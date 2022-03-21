@@ -1,5 +1,5 @@
-import { asType, isEmpty, isFunction, isString } from '@module/shared/type.library';
 import { Tempo } from '@module/shared/tempo.class';
+import { asType, isEmpty, isFunction, isString } from '@module/shared/type.library';
 
 /** YOU MUST REMOVE THIS LINE AFTER TEMPORAL REACHES STAGE-4 IN THE BROWSER */
 import { Temporal } from '@js-temporal/polyfill';
@@ -10,6 +10,7 @@ export const safe = <T>(obj: T, sentinel?: Function) => {
 	try {
 		return objectify(stringify(obj), sentinel) as T;
 	} catch (error) {
+		console.warn('Could not serialize object: ', obj);
 		return obj;
 	}
 }
