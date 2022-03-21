@@ -1,4 +1,4 @@
-import { stringify, objectify } from '@module/shared/json.library';
+import { stringify, objectify } from '@module/shared/serialize.library';
 import { isObject, isArray, isString, isNull, isUndefined, isReference, isFunction, TValues, isEmpty } from '@module/shared/type.library';
 
 const regex = /(?<matchWord>.*)\[(?<matchIdx>.)\]$/;				// a pattern to find array-references

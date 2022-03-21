@@ -1,0 +1,19 @@
+{
+	"@module/shared/application.library": "/lib/shared/application.library.js",
+	"@module/shared/array.library": "/lib/shared/array.library.js",
+	"@module/shared/cipher.class": "/lib/shared/cipher.class.js",
+	"@module/shared/logger.library": "/lib/shared/logger.library.js",
+	"@module/shared/number.library": "/lib/shared/number.library.js",
+	"@module/shared/object.library": "/lib/shared/object.library.js",
+	"@module/shared/pledge.class": "/lib/shared/pledge.class.js",
+	"@module/shared/prototype.library": "/lib/shared/prototype.library.js",
+	"@module/shared/string.library": "/lib/shared/string.library.js",
+	"@module/shared/tempo.class": "/lib/shared/tempo.class.js",
+	"@module/shared/type.library": "/lib/shared/type.library.js",
+	"@module/shared/utility.library": "/lib/shared/utility.library.js",
+	"@module/shared/serialize.library": "/lib/shared/serialize.library.js",
+
+	"@module/browser/tapper.class": "/lib/browser/tapper.class.js",
+	"@module/browser/webstore.class": "/lib/browser/webstore.class.js",
+	"@module/browser/windows.library": "/lib/browser/window.library.js"
+}
