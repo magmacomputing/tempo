@@ -75,7 +75,7 @@ export const makeTemplate = (templateString: Object) =>
 	(templateData: Object) =>
 		new Function(`{${Object.keys(templateData).join(',')}}`, 'return `' + templateString + '`')(templateData);
 
-export const asString = (str?: Object) => isNullish(str) ? '' : JSON.stringify(str);
+export const asString = (str?: Object) => isNullish(str) ? '' : isString(str) ? str : JSON.stringify(str);
 export const toLower = (str: Object) => isString(str) ? asString(str).toLowerCase().trim() : str;
 export const toUpper = (str: Object) => isString(str) ? asString(str).toUpperCase().trim() : str;
 
