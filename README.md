@@ -107,9 +107,24 @@ instance:
 	isValid()																		// returns a boolean to indicate if the underlying Tempo was successfully parsed
 
 *~~~
+# patterns:
+
+	One problem I am trying to solve (with this Wrapper) is to allow more flexible 'parsing'
+	when interpreting date/time arguments.   This is because each browser vendor has implemented
+	their own parsing mechanism, and I wanted to create something repeatable.
+
+	Best to explain with an example...   Tempo has a <<TODO>>
+
+*~~~
 # configuration:
 	You will need to install a polyfill, until the standard reaches your Browser.
 	I recommend the following:
 
 	npm install @js-temporal/polyfill
 
+	Tempo will check a set of sources, in order to determine what configuration to apply
+	1> This Class has in-built defaults
+	2> On first create, Tempo will look for a tempo.config.json in the same directory as this Class
+	3> As a final override, Tempo will allow per-instance
+
+<<TODO>>
