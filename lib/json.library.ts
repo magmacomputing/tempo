@@ -1,4 +1,8 @@
 import { asType, isEmpty, isFunction, isString } from '@module/shared/type.library';
+import { Tempo } from '@module/shared/tempo.class';
+
+/** YOU MUST REMOVE THIS LINE AFTER TEMPORAL REACHES STAGE-4 IN THE BROWSER */
+import { Temporal } from '@js-temporal/polyfill';
 
 /** Note: Firestore restricts sentinel's to only the top-level of an Object, not nested */
 /** deep-copy and replace \<undefined> field with a Sentinel function */
@@ -13,11 +17,13 @@ export const safe = <T>(obj: T, sentinel?: Function) => {
 const replacer = (key: string, val: any) => isEmpty(key) ? val : stringify(val);
 const reviver = (sentinel?: Function) => (key: string, val: any) => isEmpty(key) ? val : objectify(val, sentinel);
 const clean = (val: string) => val
-	.replaceAll('\\"', '"')
-	.replaceAll('"["', '["')
-	.replaceAll('"]"', '"]')
-	.replaceAll('"{"', '{"')
-	.replaceAll('"}"', '"}')
+	.replaceAll('"[', '[')
+	.replaceAll(']"', ']')
+	.replaceAll('"{', '{')
+	.replaceAll('}"', '}')
+	.replaceAll('=\\"', "=\'")																// try to keep embedded quotes
+	.replaceAll(';\\"', ";\'")																// around html inline attributes
+	.replaceAll('\\"', '\"')
 
 /** Serialize an object for stashing in Web Storage, Cache, etc */
 export const stringify = (obj: any, prefix = true): string => {
@@ -53,8 +59,8 @@ export const stringify = (obj: any, prefix = true): string => {
 		case 'Symbol':                                          // TODO
 			return val;
 
-		// case 'Function':																			// TODO
-		// 	break;
+		case 'Function':																				// TODO
+			return '{}';
 
 		default:
 			switch (true) {
