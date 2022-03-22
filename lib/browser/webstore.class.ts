@@ -108,7 +108,4 @@ export class WebStore {
 export namespace WebStore {
 	export const local = new WebStore('local');								// global reference to localStorage
 	export const session = new WebStore('session');						// global reference to sessionStorage
-
-	export const State = '@@STATE';														// NGXS Store in localStorage
-	export const Admin = '@@ADMIN';														// administrator settings in localStorage
 }

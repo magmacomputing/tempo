@@ -1,17 +1,18 @@
-import { enumKeys } from '@module/shared/array.library
-import { asString } from '@module/shared/string.library';
+import { Pledge } from '@module/shared/pledge.class';
+import { enumKeys } from '@module/shared/array.library';
 import { getScript } from '@module/shared/utility.library';
+import { asString, pad } from '@module/shared/string.library';
 import { getAccessors, omit } from '@module/shared/object.library';
-import { asNumber, fromOctal, isNumeric, pad, split } from '@module/shared/number.library';
+import { asNumber, fromOctal, isNumeric, split } from '@module/shared/number.library';
 import { asType, isType, isEmpty, isNull, isDefined } from '@module/shared/type.library';
 
 /** TODO: THIS IMPORT MUST BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT */
 import { Temporal } from '@js-temporal/polyfill';
 
 // shortcut functions to common Tempo properties / methods.
-/** get new Tempo	*/ export const getTempo = (tempo?: Tempo.Constructor, args: Tempo.TArgs = {}) => new Tempo(tempo, args);
-/** format Tempo	*/ export const fmtTempo = <K extends keyof Tempo.Formats>(fmt: K, tempo?: Tempo.Constructor, args: Tempo.TArgs = {}) => new Tempo(tempo, args).format(fmt);
-/** get Tempo.ts	*/ export const getStamp = (tempo?: Tempo.Constructor, args: Tempo.TArgs = {}) => new Tempo(tempo, args).ts;
+/** get new Tempo	*/ export const getTempo = (tempo?: Tempo.Argument1, args: Tempo.Argument2 = {}) => new Tempo(tempo, args);
+/** format Tempo	*/ export const fmtTempo = <K extends keyof Tempo.Formats>(fmt: K, tempo?: Tempo.Argument1, args: Tempo.Argument2 = {}) => new Tempo(tempo, args).format(fmt);
+/** get Tempo.ts	*/ export const getStamp = (tempo?: Tempo.Argument1, args: Tempo.Argument2 = {}) => new Tempo(tempo, args).ts;
 
 /**
  * Wrapper Class around Temporal API  
@@ -29,8 +30,8 @@ export class Tempo {
 	// Instance variables  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#tempo!: Temporal.ZonedDateTime;
 	#config: Tempo.Config;
-	#value?: Tempo.Constructor;																// constructor value
-	#args: Tempo.TArgs;																				// constructor arguments
+	#value?: Tempo.Argument1;																	// constructor value
+	#args: Tempo.Argument2;																		// constructor arguments
 	fmt = {} as Tempo.TypeFmt;																// inbuilt Formats
 
 	// Static variables / methods	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -91,36 +92,34 @@ export class Tempo {
 	// override #default with any tempo.config settings
 	static {
 		const makeReg = (...regexes: RegExp[]) => new RegExp('^' + regexes.map(regex => regex.source).join('') + '$', 'i');
+		const pledge = new Pledge<boolean>({ onSettle: () => console.log('Tempo: ', omit(this.#default, 'pattern')) });
 
-		new Promise<boolean>((resolve, reject) => {
-			try {
-				fetch(`${getScript()}/../tempo.config.json`)				// look for config in same directory as this script
-					.then(resp => resp.ok ? resp.json() : Promise.reject(resp.status))
-					.then((cfg: Tempo.ConfigFile) => {								// override defaults from tempo.config
-						Object.assign(this.#default, omit(cfg, 'pattern'));
+		try {
+			fetch(`${getScript()}/../tempo.config.json`)					// look for config in same directory as this script
+				.then(resp => resp.ok ? resp.json() : Promise.reject(resp.status))
+				.then((cfg: Tempo.ConfigFile) => {									// override defaults from tempo.config
+					Object.assign(this.#default, omit(cfg, 'pattern'));
 
-						((cfg.pattern ?? []).concat(this.#default.pattern)) // prepend user-patterns from tempo.config as they have priority
-							.forEach(({ key, reg }) =>
-								this.#pattern.push({
-									key,
-									reg: makeReg(...reg.map(pat => /^\/.*\/$/.test(pat)
-										? new RegExp(pat.substring(1, pat.length - 1))
-										: Tempo.regex[pat]
-									))
-								})
-							)
+					((cfg.pattern ?? []).concat(this.#default.pattern)) // prepend user-patterns from tempo.config as they have priority
+						.forEach(({ key, reg }) =>
+							this.#pattern.push({
+								key,
+								reg: makeReg(...reg.map(pat => /^\/.*\/$/.test(pat)
+									? new RegExp(pat.substring(1, pat.length - 1))
+									: Tempo.regex[pat]
+								))
+							})
+						)
 
-						// swap a couple of patterns, if required
-						Tempo.#swap(Tempo.#default.locale, this.#pattern, this.#default.pattern);
-					})
-					.catch(err => console.warn(`Error ${err}: Cannot fetch tempo.config.json`))
-					.finally(() => resolve(true))											// resolve 'fetch'
-			} catch (err: any) {																	// catch network errors from 'fetch'
-				console.warn(`Network issue on ./tempo.config.json: ${err.message}`);
-				reject(false);
-			}
-		})
-			.finally(() => console.log('Tempo: ', omit(this.#default, 'pattern')))
+					// swap a couple of patterns, if required by en-US locale
+					Tempo.#swap(Tempo.#default.locale, this.#pattern, this.#default.pattern);
+				})
+				.catch(err => pledge.reject(`Error ${err}: Cannot fetch tempo.config.json`))
+				.finally(() => pledge.resolve(true))								// resolve 'fetch'
+		} catch (err: any) {																		// catch network errors from 'fetch'
+			console.warn(`Network issue on ./tempo.config.json: ${err.message}`);
+			pledge.reject(`Error ${err}: Network issue on ./tempo.config.json`);
+		}
 	}
 
 	/** swap patterns (to suit different locales) */
@@ -148,7 +147,7 @@ export class Tempo {
 		})
 	}
 
-	static from = (tempo?: Tempo.Constructor, args: Tempo.TArgs = {}) => new Tempo(tempo, args);
+	static from = (tempo?: Tempo.Argument1, args: Tempo.Argument2 = {}) => new Tempo(tempo, args);
 
 	static get durations() {																	// 'getters' of Duration, where matched in Tempo.TIMES
 		return getAccessors<Temporal.DurationLike>(Temporal.Duration)
@@ -168,7 +167,7 @@ export class Tempo {
 	}
 
 	/** Constructor ************************************************************************************************* */
-	constructor(tempo?: Tempo.Constructor, args: Tempo.TArgs = {}) {
+	constructor(tempo?: Tempo.Argument1, args: Tempo.Argument2 = {}) {
 		this.#value = tempo;																		// stash original value
 		this.#args = args;																			// stash original arguments
 		this.#config = {																				// allow for override of defaults and config-file
@@ -234,16 +233,16 @@ export class Tempo {
 
 	// Public Methods	 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	diff(tempo2?: Tempo.Constructor): Tempo.Duration;
-	diff(tempo2: Tempo.Constructor | undefined, unit: Tempo.TUnitDiff, args?: Tempo.TArgs): number
-	/** calc diff Dates, default as \<years> */								diff(tempo2?: Tempo.Constructor, unit?: Tempo.TUnitDiff, args: Tempo.TArgs = {}) { return this.#diffDate(tempo2, unit, args) }
-	/** format elapsed diff Dates */													elapse(tempo2?: Tempo.Constructor, args: Tempo.TArgs = {}) { return this.#elapseDate(tempo2, args) }
+	diff(tempo2?: Tempo.Argument1): Tempo.Duration;
+	diff(tempo2: Tempo.Argument1 | undefined, unit: Tempo.UnitDiff, args?: Tempo.Argument2): number
+	/** calc diff Dates, default as \<years> */								diff(tempo2?: Tempo.Argument1, unit?: Tempo.UnitDiff, args: Tempo.Argument2 = {}) { return this.#diffDate(tempo2, unit, args) }
+	/** format elapsed diff Dates */													elapse(tempo2?: Tempo.Argument1, args: Tempo.Argument2 = {}) { return this.#elapseDate(tempo2, args) }
 	/** apply formatting */																		format<K extends keyof Tempo.Formats>(fmt: K) { return this.#formatDate(fmt) }
 
-	/** add date offset, default as \<minutes> */							add(offset: number, unit: Tempo.TUnitTime | Tempo.TUnitDiff = 'minutes') { return this.#setDate('add', unit, offset) }
-	/** start offset, default as \<week> */										startOf(unit: Tempo.TUnitTime = 'week') { return this.#setDate('start', unit) }
-	/** middle offset, default as \<week> */									midOf(unit: Tempo.TUnitTime = 'week') { return this.#setDate('mid', unit) }
-	/** ending offset, default as \<week> */									endOf(unit: Tempo.TUnitTime = 'week') { return this.#setDate('end', unit) }
+	/** add date offset, default as \<minutes> */							add(offset: number, unit: Tempo.UnitTime | Tempo.UnitDiff = 'minutes') { return this.#setDate('add', unit, offset) }
+	/** start offset, default as \<week> */										startOf(unit: Tempo.UnitTime = 'week') { return this.#setDate('start', unit) }
+	/** middle offset, default as \<week> */									midOf(unit: Tempo.UnitTime = 'week') { return this.#setDate('mid', unit) }
+	/** ending offset, default as \<week> */									endOf(unit: Tempo.UnitTime = 'week') { return this.#setDate('end', unit) }
 
 	/** as Temporal.ZonedDateTime */													toTemporal() { return this.#tempo }
 	/** as Date object */																			toDate() { return new Date(this.#tempo.round({ smallestUnit: 'millisecond' }).epochMilliseconds) }
@@ -254,7 +253,7 @@ export class Tempo {
 	// Private methods	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/** parse input */
-	#parseDate(tempo?: Tempo.Constructor, args: Tempo.TArgs = {}) {
+	#parseDate(tempo?: Tempo.Argument1, args: Tempo.Argument2 = {}) {
 		const arg = this.#conformDate(tempo, args);							// if String or Number, conform the input against known patterns
 		const now = Temporal.Now.zonedDateTime(this.#config.calendar, this.#config.timeZone);	// current date/time
 
@@ -332,7 +331,7 @@ export class Tempo {
 	}
 
 	/** conform values against known patterns */
-	#conformDate(tempo?: Tempo.Constructor, args: Tempo.TArgs = {}) {
+	#conformDate(tempo?: Tempo.Argument1, args: Tempo.Argument2 = {}) {
 		const arg = asType(tempo,
 			{ type: 'Temporal.ZonedDateTime', class: Temporal.ZonedDateTime },
 			{ type: 'Temporal.PlainDateTime', class: Temporal.PlainDateTime },
@@ -466,7 +465,7 @@ export class Tempo {
 	}
 
 	/** create a new offset Tempo */
-	#setDate = (mutate: Tempo.TMutate, unit: Tempo.TUnitTime | Tempo.TUnitDiff, offset: number = 1) => {
+	#setDate = (mutate: Tempo.Mutate, unit: Tempo.UnitTime | Tempo.UnitDiff, offset: number = 1) => {
 		const single = unit.endsWith('s')
 			? unit.substring(0, unit.length - 1)									// remove plural suffix
 			: unit
@@ -638,7 +637,7 @@ export class Tempo {
 	}
 
 	/** calculate the difference between dates (past is positive, future is negative) */
-	#diffDate(tempo2?: Tempo.Constructor, unit?: Tempo.TUnitDiff, args: Tempo.TArgs = {}) {
+	#diffDate(tempo2?: Tempo.Argument1, unit?: Tempo.UnitDiff, args: Tempo.Argument2 = {}) {
 		const offset = this.#parseDate(tempo2, args);
 		const dur = {} as Tempo.Duration;
 
@@ -666,7 +665,7 @@ export class Tempo {
 	}
 
 	/** format the elapsed time between two dates (to milliseconds) */
-	#elapseDate = (tempo2?: Tempo.Constructor, args: Tempo.TArgs = {}) => {
+	#elapseDate = (tempo2?: Tempo.Argument1, args: Tempo.Argument2 = {}) => {
 		const offset = this.#parseDate(tempo2, args);
 		let diff = offset.epochMilliseconds - this.#tempo.epochMilliseconds;
 
@@ -692,11 +691,11 @@ export class Tempo {
 
 export namespace Tempo {
 	/** the argument 'types' that this Class will attempt to interpret via Temporal API */
-	export type Constructor = string | number | Date | Tempo | Temporal.ZonedDateTime | Temporal.PlainDateTime | Temporal.PlainDate | Temporal.PlainTime | Temporal.PlainYearMonth | Temporal.PlainMonthDay | null;
-	export type TArgs = { timeZone?: string, calendar?: string, format?: (string | number)[], locale?: string, pivot?: number, debug?: boolean, catch?: boolean };
-	export type TMutate = 'add' | 'start' | 'mid' | 'end';
-	export type TUnitTime = Temporal.DateTimeUnit | 'quarter' | 'season';
-	export type TUnitDiff = Temporal.PluralUnit<Temporal.DateTimeUnit> | 'quarters' | 'seasons';
+	export type Argument1 = string | number | Date | Tempo | Temporal.ZonedDateTime | Temporal.PlainDateTime | Temporal.PlainDate | Temporal.PlainTime | Temporal.PlainYearMonth | Temporal.PlainMonthDay | null;
+	export type Argument2 = { timeZone?: string, calendar?: string, format?: (string | number)[], locale?: string, pivot?: number, debug?: boolean, catch?: boolean };
+	export type Mutate = 'add' | 'start' | 'mid' | 'end';
+	export type UnitTime = Temporal.DateTimeUnit | 'quarter' | 'season';
+	export type UnitDiff = Temporal.PluralUnit<Temporal.DateTimeUnit> | 'quarters' | 'seasons';
 
 	export interface ConfigFile {															// configuration on tempo.config.json
 		timeZone: string;

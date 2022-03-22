@@ -4,9 +4,28 @@ import { asType, isEmpty, isFunction, isString } from '@module/shared/type.libra
 /** YOU MUST REMOVE THIS LINE AFTER TEMPORAL REACHES STAGE-4 IN THE BROWSER */
 import { Temporal } from '@js-temporal/polyfill';
 
-/** Note: Firestore restricts sentinel's to only the top-level of an Object, not nested */
+/** make a deep-copy, using standard browser or JSON functions */
+export const clone = <T>(obj: T) => {
+	try {
+		return structuredClone(obj);
+	} catch (error) {
+		try {
+			return JSON.parse(JSON.stringify(obj));
+		} catch (error) {
+			console.warn('Could not serialize object: ', obj);
+			return obj;
+		}
+	}
+}
+
+type Safe = {
+	/** deep-copy an Object	*/
+	<T>(obj: T): T;
+	/** deep-copy and replace \<undefined> field with a call to Sentinel */
+	<T>(obj: T, sentinel: Function): T;
+};
 /** deep-copy and replace \<undefined> field with a Sentinel function */
-export const safe = <T>(obj: T, sentinel?: Function) => {
+export const safe: Safe = <T>(obj: T, sentinel?: Function) => {
 	try {
 		return objectify(stringify(obj), sentinel) as T;
 	} catch (error) {
