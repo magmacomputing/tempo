@@ -1,5 +1,4 @@
-import { stringify, objectify } from '@module/shared/serialize.library';
-import { isObject, isArray, isString, isNull, isUndefined, isReference, isFunction, TValues, isEmpty } from '@module/shared/type.library';
+import { isObject, isArray, isString, isNull, isUndefined, isReference, isFunction, type TValues } from '@module/shared/type.library';
 
 const regex = /(?<matchWord>.*)\[(?<matchIdx>.)\]$/;				// a pattern to find array-references
 
@@ -52,28 +51,6 @@ export const getPath1 = <T>(obj: any, path: string, dflt?: T, idx?: string | num
 	return res ?? dflt;
 }
 
-/** Note: Firestore restricts sentienl's to only the top-level of an Object, not nested */
-type Clone = {
-	/** deep-copy an Object	*/
-	<T>(obj: T): T;
-	/** deep-copy and replace \<undefined> field with a call to Sentinel */
-	<T>(obj: T, sentinel: Function): T;
-};
-export const clone: Clone = <T>(obj: T, sentinel?: Function) => {
-	try {
-		return objectify(stringify(obj),)
-	} catch (error) {
-		return obj;
-	}
-}
-/** make a safe deep-copy, using standard JSON functions */
-export const safe: Clone = <T>(obj: T, sentinel?: Function) => {
-	try {
-		return JSON.parse(JSON.stringify(obj));
-	} catch (error) {
-		return obj;
-	}
-}
 export const quoteObj = (obj: any) => {
 	return JSON.stringify(obj)
 		?.replace(/"([^"]+)":/g, '$1: ')

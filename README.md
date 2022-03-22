@@ -80,6 +80,25 @@ instance:
 	season																			// season: Summer/Autumn/Winter/Spring
 	config																			// Instance configuration
 
+# enums
+	WEEKDAY																			// Mon/Tue/Wed/Thu/Fri/Sat/Sun
+	WEEKDAYS																		// Monday/Tuesday/Wednesday/Thursday/Friday/Saturday/Sunday
+	MONTH																				// Jan/Feb/Mar/Apr/May/Jun/Jul/Aug/Sep/Oct/Nov/Dec
+	MONTHS																			// January/February/March/April/May/June/July/August/September/October/November/December
+	DURATION																		// year/quarter/month/week/day/hour/minute/second
+	DURATIONS																		// years/quarters/months/weeks/days/hours/minutes/seconds
+
+	FORMAT																			// {string; inbuilt format-strings}
+	TIME																				// {keyof DURATION: number of seconds per unit-of-time}
+	TIMES																				// {keyof DURATIONS: number of milli-seconds per unit-of-time}
+	SEASON																			// Summer/Autumn/Winter/Spring
+
+# consts
+	DATE																				// epoch=0/maxDate=PlainDate(9999-12-31)/minDate=PlainDate(1000-01-01)/maxStamp=Instant(9999-12-31).epochSeconds/minStamp=Instant(1000-01-01).epochSeconds
+
+	QUARTERS																		// [, Tempo.MONTH.Jul, Tempo.MONTH.Oct, Tempo.MONTH.Jan, Tempo.MONTH.Apr]
+	SEASONS																			// [, Tempo.SEASON.Summer, Tempo.SEASON.Summer, Tempo.SEASON.Autumn, Tempo.SEASON.Autumn, Tempo.SEASON.Autumn, Tempo.SEASON.Winter, Tempo.SEASON.Winter, Tempo.SEASON.Winter, Tempo.SEASON.Spring, Tempo.SEASON.Spring, Tempo.SEASON.Spring, Tempo.SEASON.Summer]
+
 *~~~
 # methods:
 static:
