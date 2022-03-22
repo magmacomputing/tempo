@@ -1,5 +1,5 @@
 import { toProperCase } from '@module/shared/string.library';
-import { asArray, keyedBy, sortBy, SortBy } from '@module/shared/array.library';
+import { asArray, keyedBy, sortBy, type SortBy } from '@module/shared/array.library';
 
 // Prototype extensions
 
