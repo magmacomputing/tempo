@@ -1,6 +1,6 @@
 import { asArray } from '@module/shared/array.library';
 import { stringify } from '@module/shared/serialize.library';
-import { isString, TValues } from '@module/shared/type.library'
+import { isString, type TValues } from '@module/shared/type.library'
 
 /**
  * Wrap a Promise<T>, its status and Resolve/Reject/Settle methods for later fulfilment   

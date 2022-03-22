@@ -4,8 +4,11 @@ import { asType, isEmpty, isFunction, isString } from '@module/shared/type.libra
 /** YOU MUST REMOVE THIS LINE AFTER TEMPORAL REACHES STAGE-4 IN THE BROWSER */
 import { Temporal } from '@js-temporal/polyfill';
 
+export const encode64 = (str: any) => Buffer.from(stringify(str)).toString('base64');
+export const decode64 = <T>(str: string) => objectify<T>(Buffer.from(str, 'base64').toString());
+
 /** make a deep-copy, using standard browser or JSON functions */
-export const clone = <T>(obj: T) => {
+export const clone = <T>(obj: T): T => {
 	try {
 		return structuredClone(obj);
 	} catch (error) {
