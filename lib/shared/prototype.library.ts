@@ -6,8 +6,6 @@ import { asArray, keyedBy, sortBy, type SortBy } from '@module/shared/array.libr
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // extend String prototype
 declare global {
-	function structuredClone<T>(obj: T): T;
-
 	interface String {
 		/** remove redundant spaces to a new string */
 		trimAll(pat?: RegExp): string;
@@ -15,7 +13,7 @@ declare global {
 		/** upper-case first letter of a word */
 		toProperCase(): string;
 
-		replaceAll(searchValue: string | RegExp, replaceValue: string): string;
+		// replaceAll(searchValue: string | RegExp, replaceValue: string): string;
 	}
 }
 
@@ -36,25 +34,20 @@ if (!String.prototype.hasOwnProperty('trimAll')) {
 }
 else console.error('Cannot extend String.trimAll');
 
-if (!String.prototype.hasOwnProperty('replaceAll')) {
-	Object.defineProperty(String.prototype, 'replaceAll', {
-		enumerable: false,
-		configurable: false,
-		writable: false,
-		value: function (str: string, newStr: string) {
+// if (!String.prototype.hasOwnProperty('replaceAll')) {
+// 	Object.defineProperty(String.prototype, 'replaceAll', {
+// 		enumerable: false,
+// 		configurable: false,
+// 		writable: false,
+// 		value: function (str: string, newStr: string) {
 
-			// If a regex pattern
-			if (Object.prototype.toString.call(str).toLowerCase() === '[object regexp]') {
-				return this.replace(str, newStr);
-			}
-
-			// If a string
-			return this.replace(new RegExp(str, 'g'), newStr);
-
-		}
-	})
-}
-else console.error('Cannot extend String.replaceAll')
+// 			return Object.prototype.toString.call(str).toLowerCase() === '[object regexp]'
+// 				? this.replace(str, newStr)													// if a regex pattern
+// 				: this.replace(new RegExp(str, 'g'), newStr);				// if a string
+// 		}
+// 	})
+// }
+// else console.error('Cannot extend String.replaceAll')
 
 if (!String.prototype.hasOwnProperty('toProperCase')) {
 	Object.defineProperty(String.prototype, 'toProperCase', {
