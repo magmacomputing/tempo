@@ -4,31 +4,28 @@ import { asType, isEmpty, isFunction, isString } from '@module/shared/type.libra
 /** YOU MUST REMOVE THIS LINE AFTER TEMPORAL REACHES STAGE-4 IN THE BROWSER */
 import { Temporal } from '@js-temporal/polyfill';
 
-export const encode64 = (str: any) => Buffer.from(stringify(str)).toString('base64');
-export const decode64 = <T>(str: string) => objectify<T>(Buffer.from(str, 'base64').toString());
-
 /** make a deep-copy, using standard browser or JSON functions */
 export const clone = <T>(obj: T): T => {
-	try {
-		return structuredClone(obj);
-	} catch (error) {
+	// try {
+	// 	return structuredClone(obj);													// structuredClone is not available in 'node'
+	// } catch (error) {
 		try {
 			return JSON.parse(JSON.stringify(obj));
 		} catch (error) {
 			console.warn('Could not serialize object: ', obj);
 			return obj;
 		}
-	}
+	// }
 }
 
-type Safe = {
+type Copy = {
 	/** deep-copy an Object	*/
 	<T>(obj: T): T;
 	/** deep-copy and replace \<undefined> field with a call to Sentinel */
 	<T>(obj: T, sentinel: Function): T;
 };
 /** deep-copy and replace \<undefined> field with a Sentinel function */
-export const safe: Safe = <T>(obj: T, sentinel?: Function) => {
+export const copy: Copy = <T>(obj: T, sentinel?: Function) => {
 	try {
 		return objectify(stringify(obj), sentinel) as T;
 	} catch (error) {
