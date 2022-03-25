@@ -9,12 +9,12 @@ export const clone = <T>(obj: T): T => {
 	// try {
 	// 	return structuredClone(obj);													// structuredClone is not available in 'node'
 	// } catch (error) {
-		try {
-			return JSON.parse(JSON.stringify(obj));
-		} catch (error) {
-			console.warn('Could not serialize object: ', obj);
-			return obj;
-		}
+	try {
+		return JSON.parse(JSON.stringify(obj));
+	} catch (error) {
+		console.warn('Could not serialize object: ', obj);
+		return obj;
+	}
 	// }
 }
 
@@ -37,6 +37,13 @@ export const copy: Copy = <T>(obj: T, sentinel?: Function) => {
 const replacer = (key: string, val: any) => isEmpty(key) ? val : stringify(val);
 const reviver = (sentinel?: Function) => (key: string, val: any) => isEmpty(key) ? val : objectify(val, sentinel);
 const clean = (val: string) => val
+	// .replace(/\"\['/g, '[')
+	// .replace(/\]\"/g, ']')
+	// .replace(/\"\{/g, '{')
+	// .replace(/\}\"/g, '}')
+	// .replace(/\=\\\"/g, '=\'')
+	// .replace(/\;\\\"/g, ';\'')
+	// .replace(/\\\"/g, '\"')
 	.replaceAll('"[', '[')
 	.replaceAll(']"', ']')
 	.replaceAll('"{', '{')

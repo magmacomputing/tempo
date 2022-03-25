@@ -4,7 +4,7 @@ import { getScript } from '@module/shared/utility.library';
 import { asString, pad } from '@module/shared/string.library';
 import { getAccessors, omit } from '@module/shared/object.library';
 import { asNumber, fromOctal, isNumeric, split } from '@module/shared/number.library';
-import { asType, isType, isEmpty, isNull, isDefined } from '@module/shared/type.library';
+import { asType, isType, isEmpty, isNull, isDefined, type OneKey } from '@module/shared/type.library';
 
 import '@module/shared/prototype.library';									// patch String, Array
 
@@ -12,9 +12,9 @@ import '@module/shared/prototype.library';									// patch String, Array
 import { Temporal } from '@js-temporal/polyfill';
 
 // shortcut functions to common Tempo properties / methods.
+/** get Tempo.ts	*/ export const getStamp = (tempo?: Tempo.DateTime, args: Tempo.Argument = {}) => new Tempo(tempo, args).ts;
 /** get new Tempo	*/ export const getTempo = (tempo?: Tempo.DateTime, args: Tempo.Argument = {}) => new Tempo(tempo, args);
 /** format Tempo	*/ export const fmtTempo = <K extends keyof Tempo.Formats>(fmt: K, tempo?: Tempo.DateTime, args: Tempo.Argument = {}) => new Tempo(tempo, args).format(fmt);
-/** get Tempo.ts	*/ export const getStamp = (tempo?: Tempo.DateTime, args: Tempo.Argument = {}) => new Tempo(tempo, args).ts;
 
 /**
  * Wrapper Class around Temporal API  
@@ -249,16 +249,12 @@ export class Tempo {
 
 	// Public Methods	 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	diff(tempo2?: Tempo.DateTime): Tempo.Duration;
-	diff(tempo2: Tempo.DateTime | undefined, unit: Tempo.UnitDiff, args?: Tempo.Argument): number
-	/** calc diff Dates, default as \<years> */								diff(tempo2?: Tempo.DateTime, unit?: Tempo.UnitDiff, args: Tempo.Argument = {}) { return this.#diffDate(tempo2, unit, args) }
-	/** format elapsed diff Dates */													elapse(tempo2?: Tempo.DateTime, args: Tempo.Argument = {}) { return this.#elapseDate(tempo2, args) }
+	/** calc DateTime duration */															diff<U extends Tempo.Diff>(diff: U) { return this.#diffDate(diff) }
 	/** apply formatting */																		format<K extends keyof Tempo.Formats>(fmt: K) { return this.#formatDate(fmt) }
+	/** format elapsed diff Dates */													elapse<E extends Tempo.Parameter>(elapse: E) { return this.#elapseDate(elapse) }
 
-	/** add date offset, default as \<minutes> */							add(offset: number, unit: Tempo.UnitTime | Tempo.UnitDiff = 'minutes') { return this.#setDate('add', unit, offset) }
-	/** start offset, default as \<week> */										startOf(unit: Tempo.UnitTime = 'week') { return this.#setDate('start', unit) }
-	/** middle offset, default as \<week> */									midOf(unit: Tempo.UnitTime = 'week') { return this.#setDate('mid', unit) }
-	/** ending offset, default as \<week> */									endOf(unit: Tempo.UnitTime = 'week') { return this.#setDate('end', unit) }
+	/** add date offset */																		add(mutate: Tempo.Add) { return this.#offset(Object.assign({}, mutate, { offset: 'add' })) }
+	/** offset */																							offset(offset: Tempo.With) { return this.#offset(offset) }
 
 	/** as Temporal.ZonedDateTime */													toTemporal() { return this.#tempo }
 	/** as Date object */																			toDate() { return new Date(this.#tempo.round({ smallestUnit: 'millisecond' }).epochMilliseconds) }
@@ -271,7 +267,6 @@ export class Tempo {
 	/** parse input */
 	#parseDate(tempo?: Tempo.DateTime) {
 		const arg = this.#conformDate(tempo);										// if String or Number, conform the input against known patterns
-
 		if (this.#config.debug)
 			console.log('arg: ', arg);
 
@@ -465,7 +460,9 @@ export class Tempo {
 								${pad(pat.groups['mm'] || Tempo.QUARTERS[Number(pat.groups['qtr'] || '0')] || this.#now.month)}-\
 								${pad(pat.groups['dd'] || '1')}\
 								${pat.groups['hms'] || ''}`
-							.trimAll(/\t/g) + `[${this.#config.timeZone}]`// remove <tab> and redundant <space>, then append timeZone
+							.trimAll(/\t/g) + 														// remove <tab> and redundant <space>
+							`[${this.#config.timeZone}]` +								// append timeZone
+							`[u-ca=${this.#config.calendar}]`							// append calendar
 					})
 
 					if (this.#config?.debug)
@@ -479,7 +476,24 @@ export class Tempo {
 	}
 
 	/** create a new offset Tempo */
-	#setDate = (mutate: Tempo.Mutate, unit: Tempo.UnitTime | Tempo.UnitDiff, offset: number = 1) => {
+	#offset = (args: (Tempo.Add | { offset: Tempo.Mutate }) | Tempo.With) => {
+		const { mutate = 'add', unit = 'seconds', offset = 1 } = Object
+			.entries(args)
+			.reduce((acc, [key, val], _itm, arr) => {
+				if (arr.length === 1) {															// mutate: start | mid | end
+					acc.mutate = key as Tempo.Mutate;
+					acc.unit = val;
+				} else {																						// mutate: add
+					if (key === 'offset') {
+						acc.mutate = val;																// method to use when mutate a Tempo
+					} else {
+						acc.unit = key as Tempo.TimeUnit;								// unit of measure to mutate
+						acc.offset = val ?? 1;													// number of units to mutate
+					}
+				}
+				return acc;
+			}, {} as { mutate: Tempo.Mutate, offset: number, unit: Tempo.TimeUnit | Tempo.DiffUnit })
+
 		const single = unit.endsWith('s')
 			? unit.substring(0, unit.length - 1)									// remove plural suffix
 			: unit
@@ -650,9 +664,12 @@ export class Tempo {
 		}
 	}
 
-	/** calculate the difference between dates (past is positive, future is negative) */
-	#diffDate(tempo2?: Tempo.DateTime, unit?: Tempo.UnitDiff, args: Tempo.Argument = {}) {
-		const offset = new Tempo(tempo2, args).toTemporal();
+	/** calculate the difference between dates  
+	 * (past is positive, future is negative)
+	 */
+	#diffDate<U extends Tempo.Diff>({ tempo, args, unit }: U): U["unit"] extends Tempo.DiffUnit ? number : Tempo.Duration;
+	#diffDate({ tempo, args, unit } = {} as Tempo.Diff) {
+		const offset = new Tempo(tempo, args).toTemporal();
 		const dur = {} as Tempo.Duration;
 
 		const duration = this.#tempo.since(offset, { largestUnit: unit === 'quarters' || unit === 'seasons' ? 'months' : (unit || 'years') });
@@ -679,8 +696,8 @@ export class Tempo {
 	}
 
 	/** format the elapsed time between two dates (to milliseconds) */
-	#elapseDate = (tempo2?: Tempo.DateTime, args: Tempo.Argument = {}) => {
-		const offset = new Tempo(tempo2, args).toTemporal();
+	#elapseDate({ tempo, args } = {} as Tempo.Parameter) {
+		const offset = new Tempo(tempo, args).toTemporal();
 		let diff = offset.epochMilliseconds - this.#tempo.epochMilliseconds;
 
 		const dd = Math.floor(diff / Tempo.TIMES.days);
@@ -707,9 +724,19 @@ export namespace Tempo {
 	/** the argument 'types' that this Class will attempt to interpret via Temporal API */
 	export type DateTime = string | number | Date | Tempo | Temporal.ZonedDateTime | Temporal.PlainDateTime | Temporal.PlainDate | Temporal.PlainTime | Temporal.PlainYearMonth | Temporal.PlainMonthDay | null;
 	export type Argument = { timeZone?: string, calendar?: string, format?: (string | number)[], locale?: string, pivot?: number, debug?: boolean, catch?: boolean };
-	export type Mutate = 'add' | 'start' | 'mid' | 'end';
-	export type UnitTime = Temporal.DateTimeUnit | 'quarter' | 'season';
-	export type UnitDiff = Temporal.PluralUnit<Temporal.DateTimeUnit> | 'quarters' | 'seasons';
+	export type Mutate = 'start' | 'mid' | 'end';
+	export type TimeUnit = Temporal.DateTimeUnit | 'quarter' | 'season';
+	export type DiffUnit = Temporal.PluralUnit<Temporal.DateTimeUnit> | 'quarters' | 'seasons';
+
+	export interface Parameter {															// parameter object
+		tempo?: Tempo.DateTime;
+		args?: Tempo.Argument;
+	}
+	export interface Diff extends Tempo.Parameter {						// configuration to use for diff() argument
+		unit?: Tempo.DiffUnit;
+	}
+	export type With = OneKey<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit>
+	export type Add = OneKey<Tempo.TimeUnit | Tempo.DiffUnit, number>;
 
 	export interface ConfigFile {															// configuration on tempo.config.json
 		timeZone: string;
