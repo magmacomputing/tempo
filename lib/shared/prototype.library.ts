@@ -13,7 +13,8 @@ declare global {
 		/** upper-case first letter of a word */
 		toProperCase(): string;
 
-		// replaceAll(searchValue: string | RegExp, replaceValue: string): string;
+		/** needed until Typescript adds declaration */
+		replaceAll(searchValue: string | RegExp, replaceValue: string): string;
 	}
 }
 
@@ -34,19 +35,19 @@ if (!String.prototype.hasOwnProperty('trimAll')) {
 }
 else console.error('Cannot extend String.trimAll');
 
-// if (!String.prototype.hasOwnProperty('replaceAll')) {
-// 	Object.defineProperty(String.prototype, 'replaceAll', {
-// 		enumerable: false,
-// 		configurable: false,
-// 		writable: false,
-// 		value: function (str: string, newStr: string) {
+if (!String.prototype.hasOwnProperty('replaceAll')) {
+	Object.defineProperty(String.prototype, 'replaceAll', {
+		enumerable: false,
+		configurable: false,
+		writable: false,
+		value: function (str: string, newStr: string) {
 
-// 			return Object.prototype.toString.call(str).toLowerCase() === '[object regexp]'
-// 				? this.replace(str, newStr)													// if a regex pattern
-// 				: this.replace(new RegExp(str, 'g'), newStr);				// if a string
-// 		}
-// 	})
-// }
+			return Object.prototype.toString.call(str).toLowerCase() === '[object regexp]'
+				? this.replace(str, newStr)													// if a regex pattern
+				: this.replace(new RegExp(str, 'g'), newStr);				// if a string
+		}
+	})
+}
 // else console.error('Cannot extend String.replaceAll')
 
 if (!String.prototype.hasOwnProperty('toProperCase')) {

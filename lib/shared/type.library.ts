@@ -75,6 +75,11 @@ export type TArray<T> = NonNullable<Exclude<T, string | number>>
 export type TPlural<T extends string> = `${T}s`
 export type ValueOf<T> = T[keyof T]
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>
+export type OneKey<K extends keyof any, V, KK extends keyof any = K> =
+	{ [P in K]: { [Q in P]: V } &
+		{ [Q in Exclude<KK, P>]?: undefined } extends infer O ?
+		{ [Q in keyof O]: O[Q] } : never
+	}[K];
 
 type Primitive = string | number | bigint | boolean | symbol | void | null
 type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling)
