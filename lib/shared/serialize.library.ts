@@ -5,17 +5,20 @@ import { asType, isEmpty, isFunction, isString } from '@module/shared/type.libra
 import { Temporal } from '@js-temporal/polyfill';
 
 /** make a deep-copy, using standard browser or JSON functions */
-export const clone = <T>(obj: T): T => {
+export const clone = <T>(obj: T) => {
+	let copy = obj;																						// default to original object
+
 	// try {
-	// 	return structuredClone(obj);													// structuredClone is not available in 'node'
+	// 	copy = structuredClone?.(obj);													// structuredClone is not available in 'node'
 	// } catch (error) {
 	try {
-		return JSON.parse(JSON.stringify(obj));
+		copy = JSON.parse(JSON.stringify(obj));
 	} catch (error) {
 		console.warn('Could not serialize object: ', obj);
-		return obj;
 	}
 	// }
+
+	return copy;
 }
 
 type Copy = {
