@@ -2,18 +2,8 @@
 	"timeZone": "Australia/Sydney",
 	"calendar": "iso8601",
 	"pivot": 75,
-	"season": {
-		"summer": "01-Dec",
-		"autumn": "01-Mar",
-		"winter": "01-Jun",
-		"spring": "01-Sep"
-	},
-	"quarter": [
-		"01-Jul",
-		"01-Oct",
-		"01-Jan",
-		"01-Apr"
-	],
+	"compass": "south",
+	"quarter": "Jul",
 	"pattern": [
 		[
 			"test",

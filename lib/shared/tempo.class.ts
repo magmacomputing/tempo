@@ -1,3 +1,4 @@
+import { clone } from '@module/shared/serialize.library';
 import { enumKeys } from '@module/shared/array.library';
 import { getScript } from '@module/shared/utility.library';
 import { asString, pad } from '@module/shared/string.library';
@@ -67,8 +68,8 @@ export class Tempo {
 		pivot: 75,																							// default pivot-duration for two-digit years
 		debug: false,																						// default debug-mode
 		catch: false,																						// default catch-mode
-		hemisphere: 'north',																		// default hemisphere (for 'season')
-		quarter: ['01-Jul', '01-Oct', '01-Jan', '01-Apr'],			// TODO
+		compass: 'north' as Tempo.COMPASS.North,								// default hemisphere (for 'season')
+		quarter: 'Jan',																					// default quarter-one start-month
 		pattern: [																							// built-in patterns to be processed in this order
 			{ key: 'yyqtr', reg: ['yy', 'sep', '/Q/', 'qtr'] },
 			{ key: 'hhmi', reg: ['hms', 'am'] },
@@ -85,19 +86,17 @@ export class Tempo {
 			{ key: 'isoDate', reg: ['yy', '/-/', 'mm', '/-/', 'dd', '/T/', 'hms', 'tzd'] },
 		]
 	}
-	static #pattern: { key: string, reg: RegExp }[] = [];			// Array of regex-patterns to test, in order of preference
-	static seasons = [] as Tempo.Season[];										// Array of Season start-dates  (PlainMonthDay)
-	static quarters = [] as (Tempo.MONTH | undefined)[];
+	static #pattern: { key: string, reg: RegExp }[] = [];			// Array of regex-patterns to test, in order of 
+	static #months = Array.from({ length: 13 }, _ => ({})) as Tempo.Months;
 
 	// override #default with any tempo.config settings
 	static {
 		const makeReg = (...regexes: RegExp[]) => new RegExp('^' + regexes.map(regex => regex.source).join('') + '$', 'i');
 
-		if (isDefined(window)) {																// TODO: skip nodejs for now
+		if (isDefined(window)) {																// TODO: skip nodejs for now; only browser
 			new Promise<boolean>(resolve => {
 				try {
-					// import(json, { assert: { type: 'json' } })
-					fetch(`${getScript()}/../tempo.config.json`)		// look for config in same directory as this script
+					fetch(`${getScript()}/../tempo.config.json`)			// look for config in same directory as this script
 						.then(resp => resp.ok ? resp.json() : Promise.reject(resp.status))
 						.then((cfg: Tempo.ConfigFile) => {							// override defaults from tempo.config
 							Object.assign(this.#default, omit(cfg, 'pattern'));
@@ -114,9 +113,9 @@ export class Tempo {
 								)
 
 							// swap a couple of patterns, if required
-							Tempo.#swap(Tempo.#default.locale, this.#pattern, this.#default.pattern);
-							Tempo.#hemisphere(Tempo.#default.hemisphere, this.seasons);
-							Tempo.#quarter(Tempo.#default.hemisphere, this.quarters);
+							this.#swap(Tempo.#default.locale, this.#pattern, this.#default.pattern);
+							this.#compass(Tempo.#default.compass, this.#months);
+							this.#quarter(Tempo.#default.quarter, this.#months);
 						})
 						.catch(err => console.warn(`Error ${err}: Cannot fetch tempo.config.json`))
 						.finally(() => resolve(true))										// resolve 'fetch'
@@ -155,35 +154,26 @@ export class Tempo {
 		})
 	}
 
-	/** setup meteorological seasons based on hemisphere */
-	static #hemisphere(hemisphere: Tempo.ConfigFile["hemisphere"], arr: typeof Tempo.seasons) {
-		arr.truncate();																					// start empty
-
-		if (hemisphere !== 'south') {														// setup northern seasons
-			arr.push(
-				{ Winter: Temporal.PlainMonthDay.from({ month: 1, day: 1 }) },
-				{ Spring: Temporal.PlainMonthDay.from({ month: 3, day: 1 }) },
-				{ Summer: Temporal.PlainMonthDay.from({ month: 6, day: 1 }) },
-				{ Autumn: Temporal.PlainMonthDay.from({ month: 9, day: 1 }) },
-				{ Winter: Temporal.PlainMonthDay.from({ month: 12, day: 1 }) },
-			)
-		} else {																								// setup southern seasons
-			arr.push(
-				{ Summer: Temporal.PlainMonthDay.from({ month: 1, day: 1 }) },
-				{ Autumn: Temporal.PlainMonthDay.from({ month: 3, day: 1 }) },
-				{ Winter: Temporal.PlainMonthDay.from({ month: 6, day: 1 }) },
-				{ Spring: Temporal.PlainMonthDay.from({ month: 9, day: 1 }) },
-				{ Summer: Temporal.PlainMonthDay.from({ month: 12, day: 1 }) },
-			)
-		}
+	/** setup meteorological seasons based on compass */
+	static #compass(compass: Tempo.ConfigFile["compass"], month: Tempo.Months) {
+		(compass !== Tempo.COMPASS.South)
+			? [void 0, 'Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer', 'Summer', 'Summer', 'Autumn', 'Autumn', 'Autumn', 'Winter']
+			: [void 0, 'Summer', 'Summer', 'Autumn', 'Autumn', 'Autumn', 'Winter', 'Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer']
+				.forEach((season, idx) => { if (idx !== 0) month[idx].season = `${season as keyof typeof Tempo.SEASON}.${idx % 3 + 1}` });
 	}
-	static #quarter(hemisphere: Tempo.ConfigFile["hemisphere"], arr: typeof Tempo.quarters) {
-		arr.truncate();																					// start empty
 
-		if (hemisphere !== 'south') {														// TODO: setup northern quarters
-			arr.push(void 0, Tempo.MONTH.Jan, Tempo.MONTH.Apr, Tempo.MONTH.Jul, Tempo.MONTH.Oct);
-		} else {																								// setup southern quarters
-			arr.push(void 0, Tempo.MONTH.Jul, Tempo.MONTH.Oct, Tempo.MONTH.Jan, Tempo.MONTH.Apr);
+	/** setup financial quarters, given a starting month */
+	static #quarter(quarter: keyof typeof Tempo.MONTH | keyof typeof Tempo.MONTHS, month: Tempo.Months) {
+		const start = Tempo.MONTH[quarter.substring(0, 3) as unknown as Tempo.MONTH] as unknown as number;
+
+		for (let i = start, mon = 1; i <= (start + 12); i++, mon++) {
+			const idx = i % 13;																		// index into the month
+			if (idx !== 0) {
+				const qtr = Math.floor((mon - 1) / 3) + 1;					// quarter increments every third iteration
+				const offset = (mon - 1) % 3 + 1;										// 1=start, 2=mid, 3=end of quarter
+				month[idx].quarter = qtr + (offset / 10);
+			}
+			else mon--
 		}
 	}
 
@@ -219,25 +209,39 @@ export class Tempo {
 			calendar: new Temporal.Calendar(args.calendar ?? Tempo.#default.calendar),
 			locale: args.locale ?? Tempo.#default.locale,					// help determine which DateFormat to check first
 			pivot: args.pivot ?? asNumber(Tempo.#default.pivot),	// determines the century-cutoff for two-digit years
+			compass: args.compass ?? Tempo.#default.compass ?? Tempo.COMPASS.North,
 			debug: args.debug ?? Tempo.#default.debug,						// debug-mode for this instance
 			catch: args.catch ?? Tempo.#default.catch,						// catch-mode for this instance
 			pattern: [...Tempo.#pattern],													// clone the pattern of RegExp's
+			month: clone(Tempo.#months),													// clone the months
 		}
-		if (this.#config.debug)
-			console.log('tempo: ', this.config);
 
 		if (this.#config.locale !== Tempo.#default.locale) {		// change of locale, swap patterns-order ?
 			if (this.#config.debug)
-				console.log('swap: ', this.#config.locale);
-
+				console.log('locale: ', this.#config.locale);
 			Tempo.#swap(this.#config.locale, this.#config.pattern);
 		}
+		if (this.#config.compass !== Tempo.#default.compass) {	// change of compass, swap hemisphere ?
+			if (this.#config.debug)
+				console.log('compass: ', this.#config.compass);
+			Tempo.#compass(this.#config.compass, this.#config.month)
+		}
+		if (args.quarter) {
+			const idx = Tempo.MONTH[args.quarter.substring(0, 3) as unknown as Tempo.MONTH] as unknown as number;
+			if (Tempo.#months[idx].quarter !== 1) {								// change of quarter-one month
+				if (this.#config.debug)
+					console.log('quarter: ', args.quarter);
+				Tempo.#quarter(args.quarter, this.#config.month);
+			}
+		}
+		if (this.#config.debug)
+			console.log('tempo: ', this.config);
 
 		try {																										// we now have all the info we need to instantiate a Tempo
 			this.#now = Temporal.Now.zonedDateTime(this.config.calendar, this.config.timeZone);
 			this.#tempo = this.#parseDate(tempo);									// attempt to interpret the input arg
 
-			if (['gregory', 'iso8601'].includes(this.config.calendar)) {
+			if (['gregory', 'iso8601'].includes(this.config.calendar.toString())) {
 				enumKeys(Tempo.FORMAT)															// add all the FORMATs to the instance
 					.forEach(key =>
 						Object.assign(this.fmt, { [key]: this.format(Tempo.FORMAT[key]) }));	// add-on short-cut format-codes
@@ -262,20 +266,24 @@ export class Tempo {
 	/** milliseconds since last second */											get ms() { return this.#tempo.millisecond }
 	/** microseconds since last millisecond */								get us() { return this.#tempo.microsecond }
 	/** nanoseconds since last microsecond */									get ns() { return this.#tempo.nanosecond }
-	/** fractional seconds since last second */								get ff() { return Number(`0.${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`) }
+	/** fractional seconds since last second */								get ff() {
+		return Number(`0.${pad(this.ms, 3)
+			}${pad(this.us, 3)}${pad(this.ns, 3)}`)
+	}
 	/** number of weeks */																		get ww() { return this.#tempo.weekOfYear }
 	/** timezone */																						get tz() { return this.#tempo.timeZone.toString() }
 	/** seconds (timeStamp) since Unix epoch */								get ts() { return this.#tempo.epochSeconds }
 	/** nanoseconds (BigInt) since Unix epoch */							get age() { return this.#tempo.epochNanoseconds }
 	/** weekday: Mon=1, Sun=7 */															get dow() { return this.#tempo.dayOfWeek }
-	/** quarter: Q1-Q4 */																			get qtr() { return [3, 4, 1, 2][Math.floor((this.#tempo.month - 1) / 3)] }
 	/** short month name */																		get mmm() { return Tempo.MONTH[this.#tempo.month] }
 	/** long month name */																		get mon() { return Tempo.MONTHS[this.#tempo.month] }
 	/** short weekday name */																	get ddd() { return Tempo.WEEKDAY[this.#tempo.dayOfWeek] }
 	/** long weekday name */																	get day() { return Tempo.WEEKDAYS[this.#tempo.dayOfWeek] }
 
-	/** meteorolgical season: Spring/Summer/Autumn/Winter */	get season() { return this.#season() }
-	/** Instance configuration */															get config() { return omit(this.#config as unknown as Tempo.ConfigFile, 'pattern') }
+	/** quarter: Q1-Q4 */																			get qtr() { return Math.trunc(this.#config.month[this.mm].quarter) }
+	/** quarter: Q1-Q4 */																			get quarter() { return Math.trunc(this.#config.month[this.mm].quarter) }
+	/** meteorolgical season: Spring/Summer/Autumn/Winter */	get season() { return this.#config.month[this.mm].season.split('.')[0] as keyof typeof Tempo.SEASON }
+	/** Instance configuration */															get config() { return omit(this.#config as unknown as Tempo.Config, 'pattern') }
 
 	// Public Methods	 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -284,7 +292,7 @@ export class Tempo {
 	/** format elapsed diff Dates */													elapse<E extends Tempo.Parameter>(elapse: E) { return this.#elapse(elapse) }
 
 	/** add date offset */																		add(mutate: Tempo.Add) { return this.#offset(Object.assign({}, mutate, { offset: 'add' })) }
-	/** offset */																							offset(offset: Tempo.With) { return this.#offset(offset) }
+	/** offset to start/mid/end of unit */										offset(offset: Tempo.With) { return this.#offset(offset) }
 
 	/** as Temporal.ZonedDateTime */													toTemporal() { return this.#tempo }
 	/** as Date object */																			toDate() { return new Date(this.#tempo.round({ smallestUnit: 'millisecond' }).epochMilliseconds) }
@@ -311,7 +319,7 @@ export class Tempo {
 					return Temporal.ZonedDateTime.from(arg.value);		// attempt to parse conformed string
 				} catch {
 					const date = new Date(arg.value.toString());			// fallback to browser's Date.parse
-					return Temporal.ZonedDateTime.from(`${date.toISOString()}[${this.#config.timeZone.toString()}]`);
+					return Temporal.ZonedDateTime.from(`${date.toISOString()} [${this.#config.timeZone.toString()}]`);
 				}
 
 			case 'Temporal.PlainDate':
@@ -381,7 +389,7 @@ export class Tempo {
 			{ type: 'Temporal.PlainMonthDay', class: Temporal.PlainMonthDay },
 			{ type: 'Temporal.Instant', class: Temporal.Instant },
 			{ type: 'Tempo', class: Tempo }
-		);
+		)
 
 		// If value is a string | number | bigint and no format-arguments were provided to the constructor()
 		if (isEmpty(this.#args?.format) && isType<string | number | bigint>(arg.value, 'String', 'Number', 'BigInt')) {
@@ -451,6 +459,13 @@ export class Tempo {
 						pat.groups['mm'] = enumKeys(Tempo.MONTH).findIndex(el => el === mm).toString();
 					}
 
+					/** Resolve a quarter-nummber into a month-number */
+					if (isDefined(pat.groups['qtr'])) {
+						const key = Number(`${pat.groups['qtr']} .1`);		// '.1' means start of quarter
+						const idx = this.#config.month.findIndex(mon => mon.quarter === key) + 1;
+						pat.groups['mm'] = idx.toString();							// set month to beginning of quarter
+					}
+
 					/**
 					 * Adjust for am/pm offset
 					 * 10pm			-> 22:00:00
@@ -487,7 +502,7 @@ export class Tempo {
 						type: 'String',
 						value: `
 								${pad(((Number(pat.groups['yy']) || this.#now.year) - Number(Number(pat.groups['qtr'] ?? '9') < 3)), 4)}-\
-								${pad(pat.groups['mm'] || Tempo.quarters[Number(pat.groups['qtr'] || '0')] || this.#now.month)}-\
+								${pad(pat.groups['mm'] || this.#now.month)}-\
 								${pad(pat.groups['dd'] || '1')}\
 								${pat.groups['hms'] || ''}`
 							.trimAll(/\t/g) + 														// remove <tab> and redundant <space>
@@ -535,7 +550,8 @@ export class Tempo {
 				break;
 			case 'start.quarter':
 			case 'start.qtr':
-				zdt = zdt.with({ day: 1, month: Tempo.quarters[this.qtr] }).startOfDay();
+				const qtr1 = this.#config.month.findIndex(mon => mon.quarter === (this.qtr + .1));
+				zdt = zdt.with({ day: 1, month: qtr1 }).startOfDay();
 				break;
 			case 'start.month':
 				zdt = zdt.with({ day: 1 }).startOfDay();
@@ -561,7 +577,8 @@ export class Tempo {
 				break;
 			case 'mid.quarter':
 			case 'mid.qtr':
-				zdt = zdt.with({ day: 1, month: [Tempo.MONTH.Aug, Tempo.MONTH.Nov, Tempo.MONTH.Feb, Tempo.MONTH.May][this.qtr - 1] }).startOfDay();
+				const qtr2 = this.#config.month.findIndex(mon => mon.quarter === (this.qtr + .2));
+				zdt = zdt.with({ day: 15, month: qtr2 }).startOfDay();
 				break;
 			case 'mid.month':
 				zdt = zdt.with({ day: 15 }).startOfDay();
@@ -587,7 +604,10 @@ export class Tempo {
 				break;
 			case 'end.quarter':
 			case 'end.qtr':
-				zdt = zdt.with({ day: 1, month: Tempo.quarters[this.qtr]! + (this.qtr === 2 ? -9 : 3), year: this.qtr === 2 ? this.yy + 1 : this.yy })
+				const qtr3 = this.#config.month.findIndex(mon => mon.quarter === (this.qtr + .3));
+				zdt = zdt.with({ month: qtr3 })
+					.add({ months: 1 })
+					.with({ day: 1 })
 					.startOfDay()
 					.subtract({ nanoseconds: 1 });
 				break;
@@ -659,7 +679,12 @@ export class Tempo {
 				return asNumber(`${this.yy}${pad(this.mm)}${pad(this.dd)}`);
 
 			case Tempo.FORMAT.yearQuarter:
-				return `${this.yy + Number(this.qtr < 3)}Q${this.qtr}`;
+				const [full, part] = this.#config.month[this.mm].quarter.toString().split('.').map(Number);
+				const mon = (full - 1) * 3 + part - 1;
+				const yy = this.toTemporal().with({ day: 1 }).add({ months: -mon }).add({ months: 11 }).year;
+				// const yy = this.#offset({ start: 'month' }).add({ months: -mon }).add({ months: 11 }).yy;
+				// const yy = this.yy - mon + 11;
+				return `${yy}Q${this.qtr}`;
 
 			default:
 				const am = asString(fmt).includes('hh')							// if 'twelve-hour' is present in fmtString
@@ -748,23 +773,12 @@ export class Tempo {
 				? pad(hh) + ':' + pad(mm) + ':' + pad(ss) + '.' + pad(diff, 3)
 				: pad(mm) + ':' + pad(ss) + '.' + pad(diff, 3)
 	}
-
-	/** return the season according to the 'hemisphere' */
-	#season() {
-		return Tempo.seasons
-			.reduce((arr, itm) => {
-				const [season, monthDay] = Object.entries(itm)[0];
-				if (this.toTemporal().toPlainMonthDay().toString() >= monthDay.toString())
-					arr = season
-				return arr;
-			}, '')
-	}
 }
 
 export namespace Tempo {
 	/** the argument 'types' that this Class will attempt to interpret via Temporal API */
 	export type DateTime = string | number | Date | Tempo | Temporal.ZonedDateTime | Temporal.PlainDateTime | Temporal.PlainDate | Temporal.PlainTime | Temporal.PlainYearMonth | Temporal.PlainMonthDay | null;
-	export type Argument = { timeZone?: string, calendar?: string, format?: (string | number)[], locale?: string, pivot?: number, debug?: boolean, catch?: boolean };
+	export type Argument = { timeZone?: string, calendar?: string, format?: (string | number)[], locale?: string, compass?: Tempo.COMPASS, quarter?: keyof typeof Tempo.MONTH | keyof typeof Tempo.MONTHS, pivot?: number, debug?: boolean, catch?: boolean };
 	export type Mutate = 'start' | 'mid' | 'end';
 	export type TimeUnit = Temporal.DateTimeUnit | 'quarter' | 'season';
 	export type DiffUnit = Temporal.PluralUnit<Temporal.DateTimeUnit> | 'quarters' | 'seasons';
@@ -777,7 +791,12 @@ export namespace Tempo {
 		unit?: Tempo.DiffUnit;
 	}
 	export type With = OneKey<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit>
-	export type Add = OneKey<Tempo.TimeUnit | Tempo.DiffUnit, number>;
+	export type Add = OneKey<Tempo.TimeUnit | Tempo.DiffUnit, number>
+	export type Month = {
+		quarter: number;
+		season: `${keyof typeof Tempo.SEASON}.${number}`;
+	}
+	export type Months = [Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month]
 
 	export interface ConfigFile {															// configuration on tempo.config.json
 		timeZone: string;
@@ -786,11 +805,11 @@ export namespace Tempo {
 		debug: boolean;
 		catch: boolean;
 		pivot: string | number;
-		hemisphere: 'north' | 'south';
-		// season: Record<'summer' | 'autumn' | 'winter' | 'spring', string>;
-		quarter: [string, string, string, string],							// locale Quarter start-dates
+		compass?: Tempo.COMPASS;
+		quarter: Tempo.CALENDAR;																// month to start quarter-one
 		pattern: { key: string, reg: string[] }[];							// Array of pattern objects, in order of preference
 	}
+
 	export interface Pattern {
 		key: string;
 		reg: RegExp;
@@ -800,6 +819,8 @@ export namespace Tempo {
 		calendar: Temporal.Calendar,														// Calendar for this instance
 		pivot: number;																					// two-digit number to determine when to prepend '19' or '20' to a year
 		locale: string;																					// Locale for this instance
+		compass?: Tempo.COMPASS;																// primarily for seasons
+		month: Tempo.Months;																		// tuple of months to assign quarter / season
 		debug?: boolean;																				// debug-mode for this instance
 		catch?: boolean;																				// catch-mode for this instance
 		pattern: Tempo.Pattern[];
@@ -855,6 +876,14 @@ export namespace Tempo {
 	export enum MONTHS { Every, January, February, March, April, May, June, July, August, September, October, November, December };
 	export enum DURATION { year, quarter, month, week, day, hour, minute, second };
 	export enum DURATIONS { years, quarters, months, weeks, days, hours, minutes, seconds };
+	export type CALENDAR = Exclude<keyof typeof Tempo.MONTH, 'All'>;
+
+	export enum COMPASS {
+		North = 'north',
+		East = 'east',
+		South = 'south',
+		West = 'west'
+	}
 
 	export enum FORMAT {																			// pre-configured format names
 		display = 'ddd, dd mmm yyyy',
