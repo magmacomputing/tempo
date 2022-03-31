@@ -31,7 +31,7 @@ export class WebStore {
 			case 'Undefined':
 				return this.del(key);																// synonym for 'removeItem'
 
-			case 'Record':
+			case 'Object':
 				prev ??= {};
 				return this.#upd(key, opt.merge
 					? Object.assign(prev, arg.value)									// assume prev is Object
