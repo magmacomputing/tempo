@@ -1,4 +1,4 @@
-import { Tempo } from '@module/shared/tempo.class';
+// import { Tempo } from '@module/shared/tempo.class';			// circular reference
 import { asType, isEmpty, isFunction, isString } from '@module/shared/type.library';
 
 /** YOU MUST REMOVE THIS LINE AFTER TEMPORAL REACHES STAGE-4 IN THE BROWSER */
@@ -9,7 +9,7 @@ export const clone = <T>(obj: T) => {
 	let copy = obj;																						// default to original object
 
 	// try {
-	// 	copy = structuredClone?.(obj);													// structuredClone is not available in 'node'
+	// 	copy = structuredClone?.(obj);												// structuredClone is not available in 'node'
 	// } catch (error) {
 	try {
 		copy = JSON.parse(JSON.stringify(obj));
@@ -61,7 +61,7 @@ export const stringify = (obj: any, prefix = true): string => {
 	const val = prefix ? `${arg.type}:` : '';
 
 	switch (arg.type) {
-		case 'Record':
+		case 'Object':
 		case 'Array':
 			return clean(JSON.stringify(arg.value, replacer));
 
@@ -146,8 +146,8 @@ export const objectify = <T extends any>(obj: any, sentinel?: Function): T => {
 		case str.startsWith('Boolean:'):
 			return (segment === 'true') as T;
 
-		case str.startsWith('Tempo:'):
-			return Tempo.from(segment) as T;
+		// case str.startsWith('Tempo:'):
+		// 	return Tempo.from(segment) as T;
 
 		case str.startsWith('Temporal.'):												// we don't expect a Temporal.Now object
 			const api = str.split('.')[1].split(':')[0] as Exclude<keyof typeof Temporal, 'Now'>;

@@ -6,6 +6,7 @@
 	"@module/shared/number.library": "/lib/shared/number.library.js",
 	"@module/shared/object.library": "/lib/shared/object.library.js",
 	"@module/shared/pledge.class": "/lib/shared/pledge.class.js",
+	"@module/shared/enum.library": "/lib/shared/emum.library.js",
 	"@module/shared/prototype.library": "/lib/shared/prototype.library.js",
 	"@module/shared/string.library": "/lib/shared/string.library.js",
 	"@module/shared/tempo.class": "/lib/shared/tempo.class.js",

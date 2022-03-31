@@ -1,40 +1,31 @@
-import { isNumber, isDate, isIterable, isString, nullToValue, isBoolean } from '@module/shared/type.library';
 import { asString } from '@module/shared/string.library';
-import { isNumeric } from '@module/shared/number.library';
 import { getPath } from '@module/shared/object.library';
+import { copy } from '@module/shared/serialize.library';
+import { asType, isNumber, isDate, isIterable, isString, isBoolean, isArrayLike, nullToValue } from '@module/shared/type.library';
 
-/** Coerce value into value[], if not already value[] */
-export const asArray = <T>(arr: T | Iterable<T> = [], str = false) => {
+type AsArray = {
+	<T>(arr: Exclude<ArrayLike<T>, string>): T[];
+	<T>(arr: T | Exclude<Iterable<T>, string>): NonNullable<T>[];
+	<T, K>(arr: Iterable<T> | ArrayLike<T>, fill: K): K[];
+}
+/** Coerce value into value[], if not already value[], with optional fill Object */
+export const asArray: AsArray = <T, K>(arr: T | Iterable<T> | ArrayLike<T> = [], fill?: K): (T | K)[] => {
 	switch (true) {
-		case isIterable<T>(arr):
-			return Array.from<T>(arr as T[]);
+		case isArrayLike<T>(arr):																// allow for {length:nn} objects
+		case isIterable<T>(arr) && !isString(arr):							// dont iterate Strings
+			const args = asType(fill);														// get type of fill-parameter
 
-		case isString(arr) && str:															// special case, to split String by character
-			return Array.from<T>(arr as T[]);
+			return Array.from<T, K>(arr as T[], val => {
+				return args.type === 'Undefined'
+					? val as unknown as K															// if no 'fill', then use val
+					// : JSON.parse(JSON.stringify(fill)) as K
+					: copy(fill as K)																	// clone 'fill' to create new Objects
+			});
 
 		default:
 			return Array.of<T>(arr as T);
 	}
 }
-
-/**
- * Enums have three types: Numeric (with reverse-mapping), String and Heterogeneous (mixed Number and String) keys.  
- */
-export const enumKeys = <T>(enumType: T) => {
-	const enumEntries = Object.entries(enumType).filter(([, val]) => isNumber(val)) as [keyof T, number][];
-	const enumKeys = Object.keys(enumType).filter(key => !isNumeric(key)) as (keyof T)[];
-
-	if (enumEntries.length === enumKeys.length) {							// if Numeric Enum
-		return enumEntries
-			.sort(([, val1], [, val2]) => val1 - val2)						// sort by the number-values
-			.map(([key,]) => key)																	// then return the keys			
-	} else {
-		return enumKeys;																				// else String/Heterogeneous Enum
-	}
-}
-export const enumCount = <T>(enumType: T) => enumKeys(enumType).length;
-export const enumValues = <T>(enumType: T) => enumKeys(enumType).map(key => enumType[key]);
-export const enumEntries = <T>(enumType: T) => enumKeys(enumType).map(key => [key, enumType[key]]);
 
 // insert a value into an Array by its sorted position
 export const sortInsert = <T>(arr: T[] = [], val: T) => {
@@ -52,7 +43,7 @@ export const sortInsert = <T>(arr: T[] = [], val: T) => {
 	return clone;
 }
 
-/** sort Object by multiple keys */
+/** sort Array-of-Objects by multiple keys */
 export interface SortBy {
 	field: string;//| FieldPath;
 	dir?: 'asc' | 'desc';

@@ -1,5 +1,6 @@
+import { asArray } from '@module/shared/array.library';
+import { enumKeys } from '@module/shared/enum.library';
 import { clone } from '@module/shared/serialize.library';
-import { enumKeys } from '@module/shared/array.library';
 import { getScript } from '@module/shared/utility.library';
 import { asString, pad } from '@module/shared/string.library';
 import { getAccessors, omit } from '@module/shared/object.library';
@@ -8,7 +9,7 @@ import { asType, isType, isEmpty, isNull, isDefined, type OneKey } from '@module
 
 import '@module/shared/prototype.library';									// patch String, Array
 
-/** TODO: THIS IMPORT MUST BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT */
+/** TODO: THIS IMPORT MUST BE REMOVED ONCE TEMPORAL IS SUPPORTED IN BROWSERS */
 import { Temporal } from '@js-temporal/polyfill';
 
 // shortcut functions to common Tempo properties / methods.
@@ -87,7 +88,7 @@ export class Tempo {
 		]
 	}
 	static #pattern: { key: string, reg: RegExp }[] = [];			// Array of regex-patterns to test, in order of 
-	static #months = Array.from({ length: 13 }, _ => ({})) as Tempo.Months;
+	static #months = asArray({ length: 13 }, {}) as Tempo.Months;
 
 	// override #default with any tempo.config settings
 	static {
@@ -156,10 +157,10 @@ export class Tempo {
 
 	/** setup meteorological seasons based on compass */
 	static #compass(compass: Tempo.ConfigFile["compass"], month: Tempo.Months) {
-		(compass !== Tempo.COMPASS.South)
+		(compass !== Tempo.COMPASS.South
 			? [void 0, 'Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer', 'Summer', 'Summer', 'Autumn', 'Autumn', 'Autumn', 'Winter']
-			: [void 0, 'Summer', 'Summer', 'Autumn', 'Autumn', 'Autumn', 'Winter', 'Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer']
-				.forEach((season, idx) => { if (idx !== 0) month[idx].season = `${season as keyof typeof Tempo.SEASON}.${idx % 3 + 1}` });
+			: [void 0, 'Summer', 'Summer', 'Autumn', 'Autumn', 'Autumn', 'Winter', 'Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer'])
+			.forEach((season, idx) => { if (idx !== 0) month[idx].season = `${season as keyof typeof Tempo.SEASON}.${idx % 3 + 1}` });
 	}
 
 	/** setup financial quarters, given a starting month */
@@ -917,8 +918,8 @@ export namespace Tempo {
 		minute = 60,
 		second = 1,
 		millisecond = .001,
-		microsecond = .000001,
-		nanosecond = .000000001,
+		microsecond = .000_001,
+		nanosecond = .000_000_001,
 	}
 
 	/** number of milliseconds per unit-of-time */
@@ -945,13 +946,11 @@ export namespace Tempo {
 		minStamp: Temporal.Instant.from('1000-01-01+00:00').epochSeconds,
 	} as const
 
-	/** Season */
+	/** Seasons */
 	export enum SEASON {
 		Spring,
 		Summer,
 		Autumn,
 		Winter,
 	}
-
-	export type Season = Partial<Record<keyof typeof Tempo.SEASON, Temporal.PlainMonthDay>>
 }
