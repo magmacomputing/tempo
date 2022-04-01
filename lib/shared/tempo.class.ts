@@ -5,7 +5,7 @@ import { getScript } from '@module/shared/utility.library';
 import { asString, pad } from '@module/shared/string.library';
 import { getAccessors, omit } from '@module/shared/object.library';
 import { asNumber, fromOctal, isNumeric, split } from '@module/shared/number.library';
-import { asType, isType, isEmpty, isNull, isDefined, type OneKey } from '@module/shared/type.library';
+import { asType, isType, isEmpty, isNull, isDefined, isTemporal, type OneKey } from '@module/shared/type.library';
 
 import '@module/shared/prototype.library';									// patch String, Array
 
@@ -26,12 +26,12 @@ import { Temporal } from '@js-temporal/polyfill';
  * ````
  * A Tempo is an object that is used to manage a Temporal.ZonedDateTime.  
  * It has properties that break the value into components ('yy', 'dd', etc.)  
- * It has methods to perform manipulations (add(), format(), diff(), startOf(), etc.)  
+ * It has methods to perform manipulations (add(), format(), diff(), offset(), etc.)  
  * Import the short-cut functions to work with a Tempo (getTempo(), fmtTempo(), getStamp())
  */
 export class Tempo {
 	// Instance variables  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	#tempo!: Temporal.ZonedDateTime;
+	#temporal!: Temporal.ZonedDateTime;
 	#config: Tempo.Config;
 	#value?: Tempo.DateTime;																	// constructor value
 	#args: Tempo.Argument;																		// constructor arguments
@@ -229,7 +229,7 @@ export class Tempo {
 		}
 		if (args.quarter) {
 			const idx = Tempo.MONTH[args.quarter.substring(0, 3) as unknown as Tempo.MONTH] as unknown as number;
-			if (Tempo.#months[idx].quarter !== 1) {								// change of quarter-one month
+			if (Tempo.#months[idx].quarter !== 1) {								// change of Q1 start month
 				if (this.#config.debug)
 					console.log('quarter: ', args.quarter);
 				Tempo.#quarter(args.quarter, this.#config.month);
@@ -240,7 +240,7 @@ export class Tempo {
 
 		try {																										// we now have all the info we need to instantiate a Tempo
 			this.#now = Temporal.Now.zonedDateTime(this.config.calendar, this.config.timeZone);
-			this.#tempo = this.#parseDate(tempo);									// attempt to interpret the input arg
+			this.#temporal = this.#parse(tempo);							// attempt to interpret the input arg
 
 			if (['gregory', 'iso8601'].includes(this.config.calendar.toString())) {
 				enumKeys(Tempo.FORMAT)															// add all the FORMATs to the instance
@@ -258,28 +258,25 @@ export class Tempo {
 	}
 
 		// Public getters	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	/** 4-digit year */																				get yy() { return this.#tempo.year }
-	/** month: Jan=1, Dec=12 */																get mm() { return this.#tempo.month }
-	/** day of month */																				get dd() { return this.#tempo.day }
-	/** hours since midnight: 24-hour format */								get hh() { return this.#tempo.hour }
-	/** minutes since last hour */														get mi() { return this.#tempo.minute }
-	/** seconds since last minute */													get ss() { return this.#tempo.second }
-	/** milliseconds since last second */											get ms() { return this.#tempo.millisecond }
-	/** microseconds since last millisecond */								get us() { return this.#tempo.microsecond }
-	/** nanoseconds since last microsecond */									get ns() { return this.#tempo.nanosecond }
-	/** fractional seconds since last second */								get ff() {
-		return Number(`0.${pad(this.ms, 3)
-			}${pad(this.us, 3)}${pad(this.ns, 3)}`)
-	}
-	/** number of weeks */																		get ww() { return this.#tempo.weekOfYear }
-	/** timezone */																						get tz() { return this.#tempo.timeZone.toString() }
-	/** seconds (timeStamp) since Unix epoch */								get ts() { return this.#tempo.epochSeconds }
-	/** nanoseconds (BigInt) since Unix epoch */							get age() { return this.#tempo.epochNanoseconds }
-	/** weekday: Mon=1, Sun=7 */															get dow() { return this.#tempo.dayOfWeek }
-	/** short month name */																		get mmm() { return Tempo.MONTH[this.#tempo.month] }
-	/** long month name */																		get mon() { return Tempo.MONTHS[this.#tempo.month] }
-	/** short weekday name */																	get ddd() { return Tempo.WEEKDAY[this.#tempo.dayOfWeek] }
-	/** long weekday name */																	get day() { return Tempo.WEEKDAYS[this.#tempo.dayOfWeek] }
+	/** 4-digit year */																				get yy() { return this.#temporal.year }
+	/** month: Jan=1, Dec=12 */																get mm() { return this.#temporal.month }
+	/** day of month */																				get dd() { return this.#temporal.day }
+	/** hours since midnight: 24-hour format */								get hh() { return this.#temporal.hour }
+	/** minutes since last hour */														get mi() { return this.#temporal.minute }
+	/** seconds since last minute */													get ss() { return this.#temporal.second }
+	/** milliseconds since last second */											get ms() { return this.#temporal.millisecond }
+	/** microseconds since last millisecond */								get us() { return this.#temporal.microsecond }
+	/** nanoseconds since last microsecond */									get ns() { return this.#temporal.nanosecond }
+	/** fractional seconds since last second */								get ff() { return Number(`0.${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`) }
+	/** number of weeks */																		get ww() { return this.#temporal.weekOfYear }
+	/** timezone */																						get tz() { return this.#temporal.timeZone.toString() }
+	/** seconds (timeStamp) since Unix epoch */								get ts() { return this.#temporal.epochSeconds }
+	/** nanoseconds (BigInt) since Unix epoch */							get age() { return this.#temporal.epochNanoseconds }
+	/** weekday: Mon=1, Sun=7 */															get dow() { return this.#temporal.dayOfWeek }
+	/** short month name */																		get mmm() { return Tempo.MONTH[this.#temporal.month] }
+	/** long month name */																		get mon() { return Tempo.MONTHS[this.#temporal.month] }
+	/** short weekday name */																	get ddd() { return Tempo.WEEKDAY[this.#temporal.dayOfWeek] }
+	/** long weekday name */																	get day() { return Tempo.WEEKDAYS[this.#temporal.dayOfWeek] }
 
 	/** quarter: Q1-Q4 */																			get qtr() { return Math.trunc(this.#config.month[this.mm].quarter) }
 	/** quarter: Q1-Q4 */																			get quarter() { return Math.trunc(this.#config.month[this.mm].quarter) }
@@ -293,24 +290,24 @@ export class Tempo {
 	/** format elapsed diff Dates */													elapse<E extends Tempo.Parameter>(elapse: E) { return this.#elapse(elapse) }
 
 	/** add date offset */																		add(mutate: Tempo.Add) { return this.#offset(Object.assign({}, mutate, { offset: 'add' })) }
-	/** offset to start/mid/end of unit */										offset(offset: Tempo.With) { return this.#offset(offset) }
+	/** offset to start/mid/end of unit */										offset(offset: Tempo.Offset) { return this.#offset(offset) }
 
-	/** as Temporal.ZonedDateTime */													toTemporal() { return this.#tempo }
-	/** as Date object */																			toDate() { return new Date(this.#tempo.round({ smallestUnit: 'millisecond' }).epochMilliseconds) }
-	/** as String */																					toString() { return this.#tempo.toString() }
-	/** as method for JSON.stringify */												toJSON() { return this.#tempo.toJSON() }
+	/** as Temporal.ZonedDateTime */													toTemporal() { return this.#temporal }
+	/** as Date object */																			toDate() { return new Date(this.#temporal.round({ smallestUnit: 'millisecond' }).epochMilliseconds) }
+	/** as String */																					toString() { return this.#temporal.toString() }
+	/** as method for JSON.stringify */												toJSON() { return this.#temporal.toJSON() }
 	/** is valid Tempo */																			isValid() { return !isNaN(this.ts) }
 
 	// Private methods	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/** parse input */
-	#parseDate(tempo?: Tempo.DateTime) {
-		const arg = this.#conformDate(tempo);										// if String or Number, conform the input against known patterns
+	#parse(tempo?: Tempo.DateTime) {
+		const arg = this.#conform(tempo);												// if String or Number, conform the input against known patterns
 		if (this.#config.debug)
 			console.log('arg: ', arg);
 
 		switch (arg.type) {
-			case 'Null':
+			case 'Null':																					// TODO: special Tempo
 			case 'Undefined':
 				return this.#now;
 
@@ -380,17 +377,8 @@ export class Tempo {
 	}
 
 	/** conform input against known patterns */
-	#conformDate(tempo?: Tempo.DateTime) {
-		const arg = asType(tempo,
-			{ type: 'Temporal.ZonedDateTime', class: Temporal.ZonedDateTime },
-			{ type: 'Temporal.PlainDateTime', class: Temporal.PlainDateTime },
-			{ type: 'Temporal.PlainDate', class: Temporal.PlainDate },
-			{ type: 'Temporal.PlainTime', class: Temporal.PlainTime },
-			{ type: 'Temporal.PlainYearMonth', class: Temporal.PlainYearMonth },
-			{ type: 'Temporal.PlainMonthDay', class: Temporal.PlainMonthDay },
-			{ type: 'Temporal.Instant', class: Temporal.Instant },
-			{ type: 'Tempo', class: Tempo }
-		)
+	#conform(tempo?: Tempo.DateTime) {
+		const arg = asType(tempo, { type: 'Tempo', class: Tempo });
 
 		// If value is a string | number | bigint and no format-arguments were provided to the constructor()
 		if (isEmpty(this.#args?.format) && isType<string | number | bigint>(arg.value, 'String', 'Number', 'BigInt')) {
@@ -522,7 +510,7 @@ export class Tempo {
 	}
 
 	/** create a new offset Tempo */
-	#offset = (args: (Tempo.Add | { offset: Tempo.Mutate }) | Tempo.With) => {
+	#offset = (args: (Tempo.Add | { offset: Tempo.Mutate }) | Tempo.Offset) => {
 		const { mutate = 'add', unit = 'seconds', offset = 1 } = Object
 			.entries(args)
 			.reduce((acc, [key, val], _itm, arr) => {
@@ -543,7 +531,7 @@ export class Tempo {
 		const single = unit.endsWith('s')
 			? unit.substring(0, unit.length - 1)									// remove plural suffix
 			: unit
-		let zdt = this.#tempo;																	// clone the Tempo instance
+		let zdt = this.#temporal;																// clone the Tempo instance
 
 		switch (`${mutate}.${single}`) {
 			case 'start.year':
@@ -682,7 +670,7 @@ export class Tempo {
 			case Tempo.FORMAT.yearQuarter:
 				const [full, part] = this.#config.month[this.mm].quarter.toString().split('.').map(Number);
 				const mon = (full - 1) * 3 + part - 1;
-				const yy = this.toTemporal().with({ day: 1 }).add({ months: -mon }).add({ months: 11 }).year;
+				const yy = this.#temporal.with({ day: 1 }).add({ months: -mon }).add({ months: 11 }).year;
 				// const yy = this.#offset({ start: 'month' }).add({ months: -mon }).add({ months: 11 }).yy;
 				// const yy = this.yy - mon + 11;
 				return `${yy}Q${this.qtr}`;
@@ -725,10 +713,10 @@ export class Tempo {
 	 */
 	#since<U extends Tempo.Diff>({ tempo, args, unit }: U): U["unit"] extends Tempo.DiffUnit ? number : Tempo.Duration;
 	#since({ tempo, args, unit } = {} as Tempo.Diff) {
-		const offset = new Tempo(tempo, args).toTemporal();
+		const offset = new Tempo(tempo, args).#temporal;
 		const dur = {} as Tempo.Duration;
 
-		const duration = this.#tempo.since(offset, { largestUnit: unit === 'quarters' || unit === 'seasons' ? 'months' : (unit || 'years') });
+		const duration = this.#temporal.since(offset, { largestUnit: unit === 'quarters' || unit === 'seasons' ? 'months' : (unit || 'years') });
 		for (const getter of Tempo.durations)
 			dur[getter] = duration[getter] ?? 0;
 
@@ -747,14 +735,14 @@ export class Tempo {
 				return (duration.months / 3) + (duration.years * 4);// three months = 1 quarter | season
 
 			default:																							// sum-up the duration components
-				return duration.total({ relativeTo: this.#tempo, unit });
+				return duration.total({ relativeTo: this.#temporal, unit });
 		}
 	}
 
 	/** format the elapsed time between two dates (to milliseconds) */
 	#elapse({ tempo, args } = {} as Tempo.Parameter) {
-		const offset = new Tempo(tempo, args).toTemporal();
-		let diff = offset.epochMilliseconds - this.#tempo.epochMilliseconds;
+		const offset = new Tempo(tempo, args).#temporal;
+		let diff = offset.epochMilliseconds - this.#temporal.epochMilliseconds;
 
 		const dd = Math.floor(diff / Tempo.TIMES.days);
 		diff -= dd * Tempo.TIMES.days;
@@ -779,7 +767,7 @@ export class Tempo {
 export namespace Tempo {
 	/** the argument 'types' that this Class will attempt to interpret via Temporal API */
 	export type DateTime = string | number | Date | Tempo | Temporal.ZonedDateTime | Temporal.PlainDateTime | Temporal.PlainDate | Temporal.PlainTime | Temporal.PlainYearMonth | Temporal.PlainMonthDay | null;
-	export type Argument = { timeZone?: string, calendar?: string, format?: (string | number)[], locale?: string, compass?: Tempo.COMPASS, quarter?: keyof typeof Tempo.MONTH | keyof typeof Tempo.MONTHS, pivot?: number, debug?: boolean, catch?: boolean };
+	export type Argument = { timeZone?: string, calendar?: string, format?: string, locale?: string, compass?: Tempo.COMPASS, quarter?: keyof typeof Tempo.MONTH | keyof typeof Tempo.MONTHS, pivot?: number, debug?: boolean, catch?: boolean };
 	export type Mutate = 'start' | 'mid' | 'end';
 	export type TimeUnit = Temporal.DateTimeUnit | 'quarter' | 'season';
 	export type DiffUnit = Temporal.PluralUnit<Temporal.DateTimeUnit> | 'quarters' | 'seasons';
@@ -791,7 +779,7 @@ export namespace Tempo {
 	export interface Diff extends Tempo.Parameter {						// configuration to use for diff() argument
 		unit?: Tempo.DiffUnit;
 	}
-	export type With = OneKey<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit>
+	export type Offset = OneKey<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit>
 	export type Add = OneKey<Tempo.TimeUnit | Tempo.DiffUnit, number>
 	export type Month = {
 		quarter: number;
