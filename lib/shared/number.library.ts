@@ -4,14 +4,17 @@ import { isType, type TValues } from '@module/shared/type.library';
 
 /** convert String to Number */
 export const asNumber = (str?: string | number) => parseFloat(str?.toString() ?? 'NaN');
+
 /** test if can convert String to Number */
 export const isNumeric = (str?: string | number): str is number => !isNaN(asNumber(str)) && isFinite(str as number);
+
 /** return as Number if possible, else String */
 export const ifNumeric = (str?: string | number, stripZero = false) =>
 	isNumeric(str) && (!str.toString().startsWith('0') || stripZero)
 		? asNumber(str)
 		: str
-/** show Hex value of a number */
+
+		/** show Hex value of a number */
 export const toHex = (num: TValues<number> = [], len: number = 64) => {
 	return asArray(num)
 		.map(val => (val + 0x100).toString(16).slice(-2))
@@ -19,6 +22,7 @@ export const toHex = (num: TValues<number> = [], len: number = 64) => {
 		.toLowerCase()
 		.substring(0, len)
 }
+
 /** apply an Ordinal suffix */
 export const suffix = (idx: number) => {
 	const str = asString(idx + 1);

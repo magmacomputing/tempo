@@ -16,9 +16,8 @@ export const asArray: AsArray = <T, K>(arr: T | Iterable<T> | ArrayLike<T> = [],
 			const args = asType(fill);														// get type of fill-parameter
 
 			return Array.from<T, K>(arr as T[], val => {
-				return args.type === 'Undefined'
+				return args.type === 'Undefined' || val !== void 0
 					? val as unknown as K															// if no 'fill', then use val
-					// : JSON.parse(JSON.stringify(fill)) as K
 					: copy(fill as K)																	// clone 'fill' to create new Objects
 			});
 
