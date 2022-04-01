@@ -2,14 +2,18 @@ import type { Tempo } from '@module/shared/tempo.class';
 import type { Pledge } from '@module/shared/pledge.class';
 
 // TODO:  remove this after Temporal reaches Stage-4
-import type { Temporal } from '@js-temporal/polyfill';
+import { Temporal } from '@js-temporal/polyfill';
+
+
+/** the actual type reported by Ecmascript */
+const esType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
 
 /**
  * return a ProperCase string of an object's type.  
  * If instance, return Class name
  */
 export const getType = (obj?: any, ...instances: Instance[]) => {
-	const type = Object.prototype.toString.call(obj).slice(8, -1);
+	const type = esType(obj);
 
 	switch (true) {
 		case type === 'Object':
@@ -47,7 +51,7 @@ export const isNumber = (obj?: unknown): obj is number => isType(obj, 'Number');
 export const isInteger = (obj?: unknown): obj is bigint => isType(obj, 'BigInt');
 export const isBoolean = <T>(obj?: T): obj is Extract<T, boolean> => isType(obj, 'Boolean');
 export const isArray = <T>(obj?: T | Array<T>): obj is Array<T> => isType(obj, 'Array');
-export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => Object.prototype.toString.call(obj).slice(8, -1) === 'Object' && 'length' in obj && Object.keys(obj).every(key => key === 'length' || !isNaN(Number(key)));
+export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => esType(obj) === 'Object' && 'length' in obj && Object.keys(obj).every(key => key === 'length' || !isNaN(Number(key)));
 export const isObject = <T>(obj?: T): obj is Extract<T, Record<any, any>> => isType(obj, 'Object');
 export const isDate = (obj?: unknown): obj is Date => isType(obj, 'Date');
 // TODO
@@ -65,6 +69,7 @@ export const isPromise = <T>(obj?: unknown): obj is Promise<T> => isType(obj, 'P
 export const isMap = <K, V>(obj?: unknown): obj is Map<K, V> => isType(obj, 'Map');
 export const isSet = <K>(obj?: unknown): obj is Set<K> => isType(obj, 'Set');
 export const isError = (err: unknown): err is Error => isType(err, 'Error');
+export const isTemporal = (obj: unknown): obj is Temporal => esType(obj).startsWith('Temporal.');
 
 export const nullToZero = <T>(obj: T) => obj ?? 0;
 export const nullToEmpty = <T>(obj: T) => obj ?? '';
@@ -101,6 +106,7 @@ export type OneKey<K extends keyof any, V, KK extends keyof any = K> =
 // TODO: add Record | Tuple
 type Primitive = string | number | bigint | boolean | symbol | void | null // | record | tuple
 type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling)
+type Temporal = Exclude<keyof typeof Temporal, 'Now'>;
 
 export type Types = 'String' | 'Number' | 'BigInt' | 'Boolean' | 'Object' | 'Array' | 'ArrayLike' | 'Null' | 'Undefined' | 'Date' | 'Function' | 'AsyncFunction' | 'Class' | 'Promise' | 'Map' | 'Set' | 'Symbol' | 'Record' | 'Tuple' | 'Error'
 export type TypeValue<T> =
@@ -126,6 +132,7 @@ export type TypeValue<T> =
 	typeRecord<T> |
 	typeTuple<T> |
 
+	typeTemporal |
 	typeZonedDateTime |
 	typePlainDateTime |
 	typePlainDate |
@@ -159,6 +166,7 @@ interface typeError { type: 'Error', value: Error }
 interface typeRecord<T> { type: 'Record', value: Record<any, any> }
 interface typeTuple<T> { type: 'Tuple', value: Array<T> }
 
+interface typeTemporal { type: 'Temporal', value: Temporal }
 interface typeZonedDateTime { type: 'Temporal.ZonedDateTime', value: Temporal.ZonedDateTime }
 interface typePlainDateTime { type: 'Temporal.PlainDateTime', value: Temporal.PlainDateTime }
 interface typePlainDate { type: 'Temporal.PlainDate', value: Temporal.PlainDate }
