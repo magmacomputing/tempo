@@ -3,7 +3,7 @@
 	"calendar": "iso8601",
 	"pivot": 75,
 	"compass": "south",
-	"quarter": "Jul",
+	"fiscal": "Jul",
 	"pattern": [
 		[
 			"test",
