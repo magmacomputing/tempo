@@ -5,7 +5,7 @@ import type { Pledge } from '@module/shared/pledge.class';
 import { Temporal } from '@js-temporal/polyfill';
 
 
-/** the actual type reported by Ecmascript */
+/** the actual type reported by ECMAScript */
 const esType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
 
 /**
@@ -54,6 +54,7 @@ export const isArray = <T>(obj?: T | Array<T>): obj is Array<T> => isType(obj, '
 export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => esType(obj) === 'Object' && 'length' in obj && Object.keys(obj).every(key => key === 'length' || !isNaN(Number(key)));
 export const isObject = <T>(obj?: T): obj is Extract<T, Record<any, any>> => isType(obj, 'Object');
 export const isDate = (obj?: unknown): obj is Date => isType(obj, 'Date');
+export const isRegExp = (obj?: unknown): obj is RegExp => isType(obj, 'RegExp');
 // TODO
 export const isRecord = (obj?: unknown): obj is Record<any, any> => isType(obj, 'Record');
 export const isTuple = <T>(obj?: unknown): obj is Array<T> => isType(obj, 'Tuple');
@@ -69,7 +70,7 @@ export const isPromise = <T>(obj?: unknown): obj is Promise<T> => isType(obj, 'P
 export const isMap = <K, V>(obj?: unknown): obj is Map<K, V> => isType(obj, 'Map');
 export const isSet = <K>(obj?: unknown): obj is Set<K> => isType(obj, 'Set');
 export const isError = (err: unknown): err is Error => isType(err, 'Error');
-export const isTemporal = (obj: unknown): obj is Temporal => esType(obj).startsWith('Temporal.');
+export const isTemporal = (obj: unknown): obj is Temporals => esType(obj).startsWith('Temporal.');
 
 export const nullToZero = <T>(obj: T) => obj ?? 0;
 export const nullToEmpty = <T>(obj: T) => obj ?? '';
@@ -106,9 +107,9 @@ export type OneKey<K extends keyof any, V, KK extends keyof any = K> =
 // TODO: add Record | Tuple
 type Primitive = string | number | bigint | boolean | symbol | void | null // | record | tuple
 type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling)
-type Temporal = Exclude<keyof typeof Temporal, 'Now'>;
+export type Temporals = Exclude<keyof typeof Temporal, 'Now'>;
 
-export type Types = 'String' | 'Number' | 'BigInt' | 'Boolean' | 'Object' | 'Array' | 'ArrayLike' | 'Null' | 'Undefined' | 'Date' | 'Function' | 'AsyncFunction' | 'Class' | 'Promise' | 'Map' | 'Set' | 'Symbol' | 'Record' | 'Tuple' | 'Error'
+export type Types = 'String' | 'Number' | 'BigInt' | 'Boolean' | 'Object' | 'Array' | 'ArrayLike' | 'Null' | 'Undefined' | 'Date' | 'Function' | 'AsyncFunction' | 'Class' | 'Promise' | 'Map' | 'Set' | 'RegExp' | 'Symbol' | 'Record' | 'Tuple' | 'Error'
 export type TypeValue<T> =
 	typeString |
 	typeNumber |
@@ -126,7 +127,6 @@ export type TypeValue<T> =
 	typeMap<T> |
 	typeSet<T> |
 	typeSymbol |
-	typeBlob |
 	typeError |
 
 	typeRecord<T> |
@@ -160,13 +160,12 @@ interface typePromise<T> { type: 'Promise', value: Promise<T> }
 interface typeMap<T> { type: 'Map', value: Map<any, T> }
 interface typeSet<T> { type: 'Set', value: Set<T> }
 interface typeSymbol { type: 'Symbol', value: Symbol }
-interface typeBlob { type: 'Blob', value: Blob }
 interface typeError { type: 'Error', value: Error }
 // TODO:  when Record/Tuple reach Stage-4
 interface typeRecord<T> { type: 'Record', value: Record<any, any> }
 interface typeTuple<T> { type: 'Tuple', value: Array<T> }
 
-interface typeTemporal { type: 'Temporal', value: Temporal }
+interface typeTemporal { type: 'Temporal', value: Temporals }
 interface typeZonedDateTime { type: 'Temporal.ZonedDateTime', value: Temporal.ZonedDateTime }
 interface typePlainDateTime { type: 'Temporal.PlainDateTime', value: Temporal.PlainDateTime }
 interface typePlainDate { type: 'Temporal.PlainDate', value: Temporal.PlainDate }
