@@ -81,8 +81,8 @@ export const stringify = (obj: any, prefix = true): string => {
 		case 'Date':																						// special treatment
 			return val + arg.value.toISOString();
 
-		case 'Blob':                                            // TODO
-			return val + arg.value.size;
+		// case 'Blob':                                            // TODO
+		// 	return val + arg.value.size;
 
 		case 'Undefined':
 		case 'Null':
@@ -116,7 +116,7 @@ export const objectify = <T extends any>(obj: any, sentinel?: Function): T => {
 		case str.startsWith('[') && str.endsWith(']'):
 			return JSON.parse(str, reviver(sentinel));
 
-		case str.startsWith('Record:{"') && str.endsWith('}'):
+		case str.startsWith('Object:{"') && str.endsWith('}'):
 		case str.startsWith('Array:[') && str.endsWith(']'):
 			return JSON.parse(segment, reviver(sentinel)) as T;
 
