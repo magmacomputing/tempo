@@ -14,7 +14,7 @@ export const ifNumeric = (str?: string | number, stripZero = false) =>
 		? asNumber(str)
 		: str
 
-		/** show Hex value of a number */
+/** show Hex value of a number */
 export const toHex = (num: TValues<number> = [], len: number = 64) => {
 	return asArray(num)
 		.map(val => (val + 0x100).toString(16).slice(-2))
@@ -40,17 +40,6 @@ export const suffix = (idx: number) => {
 			break;
 	}
 	return str + sfx;
-}
-
-/** translate octal-literals back into decimal */
-export const fromOctal = <T extends string | number | bigint>(nbr: T) => {
-	if (!isType<T>(nbr, 'Number', 'BigInt'))
-		return nbr;																							// doesn't need converting
-
-	if ([2, 3, 6].includes(nbr.toString().length))						// at-risk strings are either 2- 3- or 6-characters
-		return '0' + nbr.toString(8);														// 'guess' it had a leading zero
-
-	return nbr;
 }
 
 /** split a value into an array */
