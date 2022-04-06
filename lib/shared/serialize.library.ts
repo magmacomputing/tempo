@@ -12,7 +12,7 @@ export const clone = <T>(obj: T) => {
 	// 	copy = structuredClone?.(obj);												// structuredClone is not available in 'node'
 	// } catch (error) {
 	try {
-		copy = JSON.parse(JSON.stringify(obj));
+		copy = JSON.parse(JSON.stringify(obj));									// this will also run any toString() methods
 	} catch (error) {
 		console.warn('Could not serialize object: ', obj);
 	}

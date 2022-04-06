@@ -1,3 +1,4 @@
+import { clone } from '@module/shared/serialize.library';
 import { isObject, isArray, isString, isNull, isUndefined, isReference, isFunction, type TValues } from '@module/shared/type.library';
 
 const regex = /(?<matchWord>.*)\[(?<matchIdx>.)\]$/;				// a pattern to find array-references
@@ -80,8 +81,8 @@ export const isEqual = (obj1: any = {}, obj2: any = {}): boolean => {
 }
 
 /** omit top-level keys from an Object */
-export const omit = <T>(obj: T, ...keys: (keyof T)[]) => {
-	let res = JSON.parse(JSON.stringify(obj));
+export const omit = <T extends object>(obj: T, ...keys: (keyof T)[]) => {
+	let res = clone(obj);																			// create a safe 'stringified' copy
 
 	keys.forEach(key => Reflect.deleteProperty(res, key));
 	return res as T;
