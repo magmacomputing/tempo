@@ -6,7 +6,7 @@ import { getScript } from '@module/shared/utility.library';
 import { asString, pad } from '@module/shared/string.library';
 import { getAccessors, omit } from '@module/shared/object.library';
 import { asNumber, isNumeric, split } from '@module/shared/number.library';
-import { asType, isType, isEmpty, isNull, isDefined, isArray, type OneKey, isRegExp } from '@module/shared/type.library';
+import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isArray, isRegExp, type OneKey } from '@module/shared/type.library';
 
 /** TODO: THIS IMPORT MUST BE REMOVED ONCE TEMPORAL IS SUPPORTED IN BROWSERS */
 import { Temporal } from '@js-temporal/polyfill';
@@ -19,14 +19,16 @@ import { Temporal } from '@js-temporal/polyfill';
 /**
  * Wrapper Class around Temporal API  
  * ````
- * new Tempo(date, options)   
+ * new Tempo(date, options) or
+ * Tempo.from(date, options) or
+ * getTempo(date, options)  
  * 	date?: string | number | Tempo	- value to be interpreted as a Temporal.ZonedDateTime
  * 	options?: object				- arguments to assist with parsing the <date> and configuring the instance
  * ````
- * A Tempo is an object that is used to manage a Temporal.ZonedDateTime.  
+ * A Tempo is an object that is used to wrap a Temporal.ZonedDateTime.  
  * It has properties that break the value into components ('yy', 'dd', etc.)  
  * It has methods to perform manipulations (add(), format(), diff(), offset(), etc.)  
- * Import the short-cut functions to work with a Tempo (getTempo(), fmtTempo(), getStamp())
+ * Import the short-cut functions to work with a Tempo (getTempo(), fmtTempo(), getStamp()) indirectly
  */
 export class Tempo {
 	// Instance variables  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -142,14 +144,21 @@ export class Tempo {
 
 	// convert array of <string | RegExp> to a single RegExp
 	static regexp = (...reg: (keyof typeof Tempo.units | RegExp)[]) => {
-		const regexes = reg.map(pat => isRegExp(pat)
-			? pat																									// is a RegExp
-			: /^\/.*\/$/.test(pat)
-				? new RegExp(pat.substring(1, pat.length - 1))			// is a string that looks like a RegExp
-				: Tempo.units[pat]																	// is a string
-		)
+		const regexes = reg.map(pat => {
+			if (isRegExp(pat))																		// already a RegExp
+				return pat;
+
+			if (/^\/.*\/$/.test(pat))															// a string that looks like a RegExp
+				return new RegExp(pat.substring(1, pat.length - 1));
+
+			if (isUndefined(Tempo.units[pat]))										// unknown unit, cannot proceed
+				throw new Error(`Cannot find "${pat}" in Tempo.units`);
+
+			return Tempo.units[pat]																// lookup prebuild pattern
+		})
+
 		return new RegExp('^' + regexes.map(regex => regex.source).join('') + '$', 'i')
-	};
+	}
 
 	static #pattern: { key: string, reg: RegExp }[] = [];			// Array of regex-patterns to test until a match
 	static #months = asArray({ length: 13 }, {}) as Tempo.Months;	// Array of settings related to a Month

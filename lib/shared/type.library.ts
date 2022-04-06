@@ -124,6 +124,7 @@ export type TypeValue<T> =
 	typeFunction |
 	typeClass<T> |
 	typePromise<T> |
+	typeRegExp |
 	typeMap<T> |
 	typeSet<T> |
 	typeSymbol |
@@ -157,6 +158,7 @@ interface typeDate { type: 'Date', value: Date }
 interface typeFunction { type: 'Function', value: Function }
 interface typeClass<T> { type: 'Class', value: T }
 interface typePromise<T> { type: 'Promise', value: Promise<T> }
+interface typeRegExp { type: 'RegExp', value: RegExp }
 interface typeMap<T> { type: 'Map', value: Map<any, T> }
 interface typeSet<T> { type: 'Set', value: Set<T> }
 interface typeSymbol { type: 'Symbol', value: Symbol }
