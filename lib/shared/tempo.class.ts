@@ -189,6 +189,13 @@ export class Tempo {
 			})
 	}
 
+	/**
+	 * static method to allow sorting array of Tempo  
+	 * usage: [tempo1, tempo2, tempo3].sort(Tempo.compare)
+	 */
+	static compare = ((a: Tempo, b: Tempo) => a.ts - b.ts);
+
+	/** static method to create a new Tempo */
 	static from = (tempo?: Tempo.DateTime, args: Tempo.Argument = {}) => new Tempo(tempo, args);
 
 	/** Tempo.Duration getters, where matched in Tempo.TIMES */
@@ -291,7 +298,7 @@ export class Tempo {
 
 	/** quarter: Q1-Q4 */																			get qtr() { return Math.trunc(this.#config.month[this.mm].quarter) }
 	/** quarter: Q1-Q4 */																			get quarter() { return Math.trunc(this.#config.month[this.mm].quarter) }
-	/** meteorolgical season: Spring/Summer/Autumn/Winter */	get season() { return this.#config.month[this.mm].season.split('.')[0] as keyof typeof Tempo.SEASON }
+	/** meteorological season: Spring/Summer/Autumn/Winter */	get season() { return this.#config.month[this.mm].season.split('.')[0] as keyof typeof Tempo.SEASON }
 	/** Instance configuration */															get config() { return omit(this.#config as unknown as Tempo.Config, 'pattern') }
 
 	// Public Methods	 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -328,7 +335,7 @@ export class Tempo {
 					return Temporal.ZonedDateTime.from(arg.value);		// attempt to parse conformed string
 				} catch {
 					const date = new Date(arg.value.toString());			// fallback to browser's Date.parse
-					return Temporal.ZonedDateTime.from(`${date.toISOString()} [${this.#config.timeZone.toString()}]`);
+					return Temporal.ZonedDateTime.from(`${date.toISOString()} [${this.config.timeZone}]`);
 				}
 
 			case 'Temporal.PlainDate':
