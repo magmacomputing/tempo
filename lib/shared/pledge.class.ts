@@ -20,7 +20,7 @@ export class Pledge<T> {
 			? { tag: arg }
 			: { ...arg }
 
-		this.#status = clone({																	// clone will remove undefined
+		this.#status = clone({																	// clone will remove undefined values
 			tag,
 			catch: flags.catch,
 			debug: flags.debug,
@@ -35,18 +35,18 @@ export class Pledge<T> {
 		if (onResolve) {
 			(this.#status.fulfil ??= {}).onResolve = asArray(onResolve);
 			this.#status.fulfil.onResolve													// stack any then() callbacks
-				?.forEach(resolve => this.#promise.then(resolve));
+				.forEach(resolve => this.#promise.then(resolve));
 		}
 		if (onReject) {
 			(this.#status.fulfil ??= {}).onReject = asArray(onReject);
 			this.#status.fulfil.onReject													// stack any catch() callbacks
-				?.forEach(reject => this.#promise.catch(reject));
+				.forEach(reject => this.#promise.catch(reject));
 		}
 
 		if (onSettle) {
 			(this.#status.fulfil ??= {}).onSettle = asArray(onSettle);
 			this.#status.fulfil.onSettle													// stack any finally() callbacks
-				?.forEach(settle => this.#promise.finally(settle));
+				.forEach(settle => this.#promise.finally(settle));
 		}
 	}
 

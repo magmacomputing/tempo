@@ -78,10 +78,7 @@ export class Tempo {
 
 	/** setup fiscal quarters, from a given start month */
 	static #fiscal(quarter: keyof typeof Tempo.MONTH | keyof typeof Tempo.MONTHS, month: Tempo.Months) {
-		// const q1 = quarter.substring(0, 3).toProperCase();			// TODO: enums are not ready?
-		// const months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-		// const start = months.findIndex(mon => mon === q1);//Tempo.MONTH[quarter.substring(0, 3)];
-		const start = Tempo.MONTH[quarter.substring(0, 3) as unknown as Tempo.MONTH] as unknown as number;
+		const start = enumKeys(Tempo.MONTH).findIndex(mon => mon === quarter.substring(0, 3).toProperCase());
 
 		for (let i = start, mon = 1; i <= (start + 12); i++, mon++) {
 			const idx = i % 13;																		// index into the month
@@ -154,13 +151,13 @@ export class Tempo {
 			if (isUndefined(Tempo.units[pat]))										// unknown unit, cannot proceed
 				throw new Error(`Cannot find "${pat}" in Tempo.units`);
 
-			return Tempo.units[pat]																// lookup prebuild pattern
+			return Tempo.units[pat]																// lookup prebuilt pattern
 		})
 
 		return new RegExp('^' + regexes.map(regex => regex.source).join('') + '$', 'i')
 	}
 
-	static #pattern: { key: string, reg: RegExp }[] = [];			// Array of regex-patterns to test until a match
+	static #pattern: Tempo.Pattern[] = [];										// Array of regex-patterns to test until a match
 	static #months = asArray({ length: 13 }, {}) as Tempo.Months;	// Array of settings related to a Month
 
 	static {																									// override #default with any tempo.config settings
@@ -176,9 +173,10 @@ export class Tempo {
 					.then((cfg: Tempo.ConfigFile) => {								// override defaults from tempo.config
 						Object.assign(this.#default, omit(cfg, 'pattern'));
 
-						((cfg.pattern ?? [])
-							.concat(this.#default.pattern))								// prepend user-patterns from tempo.config as they have priority
-							.forEach(({ key, reg }) => this.#pattern.push({ key, reg: this.regexp(...reg) }))
+						Object.values(cfg.pattern ?? [])
+							.reverse()																		// prepend user-patterns from tempo.config as they have priority
+							.map(pat => Object.entries(pat)[0])
+							.forEach(([key, reg]) => this.#default.pattern.unshift({ key, reg: asArray(reg) }))
 					})
 					.catch(err => console.warn(`Error ${err}: Cannot fetch tempo.config.json`))
 					.finally(() => pledge.resolve(true))							// resolve 'fetch'
@@ -190,6 +188,10 @@ export class Tempo {
 		else pledge.resolve(void 0)															// no config file processing attempted
 
 		pledge.promise																					// once the config has been loaded (or skipped)
+			.then(_ => {
+				this.#default.pattern																// setup defaults as RegExp patterns
+					.forEach(({ key, reg }) => this.#pattern.push({ key, reg: this.regexp(...reg) }))
+			})
 			.then(_ => {																					// swap order of patterns, if required
 				this.#swap(Tempo.#default.locale, this.#pattern, this.#default.pattern);
 				this.#compass(Tempo.#default.compass, this.#months);// setup seasons
@@ -859,12 +861,9 @@ export namespace Tempo {
 		[Tempo.FORMAT.dayMonth]: string;
 		[Tempo.FORMAT.dayDate]: string;
 		[Tempo.FORMAT.sortTime]: string;
-		[Tempo.FORMAT.monthDate]: string;
 		[Tempo.FORMAT.monthTime]: string;
-		[Tempo.FORMAT.HHMISS]: string;
 		[Tempo.FORMAT.HHMI]: string;
 		[Tempo.FORMAT.hhmi]: string;
-		[Tempo.FORMAT.log]: string;
 		[Tempo.FORMAT.yearWeek]: number;
 		[Tempo.FORMAT.yearMonth]: number;
 		[Tempo.FORMAT.yearMonthDay]: number;
@@ -877,15 +876,12 @@ export namespace Tempo {
 		display: string;
 		dayTime: string;
 		dayFull: string;
-		dayMonth: string;
 		dayDate: string;
+		dayMonth: string;
 		sortTime: string;
-		monthDate: string;
 		monthTime: string;
-		HHMISS: string;
 		HHMI: string;
 		hhmi: string;
-		log: string;
 		yearWeek: number;
 		yearMonth: number;
 		yearMonthDay: number;
@@ -915,21 +911,18 @@ export namespace Tempo {
 		display = 'ddd, dd mmm yyyy',
 		dayTime = 'ddd, yyyy-mmm-dd HH:MI',
 		dayFull = 'ddd, yyyy-mmm-dd HH:MI:SS',									// useful for Sheets cell-format
-		dayMonth = 'dd-mmm',
 		dayDate = 'ddd, yyyy-mmm-dd',
-		sortTime = 'yyyy-mm-dd HH:MI',													// useful for sorting display-strings
-		monthDate = 'yyyy-mmm-dd',
+		dayMonth = 'dd-mmm',
+		sortTime = 'yyyy-mm-dd HH:MI:SS',												// useful for sorting display-strings
 		monthTime = 'yyyy-mmm-dd HH:MI',												// useful for dates where dow is not needed
-		HHMISS = 'HH:MI:SS',
 		HHMI = 'HH:MI',																					// 24-hour format
 		hhmi = 'hh:mi',																					// 12-hour format
-		log = 'HH:MI:SS.ff',																		// useful for log-stamping
 		yearWeek = 'yyyyww',
 		yearMonth = 'yyyymm',
 		yearMonthDay = 'yyyymmdd',
 		yearQuarter = 'yyyyQqtr',
-		date = 'ddd, yyyy-mmm-dd',															// synonym for dayDate
-		time = 'HH:MI:SS',																			// synonym for HHMISS
+		date = 'yyyy-mmm-dd',																		// just Date portion
+		time = 'HH:MI:SS',																			// just Time portion
 	}
 
 	/** number of seconds per unit-of-time */

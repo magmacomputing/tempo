@@ -3,13 +3,8 @@
 	"calendar": "iso8601",
 	"pivot": 75,
 	"compass": "south",
-	"fiscal": "Jul",
+	"fiscal": "July",
 	"pattern": [
-		[
-			"test",
-			[
-				"dd"
-			]
-		]
+		{"pat1": ["/XXX/", "sep", "yy", "sep", "dd", "sep", "mm", "hhmi", "am"]}
 	]
 }
