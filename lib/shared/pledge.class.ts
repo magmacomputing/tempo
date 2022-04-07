@@ -16,12 +16,14 @@ export class Pledge<T> {
 	#reject!: (reason?: string) => void;
 
 	constructor(arg?: Pledge.Constructor | string) {
-		const { tag, onResolve = void 0, onReject = void 0, onSettle = void 0 } = isString(arg)
+		const { tag, onResolve = void 0, onReject = void 0, onSettle = void 0, ...flags } = isString(arg)
 			? { tag: arg }
 			: { ...arg }
 
 		this.#status = {
 			tag,
+			catch: flags.catch ?? false,
+			debug: flags.debug ?? false,
 			state: Pledge.STATE.Pending,
 			fulfil: {
 				onResolve: asArray(onResolve),
@@ -54,17 +56,24 @@ export class Pledge<T> {
 
 			case Pledge.STATE.Resolved:														// warn: already resolved
 				const resolve = (this.#status as Pledge.StatusValue<T>).value;
-				if (value && stringify(value) !== stringify(resolve))
+				if (value && stringify(value) !== stringify(resolve) && this.#status.debug)
 					console.warn(`Pledge ${tag}already resolved: "${resolve}"`);
 				return resolve;
 
 			case Pledge.STATE.Rejected:														// error: already rejected
-				throw new Error(`Pledge ${tag}already rejected: "${(this.#status as Pledge.StatusError<Error>).error.message}"`);
+				const err = (this.#status as Pledge.StatusError<Error>).error.message;
+				const msg = `Pledge ${tag}already rejected: "${err}"`;
+				if (this.#status.catch) {
+					if (this.#status.debug)
+						console.warn(msg);
+					return err as unknown as T;												// User needs to handle the error
+				}
+				else throw new Error(msg);
 		}
 	}
 
 	reject(error?: any) {
-		const tag = this.#status.tag ? `(${this.#status.tag}) ` : '';
+		const tag = this.#status.tag;
 
 		switch (this.#status.state) {
 			case Pledge.STATE.Pending:
@@ -74,12 +83,19 @@ export class Pledge<T> {
 
 			case Pledge.STATE.Rejected:														// warn: already rejected
 				const reject = (this.#status as Pledge.StatusError<Error>).error.message;
-				if (error && stringify(error) !== stringify(reject))
+				if (error && stringify(error) !== stringify(reject) && this.#status.debug)
 					console.warn(`Pledge ${tag}already rejected: "${reject}"`);
 				return reject;
 
 			case Pledge.STATE.Resolved:														// error: already resolved
-				throw new Error(`Pledge ${tag}already resolved: "${(this.#status as Pledge.StatusValue<T>).value}"`);
+				const err = (this.#status as Pledge.StatusValue<T>).value;
+				const msg = `Pledge ${tag}already resolved: "${err}"`;
+				if (this.#status.catch) {
+					if (this.#status.debug)
+						console.warn(msg);
+					return err;																				// User needs to handle the error
+				}
+				else throw new Error(`Pledge ${tag}already resolved: "${(this.#status as Pledge.StatusValue<T>).value}"`);
 		}
 	}
 
@@ -97,7 +113,7 @@ export namespace Pledge {
 	export type Reject = (err: Error) => any;									// functions to call after Pledge rejects
 	export type Settle = () => void;													// functions to call after Pledge settles
 
-	export type Constructor = { tag?: string, onResolve?: TValues<Pledge.Resolve>, onReject?: TValues<Pledge.Reject>, onSettle?: TValues<Pledge.Settle> }
+	export type Constructor = { tag?: string, onResolve?: TValues<Pledge.Resolve>, onReject?: TValues<Pledge.Reject>, onSettle?: TValues<Pledge.Settle>, catch?: boolean, debug?: boolean }
 
 	export enum STATE {
 		Pending = 'pending',
@@ -107,6 +123,8 @@ export namespace Pledge {
 
 	export interface Status<T> {
 		tag?: string;
+		catch?: boolean;
+		debug?: boolean;
 		state: Pledge.STATE;
 		fulfil: {
 			onResolve: Pledge.Resolve[];
