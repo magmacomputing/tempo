@@ -37,7 +37,7 @@ export class Tempo {
 	#value?: Tempo.DateTime;																	// constructor value
 	#args: Tempo.Argument;																		// constructor arguments
 	#temporal!: Temporal.ZonedDateTime;												// underlying Temporal DateTime
-	#now!: Temporal.ZonedDateTime;														// instantiation Temporal DateTime, used only during construction
+	#now!: Temporal.Instant;																	// instantiation Temporal Instant, used only during construction
 	fmt = {} as Tempo.TypeFmt;																// prebuilt Formats
 
 	// Static variables / methods	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -174,7 +174,7 @@ export class Tempo {
 					.then((cfg: Tempo.ConfigFile) => {								// override defaults from tempo.config
 						Object.assign(this.#default, omit(cfg, 'pattern'));
 
-						Object.values(cfg.pattern ?? [])
+						(cfg.pattern ?? [])
 							.reverse()																		// prepend user-patterns from tempo.config as they have priority
 							.map(pat => Object.entries(pat)[0])
 							.forEach(([key, reg]) => this.#default.pattern.unshift({ key, reg: asArray(reg) }))
@@ -233,6 +233,7 @@ export class Tempo {
 
 	/** Constructor ************************************************************************************************* */
 	constructor(tempo?: Tempo.DateTime, args: Tempo.Argument = {}) {
+		this.#now = Temporal.Now.instant();											// stash current Instant
 		this.#value = tempo;																		// stash original value
 		this.#args = args;																			// stash original arguments
 		this.#config = {																				// allow for override of defaults and config-file
@@ -243,7 +244,7 @@ export class Tempo {
 			compass: args.compass ?? Tempo.#default.compass ?? Tempo.COMPASS.North,
 			debug: args.debug ?? Tempo.#default.debug,						// debug-mode for this instance
 			catch: args.catch ?? Tempo.#default.catch,						// catch-mode for this instance
-			pattern: [...Tempo.#pattern],													// clone the pattern of RegExp's
+			pattern: [],																					// instance-patterns
 			month: clone(Tempo.#months),													// clone the months
 		}
 
@@ -255,7 +256,7 @@ export class Tempo {
 		if (this.#config.compass !== Tempo.#default.compass) {	// change of compass, swap hemisphere ?
 			if (this.#config.debug)
 				console.log('compass: ', this.#config.compass);
-			Tempo.#compass(this.#config.compass, this.#config.month)
+			Tempo.#compass(this.#config.compass, this.#config.month);
 		}
 		if (args.fiscal) {
 			const idx = Tempo.MONTH[args.fiscal.substring(0, 3) as unknown as Tempo.MONTH] as unknown as number;
@@ -265,12 +266,16 @@ export class Tempo {
 				Tempo.#fiscal(args.fiscal, this.#config.month);
 			}
 		}
+		if (this.#args.pattern) {																// user-specified pattern for this instance
+			(isArray(this.#args.pattern[0]) ? this.#args.pattern as unknown as (NonNullable<Tempo.Argument["pattern"]>)[] : [this.#args.pattern])
+				.map((pat, idx) => ({ key: '_' + idx, reg: Tempo.regexp(...pat) }))
+				.forEach(pattern => this.#config.pattern.push(pattern))
+		}
 		if (this.#config.debug)
 			console.log('tempo: ', this.config);
 
 		try {																										// we now have all the info we need to instantiate a Tempo
-			this.#now = Temporal.Now.zonedDateTime(this.config.calendar, this.config.timeZone);
-			this.#temporal = this.#parse(tempo);							// attempt to interpret the input arg
+			this.#temporal = this.#parse(tempo);									// attempt to interpret the input arg
 
 			if (['gregory', 'iso8601'].includes(this.config.calendar.toString())) {
 				enumKeys(Tempo.FORMAT)															// add all the FORMATs to the instance
@@ -311,7 +316,7 @@ export class Tempo {
 	/** quarter: Q1-Q4 */																			get qtr() { return Math.trunc(this.#config.month[this.mm].quarter) }
 	/** quarter: Q1-Q4 */																			get quarter() { return Math.trunc(this.#config.month[this.mm].quarter) }
 	/** meteorological season: Spring/Summer/Autumn/Winter */	get season() { return this.#config.month[this.mm].season.split('.')[0] as keyof typeof Tempo.SEASON }
-	/** Instance configuration */															get config() { return omit(this.#config as unknown as Tempo.Config, 'pattern') }
+	/** Instance configuration */															get config() { return this.#config }
 
 	// Public Methods	 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -332,22 +337,22 @@ export class Tempo {
 
 	/** parse input */
 	#parse(tempo?: Tempo.DateTime) {
-		const arg = this.#conform(tempo);												// if String or Number, conform the input against known patterns
+		const today = this.#now.toZonedDateTime({ timeZone: this.#config.timeZone, calendar: this.#config.calendar });
+		const arg = this.#conform(tempo, today);								// if String or Number, conform the input against known patterns
 		if (this.#config.debug)
 			console.log('arg: ', arg);
 
 		switch (arg.type) {
 			case 'Null':																					// TODO: special Tempo for null?
 			case 'Undefined':
-				return this.#now;
+				return today;
 
 			case 'String':
 			case 'Temporal.ZonedDateTime':
 				try {
 					return Temporal.ZonedDateTime.from(arg.value);		// attempt to parse conformed string
-				} catch {
-					const date = new Date(arg.value.toString());			// fallback to browser's Date.parse
-					return Temporal.ZonedDateTime.from(`${date.toISOString()} [${this.config.timeZone}]`);
+				} catch {																						// fallback to browser's Date.parse
+					return Temporal.ZonedDateTime.from(`${new Date(arg.value.toString()).toISOString()} [${this.config.timeZone}]`);
 				}
 
 			case 'Temporal.PlainDate':
@@ -355,17 +360,17 @@ export class Tempo {
 				return arg.value.toZonedDateTime(this.#config.timeZone);
 
 			case 'Temporal.PlainTime':
-				return arg.value.toZonedDateTime({ timeZone: this.#config.timeZone, plainDate: this.#now.toPlainDate() });
+				return arg.value.toZonedDateTime({ timeZone: this.#config.timeZone, plainDate: today.toPlainDate() });
 
 			case 'Temporal.PlainYearMonth':												// assume current day, else end-of-month
-				const day = this.#now.day === this.#now.daysInMonth ? arg.value.daysInMonth : this.#now.day;
+				const day = today.day === today.daysInMonth ? arg.value.daysInMonth : Math.min(today.day, arg.value.daysInMonth);
 				return arg.value
 					.toPlainDate({ day })
 					.toZonedDateTime(this.#config.timeZone);
 
 			case 'Temporal.PlainMonthDay':												// assume current year
 				return arg.value
-					.toPlainDate({ year: this.#now.year })
+					.toPlainDate({ year: today.year })
 					.toZonedDateTime(this.#config.timeZone);
 
 			case 'Temporal.Instant':
@@ -407,7 +412,7 @@ export class Tempo {
 	}
 
 	/** conform input against known patterns */
-	#conform(tempo?: Tempo.DateTime) {
+	#conform(tempo: Tempo.DateTime | undefined, today: Temporal.ZonedDateTime) {
 		const arg = asType(tempo, { type: 'Tempo', class: Tempo });
 
 		if (['Number', 'BigInt'].includes(arg.type)) {
@@ -415,19 +420,11 @@ export class Tempo {
 				throw new Error('Cannot safely parse number with less than 8-digits: use string');
 		}
 
-		// If value is a string | number | bigint
+		// only if type is a string | number | bigint
 		if (isType<string | number | bigint>(arg.value, 'String', 'Number', 'BigInt')) {
-			const patterns = asArray(this.#config.pattern);				// clone
-
-			if (isDefined(this.#args.pattern)) {									// user-specified pattern for this instance
-				(isArray(this.#args.pattern[0]) ? this.#args.pattern as unknown as (NonNullable<Tempo.Argument["pattern"]>)[] : [this.#args.pattern])
-					.map((pat, idx) => ({ key: '_' + idx, reg: Tempo.regexp(...pat) }))
-					.reverse()
-					.forEach(pattern => patterns.unshift(pattern))
-			}
 
 			// Attempt to match the value against each one of the regular expressions until a match is found
-			for (const { key, reg } of patterns) {
+			for (const { key, reg } of [...this.#config.pattern, ...Tempo.patterns]) {
 				const pat = arg.value.toString().trimAll(/\(|\)|\t/gi).match(reg);
 
 				if (!isNull(pat) && isDefined(pat.groups)) {				// regexp named-groups found
@@ -443,9 +440,9 @@ export class Tempo {
 					if (Object.keys(pat.groups).every(el => ['dow', 'mod', 'nbr'].includes(el)) && isDefined(pat.groups['dow'])) {
 						const { dow, mod = '', nbr } = pat.groups;
 						const weekday = dow.substring(0, 3).toProperCase();
-						const days = this.#now.daysInWeek * Number(isEmpty(nbr) ? '1' : nbr);
+						const days = today.daysInWeek * Number(isEmpty(nbr) ? '1' : nbr);
 						const offset = enumKeys(Tempo.WEEKDAY).findIndex(el => el === weekday);
-						let adj = this.#now.dayOfWeek - offset;					// number of days to offset from today
+						let adj = today.dayOfWeek - offset;							// number of days to offset from today
 
 						switch (mod) {																	// switch on the 'modifier' character
 							case void 0:																	// current week
@@ -460,24 +457,24 @@ export class Tempo {
 								adj += days;
 								break;
 							case '<':																			// latest dow (this week or prev)
-								if (this.#now.dayOfWeek <= offset)
+								if (today.dayOfWeek <= offset)
 									adj += days;
 								break;
 							case '<=':																		// latest dow (prior to today)
-								if (this.#now.dayOfWeek < offset)
+								if (today.dayOfWeek < offset)
 									adj += days;
 								break;
 							case '>':																			// next dow
-								if (this.#now.dayOfWeek >= offset)
+								if (today.dayOfWeek >= offset)
 									adj -= days;
 								break;
 							case '>=':
-								if (this.#now.dayOfWeek > offset)
+								if (today.dayOfWeek > offset)
 									adj -= days;
 								break;
 						}
 
-						const { year, month, day } = this.#now.subtract({ days: adj });
+						const { year, month, day } = today.subtract({ days: adj });
 						pat.groups['yy'] = year.toString();							// set the now current year
 						pat.groups['mm'] = month.toString();						// and month
 						pat.groups['dd'] = day.toString();							// and day
@@ -511,7 +508,7 @@ export class Tempo {
 						if (pat.groups['am']?.toLowerCase() === 'pm' && hh < 12)
 							hh += 12
 						pat.groups['hms'] = `T${pad(hh)}:${pad(mi)}:${pad(ss)}`;
-						pat.groups['dd'] ??= this.#now.day.toString();	// if no 'day', use today
+						pat.groups['dd'] ??= today.day.toString();			// if no 'day', use today
 					}
 
 					/**
@@ -520,10 +517,10 @@ export class Tempo {
 					 * 34			-> 1934
 					 */
 					if (/^\d{2}$/.test(pat.groups['yy'])) {
-						const [, pivot] = split<number>(this.#now
+						const [, pivot] = split<number>(today
 							.subtract({ 'years': this.#config.pivot })		// arbitrary-years ago is pivot for century
 							.year / 100, '.')															// split on decimal-point
-						const [century] = split<number>(this.#now.year / 100, '.');		// current century
+						const [century] = split<number>(today.year / 100, '.');		// current century
 						const yy = Number(pat.groups['yy']);						// as number
 
 						pat.groups['yy'] = `${century - Number(yy > pivot)}${pat.groups['yy']}`;
@@ -535,8 +532,8 @@ export class Tempo {
 					Object.assign(arg, {
 						type: 'String',
 						value: `
-								${pad(((Number(pat.groups['yy']) || this.#now.year) - Number(Number(pat.groups['qtr'] ?? '9') < 3)), 4)}-\
-								${pad(pat.groups['mm'] || this.#now.month)}-\
+								${pad(((Number(pat.groups['yy']) || today.year) - Number(Number(pat.groups['qtr'] ?? '9') < 3)), 4)}-\
+								${pad(pat.groups['mm'] || today.month)}-\
 								${pad(pat.groups['dd'] || '1')}\
 								${pat.groups['hms'] || ''}`
 							.trimAll(/\t/g) + 														// remove <tab> and redundant <space>
@@ -857,7 +854,7 @@ export namespace Tempo {
 		month: Tempo.Months;																		// tuple of months to assign quarter / season
 		debug?: boolean;																				// debug-mode for this instance
 		catch?: boolean;																				// catch-mode for this instance
-		pattern: Tempo.Pattern[];
+		pattern: Tempo.Pattern[];																// conform patterns
 	}
 	export interface Formats {																// pre-configured format strings
 		[str: string]: string | number;													// allow for dynamic format-codes
