@@ -1,11 +1,11 @@
 import { asArray } from '@module/shared/array.library';
-import { stringify } from '@module/shared/serialize.library';
+import { clone, stringify } from '@module/shared/serialize.library';
 import { isString, type TValues } from '@module/shared/type.library'
 
 /**
  * Wrap a Promise<T>, its status and Resolve/Reject/Settle methods for later fulfilment   
  ```
-	 new Pledge<T>({tag: string, onResolve?: () => void, onReject?: () => void, onSettle?: () => void})
+	 new Pledge<T>({tag: string, onResolve?: () => void, onReject?: () => void, onSettle?: () => void, catch: boolean, debug: boolean})
 	 new Pledge<T>(tag?: string) 
  ```
  */
@@ -20,29 +20,34 @@ export class Pledge<T> {
 			? { tag: arg }
 			: { ...arg }
 
-		this.#status = {
+		this.#status = clone({																	// clone will remove undefined
 			tag,
-			catch: flags.catch ?? false,
-			debug: flags.debug ?? false,
+			catch: flags.catch,
+			debug: flags.debug,
 			state: Pledge.STATE.Pending,
-			fulfil: {
-				onResolve: asArray(onResolve),
-				onReject: asArray(onReject),
-				onSettle: asArray(onSettle),
-			}
-		}
+		});
 
 		this.#promise = new Promise<T>((resolve, reject) => {
 			this.#resolve = resolve;															// stash resolve()
 			this.#reject = reject;																// stash reject()
 		})
 
-		this.#status.fulfil.onResolve														// stack any then() callbacks
-			.forEach(resolve => this.#promise.then(resolve));
-		this.#status.fulfil.onReject														// stack any catch() callbacks
-			.forEach(reject => this.#promise.catch(reject));
-		this.#status.fulfil.onSettle														// stack any finally() callbacks
-			.forEach(settle => this.#promise.finally(settle));
+		if (onResolve) {
+			(this.#status.fulfil ??= {}).onResolve = asArray(onResolve);
+			this.#status.fulfil.onResolve													// stack any then() callbacks
+				?.forEach(resolve => this.#promise.then(resolve));
+		}
+		if (onReject) {
+			(this.#status.fulfil ??= {}).onReject = asArray(onReject);
+			this.#status.fulfil.onReject													// stack any catch() callbacks
+				?.forEach(reject => this.#promise.catch(reject));
+		}
+
+		if (onSettle) {
+			(this.#status.fulfil ??= {}).onSettle = asArray(onSettle);
+			this.#status.fulfil.onSettle													// stack any finally() callbacks
+				?.forEach(settle => this.#promise.finally(settle));
+		}
 	}
 
 	resolve(value: T) {
@@ -73,7 +78,7 @@ export class Pledge<T> {
 	}
 
 	reject(error?: any) {
-		const tag = this.#status.tag;
+		const tag = this.#status.tag ? `(${this.#status.tag}) ` : '';
 
 		switch (this.#status.state) {
 			case Pledge.STATE.Pending:
@@ -126,10 +131,10 @@ export namespace Pledge {
 		catch?: boolean;
 		debug?: boolean;
 		state: Pledge.STATE;
-		fulfil: {
-			onResolve: Pledge.Resolve[];
-			onReject: Pledge.Reject[];
-			onSettle: Pledge.Settle[];
+		fulfil?: {
+			onResolve?: Pledge.Resolve[];
+			onReject?: Pledge.Reject[];
+			onSettle?: Pledge.Settle[];
 		}
 	}
 	export interface StatusValue<T> extends Pledge.Status<T> {
