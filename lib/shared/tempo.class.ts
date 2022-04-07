@@ -32,6 +32,7 @@ import { Temporal } from '@js-temporal/polyfill';
  */
 export class Tempo {
 	// Instance variables  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 	#config: Tempo.Config;
 	#value?: Tempo.DateTime;																	// constructor value
 	#args: Tempo.Argument;																		// constructor arguments
@@ -105,7 +106,7 @@ export class Tempo {
 		sep: new RegExp(/[\/\-\ \,]*/),													// list of separators between date-components
 		mod: new RegExp(/(?<mod>[\+\-\<\>]?[\=]?)?(?<nbr>\d*)?/)// modifiers (_,-,<,<=,>,>=)
 	}
-	static {																									// now, combine some of the above component codes
+	static {																									// now, combine some of the above units into common components
 		Tempo.units['hm'] = new RegExp('(' + Tempo.units.hh.source + Tempo.units.tm.source + ')');
 		Tempo.units['hms'] = new RegExp('(?<hms>' + Tempo.units.hh.source + '|' + Tempo.units.hm.source + '|' + Tempo.units.hm.source + Tempo.units.tm.source + Tempo.units.ff.source + ')');
 		Tempo.units['tzd'] = new RegExp('(?<tzd>[+-]' + Tempo.units.hm.source + '|Z)')
@@ -158,7 +159,7 @@ export class Tempo {
 	}
 
 	static #pattern: Tempo.Pattern[] = [];										// Array of regex-patterns to test until a match
-	static #months = asArray({ length: 13 }, {}) as Tempo.Months;	// Array of settings related to a Month
+	static #months = asArray({ length: 13 }, {}) as Tempo.Months;	// Tuple of settings related to a Month
 
 	static {																									// override #default with any tempo.config settings
 		const pledge = new Pledge<boolean | undefined>({
@@ -217,7 +218,7 @@ export class Tempo {
 
 	/** Tempo getters */
 	static get properties() {
-		return getAccessors<string>(Tempo);
+		return getAccessors(Tempo) as string[];
 	}
 
 	/** Tempo config settings */

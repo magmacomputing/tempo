@@ -117,7 +117,7 @@ export const compareObject = (obj1 = {}, obj2 = {}) => {
 	return JSON.stringify(obj1, keys) === JSON.stringify(obj2, keys);
 }
 
-/** get an string-array of 'getter' names for a Class */
+/** get a string-array of 'getter' names for a Class */
 export const getAccessors = <T>(obj: any = {}) => {
 	const getters = Object.getOwnPropertyDescriptors(obj.prototype);
 
