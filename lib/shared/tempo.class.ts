@@ -104,7 +104,7 @@ export class Tempo {
 		ff: new RegExp(/(\.\d+)?/),															// fractional seconds
 		am: new RegExp(/ ?(?<am>am|pm)?/),											// am/pm suffix
 		sep: new RegExp(/[\/\-\ \,]*/),													// list of separators between date-components
-		mod: new RegExp(/(?<mod>[\+\-\<\>]?[\=]?)?(?<nbr>\d*)?/)// modifiers (_,-,<,<=,>,>=)
+		mod: new RegExp(/(?<mod>[\+\-\<\>][\=]?(?<nbr>\d*))?/),	// modifiers (_,-,<,<=,>,>=)
 	}
 	static {																									// now, combine some of the above units into common components
 		Tempo.units['hm'] = new RegExp('(' + Tempo.units.hh.source + Tempo.units.tm.source + ')');
@@ -134,7 +134,7 @@ export class Tempo {
 			{ key: 'mmddyyhhmi', reg: ['dow', 'mm', 'sep', 'dd', 'sep', 'yy', '/ /', 'hms', 'am'] },
 			{ key: 'yymmdd', reg: ['dow', 'yy', 'sep', 'mm', 'sep', 'dd'] },
 			{ key: 'yymmddhhmi', reg: ['dow', 'yy', 'sep', 'mm', 'sep', 'dd', '/ /', 'hms', 'am'] },
-			{ key: 'dow', reg: ['mod', '/[\s]?/', 'dow'] },
+			{ key: 'dow', reg: ['mod', 'sep', 'dow'] },
 			{ key: 'mon', reg: ['mm'] },
 			{ key: 'isoDate', reg: ['yy', '/-/', 'mm', '/-/', 'dd', '/T/', 'hms', 'tzd'] },
 		]
@@ -410,8 +410,10 @@ export class Tempo {
 	#conform(tempo?: Tempo.DateTime) {
 		const arg = asType(tempo, { type: 'Tempo', class: Tempo });
 
-		if (['Number', 'BigInt'].includes(arg.type) && arg.value!.toString().length <= 7)
-			throw new Error('Cannot safely parse number with less than 8-digits: use string');
+		if (['Number', 'BigInt'].includes(arg.type)) {
+			if (arg.value!.toString().length <= 7)								// might be 'seconds', might be 'yyyymmdd', might be 'dmmyyyy'
+				throw new Error('Cannot safely parse number with less than 8-digits: use string');
+		}
 
 		// If value is a string | number | bigint
 		if (isType<string | number | bigint>(arg.value, 'String', 'Number', 'BigInt')) {
@@ -432,50 +434,55 @@ export class Tempo {
 					/**
 					 * If just day-of-week specified, calc date offset
 					 * Wed			-> Wed in the current week (might be earlier or later than current day)
-					 * -Wed			-> Wed last week				-> same as new Tempo('Wed').add(-1,'weeks')
-					 * +Wed			-> Wed next week				-> same as new Tempo('Wed').add(1, 'weeks')
+					 * -Wed			-> Wed last week				-> same as new Tempo('Wed').add({ weeks: -1 })
+					 * +Wed			-> Wed next week				-> same as new Tempo('Wed').add({ weeks: 1})
+					 * -3Wed		-> Wed three weeks ago  -> same as new Tempo('Wed').add({ weeks: 3 })
 					 * <Wed			-> Wed prior to today 	-> current week or previous week
 					 * <=Wed		-> Wed prior to and including today
-					 * -3Wed		-> Wed three weeks ago  -> same as new Tempo('Wed').add(-3,'weeks')
 					 */
-					if (Object.keys(pat.groups).every(el => ['dow', 'mod', 'nbr'].includes(el))) {
-						const dow = pat.groups['dow'].substring(0, 3).toProperCase();
-						const weeks = this.#now.daysInWeek * Number(isEmpty(pat.groups['nbr']) ? '1' : pat.groups['nbr']);
-						const offset = enumKeys(Tempo.WEEKDAY).findIndex(el => el === dow);
+					if (Object.keys(pat.groups).every(el => ['dow', 'mod', 'nbr'].includes(el)) && isDefined(pat.groups['dow'])) {
+						let { dow, mod = '', nbr } = pat.groups;
+						const weekday = dow.substring(0, 3).toProperCase();
+						const days = this.#now.daysInWeek * Number(isEmpty(nbr) ? '1' : nbr);
+						const offset = enumKeys(Tempo.WEEKDAY).findIndex(el => el === weekday);
 						let adj = this.#now.dayOfWeek - offset;					// number of days to offset from today
 
-						switch (pat.groups['mod']) {
+						mod = mod.substring(0, mod.lastIndexOf(nbr || ''));// remove the embedded 'nbr' capture group from 'mod'
+						switch (mod) {																	// switch on the 'modifier' character
 							case void 0:																	// current week
 							case '=':
 								break;
 							case '+':																			// next week
 							case '+=':
-								adj -= weeks;
+								adj -= days;
 								break;
 							case '-':																			// last week
 							case '-=':
-								adj += weeks;
+								adj += days;
 								break;
 							case '<':																			// latest dow (this week or prev)
 								if (this.#now.dayOfWeek <= offset)
-									adj += weeks;
+									adj += days;
 								break;
 							case '<=':																		// latest dow (prior to today)
 								if (this.#now.dayOfWeek < offset)
-									adj += weeks;
+									adj += days;
 								break;
 							case '>':																			// next dow
 								if (this.#now.dayOfWeek >= offset)
-									adj -= weeks;
+									adj -= days;
 								break;
 							case '>=':
 								if (this.#now.dayOfWeek > offset)
-									adj -= weeks;
+									adj -= days;
 								break;
 						}
 
-						this.#now = this.#now.subtract({ days: adj });	// adjust #now to new weekday
-						pat.groups['dd'] = this.#now.day.toString();		// and set 'dd' to the now-current day
+						const { year, month, day } = this.#now.subtract({ days: adj });
+						pat.groups['mod'] = mod;
+						pat.groups['yy'] = year.toString();							// set the now current year
+						pat.groups['mm'] = month.toString();						// and month
+						pat.groups['dd'] = day.toString();							// and day
 					}
 
 					/**
