@@ -1,5 +1,6 @@
-import { toProperCase } from '@module/shared/string.library';
 import { asArray, keyedBy, sortBy, type SortBy } from '@module/shared/array.library';
+import { toProperCase } from '@module/shared/string.library';
+import { isType } from '@module/shared/type.library';
 
 // Prototype extensions
 
@@ -42,7 +43,7 @@ if (!String.prototype.hasOwnProperty('replaceAll')) {
 		writable: false,
 		value: function (str: string, newStr: string) {
 
-			return Object.prototype.toString.call(str).toLowerCase() === '[object regexp]'
+			return isType<RegExp>(str, 'RegExp')
 				? this.replace(str, newStr)													// if a regex pattern
 				: this.replace(new RegExp(str, 'g'), newStr);				// if a string
 		}
