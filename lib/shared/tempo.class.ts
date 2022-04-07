@@ -104,7 +104,7 @@ export class Tempo {
 		ff: new RegExp(/(\.\d+)?/),															// fractional seconds
 		am: new RegExp(/ ?(?<am>am|pm)?/),											// am/pm suffix
 		sep: new RegExp(/[\/\-\ \,]*/),													// list of separators between date-components
-		mod: new RegExp(/(?<mod>[\+\-\<\>][\=]?(?<nbr>\d*))?/),	// modifiers (_,-,<,<=,>,>=)
+		mod: new RegExp(/((?<mod>[\+\-\<\>][\=]?)(?<nbr>\d*))?/),	// modifiers (_,-,<,<=,>,>=)
 	}
 	static {																									// now, combine some of the above units into common components
 		Tempo.units['hm'] = new RegExp('(' + Tempo.units.hh.source + Tempo.units.tm.source + ')');
@@ -441,13 +441,12 @@ export class Tempo {
 					 * <=Wed		-> Wed prior to and including today
 					 */
 					if (Object.keys(pat.groups).every(el => ['dow', 'mod', 'nbr'].includes(el)) && isDefined(pat.groups['dow'])) {
-						let { dow, mod = '', nbr } = pat.groups;
+						const { dow, mod = '', nbr } = pat.groups;
 						const weekday = dow.substring(0, 3).toProperCase();
 						const days = this.#now.daysInWeek * Number(isEmpty(nbr) ? '1' : nbr);
 						const offset = enumKeys(Tempo.WEEKDAY).findIndex(el => el === weekday);
 						let adj = this.#now.dayOfWeek - offset;					// number of days to offset from today
 
-						mod = mod.substring(0, mod.lastIndexOf(nbr || ''));// remove the embedded 'nbr' capture group from 'mod'
 						switch (mod) {																	// switch on the 'modifier' character
 							case void 0:																	// current week
 							case '=':
@@ -479,7 +478,6 @@ export class Tempo {
 						}
 
 						const { year, month, day } = this.#now.subtract({ days: adj });
-						pat.groups['mod'] = mod;
 						pat.groups['yy'] = year.toString();							// set the now current year
 						pat.groups['mm'] = month.toString();						// and month
 						pat.groups['dd'] = day.toString();							// and day
