@@ -244,8 +244,8 @@ export class Tempo {
 			compass: args.compass ?? Tempo.#default.compass ?? Tempo.COMPASS.North,
 			debug: args.debug ?? Tempo.#default.debug,						// debug-mode for this instance
 			catch: args.catch ?? Tempo.#default.catch,						// catch-mode for this instance
-			pattern: [],																					// instance-patterns
 			month: clone(Tempo.#months),													// clone the months
+			pattern: [],																					// instance-patterns
 		}
 
 		if (this.#config.locale !== Tempo.#default.locale) {		// change of locale, swap patterns-order ?
