@@ -6,14 +6,14 @@ import { Temporal } from '@js-temporal/polyfill';
 
 
 /** the actual type reported by ECMAScript */
-const esType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
+const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
 
 /**
  * return a ProperCase string of an object's type.  
  * If instance, return Class name
  */
 export const getType = (obj?: any, ...instances: Instance[]) => {
-	const type = esType(obj);
+	const type = protoType(obj);
 
 	switch (true) {
 		case type === 'Object':
@@ -51,7 +51,7 @@ export const isNumber = (obj?: unknown): obj is number => isType(obj, 'Number');
 export const isInteger = (obj?: unknown): obj is bigint => isType(obj, 'BigInt');
 export const isBoolean = <T>(obj?: T): obj is Extract<T, boolean> => isType(obj, 'Boolean');
 export const isArray = <T>(obj?: T | Array<T>): obj is Array<T> => isType(obj, 'Array');
-export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => esType(obj) === 'Object' && 'length' in obj && Object.keys(obj).every(key => key === 'length' || !isNaN(Number(key)));
+export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => protoType(obj) === 'Object' && 'length' in obj && Object.keys(obj).every(key => key === 'length' || !isNaN(Number(key)));
 export const isObject = <T>(obj?: T): obj is Extract<T, Record<any, any>> => isType(obj, 'Object');
 export const isDate = (obj?: unknown): obj is Date => isType(obj, 'Date');
 export const isRegExp = (obj?: unknown): obj is RegExp => isType(obj, 'RegExp');
@@ -70,7 +70,7 @@ export const isPromise = <T>(obj?: unknown): obj is Promise<T> => isType(obj, 'P
 export const isMap = <K, V>(obj?: unknown): obj is Map<K, V> => isType(obj, 'Map');
 export const isSet = <K>(obj?: unknown): obj is Set<K> => isType(obj, 'Set');
 export const isError = (err: unknown): err is Error => isType(err, 'Error');
-export const isTemporal = (obj: unknown): obj is Temporals => esType(obj).startsWith('Temporal.');
+export const isTemporal = (obj: unknown): obj is Temporals => protoType(obj).startsWith('Temporal.');
 
 export const nullToZero = <T>(obj: T) => obj ?? 0;
 export const nullToEmpty = <T>(obj: T) => obj ?? '';
