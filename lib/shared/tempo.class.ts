@@ -159,12 +159,12 @@ export class Tempo {
 	}
 
 	static #pattern: Tempo.Pattern[] = [];										// Array of regex-patterns to test until a match
-	static #months = asArray({ length: 13 }, {}) as Tempo.Months;	// Tuple of settings related to a Month
+	static #months = asArray({ length: 13 }, {}) as Tempo.Months;	// Array of settings related to a Month
 
 	static {																									// override #default with any tempo.config settings
 		const pledge = new Pledge<boolean | undefined>({
 			tag: 'config',
-			onSettle: () => console.log('Tempo: ', omit(this.#default, 'pattern'))
+			onSettle: () => console.log('Tempo: ', omit(this.#default, 'pattern')),
 		});
 
 		if (isDefined(window)) {																// TODO: skip nodejs for now; only browser
