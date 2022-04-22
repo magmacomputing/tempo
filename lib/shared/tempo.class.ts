@@ -213,7 +213,7 @@ export class Tempo {
 	 * static method to allow sorting array of Tempo  
 	 * usage: [tempo1, tempo2, tempo3].sort(Tempo.compare)
 	 */
-	static compare = ((a: Tempo, b: Tempo) => a.now - b.now);
+	static compare = ((a: Tempo, b: Tempo) => a.era - b.era);
 
 	/** static method to create a new Tempo */
 	static from = (tempo?: Tempo.DateTime, args: Tempo.Argument = {}) => new Tempo(tempo, args);
@@ -317,7 +317,7 @@ export class Tempo {
 	/** number of weeks */																		get ww() { return this.#temporal.weekOfYear }
 	/** timezone */																						get tz() { return this.#temporal.timeZone.toString() }
 	/** seconds (timeStamp) since Unix epoch */								get ts() { return this.#temporal.epochSeconds }
-	/** nanoseconds (BigInt) since Unix epoch */							get now() { return this.#temporal.epochNanoseconds }
+	/** nanoseconds (BigInt) since Unix epoch */							get era() { return this.#temporal.epochNanoseconds }
 	/** weekday: Mon=1, Sun=7 */															get dow() { return this.#temporal.dayOfWeek }
 	/** short month name */																		get mmm() { return Tempo.MONTH[this.#temporal.month] }
 	/** long month name */																		get mon() { return Tempo.MONTHS[this.#temporal.month] }
