@@ -1,4 +1,5 @@
 import { isNumeric } from '@module/shared/number.library';
+import { isDefined } from './type.library';
 
 /** General utility functions */
 
@@ -33,5 +34,19 @@ export const getCaller = () => {
 export const getScript = (nbr = 1) =>
 	decodeURI(new Error().stack?.match(/([^ \n\(@])*([a-z]*:\/\/\/?)*?[a-z0-9\/\\]*\.js/ig)?.[nbr] ?? '');
 
-	/** pad a string with non-blocking spaces, to help right-align a display */
+/** pad a string with non-blocking spaces, to help right-align a display */
 export const padString = (str: string | number, pad = 6) => (isNumeric(str) ? str.toFixed(2).toString() : str ?? '').padStart(pad, '\u007F');
+
+/** determine Javascript environment context */
+export const getContext = () => {
+	if (typeof (<any>window)?.SpreadsheetApp === 'object')
+		return 'google-apps-script';
+
+	if (typeof (<any>window) === 'object' && '[object Window]' === window.toString.call(window))
+		return 'browser';
+
+	if (typeof (<any>global) === 'object' && '[object global]' === global.toString.call(global))
+		return 'nodejs';
+
+	return 'unknown';
+}
