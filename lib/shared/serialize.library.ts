@@ -1,4 +1,4 @@
-// import { Tempo } from '@module/shared/tempo.class';			// circular reference
+// import { Tempo } from '@module/shared/tempo.class';			// circular reference ??
 import { asType, isEmpty, isFunction, isString } from '@module/shared/type.library';
 
 /** YOU MUST REMOVE THIS LINE AFTER TEMPORAL REACHES STAGE-4 IN THE BROWSER */
@@ -37,7 +37,7 @@ export const copy: Copy = <T>(obj: T, sentinel?: Function) => {
 	}
 }
 
-const replacer = (key: string, val: any) => isEmpty(key) ? val : stringify(val);
+const replacer = (key: string, val: any) => isEmpty(key) ? val : stringify(val, 1);
 const reviver = (sentinel?: Function) => (key: string, val: any) => isEmpty(key) ? val : objectify(val, sentinel);
 const clean = (val: string) => val
 	// .replace(/\"\['/g, '[')
@@ -56,9 +56,9 @@ const clean = (val: string) => val
 	.replaceAll('\\"', '\"')
 
 /** Serialize an object for stashing in Web Storage, Cache, etc */
-export const stringify = (obj: any, prefix = true): string => {
+export const stringify = (obj: any, ...rest: any[]): string => {
 	const arg = asType(obj);
-	const val = prefix ? `${arg.type}:` : '';
+	const val = `${arg.type}:`;
 
 	switch (arg.type) {
 		case 'Object':
@@ -69,6 +69,10 @@ export const stringify = (obj: any, prefix = true): string => {
 			return arg.value;
 
 		case 'Number':
+			return !rest.length
+				? val + arg.value.toString()												// top-level stringified
+				: arg.value as unknown as string;										// return as-is
+
 		case 'BigInt':
 			return val + arg.value.toString();
 
@@ -146,8 +150,8 @@ export const objectify = <T extends any>(obj: any, sentinel?: Function): T => {
 		case str.startsWith('Boolean:'):
 			return (segment === 'true') as T;
 
-		// case str.startsWith('Tempo:'):
-		// 	return Tempo.from(segment) as T;
+		case str.startsWith('Tempo:'):
+			return Tempo.from(segment) as T;
 
 		case str.startsWith('Temporal.'):												// we don't expect a Temporal.Now object
 			const api = str.split('.')[1].split(':')[0] as Exclude<keyof typeof Temporal, 'Now'>;
