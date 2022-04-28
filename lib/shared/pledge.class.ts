@@ -100,7 +100,7 @@ export class Pledge<T> {
 						console.warn(msg);
 					return err;																				// User needs to handle the error
 				}
-				else throw new Error(`Pledge ${tag}already resolved: "${(this.#status as Pledge.StatusValue<T>).value}"`);
+				else throw new Error(msg);
 		}
 	}
 
@@ -114,9 +114,9 @@ export class Pledge<T> {
 }
 
 export namespace Pledge {
-	export type Resolve = (val: any) => any;									// functions to call after Pledge resolves
-	export type Reject = (err: Error) => any;									// functions to call after Pledge rejects
-	export type Settle = () => void;													// functions to call after Pledge settles
+	export type Resolve = (val: any) => any;									// function to call after Pledge resolves
+	export type Reject = (err: Error) => any;									// function to call after Pledge rejects
+	export type Settle = () => void;													// function to call after Pledge settles
 
 	export type Constructor = { tag?: string, onResolve?: TValues<Pledge.Resolve>, onReject?: TValues<Pledge.Reject>, onSettle?: TValues<Pledge.Settle>, catch?: boolean, debug?: boolean }
 
