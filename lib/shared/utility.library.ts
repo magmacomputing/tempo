@@ -39,13 +39,13 @@ export const padString = (str: string | number, pad = 6) => (isNumeric(str) ? st
 
 /** determine Javascript environment context */
 export const getContext = () => {
-	if (typeof (<any>window)?.SpreadsheetApp === 'object')
+	if (typeof (globalThis.window as any)?.SpreadsheetApp === 'object')
 		return 'google-apps-script';
 
-	if (typeof (<any>window) === 'object' && '[object Window]' === window.toString.call(window))
+	if (typeof (globalThis.window as any) === 'object' && '[object Window]' === window.toString.call(window))
 		return 'browser';
 
-	if (typeof (<any>global) === 'object' && '[object global]' === global.toString.call(global))
+	if (typeof (globalThis.global as any) === 'object' && '[object global]' === global.toString.call(global))
 		return 'nodejs';
 
 	return 'unknown';

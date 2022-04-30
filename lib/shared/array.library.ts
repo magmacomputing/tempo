@@ -3,13 +3,17 @@ import { getPath } from '@module/shared/object.library';
 import { copy } from '@module/shared/serialize.library';
 import { asType, isNumber, isDate, isIterable, isString, isBoolean, isArrayLike, nullToValue } from '@module/shared/type.library';
 
-type AsArray = {
-	<T>(arr: Exclude<ArrayLike<T>, string>): T[];
-	<T>(arr: T | Exclude<Iterable<T>, string>): NonNullable<T>[];
-	<T, K>(arr: Iterable<T> | ArrayLike<T>, fill: K): K[];
-}
 /** Coerce value into value[], if not already value[], with optional fill Object */
-export const asArray: AsArray = <T, K>(arr: T | Iterable<T> | ArrayLike<T> = [], fill?: K): (T | K)[] => {
+// type AsArray = {
+// 	<T>(arr: Exclude<ArrayLike<T>, string>): T[];
+// 	<T>(arr: T | Exclude<Iterable<T>, string>): NonNullable<T>[];
+// 	<T, K>(arr: Iterable<T> | ArrayLike<T>, fill: K): K[];
+// }
+// export const asArray: AsArray = <T, K>(arr: T | Iterable<T> | ArrayLike<T> = [], fill?: K): (T | K)[] => {
+export function asArray<T>(arr: Exclude<ArrayLike<T>, string>): T[];
+export function asArray<T>(arr: T | Exclude<Iterable<T>, string>): NonNullable<T>[];
+export function asArray<T, K>(arr: Iterable<T> | ArrayLike<T>, fill: K): K[];
+export function asArray<T, K>(arr: T | Iterable<T> | ArrayLike<T> = [], fill?: K): (T | K)[] {
 	switch (true) {
 		case isArrayLike<T>(arr):																// allow for {length:nn} objects
 		case isIterable<T>(arr) && !isString(arr):							// dont iterate Strings

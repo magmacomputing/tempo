@@ -1,12 +1,14 @@
 import { asArray } from '@module/shared/array.library';
 import { asString } from '@module/shared/string.library';
-import { isType, type TValues } from '@module/shared/type.library';
+import { type TValues } from '@module/shared/type.library';
 
 /** convert String to Number */
-export const asNumber = (str?: string | number) => parseFloat(str?.toString() ?? 'NaN');
+// export const asNumber = (str?: string | number) => parseFloat(str?.toString() ?? 'NaN');
+export function asNumber(str?: string | number) { return parseFloat(str?.toString() ?? 'NaN') }
 
 /** test if can convert String to Number */
-export const isNumeric = (str?: string | number): str is number => !isNaN(asNumber(str)) && isFinite(str as number);
+// export const isNumeric = (str?: string | number): str is number => !isNaN(asNumber(str)) && isFinite(str as number);
+export function isNumeric(str?: string | number): str is number { return !isNaN(asNumber(str)) && isFinite(str as number) }
 
 /** return as Number if possible, else String */
 export const ifNumeric = (str?: string | number, stripZero = false) =>
