@@ -1,6 +1,6 @@
 import { asString } from '@module/shared/string.library';
 import { getPath } from '@module/shared/object.library';
-import { copy } from '@module/shared/serialize.library';
+import { clonify } from '@module/shared/serialize.library';
 import { asType, isNumber, isDate, isIterable, isString, isBoolean, isArrayLike, nullToValue } from '@module/shared/type.library';
 
 /** Coerce value into value[], if not already value[], with optional fill Object */
@@ -22,7 +22,7 @@ export function asArray<T, K>(arr: T | Iterable<T> | ArrayLike<T> = [], fill?: K
 			return Array.from<T, K>(arr as T[], val => {
 				return args.type === 'Undefined' || val !== void 0
 					? val as unknown as K															// if no 'fill', then use val
-					: copy(fill as K)																	// clone 'fill' to create new Objects
+					: clonify(fill as K)																	// clone 'fill' to create new Objects
 			});
 
 		default:

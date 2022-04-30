@@ -177,8 +177,9 @@ export class Tempo {
 			default:
 		}
 
+		const context = getContext();
 		let store: string | undefined = void 0;
-		switch (getContext()) {
+		switch (context) {
 			case 'browser':
 				store = (<any>window).localStorage.getItem(Tempo.#configKey);
 				break;
@@ -207,7 +208,8 @@ export class Tempo {
 		this.#fiscal(Tempo.#default.fiscal, this.#months);			// setup quarters
 		enumKeys(Tempo.MONTH).forEach((mon, idx) => this.#months[idx].month = mon, 0)
 
-		console.log('Tempo: ', omit(this.#default, 'pattern'));
+		if (context !== 'nodejs')
+			console.log('Tempo: ', omit(this.#default, 'pattern'));
 	}
 
 	/**

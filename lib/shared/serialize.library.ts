@@ -1,5 +1,5 @@
-// import { Tempo } from '@module/shared/tempo.class';			// circular reference ??
-import { getTempo } from '@module/shared/tempo.class';
+import { Tempo } from '@module/shared/tempo.class';					// circular reference ??
+// import { getTempo } from '@module/shared/tempo.class';
 import { asType, isEmpty, isFunction, isString } from '@module/shared/type.library';
 
 /** YOU MUST REMOVE THIS LINE AFTER TEMPORAL REACHES STAGE-4 IN THE BROWSER */
@@ -16,55 +16,53 @@ export function clone<T>(obj: T) {
 	try {
 		copy = JSON.parse(JSON.stringify(obj));									// this will also run any toString() methods
 	} catch (error) {
-		console.warn('Could not serialize object: ', obj);
+		console.warn('Could not clone object: ', obj);
 	}
 	// }
 
 	return copy;
 }
 
-// type Copy = {
-// 	<T>(obj: T): T;
-// 	<T>(obj: T, sentinel: Function): T;
-// };
-// export const copy: Copy = <T>(obj: T, sentinel?: Function) => {
 /** deep-copy an Object	*/
-export function copy<T>(obj: T): T;
+export function clonify<T>(obj: T): T;
 /** deep-copy and replace \<undefined> field with a call to Sentinel */
-export function copy<T>(obj: T, sentinel: Function): T;
+export function clonify<T>(obj: T, sentinel: Function): T;
 /** deep-copy and replace \<undefined> field with a Sentinel function */
-export function copy<T>(obj: T, sentinel?: Function): T {
+export function clonify<T>(obj: T, sentinel?: Function): T {
 	try {
 		return objectify(stringify(obj), sentinel) as T;
-	} catch (error) {
-		console.warn('Could not serialize object: ', obj);
+	} catch (error: any) {
+		console.warn('Could not clonify object: ', obj);
+		console.warn('stack: ', error.stack);
 		return obj;
 	}
 }
 
-const replacer = (key: string, val: any) => isEmpty(key) ? val : stringify(val, 1);
-const reviver = (sentinel?: Function) => (key: string, val: any) => isEmpty(key) ? val : objectify(val, sentinel);
-const clean = (val: string) => val
-	// .replace(/\"\['/g, '[')
-	// .replace(/\]\"/g, ']')
-	// .replace(/\"\{/g, '{')
-	// .replace(/\}\"/g, '}')
-	// .replace(/\=\\\"/g, '=\'')
-	// .replace(/\;\\\"/g, ';\'')
-	// .replace(/\\\"/g, '\"')
-	.replaceAll('"[', '[')
-	.replaceAll(']"', ']')
-	.replaceAll('"{', '{')
-	.replaceAll('}"', '}')
-	.replaceAll('=\\"', "=\'")																// try to keep embedded quotes
-	.replaceAll(';\\"', ";\'")																// around html inline attributes
-	.replaceAll('\\"', '\"')
+function replacer(key: string, val: any): any { return isEmpty(key) ? val : stringify(val, 1) };
+function reviver(sentinel?: Function): any { return (key: string, val: any) => isEmpty(key) ? val : objectify(val, sentinel) };
+function clean(val: string) {
+	return val
+		// .replace(/\"\['/g, '[')
+		// .replace(/\]\"/g, ']')
+		// .replace(/\"\{/g, '{')
+		// .replace(/\}\"/g, '}')
+		// .replace(/\=\\\"/g, '=\'')
+		// .replace(/\;\\\"/g, ';\'')
+		// .replace(/\\\"/g, '\"')
+		.replaceAll('"[', '[')
+		.replaceAll(']"', ']')
+		.replaceAll('"{', '{')
+		.replaceAll('}"', '}')
+		.replaceAll('=\\"', "=\'")																// try to keep embedded quotes
+		.replaceAll(';\\"', ";\'")																// around html inline attributes
+		.replaceAll('\\"', '\"')
+}
 
 /** Serialize an object for stashing in Web Storage, Cache, etc */
-export const stringify = (obj: any, ...rest: any[]): string => {
+export function stringify(obj: any, ...rest: any[]): string {
 	const arg = asType(obj);
 	const val = `${arg.type}:`;
-console.log('stringify: ', arg);
+
 	switch (arg.type) {
 		case 'Object':
 		case 'Array':
@@ -111,7 +109,7 @@ console.log('stringify: ', arg);
 }
 
 /** Decode a string to rebuild the original Object-type */
-export const objectify = <T extends any>(obj: any, sentinel?: Function): T => {
+export function objectify<T extends any>(obj: any, sentinel?: Function): T {
 	if (!isString(obj))
 		return obj as T;
 	const str = obj.trim();				                						// easier to work with trimmed string
@@ -153,8 +151,7 @@ export const objectify = <T extends any>(obj: any, sentinel?: Function): T => {
 			return (segment === 'true') as T;
 
 		case str.startsWith('Tempo:'):
-			// return Tempo.from(segment) as T;
-			return getTempo(segment) as T;
+			return Tempo.from(segment) as T;
 
 		case str.startsWith('Temporal.'):												// we don't expect a Temporal.Now object
 			const api = str.split('.')[1].split(':')[0] as Exclude<keyof typeof Temporal, 'Now'>;
