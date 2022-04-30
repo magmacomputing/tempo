@@ -81,7 +81,8 @@ export const isEqual = (obj1: any = {}, obj2: any = {}): boolean => {
 }
 
 /** omit top-level keys from an Object */
-export const omit = <T extends object>(obj: T, ...keys: (keyof T)[]) => {
+// export const omit = <T extends object>(obj: T, ...keys: (keyof T)[]) => {
+export function omit<T extends object>(obj: T, ...keys: (keyof T)[]) {
 	let res = clone(obj);																			// create a safe 'stringified' copy
 
 	keys.forEach(key => Reflect.deleteProperty(res, key));

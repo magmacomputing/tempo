@@ -1,11 +1,13 @@
 // import { Tempo } from '@module/shared/tempo.class';			// circular reference ??
+import { getTempo } from '@module/shared/tempo.class';
 import { asType, isEmpty, isFunction, isString } from '@module/shared/type.library';
 
 /** YOU MUST REMOVE THIS LINE AFTER TEMPORAL REACHES STAGE-4 IN THE BROWSER */
 import { Temporal } from '@js-temporal/polyfill';
 
+// export const clone = <T>(obj: T) => {
 /** make a deep-copy, using standard browser or JSON functions */
-export const clone = <T>(obj: T) => {
+export function clone<T>(obj: T) {
 	let copy = obj;																						// default to original object
 
 	// try {
@@ -21,14 +23,17 @@ export const clone = <T>(obj: T) => {
 	return copy;
 }
 
-type Copy = {
-	/** deep-copy an Object	*/
-	<T>(obj: T): T;
-	/** deep-copy and replace \<undefined> field with a call to Sentinel */
-	<T>(obj: T, sentinel: Function): T;
-};
+// type Copy = {
+// 	<T>(obj: T): T;
+// 	<T>(obj: T, sentinel: Function): T;
+// };
+// export const copy: Copy = <T>(obj: T, sentinel?: Function) => {
+/** deep-copy an Object	*/
+export function copy<T>(obj: T): T;
+/** deep-copy and replace \<undefined> field with a call to Sentinel */
+export function copy<T>(obj: T, sentinel: Function): T;
 /** deep-copy and replace \<undefined> field with a Sentinel function */
-export const copy: Copy = <T>(obj: T, sentinel?: Function) => {
+export function copy<T>(obj: T, sentinel?: Function): T {
 	try {
 		return objectify(stringify(obj), sentinel) as T;
 	} catch (error) {
@@ -59,7 +64,7 @@ const clean = (val: string) => val
 export const stringify = (obj: any, ...rest: any[]): string => {
 	const arg = asType(obj);
 	const val = `${arg.type}:`;
-
+console.log('stringify: ', arg);
 	switch (arg.type) {
 		case 'Object':
 		case 'Array':
@@ -84,9 +89,6 @@ export const stringify = (obj: any, ...rest: any[]): string => {
 
 		case 'Date':																						// special treatment
 			return val + arg.value.toISOString();
-
-		// case 'Blob':                                            // TODO
-		// 	return val + arg.value.size;
 
 		case 'Undefined':
 		case 'Null':
@@ -151,7 +153,8 @@ export const objectify = <T extends any>(obj: any, sentinel?: Function): T => {
 			return (segment === 'true') as T;
 
 		case str.startsWith('Tempo:'):
-			return Tempo.from(segment) as T;
+			// return Tempo.from(segment) as T;
+			return getTempo(segment) as T;
 
 		case str.startsWith('Temporal.'):												// we don't expect a Temporal.Now object
 			const api = str.split('.')[1].split(':')[0] as Exclude<keyof typeof Temporal, 'Now'>;

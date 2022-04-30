@@ -7,6 +7,8 @@ import { getAccessors, omit } from '@module/shared/object.library';
 import { asNumber, isNumeric, split } from '@module/shared/number.library';
 import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isArray, isRegExp, type OneKey } from '@module/shared/type.library';
 
+import '@module/shared/prototype.library';									// patch prototypes
+
 /** TODO: THIS IMPORT MUST BE REMOVED ONCE TEMPORAL IS SUPPORTED IN BROWSERS */
 import { Temporal } from '@js-temporal/polyfill';
 
@@ -140,10 +142,6 @@ export class Tempo {
 	 * useful primarily for 'order of parsing input', as well as .quarter and .season
 	 */
 	static init = () => {
-		const country = Tempo.#Intl.timeZone.split('/')[0];
-		const context = getContext();
-		let config: Tempo.ConfigFile | undefined;								// config can override #default
-
 		Object.assign(Tempo.#default, {
 			timeZone: this.#Intl.timeZone,												// default TimeZone
 			calendar: this.#Intl.calendar,												// default Calendar
@@ -171,6 +169,7 @@ export class Tempo {
 			]
 		})
 
+		const country = Tempo.#Intl.timeZone.split('/')[0];
 		switch (country) {																			// TODO: better country detection
 			case 'Australia':
 				Object.assign(Tempo.#default, { compass: Tempo.COMPASS.South, fiscal: Tempo.MONTH[Tempo.MONTH.Jul], locale: 'en-AU' });
@@ -178,19 +177,21 @@ export class Tempo {
 			default:
 		}
 
-		switch (context) {
+		let store: string | undefined = void 0;
+		switch (getContext()) {
 			case 'browser':
-				config = objectify((<any>window)?.localStorage.getItem(Tempo.#configKey));
+				store = (<any>window).localStorage.getItem(Tempo.#configKey);
 				break;
 			case 'nodejs':
-				config = objectify(process?.env?.[Tempo.#configKey]);
+				store = (<any>process).env[Tempo.#configKey];
 				break;
 			case 'google-apps-script':
-				config = objectify((<any>window)?.PropertiesService?.getUserProperties().getProperty(Tempo.#configKey));
+				store = (<any>window).PropertiesService?.getUserProperties().getProperty(Tempo.#configKey);
 				break;
 		}
 
-		if (isDefined(config)) {																// found a config in storage
+		if (isDefined(store)) {																	// found a config in storage
+			const config = objectify(store) as Tempo.ConfigFile;	// config can override #default
 			config.locale &&= config.locale.replace('_', '-');		// standardize locale string
 			Object.assign(this.#default, omit(config, 'pattern'));// override defaults from storage
 			(config.pattern ?? [])
