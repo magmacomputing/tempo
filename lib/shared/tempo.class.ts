@@ -178,16 +178,16 @@ export class Tempo {
 		}
 
 		const context = getContext();
-		let store: string | undefined = void 0;
-		switch (context) {
+		let store: string | undefined | null = void 0;
+		switch (context.type) {
 			case CONTEXT.Browser:
-				store = (<any>window).localStorage.getItem(Tempo.#configKey);
+				store = context.global.localStorage.getItem(Tempo.#configKey);
 				break;
 			case CONTEXT.NodeJS:
-				store = (<any>process).env[Tempo.#configKey];
+				store = context.global.env[Tempo.#configKey];
 				break;
 			case CONTEXT.GoogleAppsScript:
-				store = (<any>window).PropertiesService?.getUserProperties().getProperty(Tempo.#configKey);
+				store = context.global.PropertiesService?.getUserProperties().getProperty(Tempo.#configKey);
 				break;
 		}
 
@@ -209,13 +209,13 @@ export class Tempo {
 		enumKeys(Tempo.MONTH).forEach((mon, idx) => this.#months[idx].month = mon, 0);
 
 		if (isUndefined(store)) {
-			switch (context) {
+			switch (context.type) {
 				case CONTEXT.Browser:
-					(<any>window).localStorage.setItem(Tempo.#configKey, stringify(omit(this.#default, 'pattern')));
+					context.global.localStorage.setItem(Tempo.#configKey, stringify(omit(this.#default, 'pattern')));
 					break;
 			}
 		}
-		if (context !== 'nodejs')
+		if (context.type !== CONTEXT.NodeJS)
 			console.log('Tempo: ', omit(this.#default, 'pattern'));
 	}
 
