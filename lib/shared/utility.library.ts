@@ -37,16 +37,22 @@ export const getScript = (nbr = 1) =>
 /** pad a string with non-blocking spaces, to help right-align a display */
 export const padString = (str: string | number, pad = 6) => (isNumeric(str) ? str.toFixed(2).toString() : str ?? '').padStart(pad, '\u007F');
 
+export enum CONTEXT {
+	'Unknown' = 'unknown',
+	'Browser' = 'browser',
+	'NodeJS' = 'nodejs',
+	'GoogleAppsScript' = 'google-apps-script',
+}
 /** determine Javascript environment context */
 export const getContext = () => {
 	if (typeof (globalThis.window as any)?.SpreadsheetApp === 'object')
-		return 'google-apps-script';
+		return CONTEXT.GoogleAppsScript;
 
 	if (typeof (globalThis.window as any) === 'object' && '[object Window]' === window.toString.call(window))
-		return 'browser';
+		return CONTEXT.Browser;
 
 	if (typeof (globalThis.global as any) === 'object' && '[object global]' === global.toString.call(global))
-		return 'nodejs';
+		return CONTEXT.NodeJS;
 
-	return 'unknown';
+	return CONTEXT.Unknown;
 }
