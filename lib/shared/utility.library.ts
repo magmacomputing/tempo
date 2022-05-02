@@ -46,14 +46,15 @@ export enum CONTEXT {
 /** determine Javascript environment context */
 export const getContext = () => {
 	const global = globalThis as any;
+
 	if (isDefined(global.window?.SpreadsheetApp))
-		return { type: CONTEXT.GoogleAppsScript, global: global };
+		return { global, type: CONTEXT.GoogleAppsScript };
 
 	if (isDefined(global.window?.document))
-		return { type: CONTEXT.Browser, global: global as Window & typeof globalThis };
+		return { global, type: CONTEXT.Browser };
 
 	if (isDefined(global.process?.versions.node))
-		return { type: CONTEXT.NodeJS, global: global.process };
+		return { global, type: CONTEXT.NodeJS };
 
-	return { type: CONTEXT.Unknown, global: global };
+	return { global, type: CONTEXT.Unknown };
 }

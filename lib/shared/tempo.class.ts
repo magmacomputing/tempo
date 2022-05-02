@@ -184,7 +184,7 @@ export class Tempo {
 				store = context.global.localStorage.getItem(Tempo.#configKey);
 				break;
 			case CONTEXT.NodeJS:
-				store = context.global.env[Tempo.#configKey];
+				store = context.global.process.env[Tempo.#configKey];
 				break;
 			case CONTEXT.GoogleAppsScript:
 				store = context.global.PropertiesService?.getUserProperties().getProperty(Tempo.#configKey);
