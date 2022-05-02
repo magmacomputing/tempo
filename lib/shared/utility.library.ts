@@ -1,5 +1,5 @@
 import { isNumeric } from '@module/shared/number.library';
-import { isDefined } from './type.library';
+import { isDefined } from '@module/shared/type.library';
 
 /** General utility functions */
 
@@ -45,14 +45,15 @@ export enum CONTEXT {
 }
 /** determine Javascript environment context */
 export const getContext = () => {
-	if (typeof (globalThis.window as any)?.SpreadsheetApp === 'object')
-		return CONTEXT.GoogleAppsScript;
+	const global = globalThis as any;
+	if (isDefined(global.window?.SpreadsheetApp))
+		return { type: CONTEXT.GoogleAppsScript, global: global };
 
-	if (typeof (globalThis.window as any) === 'object' && '[object Window]' === window.toString.call(window))
-		return CONTEXT.Browser;
+	if (isDefined(global.window?.document))
+		return { type: CONTEXT.Browser, global: global as Window & typeof globalThis };
 
-	if (typeof (globalThis.global as any) === 'object' && '[object global]' === global.toString.call(global))
-		return CONTEXT.NodeJS;
+	if (isDefined(global.process?.versions.node))
+		return { type: CONTEXT.NodeJS, global: global.process };
 
-	return CONTEXT.Unknown;
+	return { type: CONTEXT.Unknown, global: global };
 }
