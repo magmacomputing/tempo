@@ -27,7 +27,7 @@
     "@js-temporal/polyfill": "^0.4.1"
   },
   "devDependencies": {
-    "@types/node": "^17.0.25",
+    "@types/node": "^17.0.31",
     "import-remap": "^0.5.0"
   }
 }
