@@ -1,7 +1,7 @@
 import { asArray } from '@module/shared/array.library';
 import { enumKeys } from '@module/shared/enum.library';
 import { clone, stringify, objectify } from '@module/shared/serialize.library';
-import { getContext } from '@module/shared/utility.library';
+import { getContext, CONTEXT } from '@module/shared/utility.library';
 import { asString, pad } from '@module/shared/string.library';
 import { getAccessors, omit } from '@module/shared/object.library';
 import { asNumber, isNumeric, split } from '@module/shared/number.library';
@@ -180,13 +180,13 @@ export class Tempo {
 		const context = getContext();
 		let store: string | undefined = void 0;
 		switch (context) {
-			case 'browser':
+			case CONTEXT.Browser:
 				store = (<any>window).localStorage.getItem(Tempo.#configKey);
 				break;
-			case 'nodejs':
+			case CONTEXT.NodeJS:
 				store = (<any>process).env[Tempo.#configKey];
 				break;
-			case 'google-apps-script':
+			case CONTEXT.GoogleAppsScript:
 				store = (<any>window).PropertiesService?.getUserProperties().getProperty(Tempo.#configKey);
 				break;
 		}
@@ -206,8 +206,15 @@ export class Tempo {
 		this.#swap(Tempo.#default.locale, this.#pattern, this.#default.pattern);
 		this.#compass(Tempo.#default.compass, this.#months);		// setup seasons
 		this.#fiscal(Tempo.#default.fiscal, this.#months);			// setup quarters
-		enumKeys(Tempo.MONTH).forEach((mon, idx) => this.#months[idx].month = mon, 0)
+		enumKeys(Tempo.MONTH).forEach((mon, idx) => this.#months[idx].month = mon, 0);
 
+		if (isUndefined(store)) {
+			switch (context) {
+				case CONTEXT.Browser:
+					(<any>window).localStorage.setItem(Tempo.#configKey, stringify(omit(this.#default, 'pattern')));
+					break;
+			}
+		}
 		if (context !== 'nodejs')
 			console.log('Tempo: ', omit(this.#default, 'pattern'));
 	}

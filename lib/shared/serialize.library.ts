@@ -5,7 +5,6 @@ import { asType, isEmpty, isFunction, isString } from '@module/shared/type.libra
 /** YOU MUST REMOVE THIS LINE AFTER TEMPORAL REACHES STAGE-4 IN THE BROWSER */
 import { Temporal } from '@js-temporal/polyfill';
 
-// export const clone = <T>(obj: T) => {
 /** make a deep-copy, using standard browser or JSON functions */
 export function clone<T>(obj: T) {
 	let copy = obj;																						// default to original object
