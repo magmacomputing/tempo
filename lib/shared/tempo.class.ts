@@ -165,7 +165,8 @@ export class Tempo {
 				{ key: 'yymmddhhmi', reg: ['dow', 'yy', 'sep', 'mm', 'sep', 'dd', '/ /', 'hms', 'am'] },
 				{ key: 'dow', reg: ['mod', 'sep', 'dow'] },
 				{ key: 'mon', reg: ['mm'] },
-				{ key: 'isoDate', reg: ['yy', '/-/', 'mm', '/-/', 'dd', '/T/', 'hms', 'tzd'] },
+				{ key: 'yymm', reg: ['yy', 'sep', 'mm'] },
+				// { key: 'isoDate', reg: ['yy', '/-/', 'mm', '/-/', 'dd', '/T/', 'hms', 'tzd'] },
 			]
 		})
 
@@ -223,7 +224,7 @@ export class Tempo {
 	 * static method to allow sorting array of Tempo  
 	 * usage: [tempo1, tempo2, tempo3].sort(Tempo.compare)
 	 */
-	static compare = ((a: Tempo, b: Tempo) => a.era - b.era);
+	static compare = ((a: Tempo, b: Tempo) => a.age - b.age);
 
 	/** static method to create a new Tempo */
 	static from = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
@@ -327,15 +328,14 @@ export class Tempo {
 	/** number of weeks */																		get ww() { return this.#temporal.weekOfYear }
 	/** timezone */																						get tz() { return this.#temporal.timeZone.toString() }
 	/** seconds (timeStamp) since Unix epoch */								get ts() { return this.#temporal.epochSeconds }
-	/** nanoseconds (BigInt) since Unix epoch */							get era() { return this.#temporal.epochNanoseconds }
+	/** nanoseconds (BigInt) since Unix epoch */							get age() { return this.#temporal.epochNanoseconds }
 	/** weekday: Mon=1, Sun=7 */															get dow() { return this.#temporal.dayOfWeek }
 	/** short month name */																		get mmm() { return Tempo.MONTH[this.#temporal.month] }
 	/** long month name */																		get mon() { return Tempo.MONTHS[this.#temporal.month] }
 	/** short weekday name */																	get ddd() { return Tempo.WEEKDAY[this.#temporal.dayOfWeek] }
 	/** long weekday name */																	get day() { return Tempo.WEEKDAYS[this.#temporal.dayOfWeek] }
 
-	/** quarter: Q1-Q4 */																			get qtr() { return this.quarter }
-	/** quarter: Q1-Q4 */																			get quarter() { return Math.trunc(this.#config.month[this.mm].quarter) }
+	/** quarter: Q1-Q4 */																			get qtr() { return Math.trunc(this.#config.month[this.mm].quarter) }
 	/** meteorological season: Spring/Summer/Autumn/Winter */	get season() { return this.#config.month[this.mm].season.split('.')[0] as keyof typeof Tempo.SEASON }
 	/** Instance configuration */															get config() { return this.#config }
 
@@ -373,7 +373,9 @@ export class Tempo {
 				try {
 					return Temporal.ZonedDateTime.from(arg.value);		// attempt to parse conformed string
 				} catch {																						// fallback to browser's Date.parse
-					return Temporal.ZonedDateTime.from(`${new Date(arg.value.toString()).toISOString()} [${this.config.timeZone}]`);
+					if (this.#config.debug)
+						console.warn('Cannot detect DateTime, fallback to Date.parse');
+					return Temporal.ZonedDateTime.from(`${new Date(arg.value.toString()).toISOString()}[${this.config.timeZone}]`);
 				}
 
 			case 'Temporal.PlainDate':
@@ -407,24 +409,24 @@ export class Tempo {
 				const [prefix = '', suffix = ''] = arg.value.toString().split('.');
 				const nano = BigInt(suffix.substring(0, 9).padEnd(9, '0'));
 				const value = BigInt(prefix);
-				let epoch: bigint;
+				let age: bigint;
 
 				switch (true) {
 					case !isEmpty(suffix):														// seconds, with a fractional sub-second
 					case prefix.length <= 10:													// looks like 'seconds'
-						epoch = value * 1_000_000_000n + nano;
+						age = value * 1_000_000_000n + nano;
 						break;
 					case prefix.length <= 13:													// looks like 'milliseconds'
-						epoch = value * 1_000_000n;
+						age = value * 1_000_000n;
 						break;
 					case prefix.length <= 16:													// looks like 'microseconds'
-						epoch = value * 1_000n;
+						age = value * 1_000n;
 						break;
 					default:																					// looks like 'nanoseconds'
-						epoch = value;
+						age = value;
 						break;
 				}
-				return new Temporal.ZonedDateTime(epoch, this.#config.timeZone, this.#config.calendar);
+				return new Temporal.ZonedDateTime(age, this.#config.timeZone, this.#config.calendar);
 
 			default:
 				throw new Error(`Unexpected Tempo parameter type: ${arg.type}, ${arg.value}`);
@@ -461,10 +463,10 @@ export class Tempo {
 			 * <=Wed		-> Wed prior to tomorrow-> current or previous week
 			 */
 			if (Object.keys(pat.groups).every(el => ['dow', 'mod', 'nbr'].includes(el)) && isDefined(pat.groups['dow'])) {
-				const { dow, mod, nbr = '1' } = pat.groups;
+				const { dow, mod, nbr } = pat.groups;
 				const weekday = dow.substring(0, 3).toProperCase();
 				const offset = enumKeys(Tempo.WEEKDAY).findIndex(el => el === weekday);
-				const weeks = Number(nbr);
+				const days = today.daysInWeek * Number(isEmpty(nbr) ? '1' : nbr);
 				let adj = offset - today.dayOfWeek;									// number of days to offset from today
 
 				switch (mod) {																			// switch on the 'modifier' character
@@ -473,27 +475,27 @@ export class Tempo {
 						break;
 					case '+':																					// next week
 					case '+=':
-						adj += weeks;
+						adj += days;
 						break;
 					case '-':																					// last week
 					case '-=':
-						adj -= weeks;
+						adj -= days;
 						break;
 					case '<':																					// latest dow (this week or prev)
 						if (today.dayOfWeek <= offset)
-							adj -= weeks;
+							adj -= days;
 						break;
 					case '<=':																				// latest dow (prior to today)
 						if (today.dayOfWeek < offset)
-							adj -= weeks;
+							adj -= days;
 						break;
 					case '>':																					// next dow
 						if (today.dayOfWeek >= offset)
-							adj += weeks;
+							adj += days;
 						break;
 					case '>=':
 						if (today.dayOfWeek > offset)
-							adj += weeks;
+							adj += days;
 						break;
 				}
 
