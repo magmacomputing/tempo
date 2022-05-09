@@ -1,4 +1,4 @@
-import { Tempo } from '@module/shared/tempo.class';					// circular reference ??
+// import { Tempo } from '@module/shared/tempo.class';					// circular reference ??
 // import { getTempo } from '@module/shared/tempo.class';
 import { asType, isEmpty, isFunction, isString } from '@module/shared/type.library';
 
@@ -149,8 +149,8 @@ export function objectify<T extends any>(obj: any, sentinel?: Function): T {
 		case str.startsWith('Boolean:'):
 			return (segment === 'true') as T;
 
-		case str.startsWith('Tempo:'):
-			return Tempo.from(segment) as T;
+		// case str.startsWith('Tempo:'):
+		// 	return Tempo.from(segment) as T;
 
 		case str.startsWith('Temporal.'):												// we don't expect a Temporal.Now object
 			const api = str.split('.')[1].split(':')[0] as Exclude<keyof typeof Temporal, 'Now'>;

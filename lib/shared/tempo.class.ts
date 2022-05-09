@@ -141,7 +141,7 @@ export class Tempo {
 	 * this allows Tempo to set specific default configuration.  
 	 * useful primarily for 'order of parsing input', as well as .quarter and .season
 	 */
-	static init = () => {
+	static init = (log = false) => {
 		Object.assign(Tempo.#default, {
 			timeZone: this.#Intl.timeZone,												// default TimeZone
 			calendar: this.#Intl.calendar,												// default Calendar
@@ -216,7 +216,7 @@ export class Tempo {
 					break;
 			}
 		}
-		if (context.type !== CONTEXT.NodeJS)
+		if (log)
 			console.log('Tempo: ', omit(this.#default, 'pattern'));
 	}
 
@@ -756,7 +756,7 @@ export class Tempo {
 					return bailOut;
 				}
 
-				const [full, part] = this.#config.month[this.mm].quarter.toString().split('.').map(Number);
+				const [full, part] = split<number>(this.#config.month[this.mm].quarter);
 				const mon = (full - 1) * 3 + part - 1;
 				const yy = this.#temporal.with({ day: 1 }).add({ months: -mon }).add({ months: 11 }).year;
 
@@ -785,9 +785,9 @@ export class Tempo {
 					.replace(/s{2}/g, pad(this.ss))
 					.replace(/ts/g, asString(this.ts))
 					.replace(/ms/g, pad(this.ms, 3))
-					.replace(/us/g, pad(this.us))
-					.replace(/ns/g, pad(this.ns))
-					.replace(/f{2}/g, (pad(this.ff).split('.')[1] || '').padEnd(9, '0'))
+					.replace(/us/g, pad(this.us, 3))
+					.replace(/ns/g, pad(this.ns, 3))
+					.replace(/f{2}/g, asString(this.ff * 1_000_000_000))
 					.replace(/w{2}/g, asString(this.ww))
 					.replace(/dow/g, asString(this.dow))
 					.replace(/day/g, this.day)
