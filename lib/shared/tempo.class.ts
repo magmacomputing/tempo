@@ -27,9 +27,9 @@ import { Temporal } from '@js-temporal/polyfill';
  * 	Options?: 	object				- arguments to assist with parsing the <date> and configuring the instance
  * ````
  * A Tempo is an object that is used to wrap a Temporal.ZonedDateTime.  
- * It has accessors that report the value as DateTime components ('yy', 'dd', 'HH', etc.)  
- * It has methods to perform manipulations (add(), format(), diff(), offset(), etc.)  
- * Import the short-cut functions to work with a Tempo (getTempo(), fmtTempo(), getStamp()) indirectly
+ * It's strength is in it's flexibility to parse string|number DateTime.  
+ * It has accessors that report the value as DateTime components ('yy', 'dd', 'HH', ...)  
+ * It has methods to perform manipulations (add(), format(), diff(), offset(), ...)  
  */
 export class Tempo {
 	// Instance variables  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -37,8 +37,8 @@ export class Tempo {
 	#config: Tempo.Config;
 	#value?: Tempo.DateTime;																	// constructor value
 	#opts: Tempo.Options;																			// constructor arguments
+	#now: Temporal.Instant;																		// instantiation Temporal Instant, used only during construction
 	#temporal!: Temporal.ZonedDateTime;												// underlying Temporal DateTime
-	#now!: Temporal.Instant;																	// instantiation Temporal Instant, used only during construction
 	fmt = {} as Tempo.TypeFmt;																// prebuilt Formats
 
 	// Static variables / methods	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -166,7 +166,6 @@ export class Tempo {
 				{ key: 'dow', reg: ['mod', 'sep', 'dow'] },
 				{ key: 'mon', reg: ['mm'] },
 				{ key: 'yymm', reg: ['yy', 'sep', 'mm'] },
-				// { key: 'isoDate', reg: ['yy', '/-/', 'mm', '/-/', 'dd', '/T/', 'hms', 'tzd'] },
 			]
 		})
 
@@ -274,7 +273,7 @@ export class Tempo {
 		}
 		if (opts.fiscal) {
 			const idx = Tempo.MONTH[opts.fiscal.substring(0, 3) as unknown as Tempo.MONTH] as unknown as number;
-			if (Tempo.#months[idx].quarter !== 1) {								// change of fiscal-year start month
+			if (this.#config.month[idx].quarter !== 1) {					// change of fiscal-year start month
 				if (this.#config.debug)
 					console.log('fiscal: ', opts.fiscal);
 				Tempo.#fiscal(opts.fiscal, this.#config.month);
@@ -285,6 +284,7 @@ export class Tempo {
 				.map((pat, idx) => ({ key: '_' + idx, reg: Tempo.regexp(...pat) }))
 				.forEach(pattern => this.#config.pattern.push(pattern))
 		}
+
 		this.#config.pattern.splice(this.#config.pattern.length, 0, ...Tempo.#pattern);
 		if (this.#config.locale !== Tempo.#default.locale) {		// change of locale, swap patterns-order ?
 			if (this.#config.debug)
