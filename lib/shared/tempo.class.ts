@@ -1,7 +1,7 @@
 import { asArray } from '@module/shared/array.library';
 import { enumKeys } from '@module/shared/enum.library';
 import { clone, stringify, objectify } from '@module/shared/serialize.library';
-import { getContext, CONTEXT } from '@module/shared/utility.library';
+import { getContext, CONTEXT, getHemisphere } from '@module/shared/utility.library';
 import { asString, pad } from '@module/shared/string.library';
 import { getAccessors, omit } from '@module/shared/object.library';
 import { asNumber, isNumeric, split } from '@module/shared/number.library';
@@ -142,81 +142,78 @@ export class Tempo {
 	 * useful primarily for 'order of parsing input', as well as .quarter and .season
 	 */
 	static init = (log = false) => {
-		Object.assign(Tempo.#default, {
-			timeZone: this.#Intl.timeZone,												// default TimeZone
-			calendar: this.#Intl.calendar,												// default Calendar
-			locale: this.#Intl.locale,														// default Locale
-			pivot: 75,																						// default pivot-duration for two-digit years
-			debug: false,																					// default debug-mode
-			catch: false,																					// default catch-mode
-			compass: Tempo.COMPASS.North,													// default hemisphere (for 'season')
-			fiscal: Tempo.MONTH[Tempo.MONTH.Oct],									// default fiscalYear start-month
-			mmddyy: ['en-US', 'en-AS'],														// default locales that prefer 'mm-dd-yy' date order
-			pattern: [																						// built-in patterns to be processed in this order
-				{ key: 'yyqtr', reg: ['yy', 'sep', '/Q/', 'qtr'] },
-				{ key: 'hhmi', reg: ['hms', 'am'] },
-				{ key: 'ddmm', reg: ['dow', 'dd', 'sep', 'mm'] },
-				{ key: 'mmdd', reg: ['dow', 'mm', 'sep', 'dd'] },
-				{ key: 'ddmmyy', reg: ['dow', 'dd', 'sep', 'mm', 'sep', 'yy'] },
-				{ key: 'mmddyy', reg: ['dow', 'mm', 'sep', 'dd', 'sep', 'yy'] },
-				{ key: 'ddmmyyhhmi', reg: ['dow', 'dd', 'sep', 'mm', 'sep', 'yy', '/ /', 'hms', 'am'] },
-				{ key: 'mmddyyhhmi', reg: ['dow', 'mm', 'sep', 'dd', 'sep', 'yy', '/ /', 'hms', 'am'] },
-				{ key: 'yymmdd', reg: ['dow', 'yy', 'sep', 'mm', 'sep', 'dd'] },
-				{ key: 'yymmddhhmi', reg: ['dow', 'yy', 'sep', 'mm', 'sep', 'dd', '/ /', 'hms', 'am'] },
-				{ key: 'dow', reg: ['mod', 'sep', 'dow'] },
-				{ key: 'mon', reg: ['mm'] },
-				{ key: 'yymm', reg: ['yy', 'sep', 'mm'] },
-			]
-		})
+		getHemisphere()
+			.then(compass => {
+				const quarter = compass === Tempo.COMPASS.South ? Tempo.MONTH.Jul : Tempo.MONTH.Oct;
 
-		const country = Tempo.#Intl.timeZone.split('/')[0];
-		switch (country) {																			// TODO: better country detection
-			case 'Australia':
-				Object.assign(Tempo.#default, { compass: Tempo.COMPASS.South, fiscal: Tempo.MONTH[Tempo.MONTH.Jul], locale: 'en-AU' });
-				break;
-			default:
-		}
+				Object.assign(Tempo.#default, {
+					timeZone: this.#Intl.timeZone,												// default TimeZone
+					calendar: this.#Intl.calendar,												// default Calendar
+					locale: this.#Intl.locale,														// default Locale
+					pivot: 75,																						// default pivot-duration for two-digit years
+					debug: false,																					// default debug-mode
+					catch: false,																					// default catch-mode
+					compass: compass || Tempo.COMPASS.North,							// default hemisphere (for 'season')
+					fiscal: Tempo.MONTH[quarter],													// default fiscalYear start-month
+					mmddyy: ['en-US', 'en-AS'],														// default locales that prefer 'mm-dd-yy' date order
+					pattern: [																						// built-in patterns to be processed in this order
+						{ key: 'yyqtr', reg: ['yy', 'sep', '/Q/', 'qtr'] },
+						{ key: 'hhmi', reg: ['hms', 'am'] },
+						{ key: 'ddmm', reg: ['dow', 'dd', 'sep', 'mm'] },
+						{ key: 'mmdd', reg: ['dow', 'mm', 'sep', 'dd'] },
+						{ key: 'ddmmyy', reg: ['dow', 'dd', 'sep', 'mm', 'sep', 'yy'] },
+						{ key: 'mmddyy', reg: ['dow', 'mm', 'sep', 'dd', 'sep', 'yy'] },
+						{ key: 'ddmmyyhhmi', reg: ['dow', 'dd', 'sep', 'mm', 'sep', 'yy', '/ /', 'hms', 'am'] },
+						{ key: 'mmddyyhhmi', reg: ['dow', 'mm', 'sep', 'dd', 'sep', 'yy', '/ /', 'hms', 'am'] },
+						{ key: 'yymmdd', reg: ['dow', 'yy', 'sep', 'mm', 'sep', 'dd'] },
+						{ key: 'yymmddhhmi', reg: ['dow', 'yy', 'sep', 'mm', 'sep', 'dd', '/ /', 'hms', 'am'] },
+						{ key: 'dow', reg: ['mod', 'sep', 'dow'] },
+						{ key: 'mon', reg: ['mm'] },
+						{ key: 'yymm', reg: ['yy', 'sep', 'mm'] },
+					]
+				})
 
-		const context = getContext();
-		let store: string | undefined | null = void 0;
-		switch (context.type) {
-			case CONTEXT.Browser:
-				store = context.global.localStorage.getItem(Tempo.#configKey);
-				break;
-			case CONTEXT.NodeJS:
-				store = context.global.process.env[Tempo.#configKey];
-				break;
-			case CONTEXT.GoogleAppsScript:
-				store = context.global.PropertiesService?.getUserProperties().getProperty(Tempo.#configKey);
-				break;
-		}
+				const context = getContext();
+				let store: string | undefined | null = void 0;
+				switch (context.type) {
+					case CONTEXT.Browser:
+						store = context.global.localStorage.getItem(Tempo.#configKey);
+						break;
+					case CONTEXT.NodeJS:
+						store = context.global.process.env[Tempo.#configKey];
+						break;
+					case CONTEXT.GoogleAppsScript:
+						store = context.global.PropertiesService?.getUserProperties().getProperty(Tempo.#configKey);
+						break;
+				}
 
-		if (isDefined(store)) {																	// found a config in storage
-			const config = objectify(store) as Tempo.ConfigFile;	// config can override #default
-			config.locale &&= config.locale.replace('_', '-');		// standardize locale string
-			Object.assign(this.#default, omit(config, 'pattern'));// override defaults from storage
-			(config.pattern ?? [])
-				.reverse()																					// prepend user-patterns from storage as they have priority
-				.map(pat => Object.entries(pat)[0])
-				.forEach(([key, ref]) => this.#default.pattern.unshift({ key, reg: asArray(ref) }));
-		}
+				if (isDefined(store)) {																	// found a config in storage
+					const config = objectify(store) as Tempo.ConfigFile;	// config can override #default
+					config.locale &&= config.locale.replace('_', '-');		// standardize locale string
+					Object.assign(this.#default, omit(config, 'pattern'));// override defaults from storage
+					(config.pattern ?? [])
+						.reverse()																					// prepend user-patterns from storage as they have priority
+						.map(pat => Object.entries(pat)[0])
+						.forEach(([key, ref]) => this.#default.pattern.unshift({ key, reg: asArray(ref) }));
+				}
 
-		this.#default.pattern																		// setup defaults as RegExp patterns
-			.forEach(({ key, reg }) => this.#pattern.push({ key, reg: this.regexp(...reg) }));
-		this.#swap(Tempo.#default.locale, this.#pattern, this.#default.pattern);
-		this.#compass(Tempo.#default.compass, this.#months);		// setup seasons
-		this.#fiscal(Tempo.#default.fiscal, this.#months);			// setup quarters
-		enumKeys(Tempo.MONTH).forEach((mon, idx) => this.#months[idx].month = mon, 0);
+				this.#default.pattern																// setup defaults as RegExp patterns
+					.forEach(({ key, reg }) => this.#pattern.push({ key, reg: this.regexp(...reg) }));
+				this.#swap(Tempo.#default.locale, this.#pattern, this.#default.pattern);
+				this.#compass(Tempo.#default.compass, this.#months);// setup seasons
+				this.#fiscal(Tempo.#default.fiscal, this.#months);	// setup quarters
+				enumKeys(Tempo.MONTH).forEach((mon, idx) => this.#months[idx].month = mon, 0);
 
-		if (isUndefined(store)) {
-			switch (context.type) {
-				case CONTEXT.Browser:
-					context.global.localStorage.setItem(Tempo.#configKey, stringify(omit(this.#default, 'pattern')));
-					break;
-			}
-		}
-		if (log)
-			console.log('Tempo: ', omit(this.#default, 'pattern'));
+				if (isUndefined(store)) {
+					switch (context.type) {
+						case CONTEXT.Browser:
+							context.global.localStorage.setItem(Tempo.#configKey, stringify(omit(this.#default, 'pattern')));
+							break;
+					}
+				}
+				if (log)
+					console.log('Tempo: ', omit(this.#default, 'pattern'));
+			})
 	}
 
 	/**
