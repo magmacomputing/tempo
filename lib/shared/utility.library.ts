@@ -58,3 +58,31 @@ export const getContext = () => {
 
 	return { global, type: CONTEXT.Unknown };
 }
+
+export const getGeoLocation = () =>
+	new Promise<GeolocationPosition | null>(resolve => {
+		if ('geolocation' in navigator) {
+			navigator.geolocation.getCurrentPosition(
+				geo => resolve(geo),																// onsuccess
+				_ => resolve(null)																	// onfail
+			)
+		}
+		else resolve(null)																			// not supported
+	})
+
+export const getHemisphere = () =>
+	getGeoLocation()
+		.then(geo => {
+			if (geo)
+				return geo.coords.latitude >= 0 ? 'north' : 'south';
+
+			// fallback relies on the area to observe DST
+			const date = new Date();
+			const jan = -(new Date(date.getFullYear(), 0, 1, 0, 0, 0, 0).getTimezoneOffset()),
+				jul = -(new Date(date.getFullYear(), 6, 1, 0, 0, 0, 0).getTimezoneOffset()),
+				diff = jan - jul;
+
+			if (diff <= 0) return 'north';
+			if (diff > 0) return 'south';
+			return null;
+		})
