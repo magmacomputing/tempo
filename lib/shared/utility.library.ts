@@ -59,22 +59,27 @@ export const getContext = () => {
 	return { global, type: CONTEXT.Unknown };
 }
 
-export const getGeoLocation = () =>
-	new Promise<GeolocationPosition | null>(resolve => {
+export type Geolocation =
+	{ type: 'GeolocationPosition', value: GeolocationPosition } |
+	{ type: 'GeolocationPositionError', value: GeolocationPositionError } |
+	{ type: 'NOT_SUPPORTED', value: null }
+
+export const getGeolocation = () =>
+	new Promise<Geolocation>(resolve => {
 		if ('geolocation' in navigator) {
 			navigator.geolocation.getCurrentPosition(
-				geo => resolve(geo),																// onsuccess
-				_ => resolve(null)																	// onfail
+				value => resolve({ type: 'GeolocationPosition', value }),			// on success
+				value => resolve({ type: 'GeolocationPositionError', value })	// on error
 			)
 		}
-		else resolve(null)																			// not supported
+		else resolve({ type: 'NOT_SUPPORTED', value: null })							// not supported
 	})
 
 export const getHemisphere = () =>
-	getGeoLocation()
+	getGeolocation()
 		.then(geo => {
-			if (geo)
-				return geo.coords.latitude >= 0 ? 'north' : 'south';
+			if (geo.type === 'GeolocationPosition')
+				return geo.value.coords.latitude >= 0 ? 'north' : 'south';
 
 			// fallback relies on the area to observe DST
 			const date = new Date();
