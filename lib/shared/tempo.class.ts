@@ -192,7 +192,7 @@ export class Tempo {
 				Tempo.#gps = new Pledge<Tempo.Sphere>('gps');				// new Pledge
 				import('@module/browser/mapper.library')						// get browser mapper.library
 					.then(({ getHemisphere }) => getHemisphere<Tempo.Sphere>())
-					.then(Tempo.#gps.resolve)													// 'north' | 'south' | null
+					.then(res => Tempo.#gps.resolve(res))							// 'north' | 'south' | null
 				break;
 			case CONTEXT.NodeJS:
 				store = context.global.process.env[Tempo.#configKey];
