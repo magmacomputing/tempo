@@ -14,9 +14,9 @@ interface MapOpts {
  * attempt geolocation.getCurrentPosition()  
  * -> if user allows, then return geo-coordinates, else GeolocationPositionError  
  * -> if not allowed, then return GeolocationPositionError  
- * -> if not support, then return Null
+ * -> if not support, then return \<null>
  */
-export const getGeolocation = (opts = { catch: true, debug: false } as MapOpts) => {
+export const geoLocation = (opts = { catch: true, debug: false } as MapOpts) => {
 	let res: GeolocationType;
 
 	return new Promise<GeolocationType>((resolve, reject) => {
@@ -33,24 +33,46 @@ export const getGeolocation = (opts = { catch: true, debug: false } as MapOpts) 
 		.finally(() => { if (opts.debug) console[res.value instanceof GeolocationPositionError ? 'warn' : 'info']('geolocation: ', res) })
 }
 
+/** get coordinates as a GeocoderRequest 'Location' */
+export const geoCoords = (coords?: google.maps.GeocoderRequest) =>
+	new Promise<google.maps.GeocoderRequest | null>((resolve, reject) => {
+		if (!isNullish(coords))
+			return resolve(coords);																// user-supplied coordinates
+
+		geoLocation()																						// get current location
+			.then(geo => (geo.type === 'GeolocationPosition')			// successful geolocation
+				? ({ location: { lat: geo.value.coords.latitude, lng: geo.value.coords.longitude } })
+				: null																							// unsuccessful geolocation
+			)
+			.then(loc => resolve(loc))
+			.catch(err => reject(err))
+	})
+
+/** Make a 'maps' request on google API */
+export const mapQuery = (coords?: google.maps.GeocoderRequest) =>
+	new Promise<google.maps.GeocoderResponse>((resolve, reject) => {
+		if ('google' in window && 'maps' in window.google) {
+			geoCoords(coords)																			// get a Location object
+				.then(loc => {
+					if (!isNullish(loc)) {
+						new google.maps.Geocoder().geocode(loc)
+							.then(res => resolve(res))										// successful maps.geocode
+							.catch(err => reject(err))										// unsuccessful maps.geocode
+					}
+					else reject(null)																	// unsuccessful geoLocation()
+				})
+				.catch(_ => reject(null))														// unsuccessful geoCoords()
+		}
+		else reject(null);																			// google.maps not available
+	})
+
 /**
  * get Hemisphere ('north' | 'south' | null)  
  * for supplied coordinates (else query current gelocation)
  */
-export const getHemisphere = <T extends 'north' | 'south' | null>(coords?: google.maps.GeocoderRequest, opts = { catch: true, debug: false } as MapOpts) =>
-	new Promise<Record<"lat" | "lng", number> | null>(resolve => {
-		if (isNullish(coords)) {																// no coordinates
-			getGeolocation(opts)																	// so attempt to fetch current GPS
-				.then(loc => resolve(loc.type === 'GeolocationPosition'
-					? { lat: loc.value.coords.latitude, lng: loc.value.coords.longitude, }
-					: null)
-				)
-		} else {																								// else try a GeocoderRequest
-			new google.maps.Geocoder().geocode(coords)						// ask Google
-				.then(response => resolve({ lat: response.results[0].geometry.location.lat(), lng: response.results[0].geometry.location.lng() }))
-				.catch(_ => resolve(null))													// cannot geocode coordinates
-		}
-	})
+export const mapHemisphere = <T extends 'north' | 'south' | null>(coords?: google.maps.GeocoderRequest, opts = { catch: true, debug: false } as MapOpts) =>
+	mapQuery(coords)																				// ask Google
+		.then(response => ({ lat: response.results[0].geometry.location.lat(), lng: response.results[0].geometry.location.lng() }))
 		.then(res => {
 			if (!isNullish(res)) {																// useable geolocation detected
 				if (opts.debug)
@@ -71,42 +93,22 @@ export const getHemisphere = <T extends 'north' | 'south' | null>(coords?: googl
 			if (opts.catch === false)
 				throw new Error('Cannot determine Hemisphere');
 
-			return null as T;
+			return null;
 		})
+		.catch(_ => null)																				// cannot geocode coordinates
 
 /**
  * query google-maps for a best-guess address at supplied {lat,lng} co-ordinates  
  * (default current location)
  */
 export const mapAddress = (coords?: google.maps.GeocoderRequest, opts = { catch: true, debug: false } as MapOpts) =>
-	new Promise<google.maps.GeocoderRequest>((resolve, reject) => {
-		if (isNullish(coords)) {																// no coords supplied
-			getGeolocation(opts)																	// so check current location
-				.then(geo => {
-					switch (geo.type) {
-						case 'GeolocationPositionError':								// API not useable
-							return reject(geo.value.message);
-						case 'NotSupportedError':												// API not avail
-							return reject(geo.type);
-						default:																				// get current coordinates
-							return resolve({
-								location: {
-									lat: geo.value.coords.latitude,
-									lng: geo.value.coords.longitude,
-								}
-							})
-					}
-				})
-		}
-		else resolve(coords);
-	})
-		.then(request => new google.maps.Geocoder().geocode({ ...request }))
+	mapQuery(coords)
 		.then(response => response.results?.[0])								// first result is 'best-guess'
 		.then(({ formatted_address, address_components }) => address_components
 			.reduce((acc, itm) => {
 				itm.types
 					.filter(type => type !== 'political')							// ignore not useful type
-				.forEach(type => acc[type] = (acc[type] ? (acc[type] + ',') : '').concat(itm.short_name));
+					.forEach(type => acc[type] = (acc[type] ? (acc[type] + ',') : '').concat(itm.short_name));
 				return acc;
 			}, { formatted_address } as Record<string, string | string[]>))	// start with formatted_address
 		.catch(err => {

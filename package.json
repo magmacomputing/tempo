@@ -27,6 +27,7 @@
     "@js-temporal/polyfill": "^0.4.1"
   },
   "devDependencies": {
+    "@types/google.maps": "^3.48.8",
     "@types/node": "^17.0.32",
     "import-remap": "^0.5.0"
   }
