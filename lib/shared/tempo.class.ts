@@ -191,7 +191,7 @@ export class Tempo {
 				store = context.global.localStorage.getItem(Tempo.#configKey);
 				Tempo.#gps = new Pledge<Tempo.Sphere>('gps');				// new Pledge
 				import('@module/browser/mapper.library')						// get browser mapper.library
-					.then(({ getHemisphere }) => getHemisphere<Tempo.Sphere>())
+					.then(({ mapHemisphere }) => mapHemisphere<Tempo.Sphere>())
 					.then(res => Tempo.#gps.resolve(res))							// 'north' | 'south' | null
 				break;
 			case CONTEXT.NodeJS:
@@ -368,8 +368,8 @@ export class Tempo {
 
 	// Public Methods	 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	/** calc DateTime duration */															diff<U extends Tempo.Until>(diff: U) { return this.#until(diff) }
-	/** format elapsed diff Dates */													elapse<E extends Tempo.Until>(elapse: E) { return this.#since(elapse) }
+	/** calc DateTime duration */															until<U extends Tempo.Until>(until: U) { return this.#until(until) }
+	/** format elapsed time */																since<S extends Tempo.Until>(since: S) { return this.#since(since) }
 	/** apply formatting */																		format<K extends keyof Tempo.Formats>(fmt: K) { return this.#format(fmt) }
 
 	/** add date offset */																		add(mutate: Tempo.Add) { return this.#offset(Object.assign({}, mutate, { offset: 'add' })) }
@@ -853,7 +853,7 @@ export class Tempo {
 		}
 	}
 
-	/** format the elapsed time between two dates (to milliseconds) */
+	/** format the elapsed time between two Tempo (to milliseconds) */
 	#since({ tempo, opts, unit } = {} as Tempo.Until) {
 		const { days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = this.#until({ tempo, opts });
 		const since = `${pad(seconds)}.${pad(milliseconds, 3)}}`// default since
@@ -892,7 +892,7 @@ export namespace Tempo {
 		tempo?: Tempo.DateTime;
 		opts?: Tempo.Options;
 	}
-	export interface Until extends Tempo.Parameter {					// configuration to use for diff() argument
+	export interface Until extends Tempo.Parameter {					// configuration to use for #until() argument
 		unit?: Tempo.DiffUnit;
 	}
 	export type Offset = OneKey<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit>
