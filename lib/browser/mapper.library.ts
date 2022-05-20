@@ -1,47 +1,53 @@
 import { isNullish } from '@module/shared/type.library';
 
-type GeolocationType =
-	{ type: 'GeolocationPosition', value: GeolocationPosition } |
-	{ type: 'GeolocationPositionError', value: GeolocationPositionError } |
-	{ type: 'NotSupportedError', value: null }
-
 interface MapOpts {
 	catch?: boolean;																					// intercept Reject as Resolve (default: true)
 	debug?: boolean;																					// console.log progress
 }
 
 /**
- * attempt geolocation.getCurrentPosition()  
- * -> if user allows, then return geo-coordinates, else GeolocationPositionError  
- * -> if not allowed, then return GeolocationPositionError  
- * -> if not support, then return \<null>
+ * To avoid calling google.maps (for response-time and cost) we stash the current location.  
+ * On subsequent calls, we check whether the device has moved before calling google.maps
  */
-export const geoLocation = (opts = { catch: true, debug: false } as MapOpts) => {
-	let res: GeolocationType;
+const currPosition = {} as {																// static variable for current location
+	geolocation?: GeolocationPosition & { error?: string; };
+	geocoder?: google.maps.GeocoderResponse | null;
+}
 
-	return new Promise<GeolocationType>((resolve, reject) => {
+const ONE_HOUR = 60 * 60 * 1_000;														// 3600 seconds
+
+/**
+ * attempt geolocation.getCurrentPosition()  
+ * -> if user allows, then return geo-coordinates
+ * -> if not allowed, then set error = GeolocationPositionError  
+ * -> if not support, then set error = NOT_SUPPORTED
+ */
+export const geoLocation = (opts = { catch: true, debug: false } as MapOpts) =>
+	new Promise<GeolocationPosition & { error?: string; }>((resolve, reject) => {
 		const handler = opts.catch ? resolve : reject;
 
 		if ('geolocation' in navigator) {
 			navigator.geolocation.getCurrentPosition(
-				value => resolve(res = { type: 'GeolocationPosition', value }),			// on success
-				value => handler(res = { type: 'GeolocationPositionError', value })	// on error
+				value => resolve(currPosition.geolocation = value),	// on success
+				error => handler(currPosition.geolocation = Object.assign({ error: error.message }))
 			)
 		}
-		else handler(res = { type: 'NotSupportedError', value: null })					// not supported
+		else handler(currPosition.geolocation = Object.assign({ error: 'NOT_SUPPORTED' }))
 	})
-		.finally(() => { if (opts.debug) console[res.value instanceof GeolocationPositionError ? 'warn' : 'info']('geolocation: ', res) })
-}
+		.finally(() => {
+			if (opts.debug)
+				console.log('geolocation: ', currPosition.geolocation);
+		})
 
-/** get coordinates as a GeocoderRequest 'Location' */
+/** format coordinates as a GeocoderRequest["location"] object */
 export const geoCoords = (coords?: google.maps.GeocoderRequest) =>
 	new Promise<google.maps.GeocoderRequest | null>((resolve, reject) => {
 		if (!isNullish(coords))
 			return resolve(coords);																// user-supplied coordinates
 
 		geoLocation()																						// get current location
-			.then(geo => (geo.type === 'GeolocationPosition')			// successful geolocation
-				? ({ location: { lat: geo.value.coords.latitude, lng: geo.value.coords.longitude } })
+			.then(geo => isNullish(geo.error)											// successful geolocation
+				? ({ location: { lat: geo.coords.latitude, lng: geo.coords.longitude } })
 				: null																							// unsuccessful geolocation
 			)
 			.then(loc => resolve(loc))
@@ -54,14 +60,23 @@ export const mapQuery = (coords?: google.maps.GeocoderRequest) =>
 		if ('google' in window && 'maps' in window.google) {
 			geoCoords(coords)																			// get a Location object
 				.then(loc => {
-					if (!isNullish(loc)) {
-						new google.maps.Geocoder().geocode(loc)
-							.then(res => resolve(res))										// successful maps.geocode
-							.catch(err => reject(err))										// unsuccessful maps.geocode
+					switch (true) {
+						case isNullish(loc):														// unsuccessful geoLocation()
+							return reject(null);
+
+						case isNullish(coords):													// current location
+							const test1 = !isNullish(currPosition.geolocation) && !isNullish(currPosition.geocoder);
+							const test2 = currPosition.geolocation?.timestamp! < (new Date().valueOf() - ONE_HOUR);
+							if (test1 && test2) 													// if we already have geocoder and one-hour has not yet passed
+								return resolve(currPosition.geocoder!);			// return previous geocoder
+
+						default:
+							new google.maps.Geocoder().geocode(loc!)
+								.then(res => resolve(currPosition.geocoder = res))	// successful maps.geocode
+								.catch(_ => reject(currPosition.geocoder = null))		// unsuccessful maps.geocode
 					}
-					else reject(null)																	// unsuccessful geoLocation()
 				})
-				.catch(_ => reject(null))														// unsuccessful geoCoords()
+				.catch(_ => reject(currPosition.geocoder = null))		// unsuccessful geoCoords()
 		}
 		else reject(null);																			// google.maps not available
 	})
