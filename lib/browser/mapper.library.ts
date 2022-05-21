@@ -1,20 +1,24 @@
+import { WebStore } from '@module/browser/webstore.class';
+import { asObject } from '@module/shared/object.library';
 import { isNullish } from '@module/shared/type.library';
 
 interface MapOpts {
 	catch?: boolean;																					// intercept Reject as Resolve (default: true)
 	debug?: boolean;																					// console.log progress
 }
+interface MapPosi {
+	geolocation: GeolocationPosition & { error?: GeolocationPositionError["message"] | 'NOT_SUPPORTED' };
+	georesponse: google.maps.GeocoderResponse & { error?: Error["message"] };
+}
 
 /**
  * To avoid calling google.maps (for response-time and cost) we stash the current location.  
  * On subsequent calls, we check whether the device has moved before calling google.maps
  */
-const currPosition = {} as {																// static variable for current location
-	geolocation?: GeolocationPosition & { error?: string; };
-	geocoder?: google.maps.GeocoderResponse | null;
-}
-
 const ONE_HOUR = 60 * 60 * 1_000;														// 3600 seconds
+const MAP_KEY = '_map_';																		// localStorage key
+const defaults: MapOpts = { catch: true, debug: false };		// default Options
+const mapPosition = WebStore.local.get(MAP_KEY, {} as MapPosi);// static object to hold last position
 
 /**
  * attempt geolocation.getCurrentPosition()  
@@ -22,21 +26,42 @@ const ONE_HOUR = 60 * 60 * 1_000;														// 3600 seconds
  * -> if not allowed, then set error = GeolocationPositionError  
  * -> if not support, then set error = NOT_SUPPORTED
  */
-export const geoLocation = (opts = { catch: true, debug: false } as MapOpts) =>
-	new Promise<GeolocationPosition & { error?: string; }>((resolve, reject) => {
+export const geoLocation = (opts = {} as MapOpts) =>
+	new Promise<MapPosi["geolocation"]>((resolve, reject) => {
+		opts = Object.assign({}, defaults, opts);
 		const handler = opts.catch ? resolve : reject;
 
 		if ('geolocation' in navigator) {
-			navigator.geolocation.getCurrentPosition(
-				value => resolve(currPosition.geolocation = value),	// on success
-				error => handler(currPosition.geolocation = Object.assign({ error: error.message }))
-			)
+			navigator["geolocation"].getCurrentPosition(
+				value => {																					// on success
+					const test1 = value.coords.latitude.toFixed(3) !== mapPosition.geolocation?.coords.latitude.toFixed(3);
+					const test2 = value.coords.longitude.toFixed(3) !== mapPosition.geolocation?.coords.longitude.toFixed(3);
+					const test3 = mapPosition.geolocation?.timestamp < (new Date().valueOf() - ONE_HOUR);
+
+					if (test1 || test2 || test3) {										// position has moved, or timeout
+						Reflect.deleteProperty(mapPosition, 'georesponse');// so remove stashed geocoder result
+						if (opts.debug)
+							console.log('geoLocation: device moved');
+					}
+
+					Object.assign(mapPosition, { geolocation: asObject(value) });
+					resolve(mapPosition.geolocation);
+
+				},
+				error => {																					// on failure
+					Object.assign(mapPosition, { geolocation: { error: error.message }, georesponse: null });
+					handler(mapPosition.geolocation);
+				})
+		} else {																								// not available
+			Object.assign(mapPosition, { geolocation: { error: 'Not Supported' }, georesponse: null });
+			handler(mapPosition.geolocation);
 		}
-		else handler(currPosition.geolocation = Object.assign({ error: 'NOT_SUPPORTED' }))
 	})
 		.finally(() => {
 			if (opts.debug)
-				console.log('geolocation: ', currPosition.geolocation);
+				console[mapPosition.geolocation?.error ? 'error' : 'log']('geoLocation: ', mapPosition.geolocation);
+
+			WebStore.local.set(MAP_KEY, mapPosition);
 		})
 
 /** format coordinates as a GeocoderRequest["location"] object */
@@ -55,44 +80,59 @@ export const geoCoords = (coords?: google.maps.GeocoderRequest) =>
 	})
 
 /** Make a 'maps' request on google API */
-export const mapQuery = (coords?: google.maps.GeocoderRequest) =>
-	new Promise<google.maps.GeocoderResponse>((resolve, reject) => {
-		if ('google' in window && 'maps' in window.google) {
-			geoCoords(coords)																			// get a Location object
-				.then(loc => {
-					switch (true) {
-						case isNullish(loc):														// unsuccessful geoLocation()
-							return reject(null);
+export const mapQuery = (coords?: google.maps.GeocoderRequest, opts = {} as MapOpts) =>
+	new Promise<MapPosi["georesponse"]>((resolve, reject) => {
+		opts = Object.assign({}, defaults, opts);
+		const handler = opts.catch ? resolve : reject;
 
-						case isNullish(coords):													// current location
-							const test1 = !isNullish(currPosition.geolocation) && !isNullish(currPosition.geocoder);
-							const test2 = currPosition.geolocation?.timestamp! < (new Date().valueOf() - ONE_HOUR);
-							if (test1 && test2) 													// if we already have geocoder and one-hour has not yet passed
-								return resolve(currPosition.geocoder!);			// return previous geocoder
+		geoCoords(coords)																				// get a Location object
+			.then(loc => {
+				switch (true) {
+					case (!('maps' in window['google'])):
+						throw new Error('Google Maps API not configured');
 
-						default:
-							new google.maps.Geocoder().geocode(loc!)
-								.then(res => resolve(currPosition.geocoder = res))	// successful maps.geocode
-								.catch(_ => reject(currPosition.geocoder = null))		// unsuccessful maps.geocode
-					}
-				})
-				.catch(_ => reject(currPosition.geocoder = null))		// unsuccessful geoCoords()
-		}
-		else reject(null);																			// google.maps not available
+					case isNullish(loc):															// unsuccessful geoLocation()
+						throw new Error('Cannot determine Coordinates');
+
+					case isNullish(coords):														// current location
+						const test1 = !isNullish(mapPosition.geolocation) && !isNullish(mapPosition.georesponse);
+						const test2 = isNullish(mapPosition.geolocation?.error) && isNullish(mapPosition.georesponse?.error);
+						if (test1 && test2) {														// if we already have geocoder
+							if (opts.debug)
+								console.log('mapQuery: cache');
+							return resolve(mapPosition.georesponse!);			// return previous geocoder
+						}
+
+					default:
+						new window['google']['maps'].Geocoder().geocode(loc!)
+							.then(res => resolve(mapPosition.georesponse = res))	// successful maps.geocode
+				}
+			})
+			.catch(error => {																			// unsuccessful geoCoords() | geocode()
+				Object.assign(mapPosition, { georesponse: { error: error.message } });
+				handler(mapPosition.georesponse);
+			})
 	})
+		.finally(() => {
+			if (opts.debug)
+				console[mapPosition.georesponse?.error ? 'error' : 'log']('mapQuery: ', mapPosition.georesponse);
+
+			WebStore.local.set(MAP_KEY, mapPosition);
+		})
 
 /**
  * get Hemisphere ('north' | 'south' | null)  
  * for supplied coordinates (else query current gelocation)
  */
-export const mapHemisphere = <T extends 'north' | 'south' | null>(coords?: google.maps.GeocoderRequest, opts = { catch: true, debug: false } as MapOpts) =>
-	mapQuery(coords)																				// ask Google
-		.then(response => ({ lat: response.results[0].geometry.location.lat(), lng: response.results[0].geometry.location.lng() }))
-		.then(res => {
-			if (!isNullish(res)) {																// useable geolocation detected
+export const mapHemisphere = <T extends 'north' | 'south' | null>(coords?: google.maps.GeocoderRequest, opts = {} as MapOpts) =>
+	mapQuery(coords)																					// ask Google
+		.then(response => {
+			opts = Object.assign({}, defaults, opts);
+
+			if (!isNullish(response.error)) {											// useable GeocoderResult detected
 				if (opts.debug)
-					console.log('sphere: ', res);
-				return (res.lat >= 0 ? 'north' : 'south') as T;
+					console.log('sphere: ', response);
+				return (response.results[0].geometry.location.lat() >= 0 ? 'north' : 'south') as T;
 			}
 
 			const date = new Date();															// fallback relies on the area to observe DST
@@ -110,7 +150,13 @@ export const mapHemisphere = <T extends 'north' | 'south' | null>(coords?: googl
 
 			return null;
 		})
-		.catch(_ => null)																				// cannot geocode coordinates
+		.catch(error => {																				// cannot query coordinates
+			if (opts.debug)
+				console.warn('mapHemisphere: ', error.message);
+			if (opts.catch === false)
+				throw new Error(error)
+			return null;
+		})
 
 /**
  * query google-maps for a best-guess address at supplied {lat,lng} co-ordinates  
@@ -118,7 +164,10 @@ export const mapHemisphere = <T extends 'north' | 'south' | null>(coords?: googl
  */
 export const mapAddress = (coords?: google.maps.GeocoderRequest, opts = { catch: true, debug: false } as MapOpts) =>
 	mapQuery(coords)
-		.then(response => response.results?.[0])								// first result is 'best-guess'
+		.then(response => {
+			if (!isNullish(response.error)) throw new Error(response.error);
+			return response.results[0];														// first result is 'best-guess'
+		})
 		.then(({ formatted_address, address_components }) => address_components
 			.reduce((acc, itm) => {
 				itm.types
@@ -126,10 +175,10 @@ export const mapAddress = (coords?: google.maps.GeocoderRequest, opts = { catch:
 					.forEach(type => acc[type] = (acc[type] ? (acc[type] + ',') : '').concat(itm.short_name));
 				return acc;
 			}, { formatted_address } as Record<string, string | string[]>))	// start with formatted_address
-		.catch(err => {
+		.catch(error => {
 			if (opts.debug)
-				console.warn('mapAddress: ', err.message);
+				console.warn('mapAddress: ', error.message);
 			if (opts.catch === false)
-				throw new Error(err);
+				throw new Error(error);
 			return null;
 		})

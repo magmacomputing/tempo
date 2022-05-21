@@ -58,6 +58,18 @@ export const quoteObj = (obj: any) => {
 		?.replace(/,/g, ', ')
 }
 
+export const asObject = <T>(obj: any) => {
+	if (obj === null || !(obj instanceof Object)) {
+		return obj;
+	}
+	const temp: any = (obj instanceof Array) ? [] : {};
+
+	for (const key in obj)
+		temp[key] = asObject(obj[key]);
+
+	return temp as T;
+}
+
 /** deep-compare Objects for equality */
 export const isEqual = (obj1: any = {}, obj2: any = {}): boolean => {
 	const keys1 = isFunction(obj1.keys) ? Array.from<string>(obj1.keys()) : Object.keys(obj1);
