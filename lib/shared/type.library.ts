@@ -93,11 +93,15 @@ export function assertCondition(condition: boolean, message?: string): asserts c
 export function assertString(str: unknown): asserts str is string { assertCondition(isString(str), `Invalid string: ${str}`) };
 export function assertNever(val: never): asserts val is never { throw new Error(`Unexpected object: ${val}`) };
 
-export type TValues<T> = T | Array<T>
-export type TArray<T> = NonNullable<Exclude<T, string | number>>
-export type TPlural<T extends string> = `${T}s`
-export type ValueOf<T> = T[keyof T]
-export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>
+/** infer T of a <T | T[]> */
+export type TValue<T> = T extends Array<infer A> ? A : NonNullable<T>;
+/** cast <T | T[]> as T[] */
+export type TArray<T> = NonNullable<TValue<T>[]>;
+/** cast T as <T | T[]> */
+export type TValues<T> = TValue<T> | Array<TValue<T>>;
+export type TPlural<T extends string> = `${T}s`;
+export type ValueOf<T> = T[keyof T];
+export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 export type OneKey<K extends keyof any, V, KK extends keyof any = K> =
 	{ [P in K]: { [Q in P]: V } &
 		{ [Q in Exclude<KK, P>]?: undefined } extends infer O ?
