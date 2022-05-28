@@ -4,12 +4,6 @@ import { clonify } from '@module/shared/serialize.library';
 import { asType, isNumber, isDate, isIterable, isString, isBoolean, isArrayLike, nullToValue } from '@module/shared/type.library';
 
 /** Coerce value into value[], if not already value[], with optional fill Object */
-// type AsArray = {
-// 	<T>(arr: Exclude<ArrayLike<T>, string>): T[];
-// 	<T>(arr: T | Exclude<Iterable<T>, string>): NonNullable<T>[];
-// 	<T, K>(arr: Iterable<T> | ArrayLike<T>, fill: K): K[];
-// }
-// export const asArray: AsArray = <T, K>(arr: T | Iterable<T> | ArrayLike<T> = [], fill?: K): (T | K)[] => {
 export function asArray<T>(arr: Exclude<ArrayLike<T>, string>): T[];
 export function asArray<T>(arr: T | Exclude<Iterable<T>, string>): NonNullable<T>[];
 export function asArray<T, K>(arr: Iterable<T> | ArrayLike<T>, fill: K): K[];
@@ -22,7 +16,7 @@ export function asArray<T, K>(arr: T | Iterable<T> | ArrayLike<T> = [], fill?: K
 			return Array.from<T, K>(arr as T[], val => {
 				return args.type === 'Undefined' || val !== void 0
 					? val as unknown as K															// if no 'fill', then use val
-					: clonify(fill as K)																	// clone 'fill' to create new Objects
+					: clonify(fill as K)															// clone 'fill' to create new Objects
 			});
 
 		default:
@@ -48,7 +42,7 @@ export const sortInsert = <T>(arr: T[] = [], val: T) => {
 
 /** sort Array-of-Objects by multiple keys */
 export interface SortBy {
-	field: string;//| FieldPath;
+	field: string;
 	dir?: 'asc' | 'desc';
 	index?: number | '*';
 	default?: any;

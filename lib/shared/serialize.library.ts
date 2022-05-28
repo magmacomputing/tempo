@@ -41,13 +41,6 @@ function replacer(key: string, val: any): any { return isEmpty(key) ? val : stri
 function reviver(sentinel?: Function): any { return (key: string, val: any) => isEmpty(key) ? val : objectify(val, sentinel) };
 function clean(val: string) {
 	return val
-		// .replace(/\"\['/g, '[')
-		// .replace(/\]\"/g, ']')
-		// .replace(/\"\{/g, '{')
-		// .replace(/\}\"/g, '}')
-		// .replace(/\=\\\"/g, '=\'')
-		// .replace(/\;\\\"/g, ';\'')
-		// .replace(/\\\"/g, '\"')
 		.replaceAll('"[', '[')
 		.replaceAll(']"', ']')
 		.replaceAll('"{', '{')
@@ -57,7 +50,7 @@ function clean(val: string) {
 		.replaceAll('\\"', '\"')
 }
 
-/** Serialize an object for stashing in Web Storage, Cache, etc */
+/** Serialize an object for safe stashing in WebStorage, Cache, etc */
 export function stringify(obj: any, ...rest: any[]): string {
 	const arg = asType(obj);
 	const val = `${arg.type}:`;
