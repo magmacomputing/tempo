@@ -145,7 +145,7 @@ export class Tempo {
 	 */
 	static init = (init: Tempo.Init) => {
 		const sphere = init.sphere || Tempo.COMPASS.North;
-		const fiscal = init.fiscal || Tempo.MONTH[(sphere === Tempo.COMPASS.North ? Tempo.MONTH.Oct : Tempo.MONTH.Jul)];
+		const fiscal = init.fiscal || Tempo.MONTH[(sphere === Tempo.COMPASS.North ? Tempo.MONTH.Oct : Tempo.MONTH.Jul)] as Tempo.CALENDAR;
 
 		Tempo.#gps.resolve(null);																// dont block
 
@@ -232,7 +232,7 @@ export class Tempo {
 
 				this.#sphere(Tempo.#default.sphere, this.#months);	// setup seasons
 				this.#fiscal(Tempo.#default.fiscal, this.#months);	// setup quarters
-				enumKeys(Tempo.MONTH).forEach((mon, idx) => this.#months[idx].month = mon);
+				enumKeys(Tempo.MONTH).forEach((mon, idx) => this.#months[idx].name = mon);
 
 				if (isUndefined(store)) {
 					switch (context.type) {
@@ -898,7 +898,7 @@ export namespace Tempo {
 	export type Offset = OneKey<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit>
 	export type Add = OneKey<Tempo.TimeUnit | Tempo.DiffUnit, number>
 	export type Month = {
-		month: keyof typeof Tempo.MONTH;
+		name: keyof typeof Tempo.MONTH;
 		quarter: number;
 		season: `${keyof typeof Tempo.SEASON}.${number}`;
 	}

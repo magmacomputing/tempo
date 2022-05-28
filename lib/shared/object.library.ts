@@ -59,9 +59,9 @@ export const quoteObj = (obj: any) => {
 }
 
 export const asObject = <T>(obj: any) => {
-	if (obj === null || !(obj instanceof Object)) {
+	if (obj === null || !(obj instanceof Object))
 		return obj;
-	}
+
 	const temp: any = (obj instanceof Array) ? [] : {};
 
 	for (const key in obj)
