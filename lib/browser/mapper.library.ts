@@ -6,7 +6,7 @@ interface MapOpts {
 	catch?: boolean;																					// intercept Reject as Resolve (default: true)
 	debug?: boolean;																					// console.log progress
 }
-interface MapPosi {
+interface MapStore {
 	geolocation: GeolocationPosition & { error?: GeolocationPositionError["message"] | 'NOT_SUPPORTED' };
 	georesponse: google.maps.GeocoderResponse & { error?: Error["message"] };
 }
@@ -18,50 +18,49 @@ interface MapPosi {
 const ONE_HOUR = 60 * 60 * 1_000;														// 3600 seconds
 const MAP_KEY = '_map_';																		// localStorage key
 const defaults: MapOpts = { catch: true, debug: false };		// default Options
-const mapPosition = WebStore.local.get(MAP_KEY, {} as MapPosi);// static object to hold last position
+const mapStore = WebStore.local.get(MAP_KEY, {} as MapStore)// static object to hold last position
 
 /**
  * attempt geolocation.getCurrentPosition()  
- * -> if user allows, then return geo-coordinates
+ * -> if user allows, then return geo-coordinates  
  * -> if not allowed, then set error = GeolocationPositionError  
  * -> if not support, then set error = NOT_SUPPORTED
  */
 export const geoLocation = (opts = {} as MapOpts) =>
-	new Promise<MapPosi["geolocation"]>((resolve, reject) => {
+	new Promise<MapStore["geolocation"]>((resolve, reject) => {
 		opts = Object.assign({}, defaults, opts);
 		const handler = opts.catch ? resolve : reject;
 
 		if ('geolocation' in navigator) {
 			navigator["geolocation"].getCurrentPosition(
-				value => {																					// on success
-					const test1 = value.coords.latitude.toFixed(3) !== mapPosition.geolocation?.coords.latitude.toFixed(3);
-					const test2 = value.coords.longitude.toFixed(3) !== mapPosition.geolocation?.coords.longitude.toFixed(3);
-					const test3 = mapPosition.geolocation?.timestamp < (new Date().valueOf() - ONE_HOUR);
+				(value) => {																				// on success
+					const test1 = value.coords.latitude.toFixed(3) !== mapStore.geolocation?.coords?.latitude.toFixed(3);
+					const test2 = value.coords.longitude.toFixed(3) !== mapStore.geolocation?.coords?.longitude.toFixed(3);
+					const test3 = mapStore.geolocation?.timestamp < (new Date().valueOf() - ONE_HOUR);
 
 					if (test1 || test2 || test3) {										// position has moved, or timeout
-						Reflect.deleteProperty(mapPosition, 'georesponse');// so remove stashed geocoder result
+						Object.assign(mapStore, { georesponse: null });	// so remove stashed georesponse result
 						if (opts.debug)
 							console.log('geoLocation: device moved');
 					}
 
-					Object.assign(mapPosition, { geolocation: asObject(value) });
-					resolve(mapPosition.geolocation);
-
+					Object.assign(mapStore, { geolocation: asObject(value) });
+					resolve(mapStore.geolocation);
 				},
-				error => {																					// on failure
-					Object.assign(mapPosition, { geolocation: { error: error.message }, georesponse: null });
-					handler(mapPosition.geolocation);
+				(error) => {																				// on failure
+					Object.assign(mapStore, { geolocation: { error: error.message }, georesponse: null });
+					handler(mapStore.geolocation);
 				})
 		} else {																								// not available
-			Object.assign(mapPosition, { geolocation: { error: 'Not Supported' }, georesponse: null });
-			handler(mapPosition.geolocation);
+			Object.assign(mapStore, { geolocation: { error: 'Not Supported' }, georesponse: null });
+			handler(mapStore.geolocation);
 		}
 	})
 		.finally(() => {
 			if (opts.debug)
-				console[mapPosition.geolocation?.error ? 'error' : 'log']('geoLocation: ', mapPosition.geolocation);
+				console[mapStore.geolocation?.error ? 'error' : 'log']('geoLocation: ', mapStore.geolocation);
 
-			WebStore.local.set(MAP_KEY, mapPosition);
+			WebStore.local.set(MAP_KEY, mapStore);
 		})
 
 /** format coordinates as a GeocoderRequest["location"] object */
@@ -81,12 +80,12 @@ export const geoCoords = (coords?: google.maps.GeocoderRequest) =>
 
 /** Make a 'maps' request on google API */
 export const mapQuery = (coords?: google.maps.GeocoderRequest, opts = {} as MapOpts) =>
-	new Promise<MapPosi["georesponse"]>((resolve, reject) => {
+	new Promise<MapStore["georesponse"]>((resolve, reject) => {
 		opts = Object.assign({}, defaults, opts);
 		const handler = opts.catch ? resolve : reject;
 
 		geoCoords(coords)																				// get a Location object
-			.then(loc => {
+			.then((loc) => {
 				switch (true) {
 					case (!('maps' in window['google'])):
 						throw new Error('Google Maps API not configured');
@@ -95,38 +94,38 @@ export const mapQuery = (coords?: google.maps.GeocoderRequest, opts = {} as MapO
 						throw new Error('Cannot determine Coordinates');
 
 					case isNullish(coords):														// current location
-						const test1 = !isNullish(mapPosition.geolocation) && !isNullish(mapPosition.georesponse);
-						const test2 = isNullish(mapPosition.geolocation?.error) && isNullish(mapPosition.georesponse?.error);
+						const test1 = !isNullish(mapStore.geolocation) && !isNullish(mapStore.georesponse);
+						const test2 = isNullish(mapStore.geolocation?.error) && isNullish(mapStore.georesponse?.error);
 						if (test1 && test2) {														// if we already have geocoder
 							if (opts.debug)
 								console.log('mapQuery: cache');
-							return resolve(mapPosition.georesponse!);			// return previous geocoder
+							return resolve(mapStore.georesponse!);				// return previous geocoder
 						}
 
 					default:
 						new window['google']['maps'].Geocoder().geocode(loc!)
-							.then(res => resolve(mapPosition.georesponse = res))	// successful maps.geocode
+							.then(res => resolve(mapStore.georesponse = res))	// successful maps.geocode
 				}
 			})
-			.catch(error => {																			// unsuccessful geoCoords() | geocode()
-				Object.assign(mapPosition, { georesponse: { error: error.message } });
-				handler(mapPosition.georesponse);
+			.catch((error) => {																		// unsuccessful geoCoords() | geocode()
+				Object.assign(mapStore, { georesponse: { error: error.message } });
+				handler(mapStore.georesponse);
 			})
 	})
 		.finally(() => {
 			if (opts.debug)
-				console[mapPosition.georesponse?.error ? 'error' : 'log']('mapQuery: ', mapPosition.georesponse);
+				console[mapStore.georesponse?.error ? 'error' : 'log']('mapQuery: ', mapStore.georesponse);
 
-			WebStore.local.set(MAP_KEY, mapPosition);
+			WebStore.local.set(MAP_KEY, mapStore);
 		})
 
 /**
  * get Hemisphere ('north' | 'south' | null)  
- * for supplied coordinates (else query current gelocation)
+ * for supplied coordinates (else query current geolocation)
  */
 export const mapHemisphere = <T extends 'north' | 'south' | null>(coords?: google.maps.GeocoderRequest, opts = {} as MapOpts) =>
 	mapQuery(coords)																					// ask Google
-		.then(response => {
+		.then((response) => {
 			opts = Object.assign({}, defaults, opts);
 
 			if (!isNullish(response.error)) {											// useable GeocoderResult detected
@@ -150,7 +149,7 @@ export const mapHemisphere = <T extends 'north' | 'south' | null>(coords?: googl
 
 			return null;
 		})
-		.catch(error => {																				// cannot query coordinates
+		.catch((error) => {																			// cannot query coordinates
 			if (opts.debug)
 				console.warn('mapHemisphere: ', error.message);
 			if (opts.catch === false)
@@ -162,9 +161,9 @@ export const mapHemisphere = <T extends 'north' | 'south' | null>(coords?: googl
  * query google-maps for a best-guess address at supplied {lat,lng} co-ordinates  
  * (default current location)
  */
-export const mapAddress = (coords?: google.maps.GeocoderRequest, opts = { catch: true, debug: false } as MapOpts) =>
+export const mapAddress = (coords?: google.maps.GeocoderRequest, opts = {} as MapOpts) =>
 	mapQuery(coords)
-		.then(response => {
+		.then((response) => {
 			if (!isNullish(response.error)) throw new Error(response.error);
 			return response.results[0];														// first result is 'best-guess'
 		})
@@ -175,7 +174,9 @@ export const mapAddress = (coords?: google.maps.GeocoderRequest, opts = { catch:
 					.forEach(type => acc[type] = (acc[type] ? (acc[type] + ',') : '').concat(itm.short_name));
 				return acc;
 			}, { formatted_address } as Record<string, string | string[]>))	// start with formatted_address
-		.catch(error => {
+		.catch((error) => {
+			opts = Object.assign({}, defaults, opts);
+
 			if (opts.debug)
 				console.warn('mapAddress: ', error.message);
 			if (opts.catch === false)
