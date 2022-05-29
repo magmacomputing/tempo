@@ -95,10 +95,11 @@ export function assertNever(val: never): asserts val is never { throw new Error(
 
 /** infer T of a <T | T[]> */
 export type TValue<T> = T extends Array<infer A> ? A : NonNullable<T>;
-/** cast <T | T[]> as T[] */
-export type TArray<T> = NonNullable<TValue<T>[]>;
 /** cast T as <T | T[]> */
-export type TValues<T> = TValue<T> | Array<TValue<T>>;
+export type TValues<T> = TValue<T> | Array<TValue<T>> | Extract<T, undefined>;
+/** cast <T | T[]> as T[] */
+export type TArray<T> = Array<TValue<T>>;
+
 export type TPlural<T extends string> = `${T}s`;
 export type ValueOf<T> = T[keyof T];
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
