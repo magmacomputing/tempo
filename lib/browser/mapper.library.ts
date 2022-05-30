@@ -13,7 +13,7 @@ interface MapStore {
 
 /**
  * To avoid calling google.maps (for response-time and cost) we stash the current location.  
- * On subsequent calls, we check whether the device has moved before calling google.maps
+ * On subsequent attempts, we check whether the device has moved much before calling google.maps
  */
 const ONE_HOUR = 60 * 60 * 1_000;														// 3600 seconds
 const MAP_KEY = '_map_';																		// localStorage key
@@ -41,7 +41,7 @@ export const geoLocation = (opts = {} as MapOpts) =>
 					if (test1 || test2 || test3) {										// position has moved, or timeout
 						Object.assign(mapStore, { georesponse: null });	// so remove stashed georesponse result
 						if (opts.debug)
-							console.log('geoLocation: device moved');
+							console.log('geoLocation: device update');
 					}
 
 					Object.assign(mapStore, { geolocation: asObject(value) });
@@ -90,7 +90,7 @@ export const mapQuery = (coords?: google.maps.GeocoderRequest, opts = {} as MapO
 					case (!('maps' in window['google'])):
 						throw new Error('Google Maps API not configured');
 
-					case isNullish(loc):															// unsuccessful geoLocation()
+					case isNullish(loc):															// unsuccessful geoLocation
 						throw new Error('Cannot determine Coordinates');
 
 					case isNullish(coords):														// current location
@@ -100,7 +100,7 @@ export const mapQuery = (coords?: google.maps.GeocoderRequest, opts = {} as MapO
 							if (opts.debug)
 								console.log('mapQuery: cache');
 							return resolve(mapStore.georesponse!);				// return previous geocoder
-						}
+						}																								// drop through to default:
 
 					default:
 						new window['google']['maps'].Geocoder().geocode(loc!)
@@ -128,7 +128,7 @@ export const mapHemisphere = <T extends 'north' | 'south' | null>(coords?: googl
 		.then((response) => {
 			opts = Object.assign({}, defaults, opts);
 
-			if (!isNullish(response.error)) {											// useable GeocoderResult detected
+			if (isNullish(response.error)) {											// useable GeocoderResult detected
 				if (opts.debug)
 					console.log('sphere: ', response);
 				return (response.results[0].geometry.location.lat() >= 0 ? 'north' : 'south') as T;
