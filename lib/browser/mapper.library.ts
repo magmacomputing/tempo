@@ -2,11 +2,15 @@ import { WebStore } from '@module/browser/webstore.class';
 import { asObject } from '@module/shared/object.library';
 import { isNullish } from '@module/shared/type.library';
 
+/**
+ * Various functions to allow geolocating a user-device.  
+ */
+
 interface MapOpts {
-	catch?: boolean;																					// intercept Reject as Resolve (default: true)
-	debug?: boolean;																					// console.log progress
+	catch?: boolean;																					// intercept Promise Reject as Resolve (default: true)
+	debug?: boolean;																					// console.log some checkpoints
 }
-interface MapStore {
+interface MapStore {																				// a localStorage object
 	geolocation: GeolocationPosition & { error?: GeolocationPositionError["message"] | 'NOT_SUPPORTED' };
 	georesponse: google.maps.GeocoderResponse & { error?: Error["message"] };
 }
