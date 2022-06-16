@@ -4,7 +4,6 @@ import type { Pledge } from '@module/shared/pledge.class';
 // TODO:  remove this after Temporal reaches Stage-4
 import { Temporal } from '@js-temporal/polyfill';
 
-
 /** the actual type reported by ECMAScript */
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
 
@@ -50,9 +49,9 @@ export const isString = (obj?: unknown): obj is string => isType(obj, 'String');
 export const isNumber = (obj?: unknown): obj is number => isType(obj, 'Number');
 export const isInteger = (obj?: unknown): obj is bigint => isType(obj, 'BigInt');
 export const isBoolean = <T>(obj?: T): obj is Extract<T, boolean> => isType(obj, 'Boolean');
-export const isArray = <T>(obj?: T | Array<T>): obj is Array<T> => isType(obj, 'Array');
+export const isArray = <T >(obj: T | T[]): obj is Array<T> => isType(obj, 'Array');
 export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => protoType(obj) === 'Object' && 'length' in obj && Object.keys(obj).every(key => key === 'length' || !isNaN(Number(key)));
-export const isObject = <T>(obj?: T): obj is Extract<T, Record<any, any>> => isType(obj, 'Object');
+export const isObject = <T>(obj?: T): obj is T => isType(obj, 'Object');
 export const isDate = (obj?: unknown): obj is Date => isType(obj, 'Date');
 export const isRegExp = (obj?: unknown): obj is RegExp => isType(obj, 'RegExp');
 // TODO
@@ -79,9 +78,9 @@ export const nullToValue = <T, R>(obj: T, value: R) => obj ?? value;
 export const isEmpty = <T>(obj?: T) => false
 	|| isNullish(obj)
 	|| (isObject(obj) && Object.keys(obj).length === 0)
-	|| (isRecord(obj) && Object.keys(obj).length === 0)
 	|| (isString(obj) && obj.trim().length === 0)
 	|| (isArray(obj) && obj.length === 0)
+	|| (isRecord(obj) && Object.keys(obj).length === 0)
 	|| (isTuple<T>(obj) && obj.length === 0)
 	|| (isSet(obj) && obj.size === 0)
 	|| (isMap(obj) && obj.size === 0)
