@@ -4,6 +4,32 @@ import { isObject, isArray, isString, isNull, isUndefined, isReference, isFuncti
 const regex = /(?<matchWord>.*)\[(?<matchIdx>.)\]$/;				// a pattern to find array-references
 
 /**
+ * Get nested value
+ */
+export function extract<T>(obj: object, path: string, dflt: T): T;
+export function extract<T>(obj: object, path: string): T | undefined;
+export function extract<T>(obj: object, path = '', dflt?: T) {
+	if (!path.length)
+		return obj as unknown as T;															// finished searching
+	if (!isObject(obj) && !isArray(obj))
+		return dflt;
+
+	const fields = path
+		.replace(/\[(\w+)\]/g, '.$1')														// convert indexes to properties
+		.replace(/^\./, '')																			// strip a leading dot
+		.replace(/\.$/, '')																			// string a trailing dot
+		.replace(' ', '')																				// remove readability-spaces
+		.split('.')
+
+	const [word, ...rest] = fields;
+	for (const [key, val] of Object.entries(obj))
+		if (word === key)
+			return extract(val, rest.join('.'), dflt);
+
+	return dflt;
+}
+
+/**
  * Get nested value,  
  * allow for array-references in <path>
  */

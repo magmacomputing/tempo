@@ -4,8 +4,8 @@ import { isDefined } from '@module/shared/type.library';
 /** General utility functions */
 
 /** memoize repeated lookups */
-export const memoize = (fn: Function) => {
-	const cache = new Map<string, any>();
+export const memoize = <F extends (...args: any) => any>(fn: F) => {
+	const cache = new Map<string, ReturnType<F>>();
 
 	return (...args: unknown[]) => {
 		const key = JSON.stringify(args);
@@ -13,7 +13,7 @@ export const memoize = (fn: Function) => {
 		if (!cache.has(key))
 			cache.set(key, fn(...args));
 
-		return cache.get(key);
+		return cache.get(key) as ReturnType<F>;
 	}
 }
 
