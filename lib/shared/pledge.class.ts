@@ -111,6 +111,10 @@ export class Pledge<T> {
 	get status() {
 		return this.#status;
 	}
+
+	toString() {
+		return JSON.stringify(this.#status);
+	}
 }
 
 export namespace Pledge {
