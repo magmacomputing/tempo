@@ -7,8 +7,8 @@ import { isNumber } from '@module/shared/type.library';
 
 /** array of Enum keys */
 export const enumKeys = <T>(enumType: T) => {
-	const enumEntries = Object.entries(enumType).filter(([, val]) => isNumber(val)) as [keyof T, number][];
-	const enumKeys = Object.keys(enumType).filter(key => !isNumeric(key)) as (keyof T)[];
+	const enumEntries = Object.entries(enumType as T & object).filter(([, val]) => isNumber(val)) as [keyof T, number][];
+	const enumKeys = Object.keys(enumType as T & object).filter(key => !isNumeric(key)) as (keyof T)[];
 
 	return (enumEntries.length === enumKeys.length)						// if Numeric Enum
 		? enumEntries
@@ -24,4 +24,4 @@ export const enumCount = <T>(enumType: T) => enumKeys(enumType).length;
 export const enumValues = <T>(enumType: T) => enumKeys(enumType).map(key => enumType[key]);
 
 /** Array of Enum's [key, value] tuples */
-export const enumEntries = <T>(enumType: T) => enumKeys(enumType).map(key => [key, enumType[key]]);
+export const enumEntries = <T>(enumType: T) => enumKeys(enumType).map(key => [key, enumType[key]] as [keyof T, T[keyof T]]);

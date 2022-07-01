@@ -4,8 +4,8 @@ import { clonify } from '@module/shared/serialize.library';
 import { asType, isNumber, isDate, isIterable, isString, isBoolean, isArrayLike, nullToValue } from '@module/shared/type.library';
 
 /** Coerce value into value[], if not already value[], with optional fill Object */
-export function asArray<T>(arr: Exclude<ArrayLike<T>, string>): T[];
-export function asArray<T>(arr: T | Exclude<Iterable<T>, string>): NonNullable<T>[];
+export function asArray<T>(arr: Exclude<ArrayLike<T>, string> | undefined): T[];
+export function asArray<T>(arr: T | Exclude<Iterable<T> | undefined, string>): NonNullable<T>[];
 export function asArray<T, K>(arr: Iterable<T> | ArrayLike<T>, fill: K): K[];
 export function asArray<T, K>(arr: T | Iterable<T> | ArrayLike<T> = [], fill?: K): (T | K)[] {
 	switch (true) {
