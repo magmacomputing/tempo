@@ -7,8 +7,8 @@ import { Temporal } from '@js-temporal/polyfill';
 /** the actual type reported by ECMAScript */
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
 
-/**
- * return a ProperCase string of an object's type.  
+/** 
+ * return a object's type as a ProperCase string.  
  * If instance, return Class name
  */
 export const getType = (obj?: any, ...instances: Instance[]) => {
@@ -40,7 +40,7 @@ export const getType = (obj?: any, ...instances: Instance[]) => {
 export const asType = <T>(obj?: T, ...instances: Instance[]) => ({ type: getType(obj, ...instances), value: obj } as TypeValue<T>);
 export const isType = <T>(obj: unknown, type: Types, ...types: Types[]): obj is T => [type, ...types].includes(getType(obj));
 
-/** Type-Guards: return a boolean to test \<obj> is of \<type> */
+/** Type-Guards: assert \<obj> is of \<type> */
 export const isPrimitive = (obj?: unknown): obj is Primitive => isType(obj, 'String', 'Number', 'BigInt', 'Boolean', 'Symbol', 'Undefined', 'Null');
 export const isReference = (obj?: unknown): obj is Object => !isPrimitive(obj);
 export const isIterable = <T>(obj: unknown): obj is Iterable<T> => Symbol.iterator in Object(obj) && !isString(obj);
@@ -48,10 +48,11 @@ export const isIterable = <T>(obj: unknown): obj is Iterable<T> => Symbol.iterat
 export const isString = (obj?: unknown): obj is string => isType(obj, 'String');
 export const isNumber = (obj?: unknown): obj is number => isType(obj, 'Number');
 export const isInteger = (obj?: unknown): obj is bigint => isType(obj, 'BigInt');
+export const isDigit = (obj?: unknown): obj is number | bigint => isType(obj, 'Number', 'BigInt');
 export const isBoolean = <T>(obj?: T): obj is Extract<T, boolean> => isType(obj, 'Boolean');
-export const isArray = <T >(obj: T | T[]): obj is Array<T> => isType(obj, 'Array');
+export const isArray = <T>(obj: T | T[]): obj is Array<T> => isType(obj, 'Array');
 export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => protoType(obj) === 'Object' && 'length' in obj && Object.keys(obj).every(key => key === 'length' || !isNaN(Number(key)));
-export const isObject = <T>(obj?: T): obj is T => isType(obj, 'Object');
+export const isObject = <T>(obj?: unknown): obj is Record<string, any> => isType(obj, 'Object');
 export const isDate = (obj?: unknown): obj is Date => isType(obj, 'Date');
 export const isRegExp = (obj?: unknown): obj is RegExp => isType(obj, 'RegExp');
 // TODO
@@ -59,8 +60,8 @@ export const isRecord = (obj?: unknown): obj is Record<any, any> => isType(obj, 
 export const isTuple = <T>(obj?: unknown): obj is Array<T> => isType(obj, 'Tuple');
 
 export const isNull = (obj?: unknown): obj is null => isType(obj, 'Null');
-export const isNullish = <T>(obj: T | null | void): obj is void | null => isType<void | null>(obj, 'Null', 'Undefined');
-export const isUndefined = (obj?: unknown): obj is void => isType<void>(obj, 'Undefined');
+export const isNullish = <T>(obj: T | null | undefined): obj is undefined | null => isType<undefined | null>(obj, 'Null', 'Undefined');
+export const isUndefined = (obj?: unknown): obj is undefined => isType<undefined>(obj, 'Undefined');
 export const isDefined = <T>(obj: T): obj is NonNullable<T> => !isNullish(obj);
 
 export const isClass = (obj?: unknown): obj is Function => isType(obj, 'Class');

@@ -17,14 +17,14 @@ export function extract<T>(obj: object, path = '', dflt?: T) {
 	const fields = path
 		.replace(/\[(\w+)\]/g, '.$1')														// convert indexes to properties
 		.replace(/^\./, '')																			// strip a leading dot
-		.replace(/\.$/, '')																			// string a trailing dot
+		.replace(/\.$/, '')																			// strip a trailing dot
 		.replace(' ', '')																				// remove readability-spaces
 		.split('.')
 
 	const [word, ...rest] = fields;
 	for (const [key, val] of Object.entries(obj))
 		if (word === key)
-			return extract(val, rest.join('.'), dflt);
+			return extract(val, rest.join('.'), dflt);						// recurse into object
 
 	return dflt;
 }
