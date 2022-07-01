@@ -1,6 +1,5 @@
 import { asArray, keyedBy, sortBy, type SortBy } from '@module/shared/array.library';
 import { toProperCase } from '@module/shared/string.library';
-import { isType } from '@module/shared/type.library';
 
 // Prototype extensions
 
