@@ -28,9 +28,9 @@ import { Temporal } from '@js-temporal/polyfill';
  * 	Options?: 	object				- arguments to assist with parsing the <date> and configuring the instance
  * ````
  * A Tempo is an object that is used to wrap a Temporal.ZonedDateTime.  
- * It's strength is in it's flexibility to parse string|number DateTime.  
+ * It's strength is in it's flexibility to parse string|number|DateTime.  
  * It has accessors that report the value as DateTime components ('yy', 'dd', 'HH', ...)  
- * It has methods to perform manipulations (add(), format(), diff(), offset(), ...)  
+ * It has methods to perform manipulations (add, format, diff, offset, ...)  
  */
 export class Tempo {
 	// Instance variables  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
