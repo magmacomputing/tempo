@@ -42,8 +42,12 @@ export const suffix = (idx: number) => {
 }
 
 /** split a value into an array */
-export const split = <T extends string | number>(nbr?: string | number, chr: string = '.', zero: boolean = true) =>
-	nbr?.toString().split(chr).map(val => ifNumeric(val, zero)) as T[] || [];
+export function split<T extends number>(nbr: T, chr?: string, zero?: boolean): number[];
+export function split<T extends string>(nbr: T, chr?: string, zero?: boolean): (string | number)[];
+export function split<T extends string | number>(nbr?: T, chr: string = '.', zero: boolean = true) {
+	return nbr?.toString().split(chr).map(val => ifNumeric(val, zero))
+		|| []
+};
 
 /** fix a string to set decimal precision */
 export const fix = (nbr: string | number = 0, max = 2) =>
