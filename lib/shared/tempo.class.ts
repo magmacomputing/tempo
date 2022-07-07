@@ -120,7 +120,7 @@ export class Tempo {
 				return pat;
 
 			if (/^\/.*\/$/.test(pat))															// a string that looks like a RegExp
-				return new RegExp(pat.substring(1, pat.length - 1));
+				return new RegExp(pat.slice(1, -1));
 
 			if (isUndefined(Tempo.units[pat]))										// unknown unit, cannot proceed
 				throw new Error(`Cannot find "${pat}" in Tempo.units`);
@@ -464,9 +464,8 @@ export class Tempo {
 	#conform(tempo: Tempo.DateTime | undefined, today: Temporal.ZonedDateTime) {
 		const arg = asType(tempo, { type: 'Tempo', class: Tempo });
 
-		// only if type is a string | number | bigint
 		if (!isType<string | number | bigint>(arg.value, 'String', 'Number', 'BigInt'))
-			return arg;
+			return arg;																						// exit if type is not string | number | bigint
 
 		if (['Number', 'BigInt'].includes(arg.type)) {
 			if (arg.value!.toString().length <= 7)								// might be 'seconds', might be 'yymmdd', might be 'dmmyyyy'
@@ -475,7 +474,10 @@ export class Tempo {
 
 		// Attempt to match the value against each one of the regular expression patterns until a match is found
 		for (const { key, reg } of this.#config.pattern) {
-			const pat = arg.value.toString().trimAll(/\(|\)|\t/gi).match(reg);
+			const pat = arg.value
+				.toString()																					// easier to work with strings
+				.trimAll(/\(|\)|\t/gi)															// remove (), \t, \s
+				.match(reg);																				// return any matches
 
 			if (isNull(pat) || isUndefined(pat.groups))						// regexp named-groups not found
 				continue;
@@ -555,7 +557,7 @@ export class Tempo {
 			 * 12:00am	-> 00:00:00
 			 */
 			if (isDefined(pat.groups['hms'])) {
-				let [hh, mi, ss] = split<number>(pat.groups['hms'], ':');
+				let [hh, mi, ss] = split(pat.groups['hms'], ':') as [number, number, number];
 
 				if (pat.groups['am']?.toLowerCase() === 'pm' && hh < 12)
 					hh += 12
@@ -564,15 +566,15 @@ export class Tempo {
 			}
 
 			/**
-			 * Change two-digit year into four-digits using 'pivot-year' to determine previous century
+			 * Change two-digit year into four-digits using 'pivot-year' to determine century
 			 * 20			-> 2022
 			 * 34			-> 1934
 			 */
-			if (/^\d{2}$/.test(pat.groups['yy'])) {
-				const [, pivot] = split<number>(today
+			if (/^\d{2}$/.test(pat.groups['yy'])) {								// if yy match just-two digits
+				const [, pivot] = split(today
 					.subtract({ 'years': this.#config.pivot })				// arbitrary-years ago is pivot for century
 					.year / 100, '.')																	// split on decimal-point
-				const [century] = split<number>(today.year / 100, '.');		// current century
+				const [century] = split(today.year / 100, '.');			// current century
 				const yy = Number(pat.groups['yy']);								// as number
 
 				pat.groups['yy'] = `${century - Number(yy > pivot)}${pat.groups['yy']}`;
@@ -621,7 +623,7 @@ export class Tempo {
 			}, {} as { mutate: Tempo.Mutate, offset: number, unit: Tempo.TimeUnit | Tempo.DiffUnit })
 
 		const single = unit.endsWith('s')
-			? unit.substring(0, unit.length - 1)									// remove plural suffix
+			? unit.slice(0, -1)																		// remove plural suffix
 			: unit
 		let zdt = this.#temporal;																// clone the Tempo instance
 
@@ -785,7 +787,7 @@ export class Tempo {
 					return bailOut;
 				}
 
-				const [full, part] = split<number>(this.#config.month[this.mm].quarter);
+				const [full, part] = split(this.#config.month[this.mm].quarter);
 				const mon = (full - 1) * 3 + part - 1;
 				const yy = this.#temporal.with({ day: 1 }).add({ months: -mon }).add({ months: 11 }).year;
 

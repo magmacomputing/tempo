@@ -37,38 +37,65 @@ export function clonify<T>(obj: T, sentinel?: Function): T {
 	}
 }
 
-function replacer1(key: string, obj: any): any { return isEmpty(key) ? obj : stringify1(obj) };
-function reviver1(sentinel?: Function): any { return (key: string, str: any) => isEmpty(key) ? str : objectify1(str, sentinel) };
-function clean(obj: string) {
-	return obj
-	// .replaceAll('"[', '[')
-	// .replaceAll(']"', ']')
-	// .replaceAll('"{', '{')
-	// .replaceAll('}"', '}')
-	// .replaceAll('\\"', '\"')
-	// .replaceAll(quoteArray, (pat: string) => pat.slice(1, -1))
-	// .replaceAll(quoteObject, (pat: string) => pat.slice(1, -1))
-	// .replaceAll(htmlAttrib, (pat: string) => pat.replaceAll(`"`, `'`))// html inline attributes
+const quoteArray = /\"(\[.*?\])?\"/g;												// pattern to detect "[...]"
+const quoteObject = /\"(\{.*?\})?\"/g;											// pattern to detect "{...}"
+
+function replacer(key: string, obj: any): any { return isEmpty(key) ? obj : stringize(obj, true) };
+function reviver(sentinel?: Function): any { return (key: string, str: any) => isEmpty(key) ? str : objectify(str, sentinel) };
+
+/** Serialize an object for string-safe stashing in WebStorage, Cache, etc */
+export function stringify(obj: any) {
+	let str = stringize(obj)
+		.replaceAll(/\\/g, '')																	// remove double-\
+		.replaceAll(/\"\"/g, '"')																// replace double-" with single-"
+
+	while (str.match(quoteArray))															// while nested "[...]"
+		str = str.replaceAll(quoteArray, '$1');									//	remove "
+	while (str.match(quoteObject))														// while nested "{...}"
+		str = str.replaceAll(quoteObject, '$1');								// 	remove "
+	return str;
 }
-function replacer(key: string, obj: any): string {
+
+/**
+ * internal work-horse for stringify()  
+ * level: indicates recursion
+ */
+function stringize(obj: any, ...level: any[]): string {
 	const arg = asType(obj);
 	const prefix = arg.type + ':';
 
 	switch (arg.type) {
 		case 'String':
+			return JSON.stringify(arg.value);
+
+		case 'Null':
+		case 'Boolean':
+			return level.length
+				? prefix + JSON.stringify(arg.value)
+				: JSON.stringify(arg.value)
+
+		case 'Undefined':
+			return level.length
+				? prefix + 'void'
+				: 'void'
+
 		case 'Number':
-			return arg.value.toString();
+			return level.length
+				? arg.value as unknown as string
+				: arg.value.toString()
+
+		case 'BigInt':
+			return level.length
+				? prefix + arg.value.toString() + 'n'
+				: arg.value.toString() + 'n'
 
 		case 'Object':
 		case 'Array':
-			return JSON.stringify(arg.value, replacer);
-
-		case 'Undefined':
-			return prefix;
+			return JSON.stringify(arg.value, replacer)
 
 		case 'Map':
 		case 'Record':																					// TODO
-			return prefix + JSON.stringify(Array.from(arg.value.entries()), replacer);
+			return prefix + JSON.stringify(Array.from(arg.value.entries()), replacer)
 
 		case 'Set':
 		case 'Tuple':																						// TODO
@@ -86,68 +113,6 @@ function replacer(key: string, obj: any): string {
 	}
 }
 
-/** Serialize an object for safe stashing in WebStorage, Cache, etc */
-export function stringify(obj: any) {
-	return JSON.stringify(obj, replacer)
-		.replaceAll(/\\/g, '')
-		.replace(/^".*:.*"$/, str => str.slice(1, -1))
-}
-export function stringify1(obj: any, ...rest: any[]): string {
-	const arg = asType(obj);
-	const prefix = `${arg.type}:`;
-
-	switch (arg.type) {
-		case 'Object':
-		case 'Array':
-			return clean(JSON.stringify(arg.value, replacer));
-
-		case 'String':											    								// return as-is
-			return arg.value;
-
-		case 'Number':
-			return arg.value as unknown as string;
-		// return !rest.length
-		// 	? prefix + arg.value.toString()												// top-level stringified
-		// 	: arg.value as unknown as string;										// return as-is
-
-		case 'BigInt':
-			return prefix + arg.value.toString();
-
-		case 'Map':																							// special treatment
-			return prefix + clean(JSON.stringify(Array.from(arg.value.entries()), replacer))
-
-		case 'Set':																							// special treatment
-			return prefix + clean(JSON.stringify(Array.from(arg.value.values()), replacer))
-
-		case 'Date':																						// special treatment
-			return prefix + arg.value.toISOString();
-
-		case 'Undefined':
-		case 'Null':
-		case 'Symbol':                                          // TODO
-			return prefix;
-
-		case 'Function':																				// TODO
-			return '{}';
-
-		case 'Record':																					// TODO
-			return prefix + clean(JSON.stringify(Object(arg.value), replacer));
-
-		case 'Tuple':
-			return prefix + clean(JSON.stringify(Array.from(arg.value), replacer));
-
-		default:
-			switch (true) {
-				case isFunction(arg.value.toJSON):									// Object has its own toJSON method
-					return prefix + stringify(arg.value.toJSON());
-				case isFunction(arg.value.toString):								// Object has its own toString method
-					return prefix + arg.value.toString();
-				default:
-					return prefix + JSON.stringify(arg.value);					// else standard stringify
-			}
-	}
-}
-
 /** Decode a string to rebuild the original Object-type */
 export function objectify<T>(obj: any, sentinel?: Function): T {
 	if (!isString(obj))
@@ -157,7 +122,7 @@ export function objectify<T>(obj: any, sentinel?: Function): T {
 
 	switch (true) {
 		default:
-			return obj as T;
+			return obj as unknown as T;
 	}
 }
 export function objectify1<T extends any>(obj: any, sentinel?: Function): T {
@@ -169,11 +134,11 @@ export function objectify1<T extends any>(obj: any, sentinel?: Function): T {
 	switch (true) {
 		case str.startsWith('{') && str.endsWith('}'):
 		case str.startsWith('[') && str.endsWith(']'):
-			return JSON.parse(str, reviver1(sentinel));
+			return JSON.parse(str, reviver(sentinel));
 
 		case str.startsWith('Object:{"') && str.endsWith('}'):
 		case str.startsWith('Array:[') && str.endsWith(']'):
-			return JSON.parse(segment, reviver1(sentinel)) as T;
+			return JSON.parse(segment, reviver(sentinel)) as T;
 
 		case str.startsWith('Number:'):
 			return Number(segment) as T;
@@ -187,10 +152,10 @@ export function objectify1<T extends any>(obj: any, sentinel?: Function): T {
 
 		case str.startsWith('Map:[[') && str.endsWith(']]'):
 		case str === 'Map:[]':
-			return new Map(JSON.parse(segment, reviver1(sentinel))) as T;
+			return new Map(JSON.parse(segment, reviver(sentinel))) as T;
 
 		case str.startsWith('Set:[') && str.endsWith(']'):
-			return new Set(JSON.parse(segment, reviver1(sentinel))) as T;
+			return new Set(JSON.parse(segment, reviver(sentinel))) as T;
 
 		case str.startsWith('Date:'):
 			return new Date(segment) as T;
@@ -203,11 +168,11 @@ export function objectify1<T extends any>(obj: any, sentinel?: Function): T {
 
 		case str.startsWith('Record:'):
 			// return Record(segment) as T;												// TODO
-			return JSON.parse(segment, reviver1(sentinel)) as T;
+			return JSON.parse(segment, reviver(sentinel)) as T;
 
 		case str.startsWith('Tuple:'):
 			// return Tuple.from(segment) as T;										// TODO
-			return JSON.parse(segment, reviver1(sentinel)) as T;
+			return JSON.parse(segment, reviver(sentinel)) as T;
 
 		// case str.startsWith('Tempo:'):
 		// 	return Tempo.from(segment) as T;
