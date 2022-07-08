@@ -49,16 +49,17 @@ export function stringify(obj: any) {
 		.replaceAll(/\\/g, '')																	// remove double-\
 		.replaceAll(/\"\"/g, '"')																// replace double-" with single-"
 
-	while (str.match(quoteArray))															// while nested "[...]"
-		str = str.replaceAll(quoteArray, '$1');									//	remove "
-	while (str.match(quoteObject))														// while nested "{...}"
-		str = str.replaceAll(quoteObject, '$1');								// 	remove "
+	while (str.match(quoteArray))															// while match "[...]"
+		str = str.replaceAll(quoteArray, '$1');									//	remove surrounding "
+	while (str.match(quoteObject))														// while match "{...}"
+		str = str.replaceAll(quoteObject, '$1');								// 	remove surrounding "
 	return str;
 }
 
 /**
  * internal work-horse for stringify()  
- * level: indicates recursion
+ * obj:		any			is the object to serialize
+ * level: boolean	indicates recursion (if true)
  */
 function stringize(obj: any, ...level: any[]): string {
 	const arg = asType(obj);
@@ -66,7 +67,8 @@ function stringize(obj: any, ...level: any[]): string {
 
 	switch (arg.type) {
 		case 'String':
-			return JSON.stringify(arg.value);
+			return JSON.stringify(arg.value)											// TODO:  why not convert embedded quotes to hidden-char?
+				.replace('"', '\\"')																// TODO:  embedded double-quote needs to be prefixed with \\
 
 		case 'Null':
 		case 'Boolean':
