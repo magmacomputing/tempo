@@ -1,6 +1,6 @@
 // import { Tempo } from '@module/shared/tempo.class';					// circular reference ??
 // import { getTempo } from '@module/shared/tempo.class';
-import { asType, isEmpty, isFunction, isString } from '@module/shared/type.library';
+import { asType, isEmpty, isFunction, isString, isNull } from '@module/shared/type.library';
 
 /** YOU MUST REMOVE THIS LINE AFTER TEMPORAL REACHES STAGE-4 IN THE BROWSER */
 import { Temporal } from '@js-temporal/polyfill';
@@ -29,7 +29,7 @@ export function clonify<T>(obj: T, sentinel: Function): T;
 /** deep-copy and replace \<undefined> field with a Sentinel function */
 export function clonify<T>(obj: T, sentinel?: Function): T {
 	try {
-		return objectify1(stringify(obj), sentinel) as T;
+		return objectify(stringify(obj), sentinel) as T;
 	} catch (error: any) {
 		console.warn('Could not clonify object: ', obj);
 		console.warn('stack: ', error.stack);
@@ -39,9 +39,17 @@ export function clonify<T>(obj: T, sentinel?: Function): T {
 
 const quoteArray = /\"(\[.*?\])?\"/g;												// pattern to detect "[...]"
 const quoteObject = /\"(\{.*?\})?\"/g;											// pattern to detect "{...}"
+const patBigint = /^\d+n$/;																	// pattern to detect stringified BigInt
 
 function replacer(key: string, obj: any): any { return isEmpty(key) ? obj : stringize(obj, true) };
 function reviver(sentinel?: Function): any { return (key: string, str: any) => isEmpty(key) ? str : objectify(str, sentinel) };
+
+function clean(obj: string) {
+	return encodeURI(obj)
+		.replaceAll(/%5B/g, '[')
+		.replaceAll(/%5D/g, ']')
+		.replaceAll(/%20/g, ' ')
+}
 
 /** Serialize an object for string-safe stashing in WebStorage, Cache, etc */
 export function stringify(obj: any) {
@@ -67,8 +75,7 @@ function stringize(obj: any, ...level: any[]): string {
 
 	switch (arg.type) {
 		case 'String':
-			return JSON.stringify(arg.value)											// TODO:  why not convert embedded quotes to hidden-char?
-				.replace('"', '\\"')																// TODO:  embedded double-quote needs to be prefixed with \\
+			return JSON.stringify(arg.value);
 
 		case 'Null':
 		case 'Boolean':
@@ -97,7 +104,7 @@ function stringize(obj: any, ...level: any[]): string {
 
 		case 'Map':
 		case 'Record':																					// TODO
-			return prefix + JSON.stringify(Array.from(arg.value.entries()), replacer)
+			return prefix + JSON.stringify(Array.from(arg.value.entries()), replacer);
 
 		case 'Set':
 		case 'Tuple':																						// TODO
@@ -115,28 +122,35 @@ function stringize(obj: any, ...level: any[]): string {
 	}
 }
 
-/** Decode a string to rebuild the original Object-type */
-export function objectify<T>(obj: any, sentinel?: Function): T {
+/**
+ * Decode a string to rebuild the original Object-type
+ */
+export function objectify<T extends any>(obj: any, sentinel?: Function): T {
 	if (!isString(obj))
 		return obj as T;
 	const str = obj.trim();				                						// easier to work with trimmed string
 	const segment = str.substring(str.indexOf(':') + 1);			// qualified-type
 
 	switch (true) {
-		default:
-			return obj as unknown as T;
-	}
-}
-export function objectify1<T extends any>(obj: any, sentinel?: Function): T {
-	if (!isString(obj))
-		return obj as T;
-	const str = obj.trim();				                						// easier to work with trimmed string
-	const segment = str.substring(str.indexOf(':') + 1);			// qualified-type
+		case str.startsWith('"') && str.endsWith('"'):					// looks like String
+			return decodeURI(str.slice(1, -1)) as T;
 
-	switch (true) {
-		case str.startsWith('{') && str.endsWith('}'):
-		case str.startsWith('[') && str.endsWith(']'):
+		case str.startsWith('{') && str.endsWith('}'):					// looks like JSON Object
+		case str.startsWith('[') && str.endsWith(']'):					// looks like JSON Array
 			return JSON.parse(str, reviver(sentinel));
+
+		case str === 'true':																		// looks like Boolean
+		case str === 'false':
+			return JSON.parse(str) as T;
+
+		case str === 'void':																		// looks like Undefined
+			return sentinel?.() as T;
+
+		case !isNull(str.match(patBigint)):											// looks like BigInt
+			return BigInt(str.slice(0, -1)) as T;
+
+		case str.startsWith('String:"') && str.endsWith('"'):
+			return decodeURI(segment.slice(1, -1)) as T;
 
 		case str.startsWith('Object:{"') && str.endsWith('}'):
 		case str.startsWith('Array:[') && str.endsWith(']'):
@@ -162,8 +176,8 @@ export function objectify1<T extends any>(obj: any, sentinel?: Function): T {
 		case str.startsWith('Date:'):
 			return new Date(segment) as T;
 
-		case str.startsWith('BigInt:'):
-			return BigInt(segment) as T;
+		case str.startsWith('BigInt:') && !isNull(segment.match(patBigint)):
+			return BigInt(segment.slice(0, -1)) as T;							// strip trailing 'n'
 
 		case str.startsWith('Boolean:'):
 			return (segment === 'true') as T;
