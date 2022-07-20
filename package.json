@@ -24,7 +24,7 @@
   },
   "homepage": "https://github.com/magmacomputing/tempo#readme",
   "dependencies": {
-    "@js-temporal/polyfill": "^0.4.1"
+    "@js-temporal/polyfill": "^0.4.2"
   },
   "devDependencies": {
     "@types/google.maps": "^3.49.2",
