@@ -1,4 +1,5 @@
-import { WebStore } from '@module/browser/webstore.class';
+import { CONTEXT, getContext } from '@module/shared/utility.library';
+import { Pledge } from '@module/shared/pledge.class';
 import { asObject } from '@module/shared/object.library';
 import { isNullish } from '@module/shared/type.library';
 
@@ -20,9 +21,21 @@ interface MapStore {																				// a localStorage object
  * On subsequent attempts, we check whether the device has moved much before calling google.maps
  */
 const ONE_HOUR = 60 * 60 * 1_000;														// 3600 seconds
-const MAP_KEY = '_map_';																		// localStorage key
 const defaults: MapOpts = { catch: true, debug: false };		// default Options
-const mapStore = WebStore.local.get(MAP_KEY, {} as MapStore)// static object to hold last position
+
+const context = getContext();
+const mapStore = {} as MapStore;														// static object to hold last position
+const MAP_KEY = '_map_';																		// localStorage key
+const library = new Pledge<any>('WebStore');								// dynamic import of WebStore Class (if CONTEXT.Browser)
+
+if (context.type === CONTEXT.Browser) {
+	import('@module/browser/webstore.class')
+		.then(({ WebStore }) => library.resolve(WebStore))			// localStorage wrapper
+		.catch(_ => { throw new Error('Cannot import webstore.class') })
+	library.promise																						// wait for import, then fetch localStorage item
+		.then(WebStore => Object.assign(mapStore, WebStore.local.get(MAP_KEY, {})))
+}
+else library.resolve(null);																	// no access to localStorage
 
 /**
  * attempt geolocation.getCurrentPosition()  
@@ -64,7 +77,7 @@ export const geoLocation = (opts = {} as MapOpts) =>
 			if (opts.debug)
 				console[mapStore.geolocation?.error ? 'error' : 'log']('geoLocation: ', mapStore.geolocation);
 
-			WebStore.local.set(MAP_KEY, mapStore);
+			library.promise.then(WebStore => WebStore?.local.set(MAP_KEY, mapStore));
 		})
 
 /** format coordinates as a GeocoderRequest["location"] object */
@@ -120,7 +133,7 @@ export const mapQuery = (coords?: google.maps.GeocoderRequest, opts = {} as MapO
 			if (opts.debug)
 				console[mapStore.georesponse?.error ? 'error' : 'log']('mapQuery: ', mapStore.georesponse);
 
-			WebStore.local.set(MAP_KEY, mapStore);
+			library.promise.then(WebStore => WebStore?.local.set(MAP_KEY, mapStore));
 		})
 
 /**
