@@ -332,7 +332,7 @@ export class Tempo {
 			}
 		} catch (err: any) {
 			if (this.#config.debug)																// log the error
-				console.log('value: %s, opts: ', this.#value, this.#opts);
+			console.log('value: %s, opts: ', this.#value, this.#opts);
 			if (this.#config.catch) {															// catch the error
 				console.warn(`Cannot create Tempo: ${err.message}`);
 				return {} as unknown as Tempo;											// TODO: need to return empty object?
@@ -375,11 +375,14 @@ export class Tempo {
 	/** add date offset */																		add(mutate: Tempo.Add) { return this.#offset(Object.assign({}, mutate, { offset: 'add' })) }
 	/** offset to start/mid/end of unit */										offset(offset: Tempo.Offset) { return this.#offset(offset) }
 
+	/** is valid Tempo */																			isValid() { return !isNaN(this.ts) }
 	/** as Temporal.ZonedDateTime */													toTemporal() { return this.#temporal }
 	/** as Date object */																			toDate() { return new Date(this.#temporal.round({ smallestUnit: 'millisecond' }).epochMilliseconds) }
 	/** as String */																					toString() { return this.#temporal.toString() }
-	/** as method for JSON.stringify */												toJSON() { return this.#temporal.toJSON() }
-	/** is valid Tempo */																			isValid() { return !isNaN(this.ts) }
+	/** as Object */																					toJSON() {
+		const config = (({ month, pattern, ...rest }) => rest)(this.#config);
+		return ({ ...config, calendar: config.calendar.id, timeZone: config.calendar.id, value: this.toString() })
+	}
 
 	// Private methods	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -495,8 +498,8 @@ export class Tempo {
 				const { dow, mod, nbr } = pat.groups;
 				const weekday = dow.substring(0, 3).toProperCase();
 				const offset = enumKeys(Tempo.WEEKDAY).findIndex(el => el === weekday);
-				const days = today.daysInWeek * Number(isEmpty(nbr) ? '1' : nbr);
-				let adj = offset - today.dayOfWeek;									// number of days to offset from today
+				const adj = today.daysInWeek * Number(isEmpty(nbr) ? '1' : nbr);
+				let days = offset - today.dayOfWeek;									// number of days to offset from today
 
 				switch (mod) {																			// switch on the 'modifier' character
 					case void 0:																			// current week
@@ -504,31 +507,31 @@ export class Tempo {
 						break;
 					case '+':																					// next week
 					case '+=':
-						adj += days;
+						days += adj;
 						break;
 					case '-':																					// last week
 					case '-=':
-						adj -= days;
+						days -= adj;
 						break;
 					case '<':																					// latest dow (this week or prev)
 						if (today.dayOfWeek <= offset)
-							adj -= days;
+							days -= adj;
 						break;
 					case '<=':																				// latest dow (prior to today)
 						if (today.dayOfWeek < offset)
-							adj -= days;
+							days -= adj;
 						break;
 					case '>':																					// next dow
 						if (today.dayOfWeek >= offset)
-							adj += days;
+							days += adj;
 						break;
 					case '>=':
 						if (today.dayOfWeek > offset)
-							adj += days;
+							days += adj;
 						break;
 				}
 
-				const { year, month, day } = today.add({ days: adj });
+				const { year, month, day } = today.add({ days });
 				pat.groups['yy'] = year.toString();									// set the now current year
 				pat.groups['mm'] = month.toString();								// and month
 				pat.groups['dd'] = day.toString();									// and day
@@ -544,7 +547,7 @@ export class Tempo {
 				pat.groups['mm'] = enumKeys(Tempo.MONTH).findIndex(el => el === mm).toString();
 			}
 
-			/** Resolve a quarter-nummber into a month-number */
+			/** Resolve a quarter-number into a month-number */
 			if (isDefined(pat.groups['qtr'])) {
 				const key = Number(`${pat.groups['qtr']} .1`);			// '.1' means start of quarter
 				const idx = this.#config.month.findIndex(mon => mon.quarter === key) + 1;
