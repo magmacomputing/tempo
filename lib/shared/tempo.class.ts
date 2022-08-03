@@ -46,7 +46,7 @@ export class Tempo {
 
 	/** swap parsing-order of patterns (to suit different locales)  https://en.wikipedia.org/wiki/Date_format_by_country */
 	static #swap(locale: string, ...arrs: { key: string }[][]) {
-		const pats = [																					// regexs to swap (to change priority)
+		const pats = [																					// regexs to swap (to change conform priority)
 			['ddmm', 'mmdd'],																			// swap ddmm for mmdd
 			['ddmmyy', 'mmddyy'],																	// swap ddmmyy for mmddyy
 			['ddmmyyhhmi', 'mmddyyhhmi'],													// swap ddmmyyhhmi for ddmmyyhhmi
@@ -60,8 +60,8 @@ export class Tempo {
 				if (indx1 === -1 || indx2 === -1)
 					return;																						// nothing to swap
 
-				const swap1 = (indx1 < indx2) && this.#default.mmddyy.includes(locale);
-				const swap2 = (indx1 > indx2) && !(this.#default.mmddyy).includes(locale);
+				const swap1 = (indx1 < indx2) && Tempo.#default.mmddyy.includes(locale);
+				const swap2 = (indx1 > indx2) && !(Tempo.#default.mmddyy.includes(locale));
 
 				if (swap1 || swap2)																	// since 'arr' is a reference to an array, ok to swap in-place
 					[arr[indx1], arr[indx2]] = [arr[indx2], arr[indx1]];
@@ -81,6 +81,8 @@ export class Tempo {
 	/** setup fiscal quarters, from a given start month */
 	static #fiscal(quarter: Tempo.CALENDAR, month: Tempo.Months) {
 		const start = enumKeys(Tempo.MONTH).findIndex(mon => mon === quarter.substring(0, 3).toProperCase());
+		if (start === -1)
+			return;																								// cannot determine start-Month
 
 		for (let i = start, mon = 1; i <= (start + 12); i++, mon++) {
 			const idx = i % 13;																		// index into the month
@@ -140,19 +142,19 @@ export class Tempo {
 	static #gps = new Pledge<Tempo.Sphere>('gps');
 
 	/**
-	 * this allows Tempo to set specific default configuration.  
+	 * this allows Tempo to set a specific default configuration.  
 	 * useful primarily for 'order of parsing input', as well as .quarter and .season
 	 */
 	static init = (init: Tempo.Init) => {
 		const sphere = init.sphere || Tempo.COMPASS.North;
 		const fiscal = init.fiscal || Tempo.MONTH[(sphere === Tempo.COMPASS.North ? Tempo.MONTH.Oct : Tempo.MONTH.Jul)] as Tempo.CALENDAR;
 
-		Tempo.#gps.resolve(null);																// dont block
+		Tempo.#gps.resolve(null);																// dont block, if non-browser
 
 		Object.assign(Tempo.#default, {
-			timeZone: this.#Intl.timeZone,												// default TimeZone
-			calendar: this.#Intl.calendar,												// default Calendar
-			locale: this.#Intl.locale,														// default Locale
+			calendar: Tempo.#Intl.calendar,												// default Calendar
+			timeZone: Tempo.#Intl.timeZone,												// default TimeZone
+			locale: Tempo.#Intl.locale,														// default Locale
 			pivot: 75,																						// default pivot-duration for two-digit years
 			debug: false,																					// default debug-mode
 			catch: false,																					// default catch-mode
@@ -193,6 +195,7 @@ export class Tempo {
 				import('@module/browser/mapper.library')						// get browser mapper.library
 					.then(({ mapHemisphere }) => mapHemisphere<Tempo.Sphere>())
 					.then(res => Tempo.#gps.resolve(res))							// 'north' | 'south' | null
+					.catch(_ => Tempo.#gps.resolve(null))
 				break;
 			case CONTEXT.NodeJS:
 				store = context.global.process.env[Tempo.#configKey];
@@ -205,16 +208,16 @@ export class Tempo {
 		if (isDefined(store)) {																	// found a config in storage
 			const config = objectify(store) as Tempo.ConfigFile;	// config can override #default
 			config.locale &&= config.locale.replace('_', '-');		// standardize locale string
-			Object.assign(this.#default, omit(config, 'pattern'));// override defaults from storage
+			Object.assign(Tempo.#default, omit(config, 'pattern'));// override defaults from storage
 			(config.pattern ?? [])
 				.reverse()																					// prepend user-patterns from storage as they have priority
 				.map(pat => Object.entries(pat)[0])
-				.forEach(([key, ref]) => this.#default.pattern.unshift({ key, reg: asArray(ref) }));
+				.forEach(([key, ref]) => Tempo.#default.pattern.unshift({ key, reg: asArray(ref) }));
 		}
 
-		this.#default.pattern																		// setup defaults as RegExp patterns
-			.forEach(({ key, reg }) => this.#pattern.push({ key, reg: this.regexp(...reg) }));
-		this.#swap(Tempo.#default.locale, this.#pattern, this.#default.pattern);
+		Tempo.#default.pattern																	// setup defaults as RegExp patterns
+			.forEach(({ key, reg }) => Tempo.#pattern.push({ key, reg: Tempo.regexp(...reg) }));
+		Tempo.#swap(Tempo.#default.locale, Tempo.#pattern, Tempo.#default.pattern);
 
 		/**
 		 * Tempo.#default is built and it is now safe to run 'new Tempo()'  
@@ -224,25 +227,26 @@ export class Tempo {
 			.promise																							// already resolved if not browser, else wait
 			.then(geo => {
 				if (isDefined(geo)) {																// if user allowed geolocation
-					const sphere = init.sphere || geo;								// dont overwrite user-preference
-					const fiscal = init.fiscal || Tempo.MONTH[sphere === Tempo.COMPASS.North ? Tempo.MONTH.Oct : Tempo.MONTH.Jul] as Tempo.CALENDAR;
-					this.#default.sphere = sphere;										// derived hemisphere
-					this.#default.fiscal = fiscal;
+					Tempo.#default.sphere = init.sphere || geo;				// dont overwrite user-preference, else derived hemisphere
+					Tempo.#default.fiscal = init.fiscal ||
+						Tempo.MONTH[Tempo.#default.sphere === Tempo.COMPASS.North
+							? Tempo.MONTH.Oct															// northern-hemisphere default Q1
+							: Tempo.MONTH.Jul] as Tempo.CALENDAR;					// southern-hemisphere default Q1
 				}
 
-				this.#sphere(Tempo.#default.sphere, this.#months);	// setup seasons
-				this.#fiscal(Tempo.#default.fiscal, this.#months);	// setup quarters
-				enumKeys(Tempo.MONTH).forEach((mon, idx) => this.#months[idx].name = mon);
+				Tempo.#sphere(Tempo.#default.sphere, Tempo.#months);	// setup seasons
+				Tempo.#fiscal(Tempo.#default.fiscal, Tempo.#months);	// setup quarters
+				enumKeys(Tempo.MONTH).forEach((mon, idx) => Tempo.#months[idx].name = mon);
 
 				if (isUndefined(store)) {
 					switch (context.type) {
 						case CONTEXT.Browser:
-							context.global.localStorage.setItem(Tempo.#configKey, stringify(omit(this.#default, 'pattern')));
+							context.global.localStorage.setItem(Tempo.#configKey, stringify(omit(Tempo.#default, 'pattern')));
 							break;
 					}
 				}
 				if (init.debug)
-					console.log('Tempo: ', omit(this.#default, 'pattern'));
+					console.log('Tempo: ', omit(Tempo.#default, 'pattern'));
 			})
 	}
 
@@ -268,12 +272,12 @@ export class Tempo {
 
 	/** Tempo config settings */
 	static get defaults() {
-		return this.#default;
+		return Tempo.#default;
 	}
 
 	/** Array of regex patterns to check when parsing Tempo.DateTime */
 	static get patterns() {
-		return this.#pattern;
+		return Tempo.#pattern;
 	}
 
 	/** Constructor ************************************************************************************************* */
@@ -332,7 +336,7 @@ export class Tempo {
 			}
 		} catch (err: any) {
 			if (this.#config.debug)																// log the error
-			console.log('value: %s, opts: ', this.#value, this.#opts);
+				console.log('value: %s, opts: ', this.#value, this.#opts);
 			if (this.#config.catch) {															// catch the error
 				console.warn(`Cannot create Tempo: ${err.message}`);
 				return {} as unknown as Tempo;											// TODO: need to return empty object?
@@ -1066,5 +1070,5 @@ export namespace Tempo {
 }
 
 Tempo.init({																								// kick-start Tempo configuration
-	debug: true,
+	debug: getContext().type === CONTEXT.Browser,
 })
