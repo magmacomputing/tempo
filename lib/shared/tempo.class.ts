@@ -355,7 +355,7 @@ export class Tempo {
 	/** milliseconds since last second */											get ms() { return this.#temporal.millisecond }
 	/** microseconds since last millisecond */								get us() { return this.#temporal.microsecond }
 	/** nanoseconds since last microsecond */									get ns() { return this.#temporal.nanosecond }
-	/** fractional seconds since last second */								get ff() { return Number(`0.${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`) }
+	/** fractional seconds since last second */								get ff() { return `${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}` }
 	/** number of weeks */																		get ww() { return this.#temporal.weekOfYear }
 	/** timezone */																						get tz() { return this.#temporal.timeZone.toString() }
 	/** seconds (timeStamp) since Unix epoch */								get ts() { return this.#temporal.epochSeconds }
@@ -825,7 +825,7 @@ export class Tempo {
 					.replace(/ms/g, pad(this.ms, 3))
 					.replace(/us/g, pad(this.us, 3))
 					.replace(/ns/g, pad(this.ns, 3))
-					.replace(/f{2}/g, asString(this.ff * 1_000_000_000))
+					.replace(/f{2}/g, pad(this.ff, 9))
 					.replace(/w{2}/g, asString(this.ww))
 					.replace(/dow/g, asString(this.dow))
 					.replace(/day/g, this.day)
