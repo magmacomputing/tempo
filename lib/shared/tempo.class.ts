@@ -951,10 +951,11 @@ export namespace Tempo {
 	export interface Formats {																// pre-configured format strings
 		[str: string]: string | number;													// allow for dynamic format-codes
 		[Tempo.FORMAT.display]: string;
+		[Tempo.FORMAT.dayDate]: string;
 		[Tempo.FORMAT.dayTime]: string;
 		[Tempo.FORMAT.dayFull]: string;
 		[Tempo.FORMAT.dayMonth]: string;
-		[Tempo.FORMAT.dayDate]: string;
+		[Tempo.FORMAT.dayStamp]: string;
 		[Tempo.FORMAT.sortTime]: string;
 		[Tempo.FORMAT.monthTime]: string;
 		[Tempo.FORMAT.HHMI]: string;
@@ -969,10 +970,11 @@ export namespace Tempo {
 
 	export interface TypeFmt {
 		display: string;
+		dayDate: string;
 		dayTime: string;
 		dayFull: string;
-		dayDate: string;
 		dayMonth: string;
+		dayStamp: string;
 		sortTime: string;
 		monthTime: string;
 		HHMI: string;
@@ -1005,9 +1007,10 @@ export namespace Tempo {
 
 	export enum FORMAT {																			// pre-configured format names
 		display = 'ddd, dd mmm yyyy',
+		dayDate = 'ddd, yyyy-mmm-dd',
 		dayTime = 'ddd, yyyy-mmm-dd HH:MI',
 		dayFull = 'ddd, yyyy-mmm-dd HH:MI:SS',									// useful for Sheets cell-format
-		dayDate = 'ddd, yyyy-mmm-dd',
+		dayStamp = 'ddd, yyyy-mmm-dd HH:MI:SS.ff',							// Date and Time to nanosecond
 		dayMonth = 'dd-mmm',
 		sortTime = 'yyyy-mm-dd HH:MI:SS',												// useful for sorting display-strings
 		monthTime = 'yyyy-mmm-dd HH:MI',												// useful for dates where dow is not needed
