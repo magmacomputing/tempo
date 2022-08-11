@@ -345,6 +345,9 @@ export class Tempo {
 		}
 	}
 
+	/** allow for auto-convert of Tempo to primitive */
+	[Symbol.toPrimitive] = this.age;
+
 		// Public getters	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	/** 4-digit year */																				get yy() { return this.#temporal.year }
 	/** month: Jan=1, Dec=12 */																get mm() { return this.#temporal.month }
