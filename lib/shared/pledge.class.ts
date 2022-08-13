@@ -15,6 +15,8 @@ export class Pledge<T> {
 	#resolve!: (value: T | PromiseLike<T>) => void;
 	#reject!: (reason?: string) => void;
 
+	[Symbol.toStringTag] = 'Pledge';
+
 	constructor(arg?: Pledge.Constructor | string) {
 		const { tag, onResolve = void 0, onReject = void 0, onSettle = void 0, ...flags } = isString(arg)
 			? { tag: arg }

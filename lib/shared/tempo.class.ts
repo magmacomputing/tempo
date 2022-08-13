@@ -280,6 +280,26 @@ export class Tempo {
 		return Tempo.#pattern;
 	}
 
+	/** allow for auto-convert of Tempo to BigInt */
+	[Symbol.toPrimitive](hint: 'string' | 'number' | 'default') {
+		if (this.#config.debug)
+			console.log('Tempo.hint: ', hint);
+		return this.age;
+	}
+
+	/** iterate over Tempo */
+	[Symbol.iterator](key: 'properties' | 'patterns') {
+		let idx = 0;
+		const props = Tempo[key];
+
+		return {
+			done: idx >= props.length,
+			value: props[idx++],
+		}
+	}
+
+	[Symbol.toStringTag] = 'Tempo';
+
 	/** Constructor ************************************************************************************************* */
 	constructor(tempo?: Tempo.DateTime, opts: Tempo.Options = {}) {
 		this.#now = Temporal.Now.instant();											// stash current Instant
@@ -344,9 +364,6 @@ export class Tempo {
 			else throw new Error(`Cannot create Tempo: ${err.message}`);
 		}
 	}
-
-	/** allow for auto-convert of Tempo to primitive */
-	[Symbol.toPrimitive] = this.age;
 
 		// Public getters	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	/** 4-digit year */																				get yy() { return this.#temporal.year }
