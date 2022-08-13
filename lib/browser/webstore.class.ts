@@ -7,6 +7,8 @@ import { asType, isEmpty, isUndefined } from '@module/shared/type.library';
 export class WebStore {
 	#storage: globalThis.Storage;
 
+	[Symbol.toStringTag] = 'WebStore';
+
 	constructor(storage: 'local' | 'session' = 'local') {
 		this.#storage = storage === 'local'											// default to localStorage
 			? globalThis.localStorage
