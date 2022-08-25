@@ -41,7 +41,7 @@ export const asType = <T>(obj?: T, ...instances: Instance[]) => ({ type: getType
 export const isType = <T>(obj: unknown, type: Types, ...types: Types[]): obj is T => [type, ...types].includes(getType(obj));
 
 /** Type-Guards: assert \<obj> is of \<type> */
-export const isPrimitive = (obj?: unknown): obj is Primitive => isType(obj, 'String', 'Number', 'BigInt', 'Boolean', 'Symbol', 'Undefined', 'Null');
+export const isPrimitive = (obj?: unknown): obj is Primitive => isType(obj, 'String', 'Number', 'BigInt', 'Boolean', 'Symbol', 'Undefined', 'Void', 'Null');
 export const isReference = (obj?: unknown): obj is Object => !isPrimitive(obj);
 export const isIterable = <T>(obj: unknown): obj is Iterable<T> => Symbol.iterator in Object(obj) && !isString(obj);
 
@@ -60,8 +60,8 @@ export const isRecord = (obj?: unknown): obj is Record<any, any> => isType(obj, 
 export const isTuple = <T>(obj?: unknown): obj is Array<T> => isType(obj, 'Tuple');
 
 export const isNull = (obj?: unknown): obj is null => isType(obj, 'Null');
-export const isNullish = <T>(obj: T | null | undefined): obj is undefined | null => isType<undefined | null>(obj, 'Null', 'Undefined');
-export const isUndefined = (obj?: unknown): obj is undefined => isType<undefined>(obj, 'Undefined');
+export const isNullish = <T>(obj: T | null | undefined): obj is undefined | null => isType<undefined | null>(obj, 'Null', 'Undefined', 'Void');
+export const isUndefined = (obj?: unknown): obj is undefined => isType<undefined>(obj, 'Undefined', 'Void');
 export const isDefined = <T>(obj: T): obj is NonNullable<T> => !isNullish(obj);
 
 export const isClass = (obj?: unknown): obj is Function => isType(obj, 'Class');
@@ -115,7 +115,7 @@ type Primitive = string | number | bigint | boolean | symbol | void | null // | 
 type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling)
 export type Temporals = Exclude<keyof typeof Temporal, 'Now'>;
 
-export type Types = 'String' | 'Number' | 'BigInt' | 'Boolean' | 'Object' | 'Array' | 'ArrayLike' | 'Null' | 'Undefined' | 'Date' | 'Function' | 'AsyncFunction' | 'Class' | 'Promise' | 'Map' | 'Set' | 'RegExp' | 'Symbol' | 'Record' | 'Tuple' | 'Error'
+export type Types = 'String' | 'Number' | 'BigInt' | 'Boolean' | 'Object' | 'Array' | 'ArrayLike' | 'Null' | 'Undefined' | 'Void' | 'Date' | 'Function' | 'AsyncFunction' | 'Class' | 'Promise' | 'Map' | 'Set' | 'RegExp' | 'Symbol' | 'Record' | 'Tuple' | 'Error'
 export type TypeValue<T> =
 	typeString |
 	typeNumber |
@@ -125,6 +125,7 @@ export type TypeValue<T> =
 	typeArray<T> |
 	typeArrayLike<T> |
 	typeNull |
+	typeUndefined |
 	typeVoid |
 	typeDate |
 	typeFunction |
@@ -159,7 +160,8 @@ interface typeObject<T> { type: 'Object', value: Extract<T, Record<any, any>> }
 interface typeArray<T> { type: 'Array', value: Array<T> }
 interface typeArrayLike<T> { type: 'ArrayLike', value: ArrayLike<T> }
 interface typeNull { type: 'Null', value: null }
-interface typeVoid { type: 'Undefined', value: void }
+interface typeUndefined { type: 'Undefined', value: void }
+interface typeVoid { type: 'Void', value: void }
 interface typeDate { type: 'Date', value: Date }
 interface typeFunction { type: 'Function', value: Function }
 interface typeClass<T> { type: 'Class', value: T }
