@@ -25,7 +25,7 @@ import { Temporal } from '@js-temporal/polyfill';
  * Tempo.from(DateTime, Options) or
  * getTempo(DateTime, Options)  
  * 	DateTime?:	string | number | Tempo	- value to be interpreted as a Temporal.ZonedDateTime
- * 	Options?: 	object				- arguments to assist with parsing the <date> and configuring the instance
+ * 	Options?: 	object			- arguments to assist with parsing the <date> and configuring the instance
  * ````
  * A Tempo is an object that is used to wrap a Temporal.ZonedDateTime.  
  * It's strength is in it's flexibility to parse string|number|DateTime.  
@@ -35,12 +35,12 @@ import { Temporal } from '@js-temporal/polyfill';
 export class Tempo {
 	// Instance variables  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	#config: Tempo.Config;
+	#config: Tempo.Config;																		// instance config
 	#value?: Tempo.DateTime;																	// constructor value
 	#opts: Tempo.Options;																			// constructor arguments
 	#now: Temporal.Instant;																		// instantiation Temporal Instant, used only during construction
-	#temporal!: Temporal.ZonedDateTime;												// underlying Temporal DateTime
-	fmt = {} as Tempo.TypeFmt;																// prebuilt Formats
+	#temporal!: Temporal.ZonedDateTime;												// wrapped Temporal DateTime
+	fmt = {} as Tempo.TypeFmt;																// prebuilt Formats, for convenience
 
 	// Static variables / methods	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -50,7 +50,7 @@ export class Tempo {
 			['ddmm', 'mmdd'],																			// swap ddmm for mmdd
 			['ddmmyy', 'mmddyy'],																	// swap ddmmyy for mmddyy
 			['ddmmyyhhmi', 'mmddyyhhmi'],													// swap ddmmyyhhmi for ddmmyyhhmi
-		]
+		] as const;
 
 		arrs.forEach(arr => {
 			pats.forEach(([pat1, pat2]) => {
@@ -63,7 +63,7 @@ export class Tempo {
 				const swap1 = (indx1 < indx2) && Tempo.#default.mmddyy.includes(locale);
 				const swap2 = (indx1 > indx2) && !(Tempo.#default.mmddyy.includes(locale));
 
-				if (swap1 || swap2)																	// since 'arr' is a reference to an array, ok to swap in-place
+				if (swap1 || swap2)																	// since 'arr' is a reference to an array, ok to swap in-line
 					[arr[indx1], arr[indx2]] = [arr[indx2], arr[indx1]];
 			})
 		})
@@ -80,12 +80,12 @@ export class Tempo {
 
 	/** setup fiscal quarters, from a given start month */
 	static #fiscal(quarter: Tempo.CALENDAR, month: Tempo.Months) {
-		const start = enumKeys(Tempo.MONTH).findIndex(mon => mon === quarter.substring(0, 3).toProperCase());
+		const start = enumKeys(Tempo.MONTH).findIndex(mon => mon === Tempo.stringPrefix(quarter));
 		if (start === -1)
 			return;																								// cannot determine start-Month
 
 		for (let i = start, mon = 1; i <= (start + 12); i++, mon++) {
-			const idx = i % 13;																		// index into the month
+			const idx = i % 13;																		// index into the Month
 			if (idx !== 0) {
 				const qtr = Math.floor((mon - 1) / 3) + 1;					// quarter increments every third iteration
 				const offset = (mon - 1) % 3 + 1;										// 1=first, 2=mid, 3=last month of quarter
@@ -95,22 +95,22 @@ export class Tempo {
 		}
 	}
 
-	// user will need to know these in order to configure their own patterns
+	/** user will need to know these in order to configure their own patterns */
 	static readonly units: Record<string, RegExp> = {					// define some patterns to help conform input-strings
 		yy: new RegExp(/(?<yy>(18|19|20|21)?\d{2})/),
 		mm: new RegExp(/(?<mm>0?[1-9]|1[012]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/),
 		dd: new RegExp(/(?<dd>0?[1-9]|[12][0-9]|3[01])/),
 		dow: new RegExp(/(?<dow>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)?(,)?( )?/),
 		qtr: new RegExp(/(?<qtr>1|2|3|4)/),
-		hh: new RegExp(/([01]\d|2[0-3])/),											// hh:  00 - 24
+		hh: new RegExp(/([01]\d|2[0-3])/),											// hh:  00 - 23
 		tm: new RegExp(/(:[0-5]\d)/),														// tm:  00 - 59 (can be used for minutes and for seconds)
 		ff: new RegExp(/(\.\d+)?/),															// fractional seconds
 		am: new RegExp(/ ?(?<am>am|pm)?/),											// am/pm suffix
 		sep: new RegExp(/[\/\-\ \,]*/),													// list of separators between date-components
-		mod: new RegExp(/((?<mod>[\+\-\<\>][\=]?)(?<nbr>\d*))?/),	// modifiers (_,-,<,<=,>,>=)
+		mod: new RegExp(/((?<mod>[\+\-\<\>][\=]?)(?<nbr>\d*))?/),	// modifiers (+,-,<,<=,>,>=)
 	}
 	static {																									// now, combine some of the above units into common components
-		Tempo.units['hm'] = new RegExp('(' + Tempo.units.hh.source + Tempo.units.tm.source + ')');
+		Tempo.units['hm'] = new RegExp('(?<hm>' + Tempo.units.hh.source + Tempo.units.tm.source + ')');
 		Tempo.units['hms'] = new RegExp('(?<hms>' + Tempo.units.hh.source + '|' + Tempo.units.hm.source + '|' + Tempo.units.hm.source + Tempo.units.tm.source + Tempo.units.ff.source + ')');
 		Tempo.units['tzd'] = new RegExp('(?<tzd>[+-]' + Tempo.units.hm.source + '|Z)')
 	}
@@ -121,7 +121,7 @@ export class Tempo {
 			if (isRegExp(pat))																		// already a RegExp
 				return pat;
 
-			if (/^\/.*\/$/.test(pat))															// a string that looks like a RegExp
+			if (/^\/.*\/$/.test(pat))															// a string that looks like a RegExp  ("/.../")
 				return new RegExp(pat.slice(1, -1));
 
 			if (isUndefined(Tempo.units[pat]))										// unknown unit, cannot proceed
@@ -138,8 +138,8 @@ export class Tempo {
 	static #default = {} as Tempo.ConfigFile;
 	static #pattern: Tempo.Pattern[] = [];										// Array of regex-patterns to test until a match
 	static #months = asArray({ length: 13 }, {}) as Tempo.Months;	// Array of settings related to a Month
-	static #configKey = '_Tempo_';
-	static #gps = new Pledge<Tempo.Sphere>('gps');
+	static #configKey = '_Tempo_';														// for stash from persistent storage
+	static #gps = new Pledge<Tempo.Sphere>('gps');						// for location (if browser)
 
 	/**
 	 * this allows Tempo to set a specific default configuration.  
@@ -147,7 +147,7 @@ export class Tempo {
 	 */
 	static init = (init: Tempo.Init) => {
 		const sphere = init.sphere || Tempo.COMPASS.North;
-		const fiscal = init.fiscal || Tempo.MONTH[(sphere === Tempo.COMPASS.North ? Tempo.MONTH.Oct : Tempo.MONTH.Jul)] as Tempo.CALENDAR;
+		const fiscal = init.fiscal || Tempo.startFiscal(sphere);// first month of the fiscal-year
 
 		Tempo.#gps.resolve(null);																// dont block, if non-browser
 
@@ -181,7 +181,7 @@ export class Tempo {
 		const country = Tempo.#Intl.timeZone.split('/')[0];
 		switch (country) {																			// TODO: better country detection
 			case 'Australia':
-				Object.assign(Tempo.#default, { sphere: Tempo.COMPASS.South, fiscal: Tempo.MONTH[Tempo.MONTH.Jul], locale: 'en-AU' });
+				Object.assign(Tempo.#default, { sphere: Tempo.COMPASS.South, fiscal: Tempo.startFiscal(Tempo.COMPASS.South), locale: 'en-AU' });
 				break;
 			default:
 		}
@@ -197,9 +197,11 @@ export class Tempo {
 					.then(res => Tempo.#gps.resolve(res))							// 'north' | 'south' | null
 					.catch(_ => Tempo.#gps.resolve(null))
 				break;
+
 			case CONTEXT.NodeJS:
 				store = context.global.process.env[Tempo.#configKey];
 				break;
+
 			case CONTEXT.GoogleAppsScript:
 				store = context.global.PropertiesService?.getUserProperties().getProperty(Tempo.#configKey);
 				break;
@@ -208,6 +210,7 @@ export class Tempo {
 		if (isDefined(store)) {																	// found a config in storage
 			const config = objectify(store) as Tempo.ConfigFile;	// config can override #default
 			config.locale &&= config.locale.replace('_', '-');		// standardize locale string
+
 			Object.assign(Tempo.#default, omit(config, 'pattern'));// override defaults from storage
 			(config.pattern ?? [])
 				.reverse()																					// prepend user-patterns from storage as they have priority
@@ -225,17 +228,14 @@ export class Tempo {
 		 */
 		Tempo.#gps
 			.promise																							// already resolved if not browser, else wait
-			.then(geo => {
-				if (isDefined(geo)) {																// if user allowed geolocation
-					Tempo.#default.sphere = init.sphere || geo;				// dont overwrite user-preference, else derived hemisphere
-					Tempo.#default.fiscal = init.fiscal ||
-						Tempo.MONTH[Tempo.#default.sphere === Tempo.COMPASS.North
-							? Tempo.MONTH.Oct															// northern-hemisphere default Q1
-							: Tempo.MONTH.Jul] as Tempo.CALENDAR;					// southern-hemisphere default Q1
+			.then(sphere => {
+				if (isDefined(sphere)) {														// if user allowed geolocation
+					Tempo.#default.sphere = init.sphere || sphere;		// user-preference else derived hemisphere
+					Tempo.#default.fiscal = init.fiscal || Tempo.startFiscal(Tempo.#default.sphere);
 				}
 
-				Tempo.#sphere(Tempo.#default.sphere, Tempo.#months);	// setup seasons
-				Tempo.#fiscal(Tempo.#default.fiscal, Tempo.#months);	// setup quarters
+				Tempo.#sphere(Tempo.#default.sphere, Tempo.#months);// setup seasons
+				Tempo.#fiscal(Tempo.#default.fiscal, Tempo.#months);// setup quarters
 				enumKeys(Tempo.MONTH).forEach((mon, idx) => Tempo.#months[idx].name = mon);
 
 				if (isUndefined(store)) {
@@ -248,6 +248,17 @@ export class Tempo {
 				if (init.debug)
 					console.log('Tempo: ', omit(Tempo.#default, 'pattern'));
 			})
+	}
+
+	/** Norther -or- Southern hemisphere start of Q1 */
+	static startFiscal(sphere: Tempo.Sphere) {
+		const start = sphere === Tempo.COMPASS.North ? Tempo.MONTH.Oct : Tempo.MONTH.Jul;
+		return Tempo.MONTH[start] as Tempo.CALENDAR;
+	}
+
+	/** First three-letters of day/month */
+	static stringPrefix(str: string) {
+		return str.substring(0, 3).toProperCase();
 	}
 
 	/**
@@ -322,15 +333,17 @@ export class Tempo {
 				console.log('sphere: ', this.#config.sphere);
 			Tempo.#sphere(this.#config.sphere, this.#config.month);
 		}
-		if (opts.fiscal) {
-			const idx = Tempo.MONTH[opts.fiscal.substring(0, 3) as unknown as Tempo.MONTH] as unknown as number;
-			if (this.#config.month[idx].quarter !== 1) {					// change of fiscal-year start month
+		if (opts.fiscal) {																			// change of fiscal-year start month ?
+			const mon = Tempo.stringPrefix(opts.fiscal) as Tempo.CALENDAR;
+			const idx = Tempo.MONTH[mon];
+
+			if (this.#config.month[idx].quarter !== 1) {					// supplied fiscal is not Q1 in #config.month
 				if (this.#config.debug)
 					console.log('fiscal: ', opts.fiscal);
-				Tempo.#fiscal(opts.fiscal, this.#config.month);
+				Tempo.#fiscal(mon, this.#config.month);
 			}
 		}
-		if (this.#opts.pattern) {																// user-specified pattern for this instance
+		if (this.#opts.pattern) {																// user-specified pattern for this instance (might be array-of-array)
 			(isArray(this.#opts.pattern[0]) ? this.#opts.pattern as unknown as (NonNullable<Tempo.Options["pattern"]>)[] : [this.#opts.pattern])
 				.map((pat, idx) => ({ key: '_' + idx, reg: Tempo.regexp(...pat) }))
 				.forEach(pattern => this.#config.pattern.push(pattern))
@@ -354,14 +367,14 @@ export class Tempo {
 					.forEach(key =>
 						Object.assign(this.fmt, { [key]: this.format(Tempo.FORMAT[key]) }));	// add-on short-cut format-codes
 			}
-		} catch (err: any) {
+		} catch (err) {
 			if (this.#config.debug)																// log the error
 				console.log('value: %s, opts: ', this.#value, this.#opts);
 			if (this.#config.catch) {															// catch the error
-				console.warn(`Cannot create Tempo: ${err.message}`);
+				console.warn(`Cannot create Tempo: ${(err as Error).message}`);
 				return {} as unknown as Tempo;											// TODO: need to return empty object?
 			}
-			else throw new Error(`Cannot create Tempo: ${err.message}`);
+			else throw new Error(`Cannot create Tempo: ${(err as Error).message}`);
 		}
 	}
 
@@ -375,7 +388,7 @@ export class Tempo {
 	/** milliseconds since last second */											get ms() { return this.#temporal.millisecond }
 	/** microseconds since last millisecond */								get us() { return this.#temporal.microsecond }
 	/** nanoseconds since last microsecond */									get ns() { return this.#temporal.nanosecond }
-	/** fractional seconds since last second */								get ff() { return `${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}` }
+	/** fractional seconds since last second */								get ff() { return Number(`0.${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`) }
 	/** number of weeks */																		get ww() { return this.#temporal.weekOfYear }
 	/** timezone */																						get tz() { return this.#temporal.timeZone.toString() }
 	/** seconds (timeStamp) since Unix epoch */								get ts() { return this.#temporal.epochSeconds }
@@ -463,24 +476,24 @@ export class Tempo {
 				const [prefix = '', suffix = ''] = arg.value.toString().split('.');
 				const nano = BigInt(suffix.substring(0, 9).padEnd(9, '0'));
 				const value = BigInt(prefix);
-				let age: bigint;
+				let epoch: bigint;
 
 				switch (true) {
 					case !isEmpty(suffix):														// seconds, with a fractional sub-second
 					case prefix.length <= 10:													// looks like 'seconds'
-						age = value * 1_000_000_000n + nano;
+						epoch = value * 1_000_000_000n + nano;
 						break;
 					case prefix.length <= 13:													// looks like 'milliseconds'
-						age = value * 1_000_000n;
+						epoch = value * 1_000_000n;
 						break;
 					case prefix.length <= 16:													// looks like 'microseconds'
-						age = value * 1_000n;
+						epoch = value * 1_000n;
 						break;
 					default:																					// looks like 'nanoseconds'
-						age = value;
+						epoch = value;
 						break;
 				}
-				return new Temporal.ZonedDateTime(age, this.#config.timeZone, this.#config.calendar);
+				return new Temporal.ZonedDateTime(epoch, this.#config.timeZone, this.#config.calendar);
 
 			default:
 				throw new Error(`Unexpected Tempo parameter type: ${arg.type}, ${arg.value}`);
@@ -503,7 +516,7 @@ export class Tempo {
 		for (const { key, reg } of this.#config.pattern) {
 			const pat = arg.value
 				.toString()																					// easier to work with strings
-				.trimAll(/\(|\)|\t/gi)															// remove (), \t, \s
+				.trimAll(/\(|\)|\t/gi)															// remove (, ), \t, \s
 				.match(reg);																				// return any matches
 
 			if (isNull(pat) || isUndefined(pat.groups))						// regexp named-groups not found
@@ -511,19 +524,19 @@ export class Tempo {
 
 			/**
 			 * If just day-of-week specified, calc date offset
-			 * Wed			-> Wed in the current week (might be earlier or later than or equal to current day)
+			 *  Wed			-> Wed this week				-> might be earlier or later than or equal to current day
 			 * -Wed			-> Wed last week				-> same as new Tempo('Wed').add({ weeks: -1 })
 			 * +Wed			-> Wed next week				-> same as new Tempo('Wed').add({ weeks: 1 })
-			 * -3Wed		-> Wed three weeks ago  -> same as new Tempo('Wed').add({ weeks: 3 })
+			 * -3Wed		-> Wed three weeks ago  -> same as new Tempo('Wed').add({ weeks: -3 })
 			 * <Wed			-> Wed prior to today 	-> current or previous week
 			 * <=Wed		-> Wed prior to tomorrow-> current or previous week
 			 */
 			if (Object.keys(pat.groups).every(el => ['dow', 'mod', 'nbr'].includes(el)) && isDefined(pat.groups['dow'])) {
 				const { dow, mod, nbr } = pat.groups;
-				const weekday = dow.substring(0, 3).toProperCase();
+				const weekday = Tempo.stringPrefix(dow);
 				const offset = enumKeys(Tempo.WEEKDAY).findIndex(el => el === weekday);
 				const adj = today.daysInWeek * Number(isEmpty(nbr) ? '1' : nbr);
-				let days = offset - today.dayOfWeek;									// number of days to offset from today
+				let days = offset - today.dayOfWeek;								// number of days to offset from today
 
 				switch (mod) {																			// switch on the 'modifier' character
 					case void 0:																			// current week
@@ -566,7 +579,7 @@ export class Tempo {
 			 * May			-> 05
 			 */
 			if (isDefined(pat.groups['mm']) && !isNumeric(pat.groups['mm'])) {
-				const mm = pat.groups['mm'].substring(0, 3).toProperCase();
+				const mm = Tempo.stringPrefix(pat.groups['mm']);
 
 				pat.groups['mm'] = enumKeys(Tempo.MONTH).findIndex(el => el === mm).toString();
 			}
@@ -608,7 +621,8 @@ export class Tempo {
 			}
 
 			/**
-			 * Rebuild 'arg' into a string that Temporal can recognize
+			 * Finished analyzing pattern.  
+			 * now rebuild 'arg' into a string that Temporal can recognize
 			 */
 			Object.assign(arg, {
 				type: 'String',
@@ -618,8 +632,8 @@ export class Tempo {
 						${pad(pat.groups['dd'] || '1')}\
 						${pat.groups['hms'] || ''}`
 					.trimAll(/\t/g) + 																// remove <tab> and redundant <space>
-					`[${this.#config.timeZone}]` +										// append timeZone
-					`[u-ca=${this.#config.calendar}]`									// append calendar
+					`[${this.#config.timeZone.id}]` +									// append timeZone
+					`[u-ca=${this.#config.calendar.id}]`							// append calendar
 			})
 
 			if (this.#config?.debug)
@@ -845,7 +859,9 @@ export class Tempo {
 					.replace(/ms/g, pad(this.ms, 3))
 					.replace(/us/g, pad(this.us, 3))
 					.replace(/ns/g, pad(this.ns, 3))
-					.replace(/f{2}/g, pad(this.ff, 9))
+					// .replace(/f{2}/g, pad(this.ff, 9))
+					// .replace(/f{2}/g, asString(this.ff * 1_000_000_000))
+					.replace(/f{2}/g, this.ff.toString().split('.')[1])
 					.replace(/w{2}/g, asString(this.ww))
 					.replace(/dow/g, asString(this.dow))
 					.replace(/day/g, this.day)
@@ -853,7 +869,7 @@ export class Tempo {
 		}
 	}
 
-	/** calculate the difference between dates  (past is positive, future is negative) */
+	/** calculate the difference between Tempos  (past is positive, future is negative) */
 	#until<U extends Tempo.Until>({ tempo, opts, unit }: U): U["unit"] extends Tempo.DiffUnit ? number : Tempo.Duration;
 	#until({ tempo, opts, unit } = {} as Tempo.Until) {
 		const offset = new Tempo(tempo, opts).#temporal;
@@ -882,7 +898,7 @@ export class Tempo {
 		}
 	}
 
-	/** format the elapsed time between two Tempo (to milliseconds) */
+	/** format the elapsed time between two Tempos (to milliseconds) */
 	#since({ tempo, opts, unit } = {} as Tempo.Until) {
 		const { days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = this.#until({ tempo, opts });
 		const since = `${pad(seconds)}.${pad(milliseconds, 3)}}`// default since
@@ -926,11 +942,13 @@ export namespace Tempo {
 	}
 	export type Offset = OneKey<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit>
 	export type Add = OneKey<Tempo.TimeUnit | Tempo.DiffUnit, number>
+	/** detail about a Month */
 	export type Month = {
 		name: keyof typeof Tempo.MONTH;
 		quarter: number;
 		season: `${keyof typeof Tempo.SEASON}.${number}`;
 	}
+	/** tuple of 13 months */
 	export type Months = [Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month]
 
 	export interface ConfigFile {															// configuration on tempo.config.json
@@ -943,7 +961,7 @@ export namespace Tempo {
 		sphere: Tempo.Sphere;																		// hemisphere
 		fiscal: Tempo.CALENDAR;																	// month to start fiscal-year
 		mmddyy: string[];																				// Array of locales that prefer 'mm-dd-yy' date order
-		pattern: { key: string, reg: string[] }[];							// Array of pattern objects, in order of preference
+		pattern: { key: string, reg: string[] }[];							// Array of pattern strings, in order of preference
 	}
 
 	export interface Pattern {
