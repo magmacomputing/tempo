@@ -28,7 +28,6 @@
   },
   "devDependencies": {
     "@types/google.maps": "^3.50.0",
-    "@types/node": "^18.7.13",
     "import-remap": "^0.5.1"
   }
 }
