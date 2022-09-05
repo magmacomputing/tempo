@@ -104,15 +104,19 @@ export class Tempo {
 		qtr: new RegExp(/(?<qtr>1|2|3|4)/),
 		hh: new RegExp(/([01]\d|2[0-3])/),											// hh:  00 - 23
 		tm: new RegExp(/(:[0-5]\d)/),														// tm:  00 - 59 (can be used for minutes and for seconds)
-		ff: new RegExp(/(\.\d+)?/),															// fractional seconds
+		ff: new RegExp(/(\.\d{1,9})?/),													// up-to 9-digits for fractional seconds
 		am: new RegExp(/ ?(?<am>am|pm)?/),											// am/pm suffix
 		sep: new RegExp(/[\/\-\ \,]*/),													// list of separators between date-components
-		mod: new RegExp(/((?<mod>[\+\-\<\>][\=]?)(?<nbr>\d*))?/),	// modifiers (+,-,<,<=,>,>=)
+		mod: new RegExp(/((?<mod>[\+\-\<\>][\=]?)(?<nbr>\d*))?/)// modifiers (+,-,<,<=,>,>=)
 	}
 	static {																									// now, combine some of the above units into common components
 		Tempo.units['hm'] = new RegExp('(?<hm>' + Tempo.units.hh.source + Tempo.units.tm.source + ')');
-		Tempo.units['hms'] = new RegExp('(?<hms>' + Tempo.units.hh.source + '|' + Tempo.units.hm.source + '|' + Tempo.units.hm.source + Tempo.units.tm.source + Tempo.units.ff.source + ')');
-		Tempo.units['tzd'] = new RegExp('(?<tzd>[+-]' + Tempo.units.hm.source + '|Z)')
+		Tempo.units['hms'] = new RegExp('(?<hms>' +
+			Tempo.units.hh.source + '|' +													// just hh
+			Tempo.units.hh.source + Tempo.units.tm.source + '|' +	// or hh:mi
+			Tempo.units.hh.source + Tempo.units.tm.source + Tempo.units.tm.source + Tempo.units.ff.source +	// or hh:mi:ss(.ff)
+			')');
+		Tempo.units['tzd'] = new RegExp('(?<tzd>[+-]' + Tempo.units.hm.source + '|Z)');
 	}
 
 	/** convert array of <string | RegExp> to a single RegExp */
