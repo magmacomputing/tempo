@@ -1,5 +1,6 @@
 import { CONTEXT, getContext } from '@module/shared/utility.library';
 import { Pledge } from '@module/shared/pledge.class';
+import { Tempo } from '@module/shared/tempo.class';
 import { asObject } from '@module/shared/object.library';
 import { isNullish } from '@module/shared/type.library';
 
@@ -17,10 +18,9 @@ interface MapStore {																				// a localStorage object
 }
 
 /**
- * To avoid calling google.maps (for response-time and cost) we stash the current location.  
+ * To avoid calling google.maps (for UI response-time and cost) we stash the current location.  
  * On subsequent attempts, we check whether the device has moved much before calling google.maps
  */
-const ONE_HOUR = 60 * 60 * 1_000;														// 3600 seconds
 const defaults: MapOpts = { catch: true, debug: false };		// default Options
 
 const context = getContext();
@@ -53,7 +53,7 @@ export const geoLocation = (opts = {} as MapOpts) =>
 				(value) => {																				// on success
 					const test1 = value.coords.latitude.toFixed(3) !== mapStore.geolocation?.coords?.latitude.toFixed(3);
 					const test2 = value.coords.longitude.toFixed(3) !== mapStore.geolocation?.coords?.longitude.toFixed(3);
-					const test3 = mapStore.geolocation?.timestamp < (new Date().valueOf() - ONE_HOUR);
+					const test3 = mapStore.geolocation?.timestamp < new Tempo().add({ hours: -1 }).epoch.ms;
 
 					if (test1 || test2 || test3) {										// position has moved, or timeout
 						Object.assign(mapStore, { georesponse: null });	// so remove stashed georesponse result
