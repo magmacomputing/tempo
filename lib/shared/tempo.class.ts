@@ -6,7 +6,7 @@ import { asString, pad } from '@module/shared/string.library';
 import { Pledge } from '@module/shared/pledge.class';
 import { getAccessors, omit } from '@module/shared/object.library';
 import { asNumber, isNumeric, split } from '@module/shared/number.library';
-import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isArray, isRegExp, type OneKey } from '@module/shared/type.library';
+import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isArray, isRegExp } from '@module/shared/type.library';
 
 import '@module/shared/prototype.library';									// patch prototypes
 
@@ -80,7 +80,7 @@ export class Tempo {
 
 	/** setup fiscal quarters, from a given start month */
 	static #fiscal(quarter: Tempo.CALENDAR, month: Tempo.Months) {
-		const start = enumKeys(Tempo.MONTH).findIndex(mon => mon === Tempo.stringPrefix(quarter));
+		const start = enumKeys(Tempo.MONTH).findIndex(mon => mon === Tempo.#stringPrefix(quarter));
 		if (start === -1)
 			return;																								// cannot determine start-Month
 
@@ -146,12 +146,12 @@ export class Tempo {
 	static #gps = new Pledge<Tempo.Sphere>('gps');						// for location (if browser)
 
 	/**
-	 * this allows Tempo to set a specific default configuration.  
+	 * this allows Tempo to set a specific default configuration for 'new Tempo()'.  
 	 * useful primarily for 'order of parsing input', as well as .quarter and .season
 	 */
 	static init = (init: Tempo.Init) => {
 		const sphere = init.sphere || Tempo.COMPASS.North;
-		const fiscal = init.fiscal || Tempo.startFiscal(sphere);// first month of the fiscal-year
+		const fiscal = init.fiscal || Tempo.#startFiscal(sphere);// first month of the fiscal-year
 
 		Tempo.#gps.resolve(null);																// dont block, if non-browser
 
@@ -185,7 +185,7 @@ export class Tempo {
 		const country = Tempo.#Intl.timeZone.split('/')[0];
 		switch (country) {																			// TODO: better country detection
 			case 'Australia':
-				Object.assign(Tempo.#default, { sphere: Tempo.COMPASS.South, fiscal: Tempo.startFiscal(Tempo.COMPASS.South), locale: 'en-AU' });
+				Object.assign(Tempo.#default, { sphere: Tempo.COMPASS.South, fiscal: Tempo.#startFiscal(Tempo.COMPASS.South), locale: 'en-AU' });
 				break;
 			default:
 		}
@@ -199,7 +199,7 @@ export class Tempo {
 				import('@module/browser/mapper.library')						// get browser mapper.library
 					.then(({ mapHemisphere }) => mapHemisphere<Tempo.Sphere>())
 					.then(res => Tempo.#gps.resolve(res))							// 'north' | 'south' | null
-					.catch(_ => Tempo.#gps.resolve(null))
+					.catch(_ => Tempo.#gps.resolve(null))							// cannot access mapper library
 				break;
 
 			case CONTEXT.NodeJS:
@@ -235,7 +235,7 @@ export class Tempo {
 			.then(sphere => {
 				if (isDefined(sphere)) {														// if user allowed geolocation
 					Tempo.#default.sphere = init.sphere || sphere;		// user-preference else derived hemisphere
-					Tempo.#default.fiscal = init.fiscal || Tempo.startFiscal(Tempo.#default.sphere);
+					Tempo.#default.fiscal = init.fiscal || Tempo.#startFiscal(Tempo.#default.sphere);
 				}
 
 				Tempo.#sphere(Tempo.#default.sphere, Tempo.#months);// setup seasons
@@ -254,14 +254,14 @@ export class Tempo {
 			})
 	}
 
-	/** Norther -or- Southern hemisphere start of Q1 */
-	static startFiscal(sphere: Tempo.Sphere) {
+	/** Northern -or- Southern hemisphere start of Q1 */
+	static #startFiscal(sphere: Tempo.Sphere) {
 		const start = sphere === Tempo.COMPASS.North ? Tempo.MONTH.Oct : Tempo.MONTH.Jul;
 		return Tempo.MONTH[start] as Tempo.CALENDAR;
 	}
 
 	/** First three-letters of day/month */
-	static stringPrefix(str: string) {
+	static #stringPrefix(str: string) {
 		return str.substring(0, 3).toProperCase();
 	}
 
@@ -313,6 +313,7 @@ export class Tempo {
 		}
 	}
 
+	/** Default string description */
 	[Symbol.toStringTag] = 'Tempo';
 
 	/** Constructor ************************************************************************************************* */
@@ -324,12 +325,12 @@ export class Tempo {
 			timeZone: new Temporal.TimeZone(opts.timeZone ?? Tempo.#default.timeZone),
 			calendar: new Temporal.Calendar(opts.calendar ?? Tempo.#default.calendar),
 			locale: opts.locale ?? Tempo.#default.locale,					// help determine which DateFormat to check first
-			pivot: opts.pivot ?? asNumber(Tempo.#default.pivot),	// determines the century-cutoff for two-digit years
-			sphere: opts.sphere ?? Tempo.#default.sphere ?? Tempo.COMPASS.North,
+			pivot: opts.pivot ?? Tempo.#default.pivot,						// determines the century-cutoff for two-digit years
+			sphere: opts.sphere ?? Tempo.#default.sphere,					// allow for override of hemisphere
 			debug: opts.debug ?? Tempo.#default.debug,						// debug-mode for this instance
 			catch: opts.catch ?? Tempo.#default.catch,						// catch-mode for this instance
 			month: clone(Tempo.#months),													// clone the months
-			pattern: [],																					// instance-patterns
+			pattern: [],																					// additional instance-patterns
 		}
 
 		if (this.#config.sphere !== Tempo.#default.sphere) {		// change of sphere, swap hemisphere ?
@@ -338,7 +339,7 @@ export class Tempo {
 			Tempo.#sphere(this.#config.sphere, this.#config.month);
 		}
 		if (opts.fiscal) {																			// change of fiscal-year start month ?
-			const mon = Tempo.stringPrefix(opts.fiscal) as Tempo.CALENDAR;
+			const mon = Tempo.#stringPrefix(opts.fiscal) as Tempo.CALENDAR;
 			const idx = Tempo.MONTH[mon];
 
 			if (this.#config.month[idx].quarter !== 1) {					// supplied fiscal is not Q1 in #config.month
@@ -402,10 +403,20 @@ export class Tempo {
 	/** long month name */																		get mon() { return Tempo.MONTHS[this.#temporal.month] }
 	/** short weekday name */																	get ddd() { return Tempo.WEEKDAY[this.#temporal.dayOfWeek] }
 	/** long weekday name */																	get day() { return Tempo.WEEKDAYS[this.#temporal.dayOfWeek] }
-
 	/** quarter: Q1-Q4 */																			get qtr() { return Math.trunc(this.#config.month[this.mm].quarter) }
 	/** meteorological season: Spring/Summer/Autumn/Winter */	get season() { return this.#config.month[this.mm].season.split('.')[0] as keyof typeof Tempo.SEASON }
-	/** Instance configuration */															get config() { return this.#config }
+	/** epoch object */																				get epoch() {
+		return {
+			/** seconds since epoch */														ss: this.#temporal.epochSeconds,
+			/** milliseconds since epoch */												ms: this.#temporal.epochMilliseconds,
+			/** microseconds since epoch */												us: this.#temporal.epochMicroseconds,
+			/** nanoseconds since epoch */												ns: this.#temporal.epochNanoseconds
+		}
+	}
+	/** Instance configuration */															get config() {
+		const id = this.#temporalId();
+		return { ...this.#config, calendar: id.calendar, timeZone: id.timeZone }
+	}
 
 	// Public Methods	 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -413,7 +424,7 @@ export class Tempo {
 	/** format elapsed time */																since<S extends Tempo.Until>(since: S) { return this.#since(since) }
 	/** apply formatting */																		format<K extends keyof Tempo.Formats>(fmt: K) { return this.#format(fmt) }
 
-	/** add date offset */																		add(mutate: Tempo.Add) { return this.#offset(Object.assign({}, mutate, { offset: 'add' })) }
+	/** add date/time unit */																	add(mutate: Tempo.Add) { return this.#offset(mutate) }
 	/** offset to start/mid/end of unit */										offset(offset: Tempo.Offset) { return this.#offset(offset) }
 
 	/** is valid Tempo */																			isValid() { return !isNaN(this.ts) }
@@ -422,7 +433,8 @@ export class Tempo {
 	/** as String */																					toString() { return this.#temporal.toString() }
 	/** as Object */																					toJSON() {
 		const config = (({ month, pattern, ...rest }) => rest)(this.#config);
-		return ({ ...config, calendar: config.calendar.id, timeZone: config.calendar.id, value: this.toString() })
+		const id = this.#temporalId();
+		return ({ ...config, calendar: id.calendar, timeZone: id.timeZone, value: this.toString() });
 	}
 
 	// Private methods	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -527,17 +539,17 @@ export class Tempo {
 				continue;
 
 			/**
-			 * If just day-of-week specified, calc date offset
-			 *  Wed			-> Wed this week				-> might be earlier or later than or equal to current day
-			 * -Wed			-> Wed last week				-> same as new Tempo('Wed').add({ weeks: -1 })
-			 * +Wed			-> Wed next week				-> same as new Tempo('Wed').add({ weeks: 1 })
+			 * If just day-of-week specified (with optional 'mod' and 'nbr'), calc date offset
+			 *   Wed		-> Wed this week				-> might be earlier or later than or equal to current day
+			 *  -Wed		-> Wed last week				-> same as new Tempo('Wed').add({ weeks: -1 })
+			 *  +Wed		-> Wed next week				-> same as new Tempo('Wed').add({ weeks: 1 })
 			 * -3Wed		-> Wed three weeks ago  -> same as new Tempo('Wed').add({ weeks: -3 })
-			 * <Wed			-> Wed prior to today 	-> current or previous week
+			 *  <Wed		-> Wed prior to today 	-> current or previous week
 			 * <=Wed		-> Wed prior to tomorrow-> current or previous week
 			 */
 			if (Object.keys(pat.groups).every(el => ['dow', 'mod', 'nbr'].includes(el)) && isDefined(pat.groups['dow'])) {
 				const { dow, mod, nbr } = pat.groups;
-				const weekday = Tempo.stringPrefix(dow);
+				const weekday = Tempo.#stringPrefix(dow);
 				const offset = enumKeys(Tempo.WEEKDAY).findIndex(el => el === weekday);
 				const adj = today.daysInWeek * Number(isEmpty(nbr) ? '1' : nbr);
 				let days = offset - today.dayOfWeek;								// number of days to offset from today
@@ -583,7 +595,7 @@ export class Tempo {
 			 * May			-> 05
 			 */
 			if (isDefined(pat.groups['mm']) && !isNumeric(pat.groups['mm'])) {
-				const mm = Tempo.stringPrefix(pat.groups['mm']);
+				const mm = Tempo.#stringPrefix(pat.groups['mm']);
 
 				pat.groups['mm'] = enumKeys(Tempo.MONTH).findIndex(el => el === mm).toString();
 			}
@@ -628,6 +640,7 @@ export class Tempo {
 			 * Finished analyzing pattern.  
 			 * now rebuild 'arg' into a string that Temporal can recognize
 			 */
+			const id = this.#temporalId();
 			Object.assign(arg, {
 				type: 'String',
 				value: `
@@ -636,8 +649,8 @@ export class Tempo {
 						${pad(pat.groups['dd'] || '1')}\
 						${pat.groups['hms'] || ''}`
 					.trimAll(/\t/g) + 																// remove <tab> and redundant <space>
-					`[${this.#config.timeZone.id}]` +									// append timeZone
-					`[u-ca=${this.#config.calendar.id}]`							// append calendar
+					`[${id.timeZone}]` +															// append timeZone
+					`[u-ca=${id.calendar}]`														// append calendar
 			})
 
 			if (this.#config?.debug)
@@ -648,161 +661,154 @@ export class Tempo {
 		return arg;
 	}
 
+	/** display IDs for calendar and timeZone */
+	#temporalId() {
+		const { calendar, timeZone, ...rest } = this.#config;
+		return { calendar: calendar.id, timeZone: timeZone.id }
+	}
+
 	/** create a new offset Tempo */
-	#offset = (args: (Tempo.Add | Tempo.Offset | { offset: Tempo.Mutate })) => {
-		const { mutate = 'add', unit = 'seconds', offset = 1 } = Object
-			.entries(args)
-			.reduce((acc, [key, val], _itm, arr) => {
-				if (arr.length === 1) {															// mutate: start | mid | end
-					acc.mutate = key as Tempo.Mutate;
-					acc.unit = val;
-				} else {																						// mutate: add
-					if (key === 'offset') {
-						acc.mutate = val;																// method to use when mutate a Tempo
-					} else {
-						acc.unit = key as Tempo.TimeUnit;								// unit of measure to mutate
-						acc.offset = val ?? 1;													// number of units to mutate
-					}
+	#offset = (args: (Tempo.Add | Tempo.Offset)) => {
+		let zdt = this.#temporal;																// start with the Tempo instance
+
+		Object.entries(args)																		// iterate through mutations
+			.forEach(([key, unit]: [string, string]) => {
+				const { mutate, offset, single } = ['start', 'mid', 'end'].includes(key)
+					? { mutate: key, offset: 0, single: unit.endsWith('s') ? unit.slice(0 - 1) : unit }
+					: { mutate: 'add', offset: Number(unit), single: key.endsWith('s') ? key.slice(0, -1) : key }
+
+				switch (`${mutate}.${single}`) {
+					case 'start.year':
+						zdt = zdt.with({ month: Tempo.MONTH.Jan, day: 1 }).startOfDay();
+						break;
+					case 'start.season':
+						const season1 = this.#config.month.findIndex(mon => mon.season === (this.season + .1));
+						zdt = zdt.with({ day: 1, month: season1 }).startOfDay();
+						break;
+					case 'start.quarter':
+					case 'start.qtr':
+						const qtr1 = this.#config.month.findIndex(mon => mon.quarter === (this.qtr + .1));
+						zdt = zdt.with({ day: 1, month: qtr1 }).startOfDay();
+						break;
+					case 'start.month':
+						zdt = zdt.with({ day: 1 }).startOfDay();
+						break;
+					case 'start.week':
+						zdt = zdt.with({ day: this.dd - this.dow + Tempo.WEEKDAY.Mon }).startOfDay();
+						break;
+					case 'start.day':
+						zdt = zdt.startOfDay();
+						break;
+					case 'start.hour':
+						zdt = zdt.round({ smallestUnit: 'hour', roundingMode: 'trunc' });
+						break;
+					case 'start.minute':
+						zdt = zdt.round({ smallestUnit: 'minute', roundingMode: 'trunc' });
+						break;
+					case 'start.second':
+						zdt = zdt.round({ smallestUnit: 'second', roundingMode: 'trunc' });
+						break;
+
+					case 'mid.year':
+						zdt = zdt.with({ month: Tempo.MONTH.Jul, day: 1 }).startOfDay();
+						break;
+					case 'mid.season':
+						const season2 = this.#config.month.findIndex(mon => mon.season === (this.season + .2));
+						zdt = zdt.with({ day: Math.trunc(zdt.daysInMonth / 2), month: season2 }).startOfDay();
+						break;
+					case 'mid.quarter':
+					case 'mid.qtr':
+						const qtr2 = this.#config.month.findIndex(mon => mon.quarter === (this.qtr + .2));
+						zdt = zdt.with({ day: Math.trunc(zdt.daysInMonth / 2), month: qtr2 }).startOfDay();
+						break;
+					case 'mid.month':
+						zdt = zdt.with({ day: Math.trunc(zdt.daysInMonth / 2) }).startOfDay();
+						break;
+					case 'mid.week':
+						zdt = zdt.with({ day: this.dd - this.dow + Tempo.WEEKDAY.Thu }).startOfDay();
+						break;
+					case 'mid.day':
+						zdt = zdt.round({ smallestUnit: 'day', roundingMode: 'trunc' }).add({ hours: 12 });
+						break;
+					case 'mid.hour':
+						zdt = zdt.round({ smallestUnit: 'hour', roundingMode: 'trunc' }).add({ minutes: 30 });
+						break;
+					case 'mid.minute':
+						zdt = zdt.round({ smallestUnit: 'minute', roundingMode: 'trunc' }).add({ seconds: 30 });
+						break;
+					case 'mid.second':
+						zdt = zdt.round({ smallestUnit: 'second', roundingMode: 'trunc' }).add({ milliseconds: 500 });
+						break;
+
+					case 'end.year':
+						zdt = zdt.add({ years: 1 }).with({ month: Tempo.MONTH.Jan, day: 1 }).startOfDay().subtract({ nanoseconds: 1 });
+						break;
+					case 'end.season':
+						const season3 = this.#config.month.findIndex(mon => mon.season === (this.season + .3));
+						zdt = zdt.with({ month: season3 })
+							.add({ months: 1 })
+							.with({ day: 1 })
+							.startOfDay()
+							.subtract({ nanoseconds: 1 });
+					case 'end.quarter':
+					case 'end.qtr':
+						const qtr3 = this.#config.month.findIndex(mon => mon.quarter === (this.qtr + .3));
+						zdt = zdt.with({ month: qtr3 })
+							.add({ months: 1 })
+							.with({ day: 1 })
+							.startOfDay()
+							.subtract({ nanoseconds: 1 });
+						break;
+					case 'end.month':
+						zdt = zdt.add({ months: 1 }).with({ day: 1 }).startOfDay().subtract({ nanoseconds: 1 });
+						break;
+					case 'end.week':
+						zdt = zdt.with({ day: this.dd - this.dow + Tempo.WEEKDAY.Sun + 1 }).startOfDay().subtract({ nanoseconds: 1 });
+						break;
+					case 'end.day':
+						zdt = zdt.round({ smallestUnit: 'day', roundingMode: 'ceil' }).subtract({ nanoseconds: 1 });
+						break;
+					case 'end.hour':
+						zdt = zdt.round({ smallestUnit: 'hour', roundingMode: 'ceil' }).subtract({ nanoseconds: 1 });
+						break;
+					case 'end.minute':
+						zdt = zdt.round({ smallestUnit: 'minute', roundingMode: 'ceil' }).subtract({ nanoseconds: 1 });
+						break;
+					case 'end.second':
+						zdt = zdt.round({ smallestUnit: 'second', roundingMode: 'ceil' }).subtract({ nanoseconds: 1 });
+						break;
+
+					case 'add.year':
+						zdt = zdt.add({ years: offset });
+						break;
+					case 'add.season':
+					case 'add.quarter':
+					case 'add.qtr':
+						zdt = zdt.add({ months: offset * 3 });
+						break;
+					case 'add.month':
+						zdt = zdt.add({ months: offset });
+						break;
+					case 'add.week':
+						zdt = zdt.add({ weeks: offset });
+						break;
+					case 'add.day':
+						zdt = zdt.add({ days: offset });
+						break;
+					case 'add.hour':
+						zdt = zdt.add({ hours: offset });
+						break;
+					case 'add.minute':
+						zdt = zdt.add({ minutes: offset });
+						break;
+					case 'add.second':
+						zdt = zdt.add({ seconds: offset });
+						break;
+
+					default:
+						throw new Error(`Unexpected method(${mutate}) and offset(${single})`);
 				}
-				return acc;
-			}, {} as { mutate: Tempo.Mutate, offset: number, unit: Tempo.TimeUnit | Tempo.DiffUnit })
-
-		const single = unit.endsWith('s')
-			? unit.slice(0, -1)																		// remove plural suffix
-			: unit
-		let zdt = this.#temporal;																// clone the Tempo instance
-
-		switch (`${mutate}.${single}`) {
-			case 'start.year':
-				zdt = zdt.with({ month: Tempo.MONTH.Jan, day: 1 }).startOfDay();
-				break;
-			case 'start.season':
-				const season1 = this.#config.month.findIndex(mon => mon.season === (this.season + .1));
-				zdt = zdt.with({ day: 1, month: season1 }).startOfDay();
-				break;
-			case 'start.quarter':
-			case 'start.qtr':
-				const qtr1 = this.#config.month.findIndex(mon => mon.quarter === (this.qtr + .1));
-				zdt = zdt.with({ day: 1, month: qtr1 }).startOfDay();
-				break;
-			case 'start.month':
-				zdt = zdt.with({ day: 1 }).startOfDay();
-				break;
-			case 'start.week':
-				zdt = zdt.with({ day: this.dd - this.dow + Tempo.WEEKDAY.Mon }).startOfDay();
-				break;
-			case 'start.day':
-				zdt = zdt.startOfDay();
-				break;
-			case 'start.hour':
-				zdt = zdt.round({ smallestUnit: 'hour', roundingMode: 'trunc' });
-				break;
-			case 'start.minute':
-				zdt = zdt.round({ smallestUnit: 'minute', roundingMode: 'trunc' });
-				break;
-			case 'start.second':
-				zdt = zdt.round({ smallestUnit: 'second', roundingMode: 'trunc' });
-				break;
-
-			case 'mid.year':
-				zdt = zdt.with({ month: Tempo.MONTH.Jul, day: 1 }).startOfDay();
-				break;
-			case 'mid.season':
-				const season2 = this.#config.month.findIndex(mon => mon.season === (this.season + .2));
-				zdt = zdt.with({ day: Math.trunc(zdt.daysInMonth / 2), month: season2 }).startOfDay();
-				break;
-			case 'mid.quarter':
-			case 'mid.qtr':
-				const qtr2 = this.#config.month.findIndex(mon => mon.quarter === (this.qtr + .2));
-				zdt = zdt.with({ day: Math.trunc(zdt.daysInMonth / 2), month: qtr2 }).startOfDay();
-				break;
-			case 'mid.month':
-				zdt = zdt.with({ day: Math.trunc(zdt.daysInMonth / 2) }).startOfDay();
-				break;
-			case 'mid.week':
-				zdt = zdt.with({ day: this.dd - this.dow + Tempo.WEEKDAY.Thu }).startOfDay();
-				break;
-			case 'mid.day':
-				zdt = zdt.round({ smallestUnit: 'day', roundingMode: 'trunc' }).add({ hours: 12 });
-				break;
-			case 'mid.hour':
-				zdt = zdt.round({ smallestUnit: 'hour', roundingMode: 'trunc' }).add({ minutes: 30 });
-				break;
-			case 'mid.minute':
-				zdt = zdt.round({ smallestUnit: 'minute', roundingMode: 'trunc' }).add({ seconds: 30 });
-				break;
-			case 'mid.second':
-				zdt = zdt.round({ smallestUnit: 'second', roundingMode: 'trunc' }).add({ milliseconds: 500 });
-				break;
-
-			case 'end.year':
-				zdt = zdt.add({ years: 1 }).with({ month: Tempo.MONTH.Jan, day: 1 }).startOfDay().subtract({ nanoseconds: 1 });
-				break;
-			case 'end.season':
-				const season3 = this.#config.month.findIndex(mon => mon.season === (this.season + .3));
-				zdt = zdt.with({ month: season3 })
-					.add({ months: 1 })
-					.with({ day: 1 })
-					.startOfDay()
-					.subtract({ nanoseconds: 1 });
-			case 'end.quarter':
-			case 'end.qtr':
-				const qtr3 = this.#config.month.findIndex(mon => mon.quarter === (this.qtr + .3));
-				zdt = zdt.with({ month: qtr3 })
-					.add({ months: 1 })
-					.with({ day: 1 })
-					.startOfDay()
-					.subtract({ nanoseconds: 1 });
-				break;
-			case 'end.month':
-				zdt = zdt.add({ months: 1 }).with({ day: 1 }).startOfDay().subtract({ nanoseconds: 1 });
-				break;
-			case 'end.week':
-				zdt = zdt.with({ day: this.dd - this.dow + Tempo.WEEKDAY.Sun + 1 }).startOfDay().subtract({ nanoseconds: 1 });
-				break;
-			case 'end.day':
-				zdt = zdt.round({ smallestUnit: 'day', roundingMode: 'ceil' }).subtract({ nanoseconds: 1 });
-				break;
-			case 'end.hour':
-				zdt = zdt.round({ smallestUnit: 'hour', roundingMode: 'ceil' }).subtract({ nanoseconds: 1 });
-				break;
-			case 'end.minute':
-				zdt = zdt.round({ smallestUnit: 'minute', roundingMode: 'ceil' }).subtract({ nanoseconds: 1 });
-				break;
-			case 'end.second':
-				zdt = zdt.round({ smallestUnit: 'second', roundingMode: 'ceil' }).subtract({ nanoseconds: 1 });
-				break;
-
-			case 'add.year':
-				zdt = zdt.add({ years: offset });
-				break;
-			case 'add.season':
-			case 'add.quarter':
-			case 'add.qtr':
-				zdt = zdt.add({ months: offset * 3 });
-				break;
-			case 'add.month':
-				zdt = zdt.add({ months: offset });
-				break;
-			case 'add.week':
-				zdt = zdt.add({ weeks: offset });
-				break;
-			case 'add.day':
-				zdt = zdt.add({ days: offset });
-				break;
-			case 'add.hour':
-				zdt = zdt.add({ hours: offset });
-				break;
-			case 'add.minute':
-				zdt = zdt.add({ minutes: offset });
-				break;
-			case 'add.second':
-				zdt = zdt.add({ seconds: offset });
-				break;
-
-			default:
-				throw new Error(`Unexpected method(${mutate}) and offset(${single})`);
-		}
+			})
 
 		return new Tempo(zdt as unknown as typeof Temporal);
 	}
@@ -865,7 +871,9 @@ export class Tempo {
 					.replace(/ns/g, pad(this.ns, 3))
 					// .replace(/f{2}/g, pad(this.ff, 9))
 					// .replace(/f{2}/g, asString(this.ff * 1_000_000_000))
-					.replace(/f{2}/g, this.ff.toString().split('.')[1])
+					// .replace(/f{2}/g, this.ff.toString().split('.')[1])
+					// .replace(/f{2}/g, (this.ff.toString()))
+					.replace(/f{2}/g, pad(this.ff * 1_000_000_000, 9))
 					.replace(/w{2}/g, asString(this.ww))
 					.replace(/dow/g, asString(this.dow))
 					.replace(/day/g, this.day)
@@ -944,8 +952,8 @@ export namespace Tempo {
 	export interface Until extends Tempo.Parameter {					// configuration to use for #until() argument
 		unit?: Tempo.DiffUnit;
 	}
-	export type Offset = OneKey<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit>
-	export type Add = OneKey<Tempo.TimeUnit | Tempo.DiffUnit, number>
+	export type Offset = Partial<Record<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit>>
+	export type Add = Partial<Record<Tempo.TimeUnit | Tempo.DiffUnit, number>>
 	/** detail about a Month */
 	export type Month = {
 		name: keyof typeof Tempo.MONTH;
@@ -961,7 +969,7 @@ export namespace Tempo {
 		locale: string;
 		debug: boolean;
 		catch: boolean;
-		pivot: string | number;
+		pivot: number;
 		sphere: Tempo.Sphere;																		// hemisphere
 		fiscal: Tempo.CALENDAR;																	// month to start fiscal-year
 		mmddyy: string[];																				// Array of locales that prefer 'mm-dd-yy' date order
