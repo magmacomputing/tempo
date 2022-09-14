@@ -1,5 +1,5 @@
 import { stringify, objectify } from '@module/shared/serialize.library';
-import { asType, isEmpty, isUndefined } from '@module/shared/type.library';
+import { asType, isEmpty, isNullish } from '@module/shared/type.library';
 
 /**
  * Wrapper around local / session  Web Storage
@@ -19,11 +19,11 @@ export class WebStore {
 	public get<T>(key: string, dflt: T): T;
 	public get<T>(key: string, dflt?: T) {
 		const obj = objectify<T>(this.#storage.getItem(key));
-		return obj ?? (isUndefined(dflt) ? obj : dflt)
+		return obj ?? (isNullish(dflt) ? obj : dflt)
 	}
 
 	public set(key?: string, obj?: unknown, opt = { merge: true }) {
-		if (isUndefined(key))																		// synonym for 'clear'
+		if (isNullish(key))																			// synonym for 'clear'
 			return this.clear();
 
 		let prev = this.get<string | any[] | {}>(key);					// needed if merge is true

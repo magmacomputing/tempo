@@ -84,6 +84,7 @@ export const quoteObj = (obj: any) => {
 		?.replace(/,/g, ', ')
 }
 
+/** copy enumerable properties to a new Object */
 export const asObject = <T>(obj: any) => {
 	if (obj === null || !(obj instanceof Object))
 		return obj;
