@@ -65,7 +65,7 @@ export const isUndefined = (obj?: unknown): obj is undefined => isType<undefined
 export const isDefined = <T>(obj: T): obj is NonNullable<T> => !isNullish(obj);
 
 export const isClass = (obj?: unknown): obj is Function => isType(obj, 'Class');
-export const isFunction = (obj?: unknown): obj is Function => isType(obj, 'Function', 'AsyncFunction');
+export const isFunction = (obj?: unknown): obj is Function => isType(obj, 'Function');
 export const isPromise = <T>(obj?: unknown): obj is Promise<T> => isType(obj, 'Promise');
 export const isMap = <K, V>(obj?: unknown): obj is Map<K, V> => isType(obj, 'Map');
 export const isSet = <K>(obj?: unknown): obj is Set<K> => isType(obj, 'Set');
@@ -115,7 +115,7 @@ type Primitive = string | number | bigint | boolean | symbol | void | null // | 
 type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling)
 export type Temporals = Exclude<keyof typeof Temporal, 'Now'>;
 
-export type Types = 'String' | 'Number' | 'BigInt' | 'Boolean' | 'Object' | 'Array' | 'ArrayLike' | 'Null' | 'Undefined' | 'Void' | 'Date' | 'Function' | 'AsyncFunction' | 'Class' | 'Promise' | 'Map' | 'Set' | 'RegExp' | 'Symbol' | 'Record' | 'Tuple' | 'Error'
+export type Types = 'String' | 'Number' | 'BigInt' | 'Boolean' | 'Object' | 'Array' | 'ArrayLike' | 'Null' | 'Undefined' | 'Void' | 'Date' | 'Function' | 'AsyncFunction' | 'Class' | 'Promise' | 'Map' | 'Set' | 'WeakMap' | 'WeakSet' | 'RegExp' | 'Symbol' | 'Record' | 'Tuple' | 'Error'
 export type TypeValue<T> =
 	typeString |
 	typeNumber |
@@ -134,6 +134,8 @@ export type TypeValue<T> =
 	typeRegExp |
 	typeMap<T> |
 	typeSet<T> |
+	typeWeakMap<Record<string, any>, T> |
+	typeWeakSet<Record<string, T>> |
 	typeSymbol |
 	typeError |
 
@@ -169,10 +171,12 @@ interface typePromise<T> { type: 'Promise', value: Promise<T> }
 interface typeRegExp { type: 'RegExp', value: RegExp }
 interface typeMap<T> { type: 'Map', value: Map<any, T> }
 interface typeSet<T> { type: 'Set', value: Set<T> }
+interface typeWeakMap<K extends Record<string, any>, V> { type: 'WeakMap', value: WeakMap<K, V> }
+interface typeWeakSet<V extends Record<string, any>> { type: 'WeakSet', value: WeakSet<V> }
 interface typeSymbol { type: 'Symbol', value: Symbol }
 interface typeError { type: 'Error', value: Error }
 // TODO:  when Record/Tuple reach Stage-4
-interface typeRecord<T> { type: 'Record', value: Record<any, any> }
+interface typeRecord<T> { type: 'Record', value: Record<string, T> }
 interface typeTuple<T> { type: 'Tuple', value: Array<T> }
 
 interface typeTemporal { type: 'Temporal', value: Temporals }
