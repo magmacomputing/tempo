@@ -121,7 +121,7 @@ export const mapQuery = (coords?: google.maps.GeocoderRequest, opts = {} as MapO
 
 					default:
 						new window['google']['maps'].Geocoder().geocode(loc!)
-							.then(res => resolve(mapStore.georesponse = res))	// successful maps.geocode
+							.then(res => resolve(mapStore.georesponse = asObject(res)))	// successful maps.geocode
 				}
 			})
 			.catch((error) => {																		// unsuccessful geoCoords() | geocode()
