@@ -66,7 +66,7 @@ else console.error('Cannot extend String.toProperCase');
 // extend Array prototype
 declare global {
 	interface Array<T> {
-		/** return reduced Array as keyed-Object */
+		/** reduce Array to a keyed-Object */
 		keyedBy<K extends string>(key: string): Record<K, T[]>;
 		keyedBy(...keys: string[]): Record<string, T[]>;
 		keyedBy<K extends string>(flatten: true, key: string): Record<K, T>;
@@ -75,10 +75,10 @@ declare global {
 		keyedBy(flatten: false, ...keys: string[]): Record<string, T[]>;
 
 		/** return sorted Array-of-objects */
-		orderBy(keys: (string | SortBy)[]): T[];
-		orderBy(...keys: (string | SortBy)[]): T[];
-		sortBy(keys: (string | SortBy)[]): T[];
-		sortBy(...keys: (string | SortBy)[]): T[];
+		/** return sorted Array-of-objects */										orderBy(keys: (string | SortBy)[]): T[];
+		/** return sorted Array-of-objects */										orderBy(...keys: (string | SortBy)[]): T[];
+		/** return sorted Array-of-objects */										sortBy(keys: (string | SortBy)[]): T[];
+		/** return sorted Array-of-objects */										sortBy(...keys: (string | SortBy)[]): T[];
 
 		/** return new Array with no repeated elements */
 		distinct(): T[];
