@@ -1,6 +1,5 @@
 import { isNumeric } from '@module/shared/number.library';
-import { asType, getType, isEmpty, isString, isObject, isArray, isFunction } from '@module/shared/type.library';
-import { valHooks } from 'jquery';
+import { asType, isEmpty, isString, isObject, isArray, isFunction } from '@module/shared/type.library';
 
 /** make a deep-copy, using standard browser or JSON functions */
 export function clone<T>(obj: T) {
@@ -106,13 +105,13 @@ export function stringify(obj: any): string {
 			const map = (Array.from(arg.value.entries()) as any[][])
 				.map(([key, val]) => '[' + stringify(key) + ',' + stringify(val) + ']')
 				.join(',')
-			return `{"${arg.type}": [${clean(map)}]}`;
+			return `{"${arg.type}": [${map}]}`;
 
 		case 'Set':
 			const set = (Array.from(arg.value.values()) as any[])
 				.map((val) => stringify(val))
 				.join(',')
-			return `{"${arg.type}": [${clean(set)}]}`;
+			return `{"${arg.type}": [${set}]}`;
 
 		case 'Function':
 			return '{}';																					// unsupported

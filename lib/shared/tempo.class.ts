@@ -39,7 +39,7 @@ export class Tempo {
 	#value?: Tempo.DateTime;																	// constructor value
 	#opts: Tempo.Options;																			// constructor arguments
 	#now: Temporal.Instant;																		// instantiation Temporal Instant, used only during construction
-	#temporal!: Temporal.ZonedDateTime;												// wrapped Temporal DateTime
+	#temporal!: Temporal.ZonedDateTime;												// underlying Temporal DateTime
 	fmt = {} as Tempo.TypeFmt;																// prebuilt Formats, for convenience
 
 	// Static variables / methods	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -103,7 +103,7 @@ export class Tempo {
 		dow: new RegExp(/(?<dow>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)?(,)?( )?/),
 		qtr: new RegExp(/(?<qtr>1|2|3|4)/),
 		hh: new RegExp(/([01]\d|2[0-3])/),											// hh:  00 - 23
-		tm: new RegExp(/(:[0-5]\d)/),														// tm:  00 - 59 (can be used for minutes and for seconds)
+		tm: new RegExp(/([0-5]\d)/),														// tm:  00 - 59 (can be used for minutes and for seconds)
 		ff: new RegExp(/(\.\d{1,9})?/),													// up-to 9-digits for fractional seconds
 		am: new RegExp(/ ?(?<am>am|pm)?/),											// am/pm suffix
 		sep: new RegExp(/[\/\-\ \,]*/),													// list of separators between date-components
@@ -113,8 +113,8 @@ export class Tempo {
 		Tempo.units['hm'] = new RegExp('(?<hm>' + Tempo.units.hh.source + Tempo.units.tm.source + ')');
 		Tempo.units['hms'] = new RegExp('(?<hms>' +
 			Tempo.units.hh.source + '|' +													// just hh
-			Tempo.units.hh.source + Tempo.units.tm.source + '|' +	// or hh:mi
-			Tempo.units.hh.source + Tempo.units.tm.source + Tempo.units.tm.source + Tempo.units.ff.source +	// or hh:mi:ss(.ff)
+			Tempo.units.hh.source + ':' + Tempo.units.tm.source + '|' +	// or hh:mi
+			Tempo.units.hh.source + ':' + Tempo.units.tm.source + ':' + Tempo.units.tm.source + Tempo.units.ff.source +	// or hh:mi:ss(.ff)
 			')');
 		Tempo.units['tzd'] = new RegExp('(?<tzd>[+-]' + Tempo.units.hm.source + '|Z)');
 	}
@@ -260,7 +260,7 @@ export class Tempo {
 		return Tempo.MONTH[start] as Tempo.CALENDAR;
 	}
 
-	/** First three-letters of day/month */
+	/** ProperCase first three-letters of day/month */
 	static #stringPrefix(str: string) {
 		return str.substring(0, 3).toProperCase();
 	}
@@ -312,9 +312,8 @@ export class Tempo {
 			value: props[idx++],
 		}
 	}
-
 	/** Default string description */
-	[Symbol.toStringTag] = 'Tempo';
+	[Symbol.toStringTag]() { return 'Tempo' }
 
 	/** Constructor ************************************************************************************************* */
 	constructor(tempo?: Tempo.DateTime, opts: Tempo.Options = {}) {
@@ -540,7 +539,7 @@ export class Tempo {
 
 			/**
 			 * If just day-of-week specified (with optional 'mod' and 'nbr'), calc date offset
-			 *   Wed		-> Wed this week				-> might be earlier or later than or equal to current day
+			 *   Wed		-> Wed this week				-> might be earlier or later or equal to current day
 			 *  -Wed		-> Wed last week				-> same as new Tempo('Wed').add({ weeks: -1 })
 			 *  +Wed		-> Wed next week				-> same as new Tempo('Wed').add({ weeks: 1 })
 			 * -3Wed		-> Wed three weeks ago  -> same as new Tempo('Wed').add({ weeks: -3 })
