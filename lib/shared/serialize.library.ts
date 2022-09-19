@@ -1,19 +1,22 @@
 import { isNumeric } from '@module/shared/number.library';
 import { asType, getType, isEmpty, isString, isObject, isArray, isFunction } from '@module/shared/type.library';
+import { valHooks } from 'jquery';
 
 /** make a deep-copy, using standard browser or JSON functions */
 export function clone<T>(obj: T) {
 	let copy = obj;																						// default to original object
 
-	// try {
-	// 	copy = structuredClone?.(obj);												// structuredClone is not available in 'node'
-	// } catch (error) {
 	try {
-		copy = JSON.parse(JSON.stringify(obj));									// this will also run any toString() methods
+		if (!globalThis.structuredClone)
+			throw new Error('clone: structuredClone');						// skip, if not supported
+		copy = structuredClone?.(obj);
 	} catch (error) {
-		console.warn('Could not clone object: ', obj);
+		try {
+			copy = JSON.parse(JSON.stringify(obj));								// run any toString() methods
+		} catch (error) {
+			console.warn('Could not clone object: ', obj);
+		}
 	}
-	// }
 
 	return copy;
 }
@@ -135,22 +138,17 @@ export function objectify<T extends any>(str: any, sentinel?: Function): T {
 	if (!isString(str))
 		return str as T;
 
-	let uri: string;
-	let parse: any;
-
-	try {
-		uri = decodeURI(str);																		// check encoding
-	} catch (err) {
-		console.warn(`objectify.decodeURI: ${(err as Error).message} -> ${str}`);
-		uri = str;																							// fallback to original string
-	}
-
-	try {
-		parse = JSON.parse(uri);																// check parse
-	} catch (err) {
-		console.warn(`objectify.parse: ${(err as Error).message} -> ${str}`);
-		return str as T;
-	}
+	const parse = JSON.parse(str, (_key, val) => {						// throw an Error if cannot parse
+		if (isString(val)) {
+			try {
+				return decodeURI(val);															// might fail, if badly encoded '%'
+			} catch (err) {
+				console.warn(`objectify.decodeURI: ${(err as Error).message} -> ${val}`);
+				return val;																					// return un-decoded
+			}
+		}
+		return val;																							// return as-is
+	})
 
 	switch (true) {
 		case str.startsWith('{') && str.endsWith('}'):					// looks like JSON
@@ -175,7 +173,7 @@ export function objectify<T extends any>(str: any, sentinel?: Function): T {
 /**
  * Rebuild a single-key Object (that represents a item not currently serializable)
  */
-function typeify(json: unknown, sentinel?: Function) {
+function typeify(json: unknown) {
 	if (!isObject(json))
 		return json;																						// only JSON Objects
 
@@ -186,17 +184,15 @@ function typeify(json: unknown, sentinel?: Function) {
 	const [type, value] = entries[0];
 	switch (type) {
 		case 'String':
-			return decodeURI(value);
 		case 'Boolean':
+		case 'Object':
+		case 'Array':
 			return value;
+
 		case 'Number':
 			return Number(value);
 		case 'BigInt':
 			return BigInt(value);
-		case 'Object':
-			return value;
-		case 'Array':
-			return value;
 		case 'Undefined':
 		case 'Void':
 			return void 0;
@@ -217,7 +213,7 @@ function typeify(json: unknown, sentinel?: Function) {
 }
 
 /**
- * Recurse into Object / Array, looking for single-key Objects
+ * Recurse into Object / Array, looking for special single-key Objects
  */
 function traverse(obj: any): any {
 	if (isObject(obj)) {
