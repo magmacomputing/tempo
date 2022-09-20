@@ -15,7 +15,7 @@ export class Pledge<T> {
 	#resolve!: (value: T | PromiseLike<T>) => void;
 	#reject!: (reason?: string) => void;
 
-	[Symbol.toStringTag] = 'Pledge';
+	[Symbol.toStringTag]() { return 'Pledge' }
 
 	constructor(arg?: Pledge.Constructor | string) {
 		const { tag, onResolve = void 0, onReject = void 0, onSettle = void 0, ...flags } = isString(arg)
@@ -115,7 +115,7 @@ export class Pledge<T> {
 	}
 
 	toString() {
-		return JSON.stringify(this.#status);
+		return JSON.stringify(this.#status);										// current status of Pledge
 	}
 }
 
