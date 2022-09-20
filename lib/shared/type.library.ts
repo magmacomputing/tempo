@@ -37,8 +37,10 @@ export const getType = (obj?: any, ...instances: Instance[]) => {
 	}
 }
 
+/** convert value to TypeValue<T>  */
 export const asType = <T>(obj?: T, ...instances: Instance[]) => ({ type: getType(obj, ...instances), value: obj } as TypeValue<T>);
-export const isType = <T>(obj: unknown, type: Types, ...types: Types[]): obj is T => [type, ...types].includes(getType(obj));
+/** assert value is one of a list of Types */
+export const isType = <T>(obj: unknown, ...types: Types[]): obj is T => types.includes(getType(obj));
 
 /** Type-Guards: assert \<obj> is of \<type> */
 export const isPrimitive = (obj?: unknown): obj is Primitive => isType(obj, 'String', 'Number', 'BigInt', 'Boolean', 'Symbol', 'Undefined', 'Void', 'Null');
@@ -115,78 +117,77 @@ type Primitive = string | number | bigint | boolean | symbol | void | null // | 
 type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling)
 export type Temporals = Exclude<keyof typeof Temporal, 'Now'>;
 
-export type Types = 'String' | 'Number' | 'BigInt' | 'Boolean' | 'Object' | 'Array' | 'ArrayLike' | 'Null' | 'Undefined' | 'Void' | 'Date' | 'Function' | 'AsyncFunction' | 'Class' | 'Promise' | 'Map' | 'Set' | 'WeakMap' | 'WeakSet' | 'RegExp' | 'Symbol' | 'Record' | 'Tuple' | 'Error'
+export type Types =
+	'String' |
+	'Number' |
+	'BigInt' |
+	'Boolean' |
+	'Object' |
+	'Array' | 'ArrayLike' |
+	'Null' |
+	'Undefined' | 'Void' |
+	'Date' |
+	'Function' | 'AsyncFunction' |
+	'Class' |
+	'Promise' |
+	'RegExp' |
+	'Blob' |
+	'Map' |
+	'Set' |
+	'WeakMap' | 'WeakSet' | 'WeakRef' |
+	'Symbol' |
+	'Error' |
+	'Record' |
+	'Tuple' |
+
+	'Temporal' |
+	'Temporal.Instant' |
+	'Temporal.ZonedDateTime' |
+	'Temporal.PlainDateTime' |
+	'Temporal.PlainDate' |
+	'Temporal.PlainTime' |
+	'Temporal.PlainYearMonth' |
+	'Temporal.PlainMonthDay' |
+
+	'Tempo' |
+	'Pledge'
+
 export type TypeValue<T> =
-	typeString |
-	typeNumber |
-	typeBigInt |
-	typeBoolean |
-	typeObject<T> |
-	typeArray<T> |
-	typeArrayLike<T> |
-	typeNull |
-	typeUndefined |
-	typeVoid |
-	typeDate |
-	typeFunction |
-	typeClass<T> |
-	typePromise<T> |
-	typeRegExp |
-	typeMap<T> |
-	typeSet<T> |
-	typeWeakMap<Record<string, any>, T> |
-	typeWeakSet<Record<string, T>> |
-	typeSymbol |
-	typeError |
+	{ type: 'String', value: string } |
+	{ type: 'Number', value: number } |
+	{ type: 'BigInt', value: bigint } |
+	{ type: 'Boolean', value: boolean } |
+	{ type: 'Object', value: Extract<T, Record<any, any>> } |
+	{ type: 'Array', value: Array<T> } |
+	{ type: 'ArrayLike', value: ArrayLike<T> } |
+	{ type: 'Null', value: null } |
+	{ type: 'Undefined', value: void } |
+	{ type: 'Void', value: void } |
+	{ type: 'Date', value: Date } |
+	{ type: 'Function', value: Function } |
+	{ type: 'Class', value: T } |
+	{ type: 'Promise', value: Promise<T> } |
+	{ type: 'RegExp', value: RegExp } |
+	{ type: 'Blob', value: Blob } |
+	{ type: 'Map', value: Map<any, T> } |
+	{ type: 'Set', value: Set<T> } |
+	{ type: 'WeakMap', value: WeakMap<Record<string, any>, T> } |
+	{ type: 'WeakSet', value: WeakSet<Record<string, any>> } |
+	// { type: 'WeakRef', value: WeakRef<Record<string, any>, T> }
+	{ type: 'Symbol', value: Symbol } |
+	{ type: 'Error', value: Error } |
 
-	typeRecord<T> |
-	typeTuple<T> |
+	{ type: 'Record', value: Record<string, T> } |						// TODO
+	{ type: 'Tuple', value: Array<T> } |											// TODO
 
-	typeTemporal |
-	typeZonedDateTime |
-	typePlainDateTime |
-	typePlainDate |
-	typePlainTime |
-	typePlainYearMonth |
-	typePlainMonthDay |
-	typeInstant |
+	{ type: 'Temporal', value: Temporals } |
+	{ type: 'Temporal.Instant', value: Temporal.Instant } |
+	{ type: 'Temporal.ZonedDateTime', value: Temporal.ZonedDateTime } |
+	{ type: 'Temporal.PlainDateTime', value: Temporal.PlainDateTime } |
+	{ type: 'Temporal.PlainDate', value: Temporal.PlainDate } |
+	{ type: 'Temporal.PlainTime', value: Temporal.PlainTime } |
+	{ type: 'Temporal.PlainYearMonth', value: Temporal.PlainYearMonth } |
+	{ type: 'Temporal.PlainMonthDay', value: Temporal.PlainMonthDay } |
 
-	classTempo |
-	classPledge<T>
-
-interface typeString { type: 'String', value: string }
-interface typeNumber { type: 'Number', value: number }
-interface typeBigInt { type: 'BigInt', value: bigint }
-interface typeBoolean { type: 'Boolean', value: boolean }
-interface typeObject<T> { type: 'Object', value: Extract<T, Record<any, any>> }
-interface typeArray<T> { type: 'Array', value: Array<T> }
-interface typeArrayLike<T> { type: 'ArrayLike', value: ArrayLike<T> }
-interface typeNull { type: 'Null', value: null }
-interface typeUndefined { type: 'Undefined', value: void }
-interface typeVoid { type: 'Void', value: void }
-interface typeDate { type: 'Date', value: Date }
-interface typeFunction { type: 'Function', value: Function }
-interface typeClass<T> { type: 'Class', value: T }
-interface typePromise<T> { type: 'Promise', value: Promise<T> }
-interface typeRegExp { type: 'RegExp', value: RegExp }
-interface typeMap<T> { type: 'Map', value: Map<any, T> }
-interface typeSet<T> { type: 'Set', value: Set<T> }
-interface typeWeakMap<K extends Record<string, any>, V> { type: 'WeakMap', value: WeakMap<K, V> }
-interface typeWeakSet<V extends Record<string, any>> { type: 'WeakSet', value: WeakSet<V> }
-interface typeSymbol { type: 'Symbol', value: Symbol }
-interface typeError { type: 'Error', value: Error }
-// TODO:  when Record/Tuple reach Stage-4
-interface typeRecord<T> { type: 'Record', value: Record<string, T> }
-interface typeTuple<T> { type: 'Tuple', value: Array<T> }
-
-interface typeTemporal { type: 'Temporal', value: Temporals }
-interface typeZonedDateTime { type: 'Temporal.ZonedDateTime', value: Temporal.ZonedDateTime }
-interface typePlainDateTime { type: 'Temporal.PlainDateTime', value: Temporal.PlainDateTime }
-interface typePlainDate { type: 'Temporal.PlainDate', value: Temporal.PlainDate }
-interface typePlainTime { type: 'Temporal.PlainTime', value: Temporal.PlainTime }
-interface typePlainYearMonth { type: 'Temporal.PlainYearMonth', value: Temporal.PlainYearMonth }
-interface typePlainMonthDay { type: 'Temporal.PlainMonthDay', value: Temporal.PlainMonthDay }
-interface typeInstant { type: 'Temporal.Instant', value: Temporal.Instant }
-
-interface classTempo { type: 'Tempo', value: Tempo }
-interface classPledge<T> { type: 'Pledge', value: Pledge<T> }
+	{ type: 'Tempo', value: Tempo } |
+	{ type: 'Pledge', value: Pledge<T> }
