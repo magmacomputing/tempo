@@ -1,14 +1,11 @@
 import { asArray } from '@module/shared/array.library';
 import { enumKeys } from '@module/shared/enum.library';
-import { clone, stringify, objectify } from '@module/shared/serialize.library';
+import { clone, objectify } from '@module/shared/serialize.library';
 import { getContext, CONTEXT } from '@module/shared/utility.library';
 import { asString, pad } from '@module/shared/string.library';
-import { Pledge } from '@module/shared/pledge.class';
 import { getAccessors, omit } from '@module/shared/object.library';
 import { asNumber, isNumeric, split } from '@module/shared/number.library';
 import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isArray, isRegExp } from '@module/shared/type.library';
-
-import '@module/shared/prototype.library';									// patch prototypes
 
 /** TODO: THIS IMPORT MUST BE REMOVED ONCE TEMPORAL IS SUPPORTED IN BROWSERS */
 import { Temporal } from '@js-temporal/polyfill';
@@ -44,8 +41,8 @@ export class Tempo {
 
 	// Static variables / methods	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	/** swap parsing-order of patterns (to suit different locales)  https://en.wikipedia.org/wiki/Date_format_by_country */
-	static #swap(locale: string, ...arrs: { key: string }[][]) {
+	/** swap parsing-order of patterns (to suit different locales) */
+	static #swap(tz: string, ...arrs: { key: string }[][]) {
 		const pats = [																					// regexs to swap (to change conform priority)
 			['ddmm', 'mmdd'],																			// swap ddmm for mmdd
 			['ddmmyy', 'mmddyy'],																	// swap ddmmyy for mmddyy
@@ -60,8 +57,8 @@ export class Tempo {
 				if (indx1 === -1 || indx2 === -1)
 					return;																						// nothing to swap
 
-				const swap1 = (indx1 < indx2) && Tempo.#default.mmddyy.includes(locale);
-				const swap2 = (indx1 > indx2) && !(Tempo.#default.mmddyy.includes(locale));
+				const swap1 = (indx1 < indx2) && Tempo.#default.mmddyy.includes(tz);
+				const swap2 = (indx1 > indx2) && !(Tempo.#default.mmddyy.includes(tz));
 
 				if (swap1 || swap2)																	// since 'arr' is a reference to an array, ok to swap in-line
 					[arr[indx1], arr[indx2]] = [arr[indx2], arr[indx1]];
@@ -138,33 +135,37 @@ export class Tempo {
 	}
 
 	// start with defaults for all Tempo instances
-	static #Intl = Intl.DateTimeFormat().resolvedOptions();
+	static #Locales = [																				// Array of Locales that prefer 'mm-dd-yy' date order
+		new Intl.Locale('en-US'),																// https://en.wikipedia.org/wiki/Date_format_by_country
+		new Intl.Locale('en-AS'),																// add to this Array if required
+	]
+	static #DateTime = Intl.DateTimeFormat().resolvedOptions();
 	static #default = {} as Tempo.ConfigFile;
 	static #pattern: Tempo.Pattern[] = [];										// Array of regex-patterns to test until a match
 	static #months = asArray({ length: 13 }, {}) as Tempo.Months;	// Array of settings related to a Month
 	static #configKey = '_Tempo_';														// for stash from persistent storage
-	static #gps = new Pledge<Tempo.Sphere>('gps');						// for location (if browser)
+	// static #gps = new Pledge<Tempo.Sphere>('gps');						// for location (if browser)
 
 	/**
 	 * this allows Tempo to set a specific default configuration for 'new Tempo()'.  
 	 * useful primarily for 'order of parsing input', as well as .quarter and .season
 	 */
 	static init = (init: Tempo.Init) => {
-		const sphere = init.sphere || Tempo.COMPASS.North;
-		const fiscal = init.fiscal || Tempo.#startFiscal(sphere);// first month of the fiscal-year
-
-		Tempo.#gps.resolve(null);																// dont block, if non-browser
+		const sphere = init.sphere || Tempo.#dst(Tempo.#DateTime.timeZone) || Tempo.COMPASS.North;
+		const fiscal = init.fiscal || Tempo.#startFiscal(sphere)// first month of the fiscal-year
 
 		Object.assign(Tempo.#default, {
-			calendar: Tempo.#Intl.calendar,												// default Calendar
-			timeZone: Tempo.#Intl.timeZone,												// default TimeZone
-			locale: Tempo.#Intl.locale,														// default Locale
+			calendar: Tempo.#DateTime.calendar,										// default Calendar
+			timeZone: Tempo.#DateTime.timeZone,										// default TimeZone
+			locale: Tempo.#DateTime.locale,												// default Locale
 			pivot: 75,																						// default pivot-duration for two-digit years
 			debug: false,																					// default debug-mode
 			catch: false,																					// default catch-mode
 			sphere: sphere,																				// default hemisphere (for 'season')
 			fiscal: fiscal,																				// default fiscalYear start-month
-			mmddyy: ['en-US', 'en-AS'],														// default locales that prefer 'mm-dd-yy' date order
+			mmddyy: Tempo.#Locales																// default locales that prefer 'mm-dd-yy' date order
+				.map(locale => locale.timeZones)										// timeZones in those locales
+				.flat(),																						// flatten the string[][]  to string[]
 			pattern: [																						// built-in patterns to be processed in this order
 				{ key: 'yyqtr', reg: ['yy', 'sep', '/Q/', 'qtr'] },
 				{ key: 'hhmi', reg: ['hms', 'am'] },
@@ -182,7 +183,7 @@ export class Tempo {
 			]
 		} as Tempo.ConfigFile)
 
-		const country = Tempo.#Intl.timeZone.split('/')[0];
+		const country = Tempo.#DateTime.timeZone.split('/')[0];
 		switch (country) {																			// TODO: better country detection
 			case 'Australia':
 				Object.assign(Tempo.#default, { sphere: Tempo.COMPASS.South, fiscal: Tempo.#startFiscal(Tempo.COMPASS.South), locale: 'en-AU' });
@@ -190,16 +191,17 @@ export class Tempo {
 			default:
 		}
 
+		// Tempo.#gps.resolve(null);																// dont block, if non-browser
 		const context = getContext();														// javascript environment
 		let store: string | undefined | null = void 0;
 		switch (context.type) {
 			case CONTEXT.Browser:
 				store = context.global.localStorage.getItem(Tempo.#configKey);
-				Tempo.#gps = new Pledge<Tempo.Sphere>('gps');				// new Pledge
-				import('@module/browser/mapper.library')						// get browser mapper.library
-					.then(({ mapHemisphere }) => mapHemisphere<Tempo.Sphere>())
-					.then(res => Tempo.#gps.resolve(res))							// 'north' | 'south' | null
-					.catch(_ => Tempo.#gps.resolve(null))							// cannot access mapper library
+				// Tempo.#gps = new Pledge<Tempo.Sphere>('gps');				// new Pledge
+				// import('@module/browser/mapper.library')						// get browser mapper.library
+				// 	.then(({ mapHemisphere }) => mapHemisphere<Tempo.Sphere>())
+				// 	.then(res => Tempo.#gps.resolve(res))							// 'north' | 'south' | null
+				// 	.catch(_ => Tempo.#gps.resolve(null))							// cannot access mapper library
 				break;
 
 			case CONTEXT.NodeJS:
@@ -224,34 +226,56 @@ export class Tempo {
 
 		Tempo.#default.pattern																	// setup defaults as RegExp patterns
 			.forEach(({ key, reg }) => Tempo.#pattern.push({ key, reg: Tempo.regexp(...reg) }));
-		Tempo.#swap(Tempo.#default.locale, Tempo.#pattern, Tempo.#default.pattern);
+		Tempo.#swap(Tempo.#default.timeZone, Tempo.#pattern, Tempo.#default.pattern);
 
 		/**
 		 * Tempo.#default is built and it is now safe to run 'new Tempo()'  
 		 * however, async-check the browser to see if better #default can be inferred (for .quarter and .season)
 		 */
-		Tempo.#gps
-			.promise																							// already resolved if not browser, else wait
-			.then(sphere => {
-				if (isDefined(sphere)) {														// if user allowed geolocation
-					Tempo.#default.sphere = init.sphere || sphere;		// user-preference else derived hemisphere
-					Tempo.#default.fiscal = init.fiscal || Tempo.#startFiscal(Tempo.#default.sphere);
-				}
+		// Tempo.#gps
+		// 	.promise																							// already resolved if not browser, else wait
+		// 	.then(sphere => {
+		// 		if (isDefined(sphere)) {														// if user allowed geolocation
+		// 			Tempo.#default.sphere = init.sphere || sphere;		// user-preference else derived hemisphere
+		// 			Tempo.#default.fiscal = init.fiscal || Tempo.#startFiscal(Tempo.#default.sphere);
+		// 		}
 
-				Tempo.#sphere(Tempo.#default.sphere, Tempo.#months);// setup seasons
-				Tempo.#fiscal(Tempo.#default.fiscal, Tempo.#months);// setup quarters
-				enumKeys(Tempo.MONTH).forEach((mon, idx) => Tempo.#months[idx].name = mon);
+		// 		Tempo.#sphere(Tempo.#default.sphere, Tempo.#months);// setup seasons
+		// 		Tempo.#fiscal(Tempo.#default.fiscal, Tempo.#months);// setup quarters
+		// 		enumKeys(Tempo.MONTH).forEach((mon, idx) => Tempo.#months[idx].name = mon);
 
-				if (isUndefined(store)) {
-					switch (context.type) {
-						case CONTEXT.Browser:
-							context.global.localStorage.setItem(Tempo.#configKey, stringify(omit(Tempo.#default, 'pattern')));
-							break;
-					}
-				}
-				if (init.debug)
-					console.log('Tempo: ', omit(Tempo.#default, 'pattern'));
-			})
+		// 		if (isUndefined(store)) {
+		// 			switch (context.type) {
+		// 				case CONTEXT.Browser:
+		// 					context.global.localStorage.setItem(Tempo.#configKey, stringify(omit(Tempo.#default, 'pattern')));
+		// 					break;
+		// 			}
+		// 		}
+		// 	})
+		if (init.debug)
+			console.log('Tempo: ', omit(Tempo.#default, 'pattern'));
+	}
+
+	/** get first Canonical Name of a supplied locale */
+	static #locale = (locale: string) => Intl.getCanonicalLocales(locale.replace('_', '-'))[0];
+
+	/** Try to infer hemisphere, using the timezone's day-light savings setting */
+	static #dst = (tzone: string) => {
+		const yy = Temporal.Now.plainDateISO().year;						// current year
+		const tz = new Temporal.TimeZone(tzone);
+		const jan = tz.getOffsetNanosecondsFor(Temporal.Instant.from(`${yy}-01-01Z`));
+		const jun = tz.getOffsetNanosecondsFor(Temporal.Instant.from(`${yy}-06-01Z`));
+		const dst = jan - jun;																	// fallback relies on timeZone to observe DST
+
+		switch (true) {
+			case dst < 0:
+				return Tempo.COMPASS.North;
+			case dst > 0:
+				return Tempo.COMPASS.South;
+			case dst === 0:																				// timeZone does not observe DST
+			default:
+				return void 0;
+		}
 	}
 
 	/** Northern -or- Southern hemisphere start of Q1 */
@@ -273,6 +297,9 @@ export class Tempo {
 
 	/** static method to create a new Tempo */
 	static from = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
+
+	/** static method to access current epochNanoseconds */
+	static now = () => Temporal.Now.instant().epochNanoseconds;
 
 	/** Tempo.Duration getters, where matched in Tempo.TIMES */
 	static get durations() {
@@ -332,10 +359,17 @@ export class Tempo {
 			pattern: [],																					// additional instance-patterns
 		}
 
+		if (this.#config.timeZone.id !== Tempo.#default.timeZone && isUndefined(opts.sphere)) {
+			const sphere = Tempo.#dst(this.#config.timeZone.id);
+			if (sphere)
+				this.#config.sphere = sphere;
+			if (this.#config.debug)
+				console.log('timeZone: ', this.#config.timeZone.id, this.#config.sphere);
+		}
 		if (this.#config.sphere !== Tempo.#default.sphere) {		// change of sphere, swap hemisphere ?
+			Tempo.#sphere(this.#config.sphere, this.#config.month);
 			if (this.#config.debug)
 				console.log('sphere: ', this.#config.sphere);
-			Tempo.#sphere(this.#config.sphere, this.#config.month);
 		}
 		if (opts.fiscal) {																			// change of fiscal-year start month ?
 			const mon = Tempo.#stringPrefix(opts.fiscal) as Tempo.CALENDAR;
@@ -355,9 +389,12 @@ export class Tempo {
 
 		this.#config.pattern.splice(this.#config.pattern.length, 0, ...Tempo.#pattern);
 		if (this.#config.locale !== Tempo.#default.locale) {		// change of locale, swap patterns-order ?
+			this.#config.locale = Tempo.#locale(this.#config.locale);
+
+			const tz = new Intl.Locale(this.#config.locale).timeZones[0];
+			Tempo.#swap(tz, this.#config.pattern);
 			if (this.#config.debug)
 				console.log('locale: ', this.#config.locale);
-			Tempo.#swap(this.#config.locale, this.#config.pattern);
 		}
 
 		if (this.#config.debug)
@@ -366,7 +403,7 @@ export class Tempo {
 		try {																										// we now have all the info we need to instantiate a Tempo
 			this.#temporal = this.#parse(tempo);									// attempt to interpret the input arg
 
-			if (['gregory', 'iso8601'].includes(this.config.calendar.toString())) {
+			if (['gregory', 'iso8601'].includes(this.config.calendar)) {
 				enumKeys(Tempo.FORMAT)															// add all the FORMATs to the instance
 					.forEach(key =>
 						Object.assign(this.fmt, { [key]: this.format(Tempo.FORMAT[key]) }));	// add-on short-cut format-codes
@@ -830,8 +867,8 @@ export class Tempo {
 				return asNumber(`${this.yy}${pad(this.mm)}${pad(this.dd)}`);
 
 			case Tempo.FORMAT.yearQuarter:
-				if (Tempo.#gps.status.state !== Pledge.STATE.Resolved)
-					return bailOut;																		// 'quarter' not set yet
+				// if (Tempo.#gps.status.state !== Pledge.STATE.Resolved)
+				// 	return bailOut;																		// 'quarter' not set yet
 				if (isUndefined(this.#config.month[this.mm]?.quarter)) {
 					console.warn('Cannot determine "yearQuarter"');
 					return bailOut;
