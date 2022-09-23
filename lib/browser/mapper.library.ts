@@ -9,7 +9,7 @@ import { isNullish } from '@module/shared/type.library';
  */
 
 interface MapOpts {
-	catch?: boolean;																					// intercept Promise Reject as Resolve (default: true)
+	catch?: boolean;																					// intercept Promise reject() as resolve() (default: true)
 	debug?: boolean;																					// console.log some checkpoints
 }
 
