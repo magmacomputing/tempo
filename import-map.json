@@ -12,9 +12,5 @@
 	"@module/shared/tempo.class": "/lib/shared/tempo.class.js",
 	"@module/shared/type.library": "/lib/shared/type.library.js",
 	"@module/shared/utility.library": "/lib/shared/utility.library.js",
-	"@module/shared/serialize.library": "/lib/shared/serialize.library.js",
-	"@module/browser/tapper.class": "/lib/browser/tapper.class.js",
-	"@module/browser/webstore.class": "/lib/browser/webstore.class.js",
-	"@module/browser/windows.library": "/lib/browser/window.library.js",
-	"@module/browser/mapper.library": "/lib/browser/mapper.library.js"
+	"@module/shared/serialize.library": "/lib/shared/serialize.library.js"
 }
