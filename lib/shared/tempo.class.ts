@@ -231,23 +231,23 @@ export class Tempo {
 		Tempo.#sphere(Tempo.#default.sphere, Tempo.#months);		// setup seasons
 		Tempo.#fiscal(Tempo.#default.fiscal, Tempo.#months);
 
-		const locale = Tempo.#swap(Tempo.#default.timeZone, Tempo.#pattern, Tempo.#default.pattern);
+		const locale = Tempo.#swap(Tempo.#default.timeZone, Tempo.#default.pattern);
 		if (locale && !init.locale)
-			Tempo.#default.locale = locale;												// found an override locale
+			Tempo.#default.locale = locale;												// found an override locale based on timeZone
 		Tempo.#default.locale = Tempo.#locale(Tempo.#default.locale);
 
-		Tempo.#pattern = [];																		// reset defaults
+		Tempo.#pattern = [];																		// reset array of patterns
 		Tempo.#default.pattern																	// setup defaults as RegExp patterns
 			.forEach(({ key, reg }) => Tempo.#pattern.push({ key, reg: Tempo.regexp(...reg) }));
 
-		if (context.type === CONTEXT.Browser && init.debug === true)
+		if (context.type === CONTEXT.Browser || init.debug === true)
 			console.log('Tempo: ', omit(Tempo.#default, 'pattern'));
 	}
 
 	/** get first Canonical name of a supplied locale */
 	static #locale = (locale: string) => Intl.getCanonicalLocales(locale.replace('_', '-'))[0];
 
-	/** Try to infer hemisphere, using the timezone's day-light savings setting */
+	/** Try to infer hemisphere, using the timezone's daylight-savings setting */
 	static #dst = (tzone: string) => {
 		const yy = Temporal.Now.plainDateISO().year;						// current year
 		const tz = new Temporal.TimeZone(tzone);
@@ -267,9 +267,7 @@ export class Tempo {
 	}
 
 	/** ProperCase first letters of day/month */
-	static #stringPrefix(str: string, len = 3) {
-		return str.substring(0, len).toProperCase();
-	}
+	static #stringPrefix = (str: string, len = 3) => str.substring(0, len).toProperCase();
 
 	/**
 	 * static method to allow sorting array of Tempo  
@@ -311,16 +309,16 @@ export class Tempo {
 		return this.age;
 	}
 
-	/** iterate over Tempo */
-	[Symbol.iterator](key: 'properties' | 'patterns') {
+	/** iterate over Tempo properties */
+	[Symbol.iterator]() {
 		let idx = 0;
-		const props = Tempo[key];
+		const props = Tempo.properties;
 
 		return {
-			done: idx >= props.length,
-			value: props[idx++],
+			next: () => ({ done: idx >= props.length, value: props[idx++] }),
 		}
 	}
+
 	/** Default string description */
 	[Symbol.toStringTag]() { return 'Tempo' }
 
@@ -341,6 +339,7 @@ export class Tempo {
 			pattern: [],																					// additional instance-patterns
 		}
 
+		// if a timeZone provided, but no hemisphere.  try to infer hemisphere based on daylight-savings
 		if (this.#config.timeZone.id !== Tempo.#default.timeZone && isUndefined(opts.sphere)) {
 			const sphere = Tempo.#dst(this.#config.timeZone.id);
 			if (sphere)
@@ -351,12 +350,14 @@ export class Tempo {
 			if (this.#config.debug)
 				console.log('timeZone: ', this.#config.timeZone.id);
 		}
-		if (this.#config.sphere !== Tempo.#default.sphere) {		// change of sphere, swap hemisphere ?
+		// change of sphere, setup Seasons / Fiscal start-month
+		if (this.#config.sphere !== Tempo.#default.sphere) {
 			Tempo.#sphere(this.#config.sphere, this.#config.month);
 			opts.fiscal ??= Tempo.#startFiscal(this.#config.sphere);
 			if (this.#config.debug)
 				console.log('sphere: ', this.#config.sphere);
 		}
+		// change of Fiscal month, setup Quarter
 		if (opts.fiscal) {																			// change of fiscal-year start month ?
 			const mon = Tempo.#stringPrefix(opts.fiscal) as Tempo.Calendar;
 			const idx = Tempo.MONTH[mon];
@@ -367,14 +368,16 @@ export class Tempo {
 				Tempo.#fiscal(mon, this.#config.month);
 			}
 		}
-		if (this.#opts.pattern) {																// user-specified pattern for this instance (might be array-of-array)
+		// user-specified patterns to use when parsing this instance (might be array-of-array)
+		if (this.#opts.pattern) {
 			(isArray(this.#opts.pattern[0]) ? this.#opts.pattern as unknown as (NonNullable<Tempo.Options["pattern"]>)[] : [this.#opts.pattern])
 				.map((pat, idx) => ({ key: '_' + idx, reg: Tempo.regexp(...pat) }))
 				.forEach(pattern => this.#config.pattern.push(pattern))
 		}
-
+		// put user-patterns at the beginning of the parse-array
 		this.#config.pattern.splice(this.#config.pattern.length, 0, ...Tempo.#pattern);
-		if (this.#config.locale !== Tempo.#default.locale) {		// change of locale, swap patterns-order ?
+		// change of Locale, swap pattern parse-order?
+		if (this.#config.locale !== Tempo.#default.locale) {
 			const locale = Tempo.#swap(this.#config.timeZone.id, this.#config.pattern);
 
 			if (isEmpty(this.#config.locale))
@@ -392,7 +395,7 @@ export class Tempo {
 			this.#temporal = this.#parse(tempo);									// attempt to interpret the input arg
 
 			if (['iso8601', 'gregory'].includes(this.config.calendar)) {
-				enumKeys(Tempo.FORMAT)															// add all the FORMATs to the instance
+				enumKeys(Tempo.FORMAT)															// add all the FORMATs to the instance (ie  Tempo().fmt.{})
 					.forEach(key =>
 						Object.assign(this.fmt, { [key]: this.format(Tempo.FORMAT[key]) }));	// add-on short-cut format-codes
 			}
@@ -407,7 +410,7 @@ export class Tempo {
 		}
 	}
 
-		// Public getters	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Public getters	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	/** 4-digit year */																				get yy() { return this.#temporal.year }
 	/** month: Jan=1, Dec=12 */																get mm() { return this.#temporal.month }
 	/** day of month */																				get dd() { return this.#temporal.day }
@@ -456,7 +459,7 @@ export class Tempo {
 	/** as Date object */																			toDate() { return new Date(this.#temporal.round({ smallestUnit: 'millisecond' }).epochMilliseconds) }
 	/** as String */																					toString() { return this.#temporal.toString() }
 	/** as Object */																					toJSON() {
-		const config = (({ month, pattern, ...rest }) => rest)(this.#config);
+		const config = (({ month, pattern, calendar, timeZone, ...rest }) => rest)(this.#config);
 		const id = this.#temporalId();
 		return ({ ...config, calendar: id.calendar, timeZone: id.timeZone, value: this.toString() });
 	}
@@ -687,8 +690,8 @@ export class Tempo {
 
 	/** display IDs for calendar and timeZone */
 	#temporalId() {
-		const { calendar, timeZone, ...rest } = this.#config;
-		return { calendar: calendar.id, timeZone: timeZone.id }
+		const { calendar: { id: calendar }, timeZone: { id: timeZone } } = this.#config;
+		return { calendar, timeZone }
 	}
 
 	/** create a new offset Tempo */
@@ -887,13 +890,13 @@ export class Tempo {
 					.replace(/mi/g, pad(this.mi))
 					.replace(/s{2}$/g, pad(this.ss) + am)							// add 'am' if 'ss' at end of fmtString, and it follows 'hh'
 					.replace(/s{2}/g, pad(this.ss))
-					.replace(/ts/g, asString(this.ts))
+					.replace(/ts/g, this.ts.toString())
 					.replace(/ms/g, pad(this.ms, 3))
 					.replace(/us/g, pad(this.us, 3))
 					.replace(/ns/g, pad(this.ns, 3))
-					.replace(/f{2}/g, pad(this.ff * 1_000_000_000, 9))
-					.replace(/w{2}/g, asString(this.ww))
-					.replace(/dow/g, asString(this.dow))
+					.replace(/f{2}/g, `${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`)
+					.replace(/w{2}/g, pad(this.ww))
+					.replace(/dow/g, this.dow.toString())
 					.replace(/day/g, this.day)
 					.replace(/qtr/g, this.qtr.toString())
 		}
