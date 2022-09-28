@@ -89,5 +89,5 @@ export const strlen = <Min extends number, Max extends number>(str: unknown, min
 }
 
 /** pad a string with leading character */
-export const pad = (nbr: string | number = 0, max = 2, fill?: string | number) =>
+export const pad = (nbr: string | number | bigint = 0, max = 2, fill?: string | number) =>
 	nbr.toString().padStart(max, nullToValue(fill, isNumeric(nbr) ? '0' : ' ').toString());
