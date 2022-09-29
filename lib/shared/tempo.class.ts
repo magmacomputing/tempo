@@ -5,7 +5,7 @@ import { getContext, CONTEXT } from '@module/shared/utility.library';
 import { asString, pad } from '@module/shared/string.library';
 import { getAccessors, omit } from '@module/shared/object.library';
 import { asNumber, isNumeric, split } from '@module/shared/number.library';
-import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isArray, isRegExp } from '@module/shared/type.library';
+import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isArray, isObject, isRegExp } from '@module/shared/type.library';
 
 /** TODO: THIS IMPORT MUST BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
 import { Temporal } from '@js-temporal/polyfill';
@@ -271,9 +271,13 @@ export class Tempo {
 
 	/**
 	 * static method to allow sorting array of Tempo  
-	 * usage: [tempo1, tempo2, tempo3].sort(Tempo.compare)
+	 * usage: [tempo1, tempo2, tempo3].sort(Tempo.compare)  
+	 * usage: [tempo1, tempo2, tempo3].sort(Tempo.compare(true))	# for reverse sort
 	 */
-	static compare = (a: Tempo, b: Tempo) => Number((a.age > b.age) || -(a.age < b.age));
+	static compare = (reverse: false) => {
+		const adj = reverse ? -1 : 1;
+		return (a: Tempo, b: Tempo) => Number((a.age > b.age) || -(a.age < b.age)) * adj;
+	}
 
 	/** static method to create a new Tempo */
 	static from = (tempo?: Tempo.DateTime, opts?: Tempo.Options) => new Tempo(tempo, opts);
@@ -323,8 +327,14 @@ export class Tempo {
 	[Symbol.toStringTag]() { return 'Tempo' }
 
 	/** Constructor ************************************************************************************************* */
-	constructor(tempo?: Tempo.DateTime, opts: Tempo.Options = {}) {
+	constructor(tempo?: Tempo.DateTime, opts?: Tempo.Options);
+	constructor(opts?: Tempo.Options);
+	constructor(tempo?: Tempo.DateTime | Tempo.Options, opts: Tempo.Options = {}) {
 		this.#now = Temporal.Now.instant();											// stash current Instant
+		if (isObject(tempo)) {
+			Object.assign(opts, tempo);														// shift the 1st argument to the 2nd
+			tempo = void 0;																				// and unset the 1st argument
+		}
 		this.#value = tempo;																		// stash original value
 		this.#opts = opts;																			// stash original arguments
 		this.#config = {																				// allow for override of defaults and config-file
@@ -339,6 +349,8 @@ export class Tempo {
 			pattern: [],																					// additional instance-patterns
 		}
 
+		/** First thing is to parse the 'Tempo.Options' looking for overrides to Tempo.#defaults */
+		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 		// if a timeZone provided, but no hemisphere.  try to infer hemisphere based on daylight-savings
 		if (this.#config.timeZone.id !== Tempo.#default.timeZone && isUndefined(opts.sphere)) {
 			const sphere = Tempo.#dst(this.#config.timeZone.id);
@@ -391,8 +403,10 @@ export class Tempo {
 		if (this.#config.debug)
 			console.log('tempo: ', this.config);
 
-		try {																										// we now have all the info we need to instantiate a Tempo
-			this.#temporal = this.#parse(tempo);									// attempt to interpret the input arg
+		/** We now have all the info we need to instantiate a new Tempo                          */
+		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+		try {
+			this.#temporal = this.#parse(tempo);									// attempt to interpret the DateTime arg
 
 			if (['iso8601', 'gregory'].includes(this.config.calendar)) {
 				enumKeys(Tempo.FORMAT)															// add all the FORMATs to the instance (ie  Tempo().fmt.{})
@@ -466,12 +480,12 @@ export class Tempo {
 
 	// Private methods	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	/** parse input */
+	/** parse DateTime input */
 	#parse(tempo?: Tempo.DateTime) {
 		const today = this.#now.toZonedDateTime({ timeZone: this.#config.timeZone, calendar: this.#config.calendar });
 		const arg = this.#conform(tempo, today);								// if String, Number or BigInt, conform the input against known patterns
 		if (this.#config.debug)
-			console.log('arg: ', arg);
+			console.log('DateTime: ', arg);
 
 		switch (arg.type) {
 			case 'Null':																					// TODO: special Tempo for null?
@@ -481,8 +495,8 @@ export class Tempo {
 			case 'String':
 			case 'Temporal.ZonedDateTime':
 				try {
-					return Temporal.ZonedDateTime.from(arg.value);		// attempt to parse conformed string
-				} catch {																						// fallback to browser's Date.parse
+					return Temporal.ZonedDateTime.from(arg.value);		// attempt to parse value
+				} catch {																						// fallback to browser's Date.parse() method
 					if (this.#config.debug)
 						console.warn('Cannot detect DateTime, fallback to Date.parse');
 					return Temporal.ZonedDateTime.from(`${new Date(arg.value.toString()).toISOString()}[${this.config.timeZone}]`);
@@ -490,7 +504,7 @@ export class Tempo {
 
 			case 'Temporal.PlainDate':
 			case 'Temporal.PlainDateTime':
-				return arg.value.toZonedDateTime(this.#config.timeZone);
+				return arg.value.toZonedDateTime({ timeZone: this.#config.timeZone });
 
 			case 'Temporal.PlainTime':
 				return arg.value.toZonedDateTime({ timeZone: this.#config.timeZone, plainDate: today.toPlainDate() });
@@ -550,18 +564,18 @@ export class Tempo {
 		if (!isType<string | number | bigint>(arg.value, 'String', 'Number', 'BigInt'))
 			return arg;																						// exit if type is not string | number | bigint
 
-		if (['Number', 'BigInt'].includes(arg.type)) {
+		if (['Number', 'BigInt'].includes(arg.type)) {					// cannot reliably interpret input number.
 			if (arg.value!.toString().length <= 7)								// might be 'seconds', might be 'yymmdd', might be 'dmmyyyy'
 				throw new Error('Cannot safely parse number with less than 8-digits: use string');
 		}
 
+		const value = arg.value
+			.toString()																						// easier to work with strings
+			.trimAll(/\(|\)|\t/gi)																// remove \, \t \s
+
 		// Attempt to match the value against each one of the regular expression patterns until a match is found
 		for (const { key, reg } of this.#config.pattern) {
-			const pat = arg.value
-				.toString()																					// easier to work with strings
-				.trimAll(/\(|\)|\t/gi)															// remove (, ), \t, \s
-				.match(reg);																				// return any matches
-
+			const pat = value.match(reg);													// return any matches
 			if (isNull(pat) || isUndefined(pat.groups))						// regexp named-groups not found
 				continue;
 
