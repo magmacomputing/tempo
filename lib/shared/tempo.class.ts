@@ -157,12 +157,12 @@ export class Tempo {
 	static #default = {} as Tempo.ConfigFile;
 	static #pattern: Tempo.Pattern[] = [];										// Array of regex-patterns to test until a match
 	static #months = asArray({ length: 13 }, {}) as Tempo.Months;	// Array of settings related to a Month
-	static #configKey = '_Tempo_';														// for stash from persistent storage
+	static #configKey = '_Tempo_';														// for stash in persistent storage
 
 	/**
 	 * this allows Tempo to set a specific default configuration for subsequent  
 	 * 'new Tempo()' to inherit.  
-	 * Tempo.#default is set from init argument (if supplied), else reasonable default values.  
+	 * Tempo.#default is set from init argument (if supplied), else local Cache, else reasonable default values. 
 	 * useful primarily for 'order of parsing input', as well as .quarter and .season
 	 */
 	static init = (init: Tempo.Init = {}) => {
@@ -303,7 +303,7 @@ export class Tempo {
 		return Tempo.#default;
 	}
 
-	/** Array of regex patterns to check when parsing Tempo.DateTime */
+	/** array of regex patterns to check when parsing Tempo.DateTime */
 	static get patterns() {
 		return Tempo.#pattern;
 	}
@@ -325,7 +325,7 @@ export class Tempo {
 		}
 	}
 
-	/** Default string description */
+	/** default string description */
 	[Symbol.toStringTag]() { return 'Tempo' }
 
 	/** Constructor ************************************************************************************************* */
@@ -487,7 +487,7 @@ export class Tempo {
 		const today = this.#now.toZonedDateTime({ timeZone: this.#config.timeZone, calendar: this.#config.calendar });
 		const arg = this.#conform(tempo, today);								// if String, Number or BigInt, conform the input against known patterns
 		if (this.#config.debug)
-			console.log('DateTime: ', arg);
+			console.log('parse: ', arg);
 
 		switch (arg.type) {
 			case 'Null':																					// TODO: special Tempo for null?
@@ -568,10 +568,10 @@ export class Tempo {
 
 		const value = arg.value
 			.toString()																						// easier to work with strings
-			.trimAll(/\(|\)|\t/gi)																// remove \, \t \s
+			.trimAll(/\(|\)|\t/gi)																// remove \( \) \t \s
 
-		if (/^[0-9]+n$/.test(value))														// string representation of bigint
-			return Object.assign(arg, { type: 'BigInt', value: BigInt(value.substring(0, -1)) });
+		if (/^[0-9]+n$/.test(value))														// string representation of bigint literal
+			return Object.assign(arg, { type: 'BigInt', value: BigInt(value.slice(0, -1)) });
 
 		// Attempt to match the value against each one of the regular expression patterns until a match is found
 		for (const { key, reg } of this.#config.pattern) {
