@@ -112,8 +112,7 @@ export type OneKey<K extends keyof any, V, KK extends keyof any = K> =
 		{ [Q in keyof O]: O[Q] } : never
 	}[K]
 
-// TODO: add Record | Tuple
-type Primitive = string | number | bigint | boolean | symbol | void | null // | record | tuple
+type Primitive = string | number | bigint | boolean | symbol | void | null // TODO: add  record | tuple
 type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling)
 export type Temporals = Exclude<keyof typeof Temporal, 'Now'>;
 

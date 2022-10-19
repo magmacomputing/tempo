@@ -1,6 +1,6 @@
 import { asArray } from '@module/shared/array.library';
 import { asString } from '@module/shared/string.library';
-import type { TValues } from '@module/shared/type.library';
+import { isInteger, type TValues } from '@module/shared/type.library';
 
 /** convert String to Number */
 export function asNumber(str?: string | number | bigint) { return parseFloat(str?.toString() ?? 'NaN') }
@@ -9,10 +9,16 @@ export function asNumber(str?: string | number | bigint) { return parseFloat(str
 export function isNumeric(str?: string | number | bigint): str is number { return !isNaN(asNumber(str)) && isFinite(str as number) }
 
 /** return as Number if possible, else String */
-export const ifNumeric = (str?: string | number, stripZero = false) =>
-	isNumeric(str) && (!str.toString().startsWith('0') || stripZero)
-		? asNumber(str)
-		: str
+export const ifNumeric = (str?: string | number | bigint, stripZero = false) => {
+	switch (true) {
+		case isInteger(str):																		// bigint
+			return str;
+		case isNumeric(str) && (!str.toString().startsWith('0') || stripZero):
+			return asNumber(str);
+		default:
+			return str;
+	}
+}
 
 /** show Hex value of a number */
 export const toHex = (num: TValues<number> = [], len = 64) =>

@@ -1,5 +1,6 @@
+import { Tempo } from '@module/shared/tempo.class';
 import { isNumeric } from '@module/shared/number.library';
-import { isType, asType, isEmpty, isString, isObject, isArray, isFunction, Types } from '@module/shared/type.library';
+import { isType, asType, isEmpty, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types } from '@module/shared/type.library';
 
 /** make a deep-copy, using standard browser or JSON functions */
 export function clone<T>(obj: T) {
@@ -27,7 +28,7 @@ export function cloneify<T>(obj: T, sentinel: Function): T;
 /** deep-copy and replace \<undefined> field with a Sentinel function */
 export function cloneify<T>(obj: T, sentinel?: Function): T {
 	try {
-		return objectify(stringify(obj), sentinel) as T;
+		return objectify(stringize(obj), sentinel) as T;
 	} catch (error: any) {
 		console.warn('Could not cloneify object: ', obj);
 		console.warn('stack: ', error.stack);
@@ -35,13 +36,16 @@ export function cloneify<T>(obj: T, sentinel?: Function): T {
 	}
 }
 
-function replacer(key: string, obj: any): any { return isEmpty(key) ? obj : stringify(obj) };
+function replacer(key: string, obj: any): any { return isEmpty(key) ? obj : stringize(obj) };
 function reviver(sentinel?: Function): any { return (key: string, str: any) => isEmpty(key) ? str : objectify(str, sentinel) }
 
-/** encode control characters, whilst allowing a subset as string */
+/** encode control characters, then replace a subset back to text-string */
 function encode(val: string) {
 	return encodeURI(val)
 		.replace(/%20/g, ' ')
+		.replace(/%3B/g, ';')
+		.replace(/%3C/g, '<')
+		.replace(/%3D/g, '=')
 		.replace(/%5B/g, '[')
 		.replace(/%5D/g, ']')
 		.replace(/%5E/g, '^')
@@ -49,6 +53,19 @@ function encode(val: string) {
 		.replace(/%7B/g, '{')
 		.replace(/%7D/g, '}')
 		.replace(/%22/g, '\"')
+}
+
+/** decode control characters */
+function decode(val: string) {
+	if (isString(val)) {
+		try {
+			return decodeURI(val);																// might fail if badly encoded '%'
+		} catch (err) {
+			console.warn(`decodeURI: ${(err as Error).message} -> ${val}`);
+		}
+	}
+
+	return val;																								// return original value
 }
 
 /** check type can be stringify'd */
@@ -69,15 +86,26 @@ const oneKey = (type: Types, val: string) => `{"${type}": ${val}}`;
  */
 
 /**
- * Serialize Objects for string-safe stashing in WebStorage, Cache, etc    
- * uses JSON.stringify where available, else returns single-key Object {[type]: value}  
+ * serialize Objects for string-safe stashing in WebStorage, Cache, etc  
+ * uses JSON.stringify where available, else returns stringified single-key Object {[type]: value}  
  */
-export function stringify(obj: any): string {
+export const stringify = (obj: any) => stringize(obj, false);
+/** hide the second parameter for internal use only */
+function stringize(obj: any, recurse = true): string {
 	const arg = asType(obj);
 
 	switch (arg.type) {
 		case 'String':
-			return JSON.stringify(encode(arg.value));							// encode string for safe-storage
+			if (!recurse) {																				// these values must be stringified to preserve their type when objectified
+				recurse = arg.value === 'true'
+					|| arg.value === 'false'
+					|| arg.value === 'null'
+					|| isNumeric(arg.value)
+			}
+
+			return recurse
+				? JSON.stringify(encode(arg.value))									// encode string for safe-storage
+				: encode(arg.value);																// dont JSON.stringify a string
 
 		case 'Number':
 		case 'Null':
@@ -92,27 +120,27 @@ export function stringify(obj: any): string {
 		case 'Record':
 			return `${arg.type === 'Record' ? '#' : ''}{` + Object.entries(arg.value)
 				.filter(([, val]) => isStringable(val))
-				.map(([key, val]) => '"' + key + '":' + stringify(val))
+				.map(([key, val]) => '"' + key + '":' + stringize(val))
 				+ `}`;
 
 		case 'Array':
 		case 'Tuple':
 			return `${arg.type === 'Tuple' ? '#' : ''}[` + arg.value
 				.filter(val => isStringable(val))
-				.map(val => stringify(val))
+				.map(val => stringize(val))
 				+ `]`;
 
 		case 'Map':
 			const map = Array.from(arg.value.entries())
 				.filter(([, val]) => isStringable(val))
-				.map(([key, val]) => '[' + stringify(key) + ',' + stringify(val) + ']')
+				.map(([key, val]) => '[' + stringize(key) + ',' + stringize(val) + ']')
 				.join(',')
 			return oneKey(arg.type, `[${map}]`);
 
 		case 'Set':
 			const set = Array.from(arg.value.values())
 				.filter(val => isStringable(val))
-				.map(val => stringify(val))
+				.map(val => stringize(val))
 				.join(',')
 			return oneKey(arg.type, `[${set}]`);
 
@@ -126,10 +154,10 @@ export function stringify(obj: any): string {
 					return void 0 as unknown as string;								// Object is not stringable
 
 				case isFunction(arg.value.valueOf):									// Object has its own valueOf method
-					return oneKey(arg.type, arg.value.valueOf());
+					return oneKey(arg.type, JSON.stringify(arg.value.valueOf()));
 
 				case isFunction(arg.value.toString):								// Object has its own toString method
-					return oneKey(arg.type, arg.value.toString());
+					return oneKey(arg.type, JSON.stringify(arg.value.toString()));
 
 				case isFunction(arg.value.toJSON):									// Object has its own toJSON method
 					return oneKey(arg.type, JSON.stringify(arg.value.toJSON(), replacer));
@@ -143,46 +171,33 @@ export function stringify(obj: any): string {
 /** rebuild an Object from its serialized representation */
 export function objectify<T extends any>(str: any, sentinel?: Function): T {
 	if (!isString(str))
-		return str as T;
+		return str as T;																				// skip parsing
 
-	const parse = JSON.parse(str, (_key, val) => {						// throw an Error if cannot parse
-		if (isString(val)) {
-			try {
-				return decodeURI(val);															// might fail, if badly encoded '%'
-			} catch (err) {
-				console.warn(`objectify.decodeURI: ${(err as Error).message} -> ${val}`);
-				return val;																					// return un-decoded
-			}
+	try {
+		const parse = JSON.parse(str, (_key, val) => decode(val)) as T;		// catch if cannot parse
+
+		switch (true) {
+			case str.startsWith('{') && str.endsWith('}'):				// looks like Object
+			case str.startsWith('[') && str.endsWith(']'):				// looks like Array
+			case str.startsWith('#{') && str.endsWith('}'):				// looks like Record
+			case str.startsWith('#[') && str.endsWith(']'):				// looks like Tuple
+				return traverse(parse, sentinel);										// recurse into object
+
+			default:
+				return parse;
 		}
-		return val;																							// return as-is
-	})
-
-	switch (true) {
-		case str.startsWith('{') && str.endsWith('}'):					// looks like JSON
-		case str.startsWith('[') && str.endsWith(']'):					// looks like Array
-		case str.startsWith('#{') && str.endsWith('}'):					// looks like Record
-		case str.startsWith('#[') && str.endsWith(']'):					// looks like Tuple
-			return traverse(parse);																// recurse into object
-
-		case isNumeric(str):																		// is Number
-		case str.startsWith('"') && str.endsWith('"'):					// looks like String
-		case str === 'true':																		// looks like Boolean
-		case str === 'false':																		// looks like Boolean
-		case str === 'null':																		// looks like Null
-			return parse;
-
-		default:
-			console.log('Default: ', str);
-			return str as T;
+	} catch (err) {
+		// console.warn(`objectify.parse: not a JSON string -> ${str}`);
+		return str as T;
 	}
 }
 
 /** Rebuild a single-key Object (that represents a item not currently serializable) */
-function typeify(json: unknown) {
+function typeify(json: unknown, sentinel?: Function) {
 	if (!isObject(json))
 		return json;																						// only JSON Objects
 
-	const entries = Object.entries(json) as [string, any][];
+	const entries = Object.entries(json) as [Types, any][];
 	if (entries.length !== 1)																	// only single-key Objects
 		return json;
 
@@ -200,7 +215,8 @@ function typeify(json: unknown) {
 			return BigInt(value);
 		case 'Undefined':
 		case 'Void':
-			return void 0;
+			// return void 0;
+			return sentinel?.();																	// run Sentinel function
 		case 'Date':
 			return new Date(value);
 		case 'RegExp':
@@ -214,6 +230,9 @@ function typeify(json: unknown) {
 		case 'Tuple':
 		// return Tuple.from(segment) ;													// TODO
 
+		case 'Tempo':
+			return new Tempo(value);
+
 		default:
 			return json;																					// return JSON Object
 	}
@@ -222,18 +241,27 @@ function typeify(json: unknown) {
 /**
  * Recurse into Object / Array, looking for special single-key Objects
  */
-function traverse(obj: any): any {
+function traverse(obj: any, sentinel?: Function): any {
 	if (isObject(obj)) {
 		return typeify(Object.entries(obj)
 			.reduce((acc, [key, val]) =>
-				Object.assign(acc, { [key]: typeify(traverse(val)) }),
-				{})
+				Object.assign(acc, { [key]: typeify(traverse(val, sentinel)) }),
+				{}),
+			sentinel
 		)
 	}
 
 	if (isArray(obj)) {
 		return Object.values(obj)
-			.map(val => typeify(traverse(val)))
+			.map(val => typeify(traverse(val, sentinel)))
+	}
+
+	// TODO
+	if (isRecord(obj)) {
+
+	}
+	if (isTuple(obj)) {
+
 	}
 
 	return obj;

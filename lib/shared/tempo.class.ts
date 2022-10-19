@@ -2,10 +2,12 @@ import { asArray } from '@module/shared/array.library';
 import { enumKeys } from '@module/shared/enum.library';
 import { clone, objectify } from '@module/shared/serialize.library';
 import { getContext, CONTEXT } from '@module/shared/utility.library';
-import { asString, pad } from '@module/shared/string.library';
 import { getAccessors, omit } from '@module/shared/object.library';
+import { asString, pad, toProperCase, toCamelCase, } from '@module/shared/string.library';
 import { asNumber, isNumeric, split } from '@module/shared/number.library';
 import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isArray, isObject, isRegExp } from '@module/shared/type.library';
+
+// import '@module/shared/prototype.library';
 
 /** TODO: THIS IMPORT MUST BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
 import { Temporal } from '@js-temporal/polyfill';
@@ -267,7 +269,7 @@ export class Tempo {
 	}
 
 	/** ProperCase first letters of day/month */
-	static #stringPrefix = (str: string, len = 3) => str.substring(0, len).toProperCase();
+	static #stringPrefix = (str: string, len = 3) => toProperCase(str.substring(0, len));
 
 	/**
 	 * static method to allow sorting array of Tempo  
@@ -307,7 +309,7 @@ export class Tempo {
 	}
 
 	/** allow for auto-convert of Tempo to BigInt */
-	[Symbol.toPrimitive](hint: 'string' | 'number' | 'default') {
+	[Symbol.toPrimitive](hint?: 'string' | 'number' | 'default') {
 		if (this.#config.debug)
 			console.log('Tempo.hint: ', hint);
 		return this.age;
@@ -333,7 +335,7 @@ export class Tempo {
 		this.#now = Temporal.Now.instant();											// stash current Instant
 		if (isObject(tempo)) {
 			Object.assign(opts, tempo);														// shift the 1st argument to the 2nd
-			tempo = void 0;																				// and unset the 1st argument
+			tempo = opts.value;																		// and reset the 1st argument
 		}
 		this.#value = tempo;																		// stash original value
 		this.#opts = opts;																			// stash original arguments
@@ -538,13 +540,13 @@ export class Tempo {
 				switch (true) {
 					case !isEmpty(suffix):														// seconds, with a fractional sub-second
 					case prefix.length <= 10:													// looks like 'seconds'
-						epoch = value * 1_000_000_000n + nano;
+						epoch = value * BigInt(1_000_000_000) + nano;
 						break;
 					case prefix.length <= 13:													// looks like 'milliseconds'
-						epoch = value * 1_000_000n;
+						epoch = value * BigInt(1_000_000);
 						break;
 					case prefix.length <= 16:													// looks like 'microseconds'
-						epoch = value * 1_000n;
+						epoch = value * BigInt(1_000);
 						break;
 					default:																					// looks like 'nanoseconds'
 						epoch = value;
@@ -564,14 +566,12 @@ export class Tempo {
 		if (!isType<string | number | bigint>(arg.value, 'String', 'Number', 'BigInt'))
 			return arg;																						// exit if type is not string | number | bigint
 
-		if (['Number', 'BigInt'].includes(arg.type)) {					// cannot reliably interpret input number.
-			if (arg.value!.toString().length <= 7)								// might be 'seconds', might be 'yymmdd', might be 'dmmyyyy'
-				throw new Error('Cannot safely parse number with less than 8-digits: use string');
-		}
-
 		const value = arg.value
 			.toString()																						// easier to work with strings
 			.trimAll(/\(|\)|\t/gi)																// remove \, \t \s
+
+		if (/^[0-9]+n$/.test(value))														// string representation of bigint
+			return Object.assign(arg, { type: 'BigInt', value: BigInt(value.substring(0, -1)) });
 
 		// Attempt to match the value against each one of the regular expression patterns until a match is found
 		for (const { key, reg } of this.#config.pattern) {
@@ -972,10 +972,11 @@ export class Tempo {
 	}
 }
 
+/** Tempo types / interfaces / enums */
 export namespace Tempo {
 	/** the argument 'types' that this Class will attempt to interpret via Temporal API */
 	export type DateTime = string | number | Date | Tempo | typeof Temporal | null;
-	export type Options = { timeZone?: string, calendar?: string, pattern?: (string | RegExp)[], locale?: string, sphere?: Tempo.Sphere, fiscal?: Tempo.Calendar, pivot?: number, debug?: boolean, catch?: boolean };
+	export type Options = { timeZone?: string, calendar?: string, pattern?: (string | RegExp)[], locale?: string, sphere?: Tempo.Sphere, fiscal?: Tempo.Calendar, pivot?: number, debug?: boolean, catch?: boolean, value?: string; };
 	export type Mutate = 'start' | 'mid' | 'end';
 	export type TimeUnit = Temporal.DateTimeUnit | 'quarter' | 'season';
 	export type DiffUnit = Temporal.PluralUnit<Temporal.DateTimeUnit> | 'quarters' | 'seasons';
@@ -1147,8 +1148,8 @@ export namespace Tempo {
 	/** some useful Dates */
 	export const DATE = {
 		epoch: 0,
-		maxDate: Temporal.PlainDate.from('9999-12-31'),
-		minDate: Temporal.PlainDate.from('1000-01-01'),
+		maxDate: new Date('9999-12-31T23:59:59'),
+		minDate: new Date('1000-01-01T00:00:00'),
 		maxStamp: Temporal.Instant.from('9999-12-31+00:00').epochSeconds,
 		minStamp: Temporal.Instant.from('1000-01-01+00:00').epochSeconds,
 	} as const
