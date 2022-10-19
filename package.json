@@ -24,7 +24,7 @@
   },
   "homepage": "https://github.com/magmacomputing/tempo#readme",
   "dependencies": {
-    "@js-temporal/polyfill": "^0.4.2"
+    "@js-temporal/polyfill": "^0.4.3"
   },
   "devDependencies": {
     "import-remap": "^0.5.1"
