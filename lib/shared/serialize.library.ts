@@ -76,11 +76,11 @@ const oneKey = (type: Types, val: string) => `{"${type}": ${val}}`;
 
 /**
  * For items which are not currently serializable (Undefined, BigInt, Set, Map, etc.)  
- * we create a stringified, single-key Object to represent the value; for example  { 'BigInt': 123 }  
- * I would have preferred to use something more robust than strings for these keys  (perhaps a well-known Symbol),
- * as this single-key Object is open to abuse.  But the risk is acceptable within the scope of small projects.
+ * this creates a stringified, single-key Object to represent the value; for example  { 'BigInt': 123 }  
+ * I would have preferred to use something more robust than strings for these keys  (perhaps a well-known Symbol),  
+ * as this single-key Object is open to abuse.  But the risk is acceptable within the scope of small projects.  
  * 
- * Drawbacks:
+ * Drawbacks:  
  * no support Function / Symbol / WeakMap / WeakSet / WeakRef  
  * limited support for user-defined Classes (must be specifically coded)
  */
