@@ -78,6 +78,7 @@ export const nullToZero = <T>(obj: T) => obj ?? 0;
 export const nullToEmpty = <T>(obj: T) => obj ?? '';
 export const nullToValue = <T, R>(obj: T, value: R) => obj ?? value;
 
+/** object has no values */
 export const isEmpty = <T>(obj?: T) => false
 	|| isNullish(obj)
 	|| (isObject(obj) && Object.keys(obj).length === 0)
