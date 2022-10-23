@@ -3,7 +3,7 @@ import { enumKeys } from '@module/shared/enum.library';
 import { clone, objectify } from '@module/shared/serialize.library';
 import { getContext, CONTEXT } from '@module/shared/utility.library';
 import { getAccessors, omit } from '@module/shared/object.library';
-import { asString, pad, toProperCase, toCamelCase, } from '@module/shared/string.library';
+import { asString, pad, toProperCase, } from '@module/shared/string.library';
 import { asNumber, isNumeric, split } from '@module/shared/number.library';
 import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isArray, isObject, isRegExp } from '@module/shared/type.library';
 
@@ -315,9 +315,9 @@ export class Tempo {
 		return this.epoch;
 	}
 
-	/** iterate over Tempo getters / properties */
+	/** iterate over Tempo properties */
 	[Symbol.iterator]() {
-		const props = Tempo.properties;
+		const props = Tempo.properties;													// array of 'getters'
 		let idx = -1;
 
 		return {
@@ -441,7 +441,7 @@ export class Tempo {
 	/** fractional seconds since last second */								get ff() { return Number(`0.${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`) }
 	/** number of weeks */																		get ww() { return this.#temporal.weekOfYear }
 	/** timezone */																						get tz() { return this.#temporal.timeZone.toString() }
-	/** seconds (timeStamp) since Unix epoch */								get ts() { return this.#temporal.epochSeconds }
+	/** milliseconds (timestamp) since Unix epoch */					get ts() { return this.#temporal.epochMilliseconds }
 	/** weekday: Mon=1, Sun=7 */															get dow() { return this.#temporal.dayOfWeek }
 	/** short month name */																		get mmm() { return Tempo.MONTH[this.#temporal.month] }
 	/** long month name */																		get mon() { return Tempo.MONTHS[this.#temporal.month] }
@@ -455,7 +455,7 @@ export class Tempo {
 			/** seconds since epoch */														ss: this.#temporal.epochSeconds,
 			/** milliseconds since epoch */												ms: this.#temporal.epochMilliseconds,
 			/** microseconds since epoch */												us: this.#temporal.epochMicroseconds,
-			/** nanoseconds since epoch */												ns: this.#temporal.epochNanoseconds
+			/** nanoseconds since epoch */												ns: this.#temporal.epochNanoseconds,
 		}
 	}
 	/** Instance configuration */															get config() {
@@ -472,7 +472,7 @@ export class Tempo {
 	/** add date/time unit */																	add(mutate: Tempo.Add) { return this.#offset(mutate) }
 	/** offset to start/mid/end of unit */										offset(offset: Tempo.Offset) { return this.#offset(offset) }
 
-	/** is valid Tempo */																			isValid() { return !isNaN(this.ts) }
+	/** is valid Tempo */																			isValid() { return !isEmpty(this) }
 	/** as Temporal.ZonedDateTime */													toTemporal() { return this.#temporal }
 	/** as Date object */																			toDate() { return new Date(this.#temporal.round({ smallestUnit: 'millisecond' }).epochMilliseconds) }
 	/** as String */																					toString() { return this.#temporal.toString() }
@@ -977,11 +977,22 @@ export class Tempo {
 /** Tempo types / interfaces / enums */
 export namespace Tempo {
 	/** the argument 'types' that this Class will attempt to interpret via Temporal API */
-	export type DateTime = string | number | Date | Tempo | typeof Temporal | null;
-	export type Options = { timeZone?: string, calendar?: string, pattern?: (string | RegExp)[], locale?: string, sphere?: Tempo.Sphere, fiscal?: Tempo.Calendar, pivot?: number, debug?: boolean, catch?: boolean, value?: string; };
-	export type Mutate = 'start' | 'mid' | 'end';
-	export type TimeUnit = Temporal.DateTimeUnit | 'quarter' | 'season';
-	export type DiffUnit = Temporal.PluralUnit<Temporal.DateTimeUnit> | 'quarters' | 'seasons';
+	export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | null
+	export type Options = {
+		timeZone?: string,
+		calendar?: string,
+		pattern?: (string | RegExp)[],
+		locale?: string,
+		sphere?: Tempo.Sphere,
+		fiscal?: Tempo.Calendar,
+		pivot?: number,
+		debug?: boolean,
+		catch?: boolean,
+		value?: string,
+	}
+	export type Mutate = 'start' | 'mid' | 'end'
+	export type TimeUnit = Temporal.DateTimeUnit | 'quarter' | 'season'
+	export type DiffUnit = Temporal.PluralUnit<Temporal.DateTimeUnit> | 'quarters' | 'seasons'
 
 	export interface Parameter {															// parameter object
 		tempo?: Tempo.DateTime;
