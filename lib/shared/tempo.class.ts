@@ -278,7 +278,7 @@ export class Tempo {
 	 */
 	static compare = (reverse: false) => {
 		const adj = reverse ? -1 : 1;
-		return (a: Tempo, b: Tempo) => Number((a.age > b.age) || -(a.age < b.age)) * adj;
+		return (a: Tempo, b: Tempo) => Number((a.epoch > b.epoch) || -(a.epoch < b.epoch)) * adj;
 	}
 
 	/** static method to create a new Tempo */
@@ -295,7 +295,7 @@ export class Tempo {
 
 	/** Tempo getters */
 	static get properties() {
-		return getAccessors(Tempo) as string[];
+		return getAccessors(Tempo) as (keyof Tempo)[];
 	}
 
 	/** Tempo config settings */
@@ -312,16 +312,16 @@ export class Tempo {
 	[Symbol.toPrimitive](hint?: 'string' | 'number' | 'default') {
 		if (this.#config.debug)
 			console.log('Tempo.hint: ', hint);
-		return this.age;
+		return this.epoch;
 	}
 
-	/** iterate over Tempo properties */
+	/** iterate over Tempo getters / properties */
 	[Symbol.iterator]() {
-		let idx = 0;
 		const props = Tempo.properties;
+		let idx = -1;
 
 		return {
-			next: () => ({ done: idx >= props.length, value: props[idx++] }),
+			next: () => ({ done: ++idx >= props.length, value: { fmt: props[idx], value: this[props[idx]] } }),
 		}
 	}
 
@@ -329,8 +329,9 @@ export class Tempo {
 	[Symbol.toStringTag]() { return 'Tempo' }
 
 	/** Constructor ************************************************************************************************* */
-	constructor(tempo?: Tempo.DateTime, opts?: Tempo.Options);
-	constructor(opts?: Tempo.Options);
+
+	constructor(tempo?: Tempo.DateTime, opts?: Tempo.Options);// arg1: value to interpret. arg2: options to tailor the instance
+	constructor(opts?: Tempo.Options);												// arg1: options to tailor the instance (value Temporal.Now.instant() is implied)
 	constructor(tempo?: Tempo.DateTime | Tempo.Options, opts: Tempo.Options = {}) {
 		this.#now = Temporal.Now.instant();											// stash current Instant
 		if (isObject(tempo)) {
@@ -427,6 +428,7 @@ export class Tempo {
 	}
 
 	// Public getters	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 	/** 4-digit year */																				get yy() { return this.#temporal.year }
 	/** month: Jan=1, Dec=12 */																get mm() { return this.#temporal.month }
 	/** day of month */																				get dd() { return this.#temporal.day }
@@ -440,7 +442,6 @@ export class Tempo {
 	/** number of weeks */																		get ww() { return this.#temporal.weekOfYear }
 	/** timezone */																						get tz() { return this.#temporal.timeZone.toString() }
 	/** seconds (timeStamp) since Unix epoch */								get ts() { return this.#temporal.epochSeconds }
-	/** nanoseconds (BigInt) since Unix epoch */							get age() { return this.#temporal.epochNanoseconds }
 	/** weekday: Mon=1, Sun=7 */															get dow() { return this.#temporal.dayOfWeek }
 	/** short month name */																		get mmm() { return Tempo.MONTH[this.#temporal.month] }
 	/** long month name */																		get mon() { return Tempo.MONTHS[this.#temporal.month] }
@@ -448,7 +449,8 @@ export class Tempo {
 	/** long weekday name */																	get day() { return Tempo.WEEKDAYS[this.#temporal.dayOfWeek] }
 	/** quarter: Q1-Q4 */																			get qtr() { return Math.trunc(this.#config.month[this.mm].quarter) }
 	/** meteorological season: Spring/Summer/Autumn/Winter */	get season() { return this.#config.month[this.mm].season.split('.')[0] as keyof typeof Tempo.SEASON }
-	/** epoch object */																				get epoch() {
+	/** nanoseconds (BigInt) since Unix epoch */							get epoch() { return this.#temporal.epochNanoseconds }
+	/** epoch object */																				get age() {
 		return {
 			/** seconds since epoch */														ss: this.#temporal.epochSeconds,
 			/** milliseconds since epoch */												ms: this.#temporal.epochMilliseconds,
@@ -1147,7 +1149,7 @@ export namespace Tempo {
 
 	/** some useful Dates */
 	export const DATE = {
-		epoch: 0,
+		epoch: 0,																								// TODO: is this needed
 		maxDate: new Date('9999-12-31T23:59:59'),
 		minDate: new Date('1000-01-01T00:00:00'),
 		maxStamp: Temporal.Instant.from('9999-12-31+00:00').epochSeconds,
