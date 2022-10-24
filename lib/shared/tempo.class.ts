@@ -1003,6 +1003,7 @@ export namespace Tempo {
 	}
 	export type Offset = Partial<Record<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit>>
 	export type Add = Partial<Record<Tempo.TimeUnit | Tempo.DiffUnit, number>>
+	
 	/** detail about a Month */
 	export type Month = {
 		name: keyof typeof Tempo.MONTH;
