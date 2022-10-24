@@ -43,6 +43,7 @@ function reviver(sentinel?: Function): any { return (key: string, str: any) => i
 function encode(val: string) {
 	return encodeURI(val)
 		.replace(/%20/g, ' ')
+		.replace(/%22/g, '\"')
 		.replace(/%3B/g, ';')
 		.replace(/%3C/g, '<')
 		.replace(/%3D/g, '=')
@@ -52,7 +53,6 @@ function encode(val: string) {
 		.replace(/%60/g, '`')
 		.replace(/%7B/g, '{')
 		.replace(/%7D/g, '}')
-		.replace(/%22/g, '\"')
 }
 
 /** decode control characters */
@@ -76,8 +76,8 @@ const oneKey = (type: Types, val: string) => `{"${type}": ${val}}`;
 
 /**
  * For items which are not currently serializable (Undefined, BigInt, Set, Map, etc.)  
- * this creates a stringified, single-key Object to represent the value; for example  { 'BigInt': 123 }  
- * I would have preferred to use something more robust than strings for these keys  (perhaps a well-known Symbol),  
+ * this creates a stringified, single-key Object to represent the value; for example  "{ 'BigInt': 123 }"  
+ * I would have preferred to use something more robust than strings for these keys  (perhaps a Symbol?),  
  * as this single-key Object is open to abuse.  But the risk is acceptable within the scope of small projects.  
  * 
  * Drawbacks:  
@@ -91,7 +91,7 @@ const oneKey = (type: Types, val: string) => `{"${type}": ${val}}`;
  */
 export const stringify = (obj: any) => stringize(obj, false);
 /** hide the second parameter for internal use only */
-function stringize(obj: any, recurse = true): string {
+function stringize(obj: unknown, recurse = true): string {
 	const arg = asType(obj);
 
 	switch (arg.type) {
@@ -105,7 +105,7 @@ function stringize(obj: any, recurse = true): string {
 
 			return recurse
 				? JSON.stringify(encode(arg.value))									// encode string for safe-storage
-				: encode(arg.value);																// dont JSON.stringify a string
+				: encode(arg.value);																// dont JSON.stringify a top-level string
 
 		case 'Number':
 		case 'Null':
@@ -146,7 +146,7 @@ function stringize(obj: any, recurse = true): string {
 
 		case 'RegExp':
 			const { source, flags } = arg.value;
-			return oneKey(arg.type, JSON.stringify({ source: encode(source), flags }));
+			return oneKey(arg.type, stringize({ source: encode(source), flags }));
 
 		default:
 			switch (true) {
@@ -215,7 +215,6 @@ function typeify(json: unknown, sentinel?: Function) {
 			return BigInt(value);
 		case 'Undefined':
 		case 'Void':
-			// return void 0;
 			return sentinel?.();																	// run Sentinel function
 		case 'Date':
 			return new Date(value);
