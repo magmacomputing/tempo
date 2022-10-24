@@ -91,7 +91,8 @@ export class Tempo {
 
 	/** setup fiscal quarters, from a given start month */
 	static #fiscal(quarter: Tempo.Calendar, month: Tempo.Months) {
-		const start = enumKeys(Tempo.MONTH).findIndex(mon => mon === Tempo.#stringPrefix(quarter));
+		const start = enumKeys(Tempo.MONTH)
+			.findIndex(mon => mon === Tempo.#stringPrefix(quarter));
 		if (start === -1)
 			return;																								// cannot determine start-Month
 
@@ -229,7 +230,8 @@ export class Tempo {
 				.forEach(([key, ref]) => Tempo.#default.pattern.unshift({ key, reg: asArray(ref) }));
 		}
 
-		enumKeys(Tempo.MONTH).forEach((mon, idx) => Tempo.#months[idx].name = mon);
+		enumKeys(Tempo.MONTH)
+			.forEach((mon, idx) => Tempo.#months[idx].name = mon);// stash month-name into Tempo.#months
 		Tempo.#sphere(Tempo.#default.sphere, Tempo.#months);		// setup seasons
 		Tempo.#fiscal(Tempo.#default.fiscal, Tempo.#months);
 
@@ -412,7 +414,7 @@ export class Tempo {
 			this.#temporal = this.#parse(tempo);									// attempt to interpret the DateTime arg
 
 			if (['iso8601', 'gregory'].includes(this.config.calendar)) {
-				enumKeys(Tempo.FORMAT)															// add all the FORMATs to the instance (ie  Tempo().fmt.{})
+				enumKeys(Tempo.FORMAT)															// add all the pre-defined FORMATs to the instance (ie  Tempo().fmt.{})
 					.forEach(key =>
 						Object.assign(this.fmt, { [key]: this.format(Tempo.FORMAT[key]) }));	// add-on short-cut format-codes
 			}
@@ -635,7 +637,7 @@ export class Tempo {
 
 			/**
 			 * Resolve a month-name into a month-number (some browsers do not allow month-names)
-			 * May			-> 05
+			 * eg.	May				-> 05
 			 */
 			if (isDefined(pat.groups['mm']) && !isNumeric(pat.groups['mm'])) {
 				const mm = Tempo.#stringPrefix(pat.groups['mm']);
@@ -652,8 +654,8 @@ export class Tempo {
 
 			/**
 			 * Adjust for am/pm offset
-			 * 10pm			-> 22:00:00
-			 * 12:00am	-> 00:00:00
+			 * eg.	10pm			-> 22:00:00
+			 * 			12:00am		-> 00:00:00
 			 */
 			if (isDefined(pat.groups['hms'])) {
 				let [hh, mi, ss] = split(pat.groups['hms'], ':') as [number, number, number];
@@ -1003,7 +1005,7 @@ export namespace Tempo {
 	}
 	export type Offset = Partial<Record<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit>>
 	export type Add = Partial<Record<Tempo.TimeUnit | Tempo.DiffUnit, number>>
-	
+
 	/** detail about a Month */
 	export type Month = {
 		name: keyof typeof Tempo.MONTH;
