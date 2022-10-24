@@ -91,7 +91,7 @@ const oneKey = (type: Types, val: string) => `{"${type}": ${val}}`;
  */
 export const stringify = (obj: any) => stringize(obj, false);
 /** hide the second parameter for internal use only */
-function stringize(obj: unknown, recurse = true): string {
+function stringize(obj: any, recurse = true): string {
 	const arg = asType(obj);
 
 	switch (arg.type) {
