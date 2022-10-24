@@ -90,8 +90,13 @@ const oneKey = (type: Types, val: string) => `{"${type}": ${val}}`;
  * uses JSON.stringify where available, else returns stringified single-key Object {[type]: value}  
  */
 export const stringify = (obj: any) => stringize(obj, false);
-/** hide the second parameter for internal use only */
-function stringize(obj: any, recurse = true): string {
+
+/**
+ * internal function to process user-requests (to hide second parameter)  
+ * where first argument is the object to stringify, and  
+ * the second argument is a boolean to indicate if function is being called recursively
+ */
+function stringize(obj: any, recurse = true): string {			// hide the second parameter for internal use only
 	const arg = asType(obj);
 
 	switch (arg.type) {
