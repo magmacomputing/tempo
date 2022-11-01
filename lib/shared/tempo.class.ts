@@ -7,7 +7,7 @@ import { asString, pad, toProperCase, } from '@module/shared/string.library';
 import { asNumber, isNumeric, split } from '@module/shared/number.library';
 import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isArray, isObject, isRegExp } from '@module/shared/type.library';
 
-// import '@module/shared/prototype.library';
+// import '@module/shared/prototype.library';									// patch prototype
 
 /** TODO: THIS IMPORT MUST BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
 import { Temporal } from '@js-temporal/polyfill';
@@ -157,7 +157,8 @@ export class Tempo {
 	static #DateTime = Intl.DateTimeFormat().resolvedOptions();
 	static #default = {} as Tempo.ConfigFile;
 	static #pattern: Tempo.Pattern[] = [];										// Array of regex-patterns to test until a match
-	static #months = asArray({ length: 13 }, {}) as Tempo.Months;	// Array of settings related to a Month
+	// static #months = asArray({ length: 13 }, {}) as Tempo.Months;	// Array of settings related to a Month
+	static #months = Array.from({ length: 13 }, () => Object.assign({})) as Tempo.Months;	// Array of settings related to a Month
 	static #configKey = '_Tempo_';														// for stash in persistent storage
 
 	/**
@@ -1063,6 +1064,7 @@ export namespace Tempo {
 		[Tempo.FORMAT.dayFull]: string;
 		[Tempo.FORMAT.dayMonth]: string;
 		[Tempo.FORMAT.dayStamp]: string;
+		[Tempo.FORMAT.logStamp]: number;
 		[Tempo.FORMAT.sortTime]: string;
 		[Tempo.FORMAT.monthTime]: string;
 		[Tempo.FORMAT.HHMI]: string;
@@ -1082,6 +1084,7 @@ export namespace Tempo {
 		dayFull: string;
 		dayMonth: string;
 		dayStamp: string;
+		logStamp: number;
 		sortTime: string;
 		monthTime: string;
 		HHMI: string;
@@ -1117,8 +1120,9 @@ export namespace Tempo {
 		dayDate = 'ddd, yyyy-mmm-dd',
 		dayTime = 'ddd, yyyy-mmm-dd HH:MI',
 		dayFull = 'ddd, yyyy-mmm-dd HH:MI:SS',									// useful for Sheets cell-format
-		dayStamp = 'ddd, yyyy-mmm-dd HH:MI:SS.ff',							// Date and Time to nanosecond
+		dayStamp = 'ddd, yyyy-mmm-dd HH:MI:SS.ff',							// Day, Date and Time to nanosecond
 		dayMonth = 'dd-mmm',
+		logStamp = 'HHMISS.ff',																	// useful for stamping logs 
 		sortTime = 'yyyy-mm-dd HH:MI:SS',												// useful for sorting display-strings
 		monthTime = 'yyyy-mmm-dd HH:MI',												// useful for dates where dow is not needed
 		HHMI = 'HH:MI',																					// 24-hour format
