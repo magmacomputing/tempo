@@ -67,7 +67,7 @@ export const isUndefined = (obj?: unknown): obj is undefined => isType<undefined
 export const isDefined = <T>(obj: T): obj is NonNullable<T> => !isNullish(obj);
 
 export const isClass = (obj?: unknown): obj is Function => isType(obj, 'Class');
-export const isFunction = (obj?: unknown): obj is Function => isType(obj, 'Function');
+export const isFunction = (obj?: unknown): obj is Function => isType(obj, 'Function', 'AsyncFunction');
 export const isPromise = <T>(obj?: unknown): obj is Promise<T> => isType(obj, 'Promise');
 export const isMap = <K, V>(obj?: unknown): obj is Map<K, V> => isType(obj, 'Map');
 export const isSet = <K>(obj?: unknown): obj is Set<K> => isType(obj, 'Set');
