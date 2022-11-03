@@ -23,24 +23,15 @@ import { Temporal } from '@js-temporal/polyfill';
  * new Tempo(DateTime, Options) or
  * Tempo.from(DateTime, Options) or
  * getTempo(DateTime, Options)  
- * 	DateTime?:	string | number | Tempo	- value to be interpreted as a Temporal.ZonedDateTime
+ * 	DateTime?:	string | number | Tempo	- value to be interpreted as a Temporal.ZonedDateTime, default 'now'
  * 	Options?: 	object			- arguments to assist with parsing the <date> and configuring the instance
  * ````
  * A Tempo is an object that is used to wrap a Temporal.ZonedDateTime.  
- * It's strength is in it's flexibility to parse string|number|DateTime.  
+ * It's strength is in it's flexibility to parse string|number|bigint|DateTime.  
  * It has accessors that report the value as DateTime components ('yy', 'dd', 'HH', ...)  
  * It has methods to perform manipulations (add, format, diff, offset, ...)  
  */
 export class Tempo {
-	// Instance variables  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	#config: Tempo.Config;																		// instance config
-	#value?: Tempo.DateTime;																	// constructor value
-	#opts: Tempo.Options;																			// constructor arguments
-	#now: Temporal.Instant;																		// instantiation Temporal Instant, used only during construction
-	#temporal!: Temporal.ZonedDateTime;												// underlying Temporal DateTime
-	fmt = {} as Tempo.TypeFmt;																// prebuilt Formats, for convenience
-
 	// Static variables / methods	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/** swap parsing-order of patterns (to suit different locales) */
@@ -52,7 +43,7 @@ export class Tempo {
 		] as const;
 		const idx = Tempo.#default.mmddyy.findIndex(itm => itm.timeZones.includes(tz));
 		const locale = idx !== -1
-			? Tempo.#default.mmddyy[idx].locale										// found a Intl.Locale that contains our timeZone
+			? Tempo.#default.mmddyy[idx].locale										// found an Intl.Locale that contains our timeZone
 			: void 0
 
 		arrs.forEach(arr => {
@@ -108,7 +99,7 @@ export class Tempo {
 	}
 
 	/** user will need to know these in order to configure their own patterns */
-	static readonly units: Record<string, RegExp> = {					// define some patterns to help conform input-strings
+	static readonly units: Record<string, RegExp> = {					// define some components to help interpret input-strings
 		yy: new RegExp(/(?<yy>(18|19|20|21)?\d{2})/),
 		mm: new RegExp(/(?<mm>0?[1-9]|1[012]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/),
 		dd: new RegExp(/(?<dd>0?[1-9]|[12][0-9]|3[01])/),
@@ -121,7 +112,7 @@ export class Tempo {
 		sep: new RegExp(/[\/\-\ \,]*/),													// list of separators between date-components
 		mod: new RegExp(/((?<mod>[\+\-\<\>][\=]?)(?<nbr>\d*))?/)// modifiers (+,-,<,<=,>,>=)
 	}
-	static {																									// now, combine some of the above units into common components
+	static {																									// now, combine some of the above units into common Time components
 		Tempo.units['hm'] = new RegExp('(?<hm>' + Tempo.units.hh.source + Tempo.units.tm.source + ')');
 		Tempo.units['hms'] = new RegExp('(?<hms>' +
 			Tempo.units.hh.source + '|' +													// just hh
@@ -157,7 +148,6 @@ export class Tempo {
 	static #DateTime = Intl.DateTimeFormat().resolvedOptions();
 	static #default = {} as Tempo.ConfigFile;
 	static #pattern: Tempo.Pattern[] = [];										// Array of regex-patterns to test until a match
-	// static #months = asArray({ length: 13 }, {}) as Tempo.Months;	// Array of settings related to a Month
 	static #months = Array.from({ length: 13 }, () => Object.assign({})) as Tempo.Months;	// Array of settings related to a Month
 	static #configKey = '_Tempo_';														// for stash in persistent storage
 
@@ -204,8 +194,8 @@ export class Tempo {
 			default:
 		}
 
-		const context = getContext();														// javascript runtime environment
-		let store: string | undefined | null = void 0;
+		const context = getContext();														// Javascript runtime environment
+		let store: string | null = null;
 		switch (context.type) {
 			case CONTEXT.Browser:
 				store = context.global.localStorage.getItem(Tempo.#configKey);
@@ -331,7 +321,16 @@ export class Tempo {
 	/** default string description */
 	[Symbol.toStringTag]() { return 'Tempo' }
 
-	/** Constructor ************************************************************************************************* */
+	// Instance variables  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	#config: Tempo.Config;																		// instance config
+	#value?: Tempo.DateTime;																	// constructor value
+	#opts: Tempo.Options;																			// constructor arguments
+	#now: Temporal.Instant;																		// instantiation Temporal Instant, used only during construction
+	#temporal!: Temporal.ZonedDateTime;												// underlying Temporal DateTime
+	fmt = {} as Tempo.TypeFmt;																// prebuilt Formats, for convenience	
+
+	// Constructor  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	constructor(tempo?: Tempo.DateTime, opts?: Tempo.Options);// arg1: value to interpret. arg2: options to tailor the instance
 	constructor(opts?: Tempo.Options);												// arg1: options to tailor the instance (value Temporal.Now.instant() is implied)
