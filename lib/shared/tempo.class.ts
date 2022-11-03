@@ -216,7 +216,7 @@ export class Tempo {
 
 			Object.assign(Tempo.#default, omit(config, 'pattern'));// override defaults from storage
 			(config.pattern ?? [])
-				.reverse()																					// prepend user-patterns from storage as they have priority
+				.reverse()																					// prepend user-patterns from storage, as they have priority
 				.map(pat => Object.entries(pat)[0])
 				.forEach(([key, ref]) => Tempo.#default.pattern.unshift({ key, reg: asArray(ref) }));
 		}
@@ -235,14 +235,14 @@ export class Tempo {
 		Tempo.#default.pattern																	// setup defaults as RegExp patterns
 			.forEach(({ key, reg }) => Tempo.#pattern.push({ key, reg: Tempo.regexp(...reg) }));
 
-		if (context.type === CONTEXT.Browser || init.debug === true)
+		if ((context.type === CONTEXT.Browser && init.debug !== false) || init.debug === true)
 			console.log('Tempo: ', omit(Tempo.#default, 'pattern'));
 	}
 
 	/** get first Canonical name of a supplied locale */
 	static #locale = (locale: string) => Intl.getCanonicalLocales(locale.replace('_', '-'))[0];
 
-	/** Try to infer hemisphere, using the timezone's daylight-savings setting */
+	/** try to infer hemisphere, using the timezone's daylight-savings setting */
 	static #dst = (tzone: string) => {
 		const yy = Temporal.Now.plainDateISO().year;						// current year
 		const tz = new Temporal.TimeZone(tzone);
@@ -261,13 +261,13 @@ export class Tempo {
 		}
 	}
 
-	/** ProperCase first letters of day/month */
+	/** properCase first letters of day/month */
 	static #stringPrefix = (str: string, len = 3) => toProperCase(str.substring(0, len));
 
 	/**
-	 * static method to allow sorting array of Tempo  
+	 * static method to allow sorting array of Tempo's  
 	 * usage: [tempo1, tempo2, tempo3].sort(Tempo.compare)  
-	 * usage: [tempo1, tempo2, tempo3].sort(Tempo.compare(true))	# for reverse sort
+	 * usage: [tempo1, tempo2, tempo3].sort(Tempo.compare(true))	for reverse sort
 	 */
 	static compare = (reverse: false) => {
 		const adj = reverse ? -1 : 1;
@@ -280,13 +280,13 @@ export class Tempo {
 	/** static method to access current epochNanoseconds */
 	static now = () => Temporal.Now.instant().epochNanoseconds;
 
-	/** Tempo.Duration getters, where matched in Tempo.TIMES */
+	/** static Tempo.Duration getter, where matched in Tempo.TIMES */
 	static get durations() {
 		return getAccessors<Temporal.DurationLike>(Temporal.Duration)
 			.filter(key => enumKeys(Tempo.TIMES).includes(key));
 	}
 
-	/** Tempo getters */
+	/** static Tempo property getter */
 	static get properties() {
 		return getAccessors(Tempo) as (keyof Tempo)[];
 	}
@@ -296,10 +296,12 @@ export class Tempo {
 		return Tempo.#default;
 	}
 
-	/** array of regex patterns to check when parsing Tempo.DateTime */
+	/** array of regex patterns used when parsing Tempo.DateTime argument */
 	static get patterns() {
 		return Tempo.#pattern;
 	}
+
+	// instance Symbols    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/** allow for auto-convert of Tempo to BigInt */
 	[Symbol.toPrimitive](hint?: 'string' | 'number' | 'default') {
@@ -314,7 +316,7 @@ export class Tempo {
 		let idx = -1;
 
 		return {
-			next: () => ({ done: ++idx >= props.length, value: { fmt: props[idx], value: this[props[idx]] } }),
+			next: () => ({ done: ++idx >= props.length, value: { property: props[idx], value: this[props[idx]] } }),
 		}
 	}
 
