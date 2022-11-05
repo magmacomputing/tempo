@@ -32,7 +32,45 @@ import { Temporal } from '@js-temporal/polyfill';
  * It has methods to perform manipulations (add, format, diff, offset, ...)  
  */
 export class Tempo {
-	// Static variables / methods	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Static variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	// start with defaults for all Tempo instances
+	static #Locales = [																				// Array of Locales that prefer 'mm-dd-yy' date order
+		new Intl.Locale('en-US'),																// https://en.wikipedia.org/wiki/Date_format_by_country
+		new Intl.Locale('en-AS'),																// add to this Array if required
+	]
+	static #DateTime = Intl.DateTimeFormat().resolvedOptions();
+	static #default = {} as Tempo.ConfigFile;
+	static #pattern = [] as Tempo.Pattern[];									// Array of regex-patterns to test until a match
+	static #months = Array.from({ length: 13 }, () => Object.assign({})) as Tempo.Months;	// Array of settings related to a Month
+	static #configKey = '_Tempo_';														// for stash in persistent storage
+
+
+	/** user will need to know these in order to configure their own patterns */
+	static readonly units: Record<string, RegExp> = {					// define some components to help interpret input-strings
+		yy: new RegExp(/(?<yy>(18|19|20|21)?\d{2})/),
+		mm: new RegExp(/(?<mm>0?[1-9]|1[012]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/),
+		dd: new RegExp(/(?<dd>0?[1-9]|[12][0-9]|3[01])/),
+		dow: new RegExp(/(?<dow>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)?(,)?( )?/),
+		qtr: new RegExp(/(?<qtr>1|2|3|4)/),
+		hh: new RegExp(/([01]\d|2[0-3])/),											// hh:  00 - 23
+		tm: new RegExp(/([0-5]\d)/),														// tm:  00 - 59 (can be used for minutes and for seconds)
+		ff: new RegExp(/(\.\d{1,9})?/),													// up-to 9-digits for fractional seconds
+		am: new RegExp(/ ?(?<am>am|pm)?/),											// am/pm suffix
+		sep: new RegExp(/[\/\-\ \,]*/),													// list of separators between date-components
+		mod: new RegExp(/((?<mod>[\+\-\<\>][\=]?)(?<nbr>\d*))?/)// modifiers (+,-,<,<=,>,>=)
+	}
+	static {																									// now, combine some of the above units into common Time components
+		Tempo.units['hm'] = new RegExp('(?<hm>' + Tempo.units.hh.source + Tempo.units.tm.source + ')');
+		Tempo.units['hms'] = new RegExp('(?<hms>' +
+			Tempo.units.hh.source + '|' +													// just hh
+			Tempo.units.hh.source + ':' + Tempo.units.tm.source + '|' +	// or hh:mi
+			Tempo.units.hh.source + ':' + Tempo.units.tm.source + ':' + Tempo.units.tm.source + Tempo.units.ff.source +	// or hh:mi:ss(.ff)
+			')');
+		Tempo.units['tzd'] = new RegExp('(?<tzd>[+-]' + Tempo.units.hm.source + '|Z)');
+	}
+
+	// Static methods ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/** swap parsing-order of patterns (to suit different locales) */
 	static #swap(tz: string, ...arrs: { key: string }[][]) {
@@ -98,29 +136,8 @@ export class Tempo {
 		}
 	}
 
-	/** user will need to know these in order to configure their own patterns */
-	static readonly units: Record<string, RegExp> = {					// define some components to help interpret input-strings
-		yy: new RegExp(/(?<yy>(18|19|20|21)?\d{2})/),
-		mm: new RegExp(/(?<mm>0?[1-9]|1[012]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/),
-		dd: new RegExp(/(?<dd>0?[1-9]|[12][0-9]|3[01])/),
-		dow: new RegExp(/(?<dow>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)?(,)?( )?/),
-		qtr: new RegExp(/(?<qtr>1|2|3|4)/),
-		hh: new RegExp(/([01]\d|2[0-3])/),											// hh:  00 - 23
-		tm: new RegExp(/([0-5]\d)/),														// tm:  00 - 59 (can be used for minutes and for seconds)
-		ff: new RegExp(/(\.\d{1,9})?/),													// up-to 9-digits for fractional seconds
-		am: new RegExp(/ ?(?<am>am|pm)?/),											// am/pm suffix
-		sep: new RegExp(/[\/\-\ \,]*/),													// list of separators between date-components
-		mod: new RegExp(/((?<mod>[\+\-\<\>][\=]?)(?<nbr>\d*))?/)// modifiers (+,-,<,<=,>,>=)
-	}
-	static {																									// now, combine some of the above units into common Time components
-		Tempo.units['hm'] = new RegExp('(?<hm>' + Tempo.units.hh.source + Tempo.units.tm.source + ')');
-		Tempo.units['hms'] = new RegExp('(?<hms>' +
-			Tempo.units.hh.source + '|' +													// just hh
-			Tempo.units.hh.source + ':' + Tempo.units.tm.source + '|' +	// or hh:mi
-			Tempo.units.hh.source + ':' + Tempo.units.tm.source + ':' + Tempo.units.tm.source + Tempo.units.ff.source +	// or hh:mi:ss(.ff)
-			')');
-		Tempo.units['tzd'] = new RegExp('(?<tzd>[+-]' + Tempo.units.hm.source + '|Z)');
-	}
+	/** properCase first letters of day/month */
+	static #stringPrefix = (str: string, len = 3) => toProperCase(str.substring(0, len));
 
 	/** convert array of <string | RegExp> to a single RegExp */
 	static regexp = (...reg: (keyof typeof Tempo.units | RegExp)[]) => {
@@ -139,17 +156,6 @@ export class Tempo {
 
 		return new RegExp('^' + regexes.map(regex => regex.source).join('') + '$', 'i')
 	}
-
-	// start with defaults for all Tempo instances
-	static #Locales = [																				// Array of Locales that prefer 'mm-dd-yy' date order
-		new Intl.Locale('en-US'),																// https://en.wikipedia.org/wiki/Date_format_by_country
-		new Intl.Locale('en-AS'),																// add to this Array if required
-	]
-	static #DateTime = Intl.DateTimeFormat().resolvedOptions();
-	static #default = {} as Tempo.ConfigFile;
-	static #pattern: Tempo.Pattern[] = [];										// Array of regex-patterns to test until a match
-	static #months = Array.from({ length: 13 }, () => Object.assign({})) as Tempo.Months;	// Array of settings related to a Month
-	static #configKey = '_Tempo_';														// for stash in persistent storage
 
 	/**
 	 * this allows Tempo to set a specific default configuration for subsequent  
@@ -261,17 +267,14 @@ export class Tempo {
 		}
 	}
 
-	/** properCase first letters of day/month */
-	static #stringPrefix = (str: string, len = 3) => toProperCase(str.substring(0, len));
-
 	/**
 	 * static method to allow sorting array of Tempo's  
 	 * usage: [tempo1, tempo2, tempo3].sort(Tempo.compare)  
 	 * usage: [tempo1, tempo2, tempo3].sort(Tempo.compare(true))	for reverse sort
 	 */
 	static compare = (reverse: false) => {
-		const adj = reverse ? -1 : 1;
-		return (a: Tempo, b: Tempo) => Number((a.epoch > b.epoch) || -(a.epoch < b.epoch)) * adj;
+		const direction = reverse ? -1 : 1;
+		return (a: Tempo, b: Tempo) => Number((a.epoch > b.epoch) || -(a.epoch < b.epoch)) * direction;
 	}
 
 	/** static method to create a new Tempo */
@@ -301,7 +304,7 @@ export class Tempo {
 		return Tempo.#pattern;
 	}
 
-	// instance Symbols    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Instance Symbols    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/** allow for auto-convert of Tempo to BigInt */
 	[Symbol.toPrimitive](hint?: 'string' | 'number' | 'default') {
@@ -337,11 +340,11 @@ export class Tempo {
 	constructor(tempo?: Tempo.DateTime, opts?: Tempo.Options);// arg1: value to interpret. arg2: options to tailor the instance
 	constructor(opts?: Tempo.Options);												// arg1: options to tailor the instance (value Temporal.Now.instant() is implied)
 	constructor(tempo?: Tempo.DateTime | Tempo.Options, opts: Tempo.Options = {}) {
-		this.#now = Temporal.Now.instant();											// stash current Instant
 		if (isObject(tempo)) {
 			Object.assign(opts, tempo);														// shift the 1st argument to the 2nd
 			tempo = opts.value;																		// and reset the 1st argument
 		}
+		this.#now = Temporal.Now.instant();											// stash current Instant
 		this.#value = tempo;																		// stash original value
 		this.#opts = opts;																			// stash original arguments
 		this.#config = {																				// allow for override of defaults and config-file
@@ -497,6 +500,7 @@ export class Tempo {
 
 		switch (arg.type) {
 			case 'Null':																					// TODO: special Tempo for null?
+			case 'Void':
 			case 'Undefined':
 				return today;
 
@@ -589,7 +593,7 @@ export class Tempo {
 			 * If just day-of-week specified (with optional 'mod' and 'nbr'), calc date offset
 			 *   Wed		-> Wed this week				-> might be earlier or later or equal to current day
 			 *  -Wed		-> Wed last week				-> same as new Tempo('Wed').add({ weeks: -1 })
-			 *  +Wed		-> Wed next week				-> same as new Tempo('Wed').add({ weeks: 1 })
+			 *  +Wed		-> Wed next week				-> same as new Tempo('Wed').add({ weeks:  1 })
 			 * -3Wed		-> Wed three weeks ago  -> same as new Tempo('Wed').add({ weeks: -3 })
 			 *  <Wed		-> Wed prior to today 	-> current or previous week
 			 * <=Wed		-> Wed prior to tomorrow-> current or previous week
@@ -719,9 +723,9 @@ export class Tempo {
 		let zdt = this.#temporal;																// start with the Tempo instance
 
 		Object.entries(args)																		// iterate through mutations
-			.forEach(([key, unit]: [string, string]) => {
+			.forEach(([key, unit]) => {
 				const { mutate, offset, single } = ['start', 'mid', 'end'].includes(key)
-					? { mutate: key, offset: 0, single: unit.endsWith('s') ? unit.slice(0 - 1) : unit }
+					? { mutate: key, offset: 0, single: unit.endsWith('s') ? unit.slice(0, -1) : unit }
 					: { mutate: 'add', offset: Number(unit), single: key.endsWith('s') ? key.slice(0, -1) : key }
 
 				switch (`${mutate}.${single}`) {
@@ -864,7 +868,7 @@ export class Tempo {
 		const bailOut = void 0 as unknown as Tempo.Formats[K];
 
 		if (isNull(this.#value))
-			return bailOut;																				// dont format <null> dates
+			return bailOut;																				// don't format <null> dates
 
 		switch (fmt) {
 			case Tempo.FORMAT.yearWeek:
