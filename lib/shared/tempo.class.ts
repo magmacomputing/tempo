@@ -109,7 +109,7 @@ export class Tempo {
 			? [void 0, 'Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer', 'Summer', 'Summer', 'Autumn', 'Autumn', 'Autumn', 'Winter']
 			: [void 0, 'Summer', 'Summer', 'Autumn', 'Autumn', 'Autumn', 'Winter', 'Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer']
 		)																												// 1=first, 2=mid, 3=last month of season
-			.forEach((season, idx) => { if (idx !== 0) month[idx].season = `${season as keyof typeof Tempo.SEASON}.${idx % 3 + 1}` });
+			.forEach((season, idx) => { if (idx !== 0) month[idx].season = `${season}.${idx % 3 + 1}` as Tempo.Month["season"] });
 	}
 
 	/** Northern -or- Southern hemisphere start of QTR1 */
@@ -130,7 +130,7 @@ export class Tempo {
 			if (idx !== 0) {
 				const qtr = Math.floor((mon - 1) / 3) + 1;					// quarter increments every third iteration
 				const offset = (mon - 1) % 3 + 1;										// 1=first, 2=mid, 3=last month of quarter
-				month[idx].quarter = qtr + (offset / 10);
+				month[idx].quarter = qtr + (offset / 10) as Tempo.Month["quarter"];
 			}
 			else mon--
 		}
@@ -1015,8 +1015,8 @@ export namespace Tempo {
 	/** detail about a Month */
 	export type Month = {
 		name: keyof typeof Tempo.MONTH;
-		quarter: number;
-		season: `${keyof typeof Tempo.SEASON}.${number}`;
+		season: `${keyof typeof Tempo.SEASON}.${1 | 2 | 3}`;
+		quarter: 1 | 2 | 3 | 4;
 	}
 	/** tuple of 13 months */
 	export type Months = [Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month]
