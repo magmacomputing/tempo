@@ -36,7 +36,7 @@ export function extract<T>(obj: object, path = '', dflt?: T) {
 export const getPath = <T>(obj: any, path: TValues<string>, dflt?: any, indx?: string | number): T => {
 	if (!isObject(obj) && !isArray(obj))
 		return dflt || void 0;
-	// if (isNullish(obj))
+	// if (isVoid(obj))
 	// 	return dflt || void 0;
 
 	const [word, ...rest] = isString(path)										// first word in the index-path, and the rest

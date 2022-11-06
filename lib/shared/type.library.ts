@@ -62,9 +62,9 @@ export const isRecord = (obj?: unknown): obj is Record<any, any> => isType(obj, 
 export const isTuple = <T>(obj?: unknown): obj is Array<T> => isType(obj, 'Tuple');
 
 export const isNull = (obj?: unknown): obj is null => isType(obj, 'Null');
-export const isNullish = <T>(obj: T | null | undefined): obj is undefined | null => isType<undefined | null>(obj, 'Null', 'Undefined', 'Void');
+export const isVoid = <T>(obj: T | null | undefined): obj is undefined | null => isType<undefined | null>(obj, 'Null', 'Undefined', 'Void');
 export const isUndefined = (obj?: unknown): obj is undefined => isType<undefined>(obj, 'Undefined', 'Void');
-export const isDefined = <T>(obj: T): obj is NonNullable<T> => !isNullish(obj);
+export const isDefined = <T>(obj: T): obj is NonNullable<T> => !isVoid(obj);
 
 export const isClass = (obj?: unknown): obj is Function => isType(obj, 'Class');
 export const isFunction = (obj?: unknown): obj is Function => isType(obj, 'Function', 'AsyncFunction');
@@ -80,7 +80,7 @@ export const nullToValue = <T, R>(obj: T, value: R) => obj ?? value;
 
 /** object has no values */
 export const isEmpty = <T>(obj?: T) => false
-	|| isNullish(obj)
+	|| isVoid(obj)
 	|| (isObject(obj) && Object.keys(obj).length === 0)
 	|| (isString(obj) && obj.trim().length === 0)
 	|| (isArray(obj) && obj.length === 0)
