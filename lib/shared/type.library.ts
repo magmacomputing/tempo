@@ -61,9 +61,9 @@ export const isRegExp = (obj?: unknown): obj is RegExp => isType(obj, 'RegExp');
 export const isRecord = (obj?: unknown): obj is Record<any, any> => isType(obj, 'Record');
 export const isTuple = <T>(obj?: unknown): obj is Array<T> => isType(obj, 'Tuple');
 
+export const isVoid = <T>(obj: T | void): obj is void => isType<undefined | null>(obj, 'Null', 'Undefined', 'Void');
+export const isUndefined = (obj?: unknown): obj is undefined => isType<undefined>(obj, 'Undefined');
 export const isNull = (obj?: unknown): obj is null => isType(obj, 'Null');
-export const isVoid = <T>(obj: T | null | undefined): obj is undefined | null => isType<undefined | null>(obj, 'Null', 'Undefined', 'Void');
-export const isUndefined = (obj?: unknown): obj is undefined => isType<undefined>(obj, 'Undefined', 'Void');
 export const isDefined = <T>(obj: T): obj is NonNullable<T> => !isVoid(obj);
 
 export const isClass = (obj?: unknown): obj is Function => isType(obj, 'Class');
@@ -113,7 +113,7 @@ export type OneKey<K extends keyof any, V, KK extends keyof any = K> =
 		{ [Q in keyof O]: O[Q] } : never
 	}[K]
 
-type Primitive = string | number | bigint | boolean | symbol | void | null // TODO: add  record | tuple
+type Primitive = string | number | bigint | boolean | symbol | void | undefined | null // TODO: add  record | tuple
 type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling)
 export type Temporals = Exclude<keyof typeof Temporal, 'Now'>;
 
@@ -160,8 +160,8 @@ export type TypeValue<T> =
 	{ type: 'Object', value: Extract<T, Record<any, any>> } |
 	{ type: 'Array', value: Array<T> } |
 	{ type: 'ArrayLike', value: ArrayLike<T> } |
+	{ type: 'Undefined', value: undefined} |
 	{ type: 'Null', value: null } |
-	{ type: 'Undefined', value: void } |
 	{ type: 'Void', value: void } |
 	{ type: 'Date', value: Date } |
 	{ type: 'Function', value: Function } |

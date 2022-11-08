@@ -1,5 +1,5 @@
 import { asArray } from '@module/shared/array.library';
-import { clone, stringify } from '@module/shared/serialize.library';
+import { stringify } from '@module/shared/serialize.library';
 import { isString, type TValues } from '@module/shared/type.library'
 
 /**
@@ -22,12 +22,12 @@ export class Pledge<T> {
 			? { tag: arg }
 			: { ...arg }
 
-		this.#status = clone({																	// clone will remove undefined values
+		this.#status = JSON.parse(JSON.stringify({							// remove undefined values
 			tag,
 			catch: flags.catch,
 			debug: flags.debug,
 			state: Pledge.STATE.Pending,
-		});
+		}));
 
 		this.#promise = new Promise<T>((resolve, reject) => {
 			this.#resolve = resolve;															// stash resolve()
