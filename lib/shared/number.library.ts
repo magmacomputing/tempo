@@ -3,10 +3,14 @@ import { asString } from '@module/shared/string.library';
 import { isInteger, type TValues } from '@module/shared/type.library';
 
 /** convert String to Number */
-export function asNumber(str?: string | number | bigint) { return parseFloat(str?.toString() ?? 'NaN') }
+export function asNumber(str?: string | number | bigint) {
+	return parseFloat(str?.toString() ?? 'NaN')
+}
 
 /** test if can convert String to Number */
-export function isNumeric(str?: string | number | bigint): str is number { return !isNaN(asNumber(str)) && isFinite(str as number) }
+export function isNumeric(str?: string | number | bigint): str is number {
+	return !isNaN(asNumber(str)) && isFinite(str as number)
+}
 
 /** return as Number if possible, else String */
 export const ifNumeric = (str?: string | number | bigint, stripZero = false) => {
@@ -31,20 +35,17 @@ export const toHex = (num: TValues<number> = [], len = 64) =>
 /** apply an Ordinal suffix */
 export const suffix = (idx: number) => {
 	const str = asString(idx + 1);
-	let sfx = 'th';
 
 	switch (true) {
 		case str.endsWith('1') && !str.endsWith('11'):
-			sfx = 'st';
-			break;
+			return str + 'st';
 		case str.endsWith('2') && !str.endsWith('12'):
-			sfx = 'nd';
-			break;
+			return str + 'nd';
 		case str.endsWith('3') && !str.endsWith('13'):
-			sfx = 'rd';
-			break;
+			return str + 'rd';
+		default:
+			return str + 'th';
 	}
-	return str + sfx;
 }
 
 /** split a value into an array */
