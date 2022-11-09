@@ -28,16 +28,16 @@ export function cloneify<T>(obj: T, sentinel: Function): T;
 /** deep-copy and replace \<undefined> field with a Sentinel function */
 export function cloneify<T>(obj: T, sentinel?: Function): T {
 	try {
-		return objectify(stringize(obj), sentinel) as T;
-	} catch (error: any) {
+		return objectify(stringify(obj), sentinel) as T;
+	} catch (error) {
 		console.warn('Could not cloneify object: ', obj);
-		console.warn('stack: ', error.stack);
+		console.warn('stack: ', (error as Error).stack);
 		return obj;
 	}
 }
 
-function replacer(key: string, obj: any): any { return isEmpty(key) ? obj : stringize(obj) };
-function reviver(sentinel?: Function): any { return (key: string, str: any) => isEmpty(key) ? str : objectify(str, sentinel) }
+function replacer(key: string, obj: any): any { return isEmpty(key) ? obj : stringize(obj) }
+function reviver() { return (_key: string, val: any) => decode(val) }
 
 /** encode control characters, then replace a subset back to text-string */
 function encode(val: string) {
@@ -60,8 +60,8 @@ function decode(val: string) {
 	if (isString(val)) {
 		try {
 			return decodeURI(val);																// might fail if badly encoded '%'
-		} catch (err) {
-			console.warn(`decodeURI: ${(err as Error).message} -> ${val}`);
+		} catch (error) {
+			console.warn(`decodeURI: ${(error as Error).message} -> ${val}`);
 		}
 	}
 
@@ -179,7 +179,8 @@ export function objectify<T extends any>(str: any, sentinel?: Function): T {
 		return str as T;																				// skip parsing
 
 	try {
-		const parse = JSON.parse(str, (_key, val) => decode(val)) as T;		// catch if cannot parse
+		const parse = JSON.parse(str, reviver()) as T;					// catch if cannot parse
+		// const parse = JSON.parse(str, (_key, val) => decode(val)) as T;		// catch if cannot parse
 
 		switch (true) {
 			case str.startsWith('{') && str.endsWith('}'):				// looks like Object
@@ -191,7 +192,7 @@ export function objectify<T extends any>(str: any, sentinel?: Function): T {
 			default:
 				return parse;
 		}
-	} catch (err) {
+	} catch (error) {
 		// console.warn(`objectify.parse: not a JSON string -> ${str}`);
 		return str as T;
 	}

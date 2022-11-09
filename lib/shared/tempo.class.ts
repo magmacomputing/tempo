@@ -28,7 +28,7 @@ import { Temporal } from '@js-temporal/polyfill';
  * ````
  * A Tempo is an object that is used to wrap a Temporal.ZonedDateTime.  
  * It's strength is in it's flexibility to parse string|number|bigint|DateTime.  
- * It has accessors that report the value as DateTime components ('yy', 'dd', 'HH', ...)  
+ * It has accessors that report the value as DateTime components ('yy', 'dd', 'hh', ...)  
  * It has methods to perform manipulations (add, format, diff, offset, ...)  
  */
 export class Tempo {
@@ -892,7 +892,7 @@ export class Tempo {
 				return `${yy}Q${this.qtr}`;
 
 			default:
-				const am = asString(fmt).includes('hh')							// if 'twelve-hour' is present in fmtString
+				const am = asString(fmt).includes('HH')							// if 'twelve-hour' is present in fmtString
 					? this.hh >= 12 ? 'pm' : 'am'											// noon is considered 'pm'
 					: ''																							// else no am/pm suffix needed
 
@@ -903,15 +903,15 @@ export class Tempo {
 					.replace(/m{2}/g, pad(this.mm))
 					.replace(/d{3}/g, this.ddd)
 					.replace(/d{2}/g, pad(this.dd))
-					.replace(/H{2}/g, pad(this.hh))
-					.replace(/MI/g, pad(this.mi))
-					.replace(/S{2}/g, pad(this.ss))
-					.replace(/h{2}$/g, pad(this.hh >= 13 ? this.hh % 12 : this.hh) + am)
-					.replace(/h{2}/g, pad(this.hh >= 13 ? this.hh % 12 : this.hh))
-					.replace(/mi$/g, pad(this.mi) + am)								// add 'am' if 'mi' at end of fmtString, and it follows 'hh'
+					.replace(/h{2}/g, pad(this.hh))
 					.replace(/mi/g, pad(this.mi))
-					.replace(/s{2}$/g, pad(this.ss) + am)							// add 'am' if 'ss' at end of fmtString, and it follows 'hh'
 					.replace(/s{2}/g, pad(this.ss))
+					.replace(/H{2}$/g, pad(this.hh >= 13 ? this.hh % 12 : this.hh) + am)
+					.replace(/H{2}/g, pad(this.hh >= 13 ? this.hh % 12 : this.hh))
+					.replace(/MI$/g, pad(this.mi) + am)								// add 'am' if 'mi' at end of fmtString, and it follows 'HH'
+					.replace(/MI/g, pad(this.mi))
+					.replace(/S{2}$/g, pad(this.ss) + am)							// add 'am' if 'ss' at end of fmtString, and it follows 'HH'
+					.replace(/S{2}/g, pad(this.ss))
 					.replace(/ts/g, this.ts.toString())
 					.replace(/ms/g, pad(this.ms, 3))
 					.replace(/us/g, pad(this.us, 3))
@@ -1070,7 +1070,6 @@ export namespace Tempo {
 		[Tempo.FORMAT.logStamp]: number;
 		[Tempo.FORMAT.sortTime]: string;
 		[Tempo.FORMAT.monthTime]: string;
-		[Tempo.FORMAT.HHMI]: string;
 		[Tempo.FORMAT.hhmi]: string;
 		[Tempo.FORMAT.yearWeek]: number;
 		[Tempo.FORMAT.yearMonth]: number;
@@ -1090,7 +1089,6 @@ export namespace Tempo {
 		logStamp: number;
 		sortTime: string;
 		monthTime: string;
-		HHMI: string;
 		hhmi: string;
 		yearWeek: number;
 		yearMonth: number;
@@ -1121,21 +1119,20 @@ export namespace Tempo {
 	export enum FORMAT {																			// pre-configured format names
 		display = 'ddd, dd mmm yyyy',
 		dayDate = 'ddd, yyyy-mmm-dd',
-		dayTime = 'ddd, yyyy-mmm-dd HH:MI',
-		dayFull = 'ddd, yyyy-mmm-dd HH:MI:SS',									// useful for Sheets cell-format
-		dayStamp = 'ddd, yyyy-mmm-dd HH:MI:SS.ff',							// Day, Date and Time to nanosecond
+		dayTime = 'ddd, yyyy-mmm-dd hh:mi',
+		dayFull = 'ddd, yyyy-mmm-dd hh:mi:ss',									// useful for Sheets cell-format
+		dayStamp = 'ddd, yyyy-mmm-dd hh:mi:ss.ff',							// Day, Date and Time to nanosecond
 		dayMonth = 'dd-mmm',
-		logStamp = 'HHMISS.ff',																	// useful for stamping logs 
-		sortTime = 'yyyy-mm-dd HH:MI:SS',												// useful for sorting display-strings
-		monthTime = 'yyyy-mmm-dd HH:MI',												// useful for dates where dow is not needed
-		HHMI = 'HH:MI',																					// 24-hour format
-		hhmi = 'hh:mi',																					// 12-hour format
+		logStamp = 'hhmiss.ff',																	// useful for stamping logs 
+		sortTime = 'yyyy-mm-dd hh:mi:ss',												// useful for sorting display-strings
+		monthTime = 'yyyy-mmm-dd hh:mi',												// useful for dates where dow is not needed
+		hhmi = 'hh:mi',																					// 24-hour format
 		yearWeek = 'yyyyww',
 		yearMonth = 'yyyymm',
 		yearMonthDay = 'yyyymmdd',
 		yearQuarter = 'yyyyQqtr',
 		date = 'yyyy-mmm-dd',																		// just Date portion
-		time = 'HH:MI:SS',																			// just Time portion
+		time = 'hh:mi:ss',																			// just Time portion
 	}
 
 	/** number of seconds per unit-of-time */
