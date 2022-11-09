@@ -23,15 +23,19 @@ export class Cipher {
 		hash: { name: Cipher.#KEYS.Algorithm },
 	}, false, ['sign', 'verify']);
 
-	static decodeBase64 = <T>(str = ''): T => {
-		const uint8 = base64DecToArr(str);
-		const buf = UTF8ArrToStr(uint8);
-		return objectify(buf);
+	/** decode base64 back into object */
+	static decodeBase64 = <T>(buf = ''): T => {
+		const uint8 = base64DecToArr(buf);											// first, convert to UInt8Array
+		const str = UTF8ArrToStr(uint8);												// convert to string
+
+		return objectify(str);																	// rebuild the original object
 	}
 
-	static encodeBase64 = (buf: any) => {
+	/** encode object into base64 */
+	static encodeBase64 = (buf: unknown) => {
 		const str = stringify(buf);															// first, stringify the incoming buffer
 		const uint8 = strToUTF8Arr(str);												// convert to Uint8Array
+
 		return base64EncArr(uint8);															// convert to string
 	}
 

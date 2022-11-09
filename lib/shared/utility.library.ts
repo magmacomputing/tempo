@@ -41,6 +41,7 @@ export enum CONTEXT {
 	'Unknown' = 'unknown',
 	'Browser' = 'browser',
 	'NodeJS' = 'nodejs',
+	'Deno' = 'deno',
 	'GoogleAppsScript' = 'google-apps-script',
 }
 /** determine Javascript environment context */

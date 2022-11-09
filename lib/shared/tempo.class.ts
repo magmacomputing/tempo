@@ -157,8 +157,7 @@ export class Tempo {
 	}
 
 	/**
-	 * this allows Tempo to set a specific default configuration for subsequent  
-	 * 'new Tempo()' to inherit.  
+	 * this allows Tempo to set a specific default configuration for subsequent 'new Tempo()' to inherit.  
 	 * Tempo.#default is set from init argument (if supplied), else local Cache, else reasonable default values. 
 	 * useful primarily for 'order of parsing input', as well as .quarter and .season
 	 */
@@ -323,7 +322,7 @@ export class Tempo {
 	}
 
 	/** default string description */
-	[Symbol.toStringTag]() { return 'Tempo' }
+	get [Symbol.toStringTag]() { return 'Tempo' }
 
 	// Instance variables  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
