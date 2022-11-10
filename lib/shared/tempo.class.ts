@@ -908,9 +908,9 @@ export class Tempo {
 					.replace(/s{2}/g, pad(this.ss))
 					.replace(/H{2}$/g, pad(this.hh >= 13 ? this.hh % 12 : this.hh) + am)
 					.replace(/H{2}/g, pad(this.hh >= 13 ? this.hh % 12 : this.hh))
-					.replace(/MI$/g, pad(this.mi) + am)								// add 'am' if 'MI' at end of fmtString, and it follows 'HH'
+					.replace(/MI$/g, pad(this.mi) + am)								// append 'am' if 'MI' at end of fmtString, and it follows 'HH'
 					.replace(/MI/g, pad(this.mi))
-					.replace(/S{2}$/g, pad(this.ss) + am)							// add 'am' if 'SS' at end of fmtString, and it follows 'HH'
+					.replace(/S{2}$/g, pad(this.ss) + am)							// append 'am' if 'SS' at end of fmtString, and it follows 'HH'
 					.replace(/S{2}/g, pad(this.ss))
 					.replace(/ts/g, this.ts.toString())
 					.replace(/ms/g, pad(this.ms, 3))
