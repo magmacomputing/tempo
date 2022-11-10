@@ -2,6 +2,9 @@ import { Tempo } from '@module/shared/tempo.class';
 import { isNumeric } from '@module/shared/number.library';
 import { isType, asType, isEmpty, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types } from '@module/shared/type.library';
 
+// be aware that 'structuredClone' preserves \<undefined> values...  
+// JSON.stringify() does not
+
 /** make a deep-copy, using standard browser or JSON functions */
 export function clone<T>(obj: T) {
 	let copy = obj;																						// default to original object
