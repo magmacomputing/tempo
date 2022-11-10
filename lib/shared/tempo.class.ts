@@ -892,7 +892,7 @@ export class Tempo {
 				return `${yy}Q${this.qtr}`;
 
 			default:
-				const am = asString(fmt).includes('HH')							// if 'twelve-hour' is present in fmtString
+				const am = asString(fmt).includes('HH')							// 'twelve-hour' is present in fmtString
 					? this.hh >= 12 ? 'pm' : 'am'											// noon is considered 'pm'
 					: ''																							// else no am/pm suffix needed
 
@@ -908,9 +908,9 @@ export class Tempo {
 					.replace(/s{2}/g, pad(this.ss))
 					.replace(/H{2}$/g, pad(this.hh >= 13 ? this.hh % 12 : this.hh) + am)
 					.replace(/H{2}/g, pad(this.hh >= 13 ? this.hh % 12 : this.hh))
-					.replace(/MI$/g, pad(this.mi) + am)								// add 'am' if 'mi' at end of fmtString, and it follows 'HH'
+					.replace(/MI$/g, pad(this.mi) + am)								// add 'am' if 'MI' at end of fmtString, and it follows 'HH'
 					.replace(/MI/g, pad(this.mi))
-					.replace(/S{2}$/g, pad(this.ss) + am)							// add 'am' if 'ss' at end of fmtString, and it follows 'HH'
+					.replace(/S{2}$/g, pad(this.ss) + am)							// add 'am' if 'SS' at end of fmtString, and it follows 'HH'
 					.replace(/S{2}/g, pad(this.ss))
 					.replace(/ts/g, this.ts.toString())
 					.replace(/ms/g, pad(this.ms, 3))
