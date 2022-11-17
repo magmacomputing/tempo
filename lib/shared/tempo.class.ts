@@ -984,6 +984,7 @@ export class Tempo {
 export namespace Tempo {
 	/** the argument 'types' that this Class will attempt to interpret via Temporal API */
 	export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | null
+	/** the options that this Class will use to interpret a Tempo.DateTime */
 	export type Options = {
 		timeZone?: string,
 		calendar?: string,
@@ -1000,11 +1001,13 @@ export namespace Tempo {
 	export type TimeUnit = Temporal.DateTimeUnit | 'quarter' | 'season'
 	export type DiffUnit = Temporal.PluralUnit<Temporal.DateTimeUnit> | 'quarters' | 'seasons'
 
-	export interface Parameter {															// parameter object
+	/** constructor parameter object */
+	export interface Parameter {
 		tempo?: Tempo.DateTime;
 		opts?: Tempo.Options;
 	}
-	export interface Until extends Tempo.Parameter {					// configuration to use for #until() argument
+	/** configuration to use for #until() argument */
+	export interface Until extends Tempo.Parameter {
 		unit?: Tempo.DiffUnit;
 	}
 	export type Offset = Partial<Record<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit>>
@@ -1019,7 +1022,8 @@ export namespace Tempo {
 	/** tuple of 13 months */
 	export type Months = [Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month]
 
-	export interface ConfigFile {															// configuration on tempo.config.json
+	/** configuration on tempo.config.json */
+	export interface ConfigFile {
 		timeZone: string;
 		calendar: string;
 		locale: string;
@@ -1036,7 +1040,8 @@ export namespace Tempo {
 		key: string;
 		reg: RegExp;
 	}
-	export interface Config {																	// configuration to use on Instance
+	/** configuration to use on Instance */
+	export interface Config {
 		timeZone: Temporal.TimeZone,														// TimeZone for this instance
 		calendar: Temporal.Calendar,														// Calendar for this instance
 		pivot: number;																					// two-digit number to determine when to prepend '19' or '20' to a year
@@ -1048,7 +1053,8 @@ export namespace Tempo {
 		pattern: Tempo.Pattern[];																// conform patterns
 	}
 
-	export interface Init {																		// use to set Tempo.defaults
+	/** use to set Tempo.defaults */
+	export interface Init {
 		debug?: boolean;
 		catch?: boolean;
 		sphere?: Tempo.Sphere;
@@ -1059,7 +1065,8 @@ export namespace Tempo {
 		pivot?: number;
 	}
 
-	export interface Formats {																// pre-configured format strings
+	/** pre-configured format strings */
+	export interface Formats {
 		[str: string]: string | number;													// allow for dynamic format-codes
 		[Tempo.FORMAT.display]: string;
 		[Tempo.FORMAT.dayDate]: string;
@@ -1108,15 +1115,18 @@ export namespace Tempo {
 	export enum DURATIONS { years, quarters, months, weeks, days, hours, minutes, seconds };
 	export type Calendar = Exclude<keyof typeof Tempo.MONTH, 'All'>;
 
+	/** Compass points */
 	export enum COMPASS {
 		North = 'north',
 		East = 'east',
 		South = 'south',
 		West = 'west'
 	}
+	/** Hemisphere */
 	export type Sphere = Tempo.COMPASS.North | Tempo.COMPASS.South | null;
 
-	export enum FORMAT {																			// pre-configured format names
+	/** pre-configured format names */
+	export enum FORMAT {
 		display = 'ddd, dd mmm yyyy',
 		dayDate = 'ddd, yyyy-mmm-dd',
 		dayTime = 'ddd, yyyy-mmm-dd hh:mi',
