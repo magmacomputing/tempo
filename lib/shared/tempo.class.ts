@@ -1072,10 +1072,10 @@ export namespace Tempo {
 		[Tempo.FORMAT.dayDate]: string;
 		[Tempo.FORMAT.dayTime]: string;
 		[Tempo.FORMAT.dayFull]: string;
-		[Tempo.FORMAT.dayMonth]: string;
 		[Tempo.FORMAT.dayStamp]: string;
 		[Tempo.FORMAT.logStamp]: number;
 		[Tempo.FORMAT.sortTime]: string;
+		[Tempo.FORMAT.monthDay]: string;
 		[Tempo.FORMAT.monthTime]: string;
 		[Tempo.FORMAT.hhmi]: string;
 		[Tempo.FORMAT.yearWeek]: number;
@@ -1091,10 +1091,10 @@ export namespace Tempo {
 		dayDate: string;
 		dayTime: string;
 		dayFull: string;
-		dayMonth: string;
 		dayStamp: string;
 		logStamp: number;
 		sortTime: string;
+		monthDay: string;
 		monthTime: string;
 		hhmi: string;
 		yearWeek: number;
@@ -1132,9 +1132,9 @@ export namespace Tempo {
 		dayTime = 'ddd, yyyy-mmm-dd hh:mi',
 		dayFull = 'ddd, yyyy-mmm-dd hh:mi:ss',									// useful for Sheets cell-format
 		dayStamp = 'ddd, yyyy-mmm-dd hh:mi:ss.ff',							// Day, Date and Time to nanosecond
-		dayMonth = 'dd-mmm',
 		logStamp = 'hhmiss.ff',																	// useful for stamping logs 
 		sortTime = 'yyyy-mm-dd hh:mi:ss',												// useful for sorting display-strings
+		monthDay = 'dd-mmm',																		// useful for readable month and day
 		monthTime = 'yyyy-mmm-dd hh:mi',												// useful for dates where dow is not needed
 		hhmi = 'hh:mi',																					// 24-hour format
 		yearWeek = 'yyyyww',
