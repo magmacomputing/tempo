@@ -10,7 +10,7 @@ export const toProperCase = <T extends string>(...str: T[]) =>
 		.join(' ') as T
 
 export const toCamelCase = <T extends string>(sentence: T) => {
-	let [word, ...rest] = sentence.match(/[A-Z\xC0-\xD6\xD8-\xDE]?[a-z\xDF-\xF6\xF8-\xFF]+|[A-Z\xC0-\xD6\xD8-\xDE]+(?![a-z\xDF-\xF6\xF8-\xFF])|\d+/g) ?? [];
+	let [word, ...rest] = sentence.match(/[A-Z\xC0-\xD6\xD8-\xDE]?[a-z\xDF-\xF6\xF8-\xFF]+|[A-Z\xC0-\xD6\xD8-\xDE]+(?![a-z\xDF-\xF6\xF8-\xFF])|\d+/g) ?? [''];
 
 	if (isNumeric(word)) {
 		word = rest[0];
