@@ -76,7 +76,7 @@ export class Tempo {
 		const pats = [																					// regexs to swap (to change conform priority)
 			['ddmm', 'mmdd'],																			// swap ddmm for mmdd
 			['ddmmyy', 'mmddyy'],																	// swap ddmmyy for mmddyy
-			['ddmmyyhhmi', 'mmddyyhhmi'],													// swap ddmmyyhhmi for ddmmyyhhmi
+			['ddmmyyhms', 'mmddyyhms'],														// swap ddmmyyhms for ddmmyyhms
 		] as const;
 		const idx = Tempo.#default.mmddyy.findIndex(itm => itm.timeZones.includes(tz));
 		const locale = idx !== -1
@@ -175,15 +175,15 @@ export class Tempo {
 				.map(locale => ({ locale: locale.baseName, timeZones: locale.timeZones })),										// timeZones in those locales
 			pattern: [																						// built-in patterns to be processed in this order
 				{ key: 'yyqtr', reg: ['yy', 'sep', '/Q/', 'qtr'] },
-				{ key: 'hhmi', reg: ['hms', 'am'] },
+				{ key: 'hms', reg: ['hms', 'am'] },
 				{ key: 'ddmm', reg: ['dow', 'dd', 'sep', 'mm'] },
 				{ key: 'mmdd', reg: ['dow', 'mm', 'sep', 'dd'] },
 				{ key: 'ddmmyy', reg: ['dow', 'dd', 'sep', 'mm', 'sep', 'yy'] },
 				{ key: 'mmddyy', reg: ['dow', 'mm', 'sep', 'dd', 'sep', 'yy'] },
-				{ key: 'ddmmyyhhmi', reg: ['dow', 'dd', 'sep', 'mm', 'sep', 'yy', '/ /', 'hms', 'am'] },
-				{ key: 'mmddyyhhmi', reg: ['dow', 'mm', 'sep', 'dd', 'sep', 'yy', '/ /', 'hms', 'am'] },
+				{ key: 'ddmmyyhms', reg: ['dow', 'dd', 'sep', 'mm', 'sep', 'yy', '/ /', 'hms', 'am'] },
+				{ key: 'mmddyyhms', reg: ['dow', 'mm', 'sep', 'dd', 'sep', 'yy', '/ /', 'hms', 'am'] },
 				{ key: 'yymmdd', reg: ['dow', 'yy', 'sep', 'mm', 'sep', 'dd'] },
-				{ key: 'yymmddhhmi', reg: ['dow', 'yy', 'sep', 'mm', 'sep', 'dd', '/ /', 'hms', 'am'] },
+				{ key: 'yymmddhms', reg: ['dow', 'yy', 'sep', 'mm', 'sep', 'dd', '/ /', 'hms', 'am'] },
 				{ key: 'dow', reg: ['mod', 'sep', 'dow'] },
 				{ key: 'mon', reg: ['mm'] },
 				{ key: 'yymm', reg: ['yy', 'sep', 'mm'] },
@@ -331,7 +331,7 @@ export class Tempo {
 	#opts: Tempo.Options;																			// constructor arguments
 	#now: Temporal.Instant;																		// instantiation Temporal Instant, used only during construction
 	#temporal!: Temporal.ZonedDateTime;												// underlying Temporal DateTime
-	fmt = {} as Tempo.TypeFmt;																// prebuilt Formats, for convenience	
+	/** prebuilt Formats */ fmt = {} as Tempo.TypeFmt;				// prebuilt Formats, for convenience	
 
 	// Constructor  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1077,7 +1077,7 @@ export namespace Tempo {
 		[Tempo.FORMAT.sortTime]: string;
 		[Tempo.FORMAT.monthDay]: string;
 		[Tempo.FORMAT.monthTime]: string;
-		[Tempo.FORMAT.hhmi]: string;
+		[Tempo.FORMAT.hourMinute]: string;
 		[Tempo.FORMAT.yearWeek]: number;
 		[Tempo.FORMAT.yearMonth]: number;
 		[Tempo.FORMAT.yearMonthDay]: number;
@@ -1087,22 +1087,22 @@ export namespace Tempo {
 	}
 
 	export interface TypeFmt {
-		display: string;
-		dayDate: string;
-		dayTime: string;
-		dayFull: string;
-		dayStamp: string;
-		logStamp: number;
-		sortTime: string;
-		monthDay: string;
-		monthTime: string;
-		hhmi: string;
-		yearWeek: number;
-		yearMonth: number;
-		yearMonthDay: number;
-		yearQuarter: string;
-		date: string;
-		time: string;
+		/** ddd, dd mmm yyyy */																	display: string;
+		/** ddd, yyyy-mmm-dd */																	dayDate: string;
+		/** ddd, yyyy-mmm-dd hh:mi */														dayTime: string;
+		/** ddd, yyyy-mmm-dd hh:mi:ss */												dayFull: string;
+		/** ddd, yyyy-mmm-dd hh:mi:ss.ff */											dayStamp: string;
+		/** hhmiss.ff */																				logStamp: number;
+		/** yyyy-mm-dd hh:mi:ss */															sortTime: string;
+		/** ddd-mm */																						monthDay: string;
+		/** yyyy-mmm-dd hh:mi */																monthTime: string;
+		/** hh:mi */																						hourMinute: string;
+		/** yyyyww */																						yearWeek: number;
+		/** yyyymm */																						yearMonth: number;
+		/** yyyymmdd */																					yearMonthDay: number;
+		/** yyyyQqtr */																					yearQuarter: string;
+		/** yyyy-mm-dd */																				date: string;
+		/** hh:mi:ss */																					time: string;
 	}
 
 	export type Duration = Temporal.DurationLike & Record<"quarters" | "seasons", number> & Record<"iso", string>
@@ -1136,7 +1136,7 @@ export namespace Tempo {
 		sortTime = 'yyyy-mm-dd hh:mi:ss',												// useful for sorting display-strings
 		monthDay = 'dd-mmm',																		// useful for readable month and day
 		monthTime = 'yyyy-mmm-dd hh:mi',												// useful for dates where dow is not needed
-		hhmi = 'hh:mi',																					// 24-hour format
+		hourMinute = 'hh:mi',																		// 24-hour format
 		yearWeek = 'yyyyww',
 		yearMonth = 'yyyymm',
 		yearMonthDay = 'yyyymmdd',
