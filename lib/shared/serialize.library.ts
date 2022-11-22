@@ -80,7 +80,7 @@ const oneKey = (type: Types, val: string) => `{"${type}": ${val}}`;
 /**
  * For items which are not currently serializable (Undefined, BigInt, Set, Map, etc.)  
  * this creates a stringified, single-key Object to represent the value; for example  "{ 'BigInt': 123 }"  
- * I would have preferred to use something more robust than strings for these keys  (perhaps a Symbol?),  
+ * I would have preferred to use something more robust than strings for the keys  (perhaps a Symbol?),  
  * as this single-key Object is open to abuse.  But the risk is acceptable within the scope of small projects.  
  * 
  * Drawbacks:  
@@ -95,7 +95,7 @@ const oneKey = (type: Types, val: string) => `{"${type}": ${val}}`;
 export const stringify = (obj: any) => stringize(obj, false);
 
 /**
- * internal function to process user-requests (to hide second parameter)  
+ * internal function to process stringify-requests (and hide second parameter)  
  * where first argument is the object to stringify, and  
  * the second argument is a boolean to indicate if function is being called recursively
  */
@@ -115,13 +115,13 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 				? JSON.stringify(encode(arg.value))									// encode string for safe-storage
 				: encode(arg.value);																// dont JSON.stringify a top-level string
 
-		case 'Number':
 		case 'Null':
+		case 'Number':
 		case 'Boolean':
 			return JSON.stringify(arg.value);											// JSON.stringify will correctly handle these
 
-		case 'Undefined':
 		case 'Void':
+		case 'Undefined':
 			return oneKey('Void', JSON.stringify('void'));				// preserve 'undefined' values
 
 		case 'Object':
@@ -133,9 +133,10 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 
 		case 'Array':
 		case 'Tuple':
-			return `${arg.type === 'Tuple' ? '#' : ''}[` + arg.value
-				.filter(val => isStringable(val))
-				.map(val => stringize(val))
+			return `${arg.type === 'Tuple' ? '#' : ''}[`
+				+ arg.value
+					.filter(val => isStringable(val))
+					.map(val => stringize(val))
 				+ `]`;
 
 		case 'Map':
