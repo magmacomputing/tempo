@@ -331,7 +331,7 @@ export class Tempo {
 	#opts: Tempo.Options;																			// constructor arguments
 	#now: Temporal.Instant;																		// instantiation Temporal Instant, used only during construction
 	#temporal!: Temporal.ZonedDateTime;												// underlying Temporal DateTime
-	/** prebuilt Formats */ fmt = {} as Tempo.TypeFmt;				// prebuilt Formats, for convenience	
+	/** prebuilt formats, for convenience */									fmt = {} as Tempo.TypeFmt;
 
 	// Constructor  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
