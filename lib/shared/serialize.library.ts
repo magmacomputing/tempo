@@ -3,7 +3,7 @@ import { isNumeric } from '@module/shared/number.library';
 import { isType, asType, isEmpty, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types } from '@module/shared/type.library';
 
 // be aware that 'structuredClone' preserves \<undefined> values...  
-// JSON.stringify() does not
+// but JSON.stringify() does not
 
 /** make a deep-copy, using standard browser or JSON functions */
 export function clone<T>(obj: T) {
@@ -46,10 +46,11 @@ function reviver() { return (_key: string, val: any) => decode(val) }
 function encode(val: string) {
 	return encodeURI(val)
 		.replace(/%20/g, ' ')
-		.replace(/%22/g, '\"')
+		.replace(/%22/g, '"')
 		.replace(/%3B/g, ';')
 		.replace(/%3C/g, '<')
 		.replace(/%3D/g, '=')
+		.replace(/%3E/g, '>')
 		.replace(/%5B/g, '[')
 		.replace(/%5D/g, ']')
 		.replace(/%5E/g, '^')
@@ -72,14 +73,14 @@ function decode(val: string) {
 }
 
 /** check type can be stringify'd */
-const isStringable: (val: unknown) => boolean = (val) => !isType(val, 'Function', 'Symbol', 'WeakMap', 'WeakSet', 'WeakRef');
+const isStringable: (val: unknown) => boolean = (val) => !isType(val, 'Function', 'AsyncFunction', 'Symbol', 'WeakMap', 'WeakSet', 'WeakRef');
 
 /** string representation of a single-key Object */
-const oneKey = (type: Types, val: string) => `{"${type}": ${val}}`;
+const oneKey = (type: Types, value: string) => `{"${type}": ${value}}`;
 
 /**
- * For items which are not currently serializable (Undefined, BigInt, Set, Map, etc.)  
- * this creates a stringified, single-key Object to represent the value; for example  "{ 'BigInt': 123 }"  
+ * For items which are not currently serializable via standard JSON.stringify (Undefined, BigInt, Set, Map, etc.)  
+ * this creates a stringified, single-key Object to represent the value; for example  "{ 'BigInt': '123' }"  
  * I would have preferred to use something more robust than strings for the keys  (perhaps a Symbol?),  
  * as this single-key Object is open to abuse.  But the risk is acceptable within the scope of small projects.  
  * 
@@ -90,7 +91,7 @@ const oneKey = (type: Types, val: string) => `{"${type}": ${val}}`;
 
 /**
  * serialize Objects for string-safe stashing in WebStorage, Cache, etc  
- * uses JSON.stringify where available, else returns stringified single-key Object {[type]: value}  
+ * uses JSON.stringify where available, else returns stringified single-key Object "{[type]: value}"  
  */
 export const stringify = (obj: any) => stringize(obj, false);
 
@@ -122,13 +123,17 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 
 		case 'Void':
 		case 'Undefined':
-			return oneKey('Void', JSON.stringify('void'));				// preserve 'undefined' values
+			return oneKey(arg.type, JSON.stringify('void'));			// preserve 'undefined' values
+
+		case 'BigInt':
+			return oneKey(arg.type, arg.value.toString());				// even though BigInt has a toString method, it is not supported in JSON.stringify
 
 		case 'Object':
 		case 'Record':
-			return `${arg.type === 'Record' ? '#' : ''}{` + Object.entries(arg.value)
-				.filter(([, val]) => isStringable(val))
-				.map(([key, val]) => '"' + key + '":' + stringize(val))
+			return `${arg.type === 'Record' ? '#' : ''}{`
+				+ Object.entries(arg.value)
+					.filter(([, val]) => isStringable(val))
+					.map(([key, val]) => '"' + key + '":' + stringize(val))
 				+ `}`;
 
 		case 'Array':
@@ -160,7 +165,7 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 		default:
 			switch (true) {
 				case !isStringable(arg.value):
-					return void 0 as unknown as string;								// Object is not stringable
+					return void 0 as unknown as string;								// Object is not stringify-able
 
 				case isFunction(arg.value.valueOf):									// Object has its own valueOf method
 					return oneKey(arg.type, JSON.stringify(arg.value.valueOf()));
@@ -177,14 +182,13 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 	}
 }
 
-/** rebuild an Object from its serialized representation */
+/** rebuild an Object from its stringified representation */
 export function objectify<T extends any>(str: any, sentinel?: Function): T {
 	if (!isString(str))
 		return str as T;																				// skip parsing
 
 	try {
 		const parse = JSON.parse(str, reviver()) as T;					// catch if cannot parse
-		// const parse = JSON.parse(str, (_key, val) => decode(val)) as T;		// catch if cannot parse
 
 		switch (true) {
 			case str.startsWith('{') && str.endsWith('}'):				// looks like Object
@@ -199,51 +203,6 @@ export function objectify<T extends any>(str: any, sentinel?: Function): T {
 	} catch (error) {
 		// console.warn(`objectify.parse: not a JSON string -> ${str}`);
 		return str as T;
-	}
-}
-
-/** Rebuild a single-key Object (that represents a item not currently serializable) */
-function typeify(json: unknown, sentinel?: Function) {
-	if (!isObject(json))
-		return json;																						// only JSON Objects
-
-	const entries = Object.entries(json) as [Types, any][];
-	if (entries.length !== 1)																	// only single-key Objects
-		return json;
-
-	const [type, value] = entries[0];
-	switch (type) {
-		case 'String':
-		case 'Boolean':
-		case 'Object':
-		case 'Array':
-			return value;
-
-		case 'Number':
-			return Number(value);
-		case 'BigInt':
-			return BigInt(value);
-		case 'Undefined':
-		case 'Void':
-			return sentinel?.();																	// run Sentinel function
-		case 'Date':
-			return new Date(value);
-		case 'RegExp':
-			return new RegExp(value.source, value.flags);
-		case 'Map':
-			return new Map(value);
-		case 'Set':
-			return new Set(value);
-		case 'Record':
-		// return Record(segment) ;															// TODO
-		case 'Tuple':
-		// return Tuple.from(segment) ;													// TODO
-
-		case 'Tempo':
-			return new Tempo(value);
-
-		default:
-			return json;																					// return JSON Object
 	}
 }
 
@@ -274,4 +233,51 @@ function traverse(obj: any, sentinel?: Function): any {
 	}
 
 	return obj;
+}
+
+/** Rebuild an Object from its single-key representation */
+function typeify(json: unknown, sentinel?: Function) {
+	if (!isObject(json))
+		return json;																						// only JSON Objects
+
+	const entries = Object.entries(json) as [Types, any][];
+	if (entries.length !== 1)																	// only single-key Objects
+		return json;
+
+	const [type, value] = entries[0];
+	switch (type) {
+		case 'String':
+		case 'Boolean':
+		case 'Object':
+		case 'Array':
+			return value;
+
+		case 'Number':
+			return Number(value);
+		case 'BigInt':
+			return BigInt(value);
+		case 'Null':
+			return null;
+		case 'Undefined':
+		case 'Void':
+			return sentinel?.();																	// run Sentinel function
+		case 'Date':
+			return new Date(value);
+		case 'RegExp':
+			return new RegExp(value.source, value.flags);
+		case 'Map':
+			return new Map(value);
+		case 'Set':
+			return new Set(value);
+		case 'Record':
+		// return Record(segment) ;															// TODO
+		case 'Tuple':
+		// return Tuple.from(segment) ;													// TODO
+
+		case 'Tempo':
+			return new Tempo(value);
+
+		default:
+			return json;																					// return JSON Object
+	}
 }
