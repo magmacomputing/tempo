@@ -1,5 +1,6 @@
 import { isNumeric } from '@module/shared/number.library';
-import { isVoid, isString, isObject, assertCondition, assertString, nullToValue } from '@module/shared/type.library';
+import { stringify } from '@module/shared/serialize.library';
+import { isString, isObject, assertCondition, assertString, nullToValue } from '@module/shared/type.library';
 
 // General <string> functions
 
@@ -75,7 +76,7 @@ export const makeTemplate = (templateString: Object) =>
 	(templateData: Object) =>
 		new Function(`{${Object.keys(templateData).join(',')}}`, 'return `' + templateString + '`')(templateData);
 
-export const asString = (str?: Object) => isVoid(str) ? '' : isString(str) ? str : JSON.stringify(str);
+export const asString = (str?: Object) => stringify(str);//isNullish(str) ? '' : isString(str) ? str : JSON.stringify(str);
 export const toLower = (str: Object) => isString(str) ? asString(str).toLowerCase().trim() : str;
 export const toUpper = (str: Object) => isString(str) ? asString(str).toUpperCase().trim() : str;
 

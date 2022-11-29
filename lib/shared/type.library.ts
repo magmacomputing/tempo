@@ -61,10 +61,10 @@ export const isRegExp = (obj?: unknown): obj is RegExp => isType(obj, 'RegExp');
 export const isRecord = (obj?: unknown): obj is Record<any, any> => isType(obj, 'Record');
 export const isTuple = <T>(obj?: unknown): obj is Array<T> => isType(obj, 'Tuple');
 
-export const isVoid = <T>(obj: T | void): obj is void => isType<undefined | null>(obj, 'Null', 'Undefined', 'Void');
-export const isUndefined = (obj?: unknown): obj is undefined => isType<undefined>(obj, 'Undefined');
 export const isNull = (obj?: unknown): obj is null => isType(obj, 'Null');
-export const isDefined = <T>(obj: T): obj is NonNullable<T> => !isVoid(obj);
+export const isNullish = (obj: {} | Nullish): obj is Nullish => isType<undefined | null>(obj, 'Null', 'Undefined', 'Void');
+export const isUndefined = (obj?: unknown): obj is undefined => isType<undefined>(obj, 'Undefined');
+export const isDefined = <T>(obj: T): obj is NonNullable<T> => !isNullish(obj);
 
 export const isClass = (obj?: unknown): obj is Function => isType(obj, 'Class');
 export const isFunction = (obj?: unknown): obj is Function => isType(obj, 'Function', 'AsyncFunction');
@@ -80,7 +80,7 @@ export const nullToValue = <T, R>(obj: T, value: R) => obj ?? value;
 
 /** object has no values */
 export const isEmpty = <T>(obj?: T) => false
-	|| isVoid(obj)
+	|| isNullish(obj)
 	|| (isObject(obj) && Object.keys(obj).length === 0)
 	|| (isString(obj) && obj.trim().length === 0)
 	|| (isArray(obj) && obj.length === 0)
@@ -103,6 +103,8 @@ export type TValues<T> = TValue<T> | Array<TValue<T>> | Extract<T, undefined>;
 /** cast <T | T[]> as T[] */
 export type TArray<T> = Array<TValue<T>>;
 
+/** bottom values */
+export type Nullish = null | undefined | void;
 export type TPlural<T extends string> = `${T}s`;
 export type ValueOf<T> = T[keyof T];
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
@@ -160,7 +162,7 @@ export type TypeValue<T> =
 	{ type: 'Object', value: Extract<T, Record<any, any>> } |
 	{ type: 'Array', value: Array<T> } |
 	{ type: 'ArrayLike', value: ArrayLike<T> } |
-	{ type: 'Undefined', value: undefined} |
+	{ type: 'Undefined', value: undefined } |
 	{ type: 'Null', value: null } |
 	{ type: 'Void', value: void } |
 	{ type: 'Date', value: Date } |
