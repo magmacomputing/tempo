@@ -2,6 +2,8 @@ import { asArray, keyedBy, sortBy, type SortBy } from '@module/shared/array.libr
 import { toProperCase } from '@module/shared/string.library';
 
 // Prototype extensions
+// Remember to define any imports as a Function declaration (not a function expression)
+// so that they are 'hoisted' prior to extending a prototype
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // extend String prototype

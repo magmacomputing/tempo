@@ -48,8 +48,8 @@ export interface SortBy {
 	default?: any;
 }
 /** return a function that will apply a series of sort-keys */
-export const sortBy = <T>(...keys: (string | SortBy)[] | [arg: (string | SortBy)[]]) => {
-	const sortOptions = keys
+export function sortBy<T>(...keys: (string | SortBy)[]) {
+	const sortOptions = keys																	// coerce string => SortBy
 		.flat()																									// flatten Array-of-Array
 		.map(key => isString(key) ? { field: key } : key)				// build Array of sort-options
 
@@ -57,7 +57,7 @@ export const sortBy = <T>(...keys: (string | SortBy)[] | [arg: (string | SortBy)
 		let result = 0;
 
 		sortOptions.forEach(key => {
-			if (result === 0) {																		// stop looking if result !== 0
+			if (result === 0) {																		// no need to look further if result !== 0
 				const dir = key.dir === 'desc' ? -1 : 1;
 				const valueA = getPath<any>(a, key.field, nullToValue(key.default, 0), key.index);
 				const valueB = getPath<any>(b, key.field, nullToValue(key.default, 0), key.index);

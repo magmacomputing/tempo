@@ -1,14 +1,17 @@
 import { isNumeric } from '@module/shared/number.library';
 import { stringify } from '@module/shared/serialize.library';
-import { isString, isObject, assertCondition, assertString, nullToValue } from '@module/shared/type.library';
+import { isString, isObject, isNullish, assertCondition, assertString, nullToValue } from '@module/shared/type.library';
 
 // General <string> functions
 
-export const toProperCase = <T extends string>(...str: T[]) =>
-	str
+// This needs to be a Function declaration so that it is hoisted
+// (because it is referenced in prototype.library)
+export function toProperCase<T extends string>(...str: T[]) {
+	return str
 		.map(text => text.replace(/\w\S*/g,
 			word => word.charAt(0).toUpperCase() + word.substring(1).toLowerCase()))
 		.join(' ') as T
+}
 
 export const toCamelCase = <T extends string>(sentence: T) => {
 	let [word, ...rest] = sentence.match(/[A-Z\xC0-\xD6\xD8-\xDE]?[a-z\xDF-\xF6\xF8-\xFF]+|[A-Z\xC0-\xD6\xD8-\xDE]+(?![a-z\xDF-\xF6\xF8-\xFF])|\d+/g) ?? [''];
@@ -32,16 +35,16 @@ export const randomString = (len = 36) => {
 	return str.substring(0, len);
 }
 
+const regexp = /\$\{(\d)\}/g;																// pattern to find "${digit}" parameter markers
 type Sprintf = {
 	(fmt: string, ...msg: any[]): string;											// either a format-string, followed by arguments
 	(...msg: any[]): string;																	// or just an array of arguments
-};
+}
 /**
  * use sprintf-style formatting on a string.  
  */
-export const sprintf: Sprintf = (fmt: any, ...msg: any[]) => {
+export const sprintf: Sprintf = (fmt: {}, ...msg: any[]) => {
 	let sfmt = asString(fmt);																	// avoid mutate fmt
-	let regexp = /\$\{(\d)\}/g;																// pattern to find "${digit}" parameter markers
 
 	if (!isString(fmt)) {																			// might be an Object
 		msg.unshift(JSON.stringify(fmt));												// push to start of msg[]
@@ -76,7 +79,7 @@ export const makeTemplate = (templateString: Object) =>
 	(templateData: Object) =>
 		new Function(`{${Object.keys(templateData).join(',')}}`, 'return `' + templateString + '`')(templateData);
 
-export const asString = (str?: Object) => stringify(str);//isNullish(str) ? '' : isString(str) ? str : JSON.stringify(str);
+export const asString = (str?: Object) => isNullish(str) ? '' : stringify(str); //isString(str) ? str : JSON.stringify(str);
 export const toLower = (str: Object) => isString(str) ? asString(str).toLowerCase().trim() : str;
 export const toUpper = (str: Object) => isString(str) ? asString(str).toUpperCase().trim() : str;
 

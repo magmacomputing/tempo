@@ -1,6 +1,6 @@
 import { asArray } from '@module/shared/array.library';
 import { enumKeys } from '@module/shared/enum.library';
-import { clone, objectify } from '@module/shared/serialize.library';
+import { clone, stringify, objectify } from '@module/shared/serialize.library';
 import { getContext, CONTEXT } from '@module/shared/utility.library';
 import { getAccessors, omit } from '@module/shared/object.library';
 import { asString, pad, toProperCase, } from '@module/shared/string.library';
@@ -11,6 +11,7 @@ import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isArray, isObj
 
 /** TODO: THIS IMPORT MUST BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
 import { Temporal } from '@js-temporal/polyfill';
+import { Pledge } from './pledge.class';
 
 // shortcut functions to common Tempo properties / methods.
 /** new Tempo().ts			*/ export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
@@ -33,6 +34,8 @@ import { Temporal } from '@js-temporal/polyfill';
  */
 export class Tempo {
 	// Static variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	static #ready = new Pledge<boolean>('Tempo');							// wait for static-blocks to settle
+	static ready = Tempo.#ready.promise;											// 
 
 	// start with defaults for all Tempo instances
 	static #Locales = [																				// Array of Locales that prefer 'mm-dd-yy' date order
@@ -69,7 +72,7 @@ export class Tempo {
 		Tempo.units['tzd'] = new RegExp('(?<tzd>[+-]' + Tempo.units.hm.source + '|Z)');
 	}
 
-	// Static methods ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Static private methods ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/** swap parsing-order of patterns (to suit different locales) */
 	static #swap(tz: string, ...arrs: { key: string }[][]) {
@@ -138,23 +141,40 @@ export class Tempo {
 	/** properCase first letters of day/month */
 	static #stringPrefix = (str: string, len = 3) => toProperCase(str.substring(0, len));
 
-	/** convert array of <string | RegExp> to a single RegExp */
-	static regexp = (...reg: (keyof typeof Tempo.units | RegExp)[]) => {
-		const regexes = reg.map(pat => {
-			if (isRegExp(pat))																		// already a RegExp
-				return pat;
+	/** get first Canonical name of a supplied locale */
+	static #locale = (locale: string) => {
+		let language: string | undefined;
 
-			if (/^\/.*\/$/.test(pat))															// a string that looks like a RegExp  ("/.../")
-				return new RegExp(pat.slice(1, -1));
+		try {																										// lookup locale
+			language = Intl.getCanonicalLocales?.(locale.replace('_', '-'))[0];
+		} catch (error) { }																			// catch unknown locale
 
-			if (isUndefined(Tempo.units[pat]))										// unknown unit, cannot proceed
-				throw new Error(`Cannot find "${pat}" in Tempo.units`);
-
-			return Tempo.units[pat]																// lookup prebuilt pattern
-		})
-
-		return new RegExp('^' + regexes.map(regex => regex.source).join('') + '$', 'i')
+		return language ??
+			navigator.languages[0] ??															// fallback to current first navigator.languages[]
+			navigator.language ??																	// else navigator.language
+			'en-US'																								// else reasonable default
 	}
+
+	/** try to infer hemisphere, using the timezone's daylight-savings setting */
+	static #dst = (tzone: string) => {
+		const yy = Temporal.Now.plainDateISO().year;						// current year
+		const tz = new Temporal.TimeZone(tzone);
+		const jan = tz.getOffsetNanosecondsFor(Temporal.Instant.from(`${yy}-01-01Z`));
+		const jun = tz.getOffsetNanosecondsFor(Temporal.Instant.from(`${yy}-06-01Z`));
+		const dst = jan - jun;																	// timezone offset difference between Jan and Jun
+
+		switch (true) {
+			case dst < 0:
+				return Tempo.COMPASS.North;
+			case dst > 0:
+				return Tempo.COMPASS.South;
+			case dst === 0:																				// timeZone does not observe DST
+			default:
+				return void 0;
+		}
+	}
+
+	// Static public methods ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/**
 	 * this allows Tempo to set a specific default configuration for subsequent 'new Tempo()' to inherit.  
@@ -216,7 +236,6 @@ export class Tempo {
 
 		if (isDefined(store)) {																	// found a config in storage
 			const config = objectify(store) as Tempo.ConfigFile;	// config can override #default
-			config.locale &&= config.locale.replace('_', '-');		// standardize locale string
 
 			Object.assign(Tempo.#default, omit(config, 'pattern'));// override defaults from storage
 			(config.pattern ?? [])
@@ -243,26 +262,22 @@ export class Tempo {
 			console.log('Tempo: ', omit(Tempo.#default, 'pattern'));
 	}
 
-	/** get first Canonical name of a supplied locale */
-	static #locale = (locale: string) => Intl.getCanonicalLocales(locale.replace('_', '-'))[0];
+	/** convert array of <string | RegExp> to a single RegExp */
+	static regexp = (...reg: (keyof typeof Tempo.units | RegExp)[]) => {
+		const regexes = reg.map(pat => {
+			if (isRegExp(pat))																		// already a RegExp
+				return pat;
 
-	/** try to infer hemisphere, using the timezone's daylight-savings setting */
-	static #dst = (tzone: string) => {
-		const yy = Temporal.Now.plainDateISO().year;						// current year
-		const tz = new Temporal.TimeZone(tzone);
-		const jan = tz.getOffsetNanosecondsFor(Temporal.Instant.from(`${yy}-01-01Z`));
-		const jun = tz.getOffsetNanosecondsFor(Temporal.Instant.from(`${yy}-06-01Z`));
-		const dst = jan - jun;																	// timezone offset difference between Jan and Jun
+			if (/^\/.*\/$/.test(pat))															// a string that looks like a RegExp  ("/.../")
+				return new RegExp(pat.slice(1, -1));
 
-		switch (true) {
-			case dst < 0:
-				return Tempo.COMPASS.North;
-			case dst > 0:
-				return Tempo.COMPASS.South;
-			case dst === 0:																				// timeZone does not observe DST
-			default:
-				return void 0;
-		}
+			if (isUndefined(Tempo.units[pat]))										// unknown unit, cannot proceed
+				throw new Error(`Cannot find user-pattern "${pat}" in Tempo.units`);
+
+			return Tempo.units[pat]																// lookup prebuilt pattern
+		})
+
+		return new RegExp('^' + regexes.map(regex => regex.source).join('') + '$', 'i')
 	}
 
 	/**
@@ -273,6 +288,26 @@ export class Tempo {
 	static compare = (reverse: false) => {
 		const direction = reverse ? -1 : 1;
 		return (a: Tempo, b: Tempo) => Number((a.epoch > b.epoch) || -(a.epoch < b.epoch)) * direction;
+	}
+
+	/** write a default configuration into persistent storage */
+	static store(config?: Tempo.ConfigFile) {
+		const context = getContext();														// Javascript runtime environment
+		const stash = stringify(config ?? omit(Tempo.#default, 'mmddyy', 'pattern'));
+
+		switch (context.type) {
+			case CONTEXT.Browser:
+				context.global.localStorage.setItem(Tempo.#configKey, stash);
+				break;
+
+			case CONTEXT.NodeJS:
+				context.global.process.env[Tempo.#configKey] = stash;
+				break;
+
+			case CONTEXT.GoogleAppsScript:
+				context.global.PropertiesService?.getUserProperties().setProperty(Tempo.#configKey, stash);
+				break;
+		}
 	}
 
 	/** static method to create a new Tempo */
@@ -300,6 +335,10 @@ export class Tempo {
 	/** array of regex patterns used when parsing Tempo.DateTime argument */
 	static get patterns() {
 		return Tempo.#pattern;
+	}
+
+	static {
+		Tempo.#ready.resolve(true);															// static blocks complete
 	}
 
 	// Instance Symbols    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1196,4 +1235,5 @@ export namespace Tempo {
 /**
  * kick-start Tempo configuration with default config
  */
-Tempo.init();
+Tempo.ready
+	.then(_ => Tempo.init())
