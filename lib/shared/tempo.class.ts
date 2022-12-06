@@ -17,6 +17,7 @@ import { Pledge } from './pledge.class';
 /** new Tempo().ts			*/ export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
 /** new Tempo()					*/ export const getTempo = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
 /** new Tempo().format()*/ export const fmtTempo = <K extends keyof Tempo.Formats>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).format(fmt);
+/** isTempo(arg)				*/ export const isTempo = (tempo?: any) => isType(tempo, 'Tempo');
 
 /**
  * Wrapper Class around Temporal API  
@@ -35,7 +36,6 @@ import { Pledge } from './pledge.class';
 export class Tempo {
 	// Static variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	static #ready = new Pledge<boolean>('Tempo');							// wait for static-blocks to settle
-	static ready = Tempo.#ready.promise;											// 
 
 	// start with defaults for all Tempo instances
 	static #Locales = [																				// Array of Locales that prefer 'mm-dd-yy' date order
@@ -281,13 +281,24 @@ export class Tempo {
 	}
 
 	/**
-	 * static method to allow sorting array of Tempo's  
-	 * usage: [tempo1, tempo2, tempo3].sort(Tempo.compare)  
-	 * usage: [tempo1, tempo2, tempo3].sort(Tempo.compare(true))	for reverse sort
+	 * static method to allow compare of Tempo's.  
+	 * tempo2 defaults to current Instant.
+	 * ````
+	 * const diff = Tempo.compare(tempo1, tempo2);
+	 * 		-1 if tempo1 comes before tempo2  
+	 * 		 0 if tempo1 and tempo2 represent the same time  
+	 * 		 1 if tempo1 comes after tempo2 
+	 * ```` 
+	 * 
+	 * can also be used to sort an array of Tempo's.  
+	 * returns a new array
+	 * ````
+	 * const arr = [tempo1, tempo2, tempo3].sort(Tempo.compare)  
+	 * ````
 	 */
-	static compare = (reverse: false) => {
-		const direction = reverse ? -1 : 1;
-		return (a: Tempo, b: Tempo) => Number((a.epoch > b.epoch) || -(a.epoch < b.epoch)) * direction;
+	static compare = (tempo1: Tempo.DateTime, tempo2?: Tempo.DateTime) => {
+		const one = new Tempo(tempo1), two = new Tempo(tempo2);
+		Number((one.epoch > two.epoch) || -(one.epoch < two.epoch))
 	}
 
 	/** write a default configuration into persistent storage */
@@ -337,8 +348,12 @@ export class Tempo {
 		return Tempo.#pattern;
 	}
 
+	static get ready() {
+		return Tempo.#ready.promise;														// Promise when static blocks are complete
+	}
+
 	static {
-		Tempo.#ready.resolve(true);															// static blocks complete
+		Tempo.#ready.resolve(true);															// static blocks are now complete
 	}
 
 	// Instance Symbols    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1216,7 +1231,7 @@ export namespace Tempo {
 
 	/** some useful Dates */
 	export const DATE = {
-		epoch: 0,																								// TODO: is this needed
+		epoch: 0,																								// TODO: is this needed ?
 		maxDate: new Date('9999-12-31T23:59:59'),
 		minDate: new Date('1000-01-01T00:00:00'),
 		maxStamp: Temporal.Instant.from('9999-12-31+00:00').epochSeconds,
