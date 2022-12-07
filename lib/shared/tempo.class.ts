@@ -1,5 +1,6 @@
 import { asArray } from '@module/shared/array.library';
 import { enumKeys } from '@module/shared/enum.library';
+import { Pledge } from '@module/shared/pledge.class';
 import { clone, stringify, objectify } from '@module/shared/serialize.library';
 import { getContext, CONTEXT } from '@module/shared/utility.library';
 import { getAccessors, omit } from '@module/shared/object.library';
@@ -11,13 +12,13 @@ import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isArray, isObj
 
 /** TODO: THIS IMPORT MUST BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
 import { Temporal } from '@js-temporal/polyfill';
-import { Pledge } from './pledge.class';
 
 // shortcut functions to common Tempo properties / methods.
+/** isTempo(arg)				*/ export const isTempo = (tempo?: any) => isType<Tempo>(tempo, 'Tempo');
 /** new Tempo().ts			*/ export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
 /** new Tempo()					*/ export const getTempo = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
-/** new Tempo().format()*/ export const fmtTempo = <K extends keyof Tempo.Formats>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).format(fmt);
-/** isTempo(arg)				*/ export const isTempo = (tempo?: any) => isType(tempo, 'Tempo');
+/** new Tempo().format()*/ export const fmtTempo = <K extends keyof Tempo.Formats>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) =>
+	new Tempo(tempo, opts).format(fmt);
 
 /**
  * Wrapper Class around Temporal API  
@@ -282,7 +283,7 @@ export class Tempo {
 
 	/**
 	 * static method to allow compare of Tempo's.  
-	 * tempo2 defaults to current Instant.
+	 * (tempo2 defaults to current Instant).
 	 * ````
 	 * const diff = Tempo.compare(tempo1, tempo2);
 	 * 		-1 if tempo1 comes before tempo2  
@@ -298,7 +299,7 @@ export class Tempo {
 	 */
 	static compare = (tempo1: Tempo.DateTime, tempo2?: Tempo.DateTime) => {
 		const one = new Tempo(tempo1), two = new Tempo(tempo2);
-		Number((one.epoch > two.epoch) || -(one.epoch < two.epoch))
+		return Number((one.epoch > two.epoch) || -(one.epoch < two.epoch)) + 0;
 	}
 
 	/** write a default configuration into persistent storage */
@@ -385,7 +386,7 @@ export class Tempo {
 	#opts: Tempo.Options;																			// constructor arguments
 	#now: Temporal.Instant;																		// instantiation Temporal Instant, used only during construction
 	#temporal!: Temporal.ZonedDateTime;												// underlying Temporal DateTime
-	/** prebuilt formats, for convenience */									fmt = {} as Tempo.TypeFmt;
+	/** prebuilt formats object, for convenience */						fmt = {} as Tempo.TypeFmt;
 
 	// Constructor  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -394,7 +395,8 @@ export class Tempo {
 	constructor(tempo?: Tempo.DateTime | Tempo.Options, opts: Tempo.Options = {}) {
 		if (isObject(tempo)) {
 			Object.assign(opts, tempo);														// shift the 1st argument to the 2nd
-			tempo = opts.value;																		// and reset the 1st argument
+			tempo = opts.value;																		// and reset the 1st argument (else undefined)
+			delete opts.value;																		// no longer needed
 		}
 		this.#now = Temporal.Now.instant();											// stash current Instant
 		this.#value = tempo;																		// stash original value
@@ -410,8 +412,17 @@ export class Tempo {
 			month: clone(Tempo.#months),													// clone the months
 			pattern: [],																					// additional instance-patterns
 		}
+		if (opts.debug) {
+			Object
+				.keys(opts)																					// get user-supplied options
+				.filter(key => !['fiscal'].includes(key))						// except 'fiscal' which is used solely to derive #config.months
+				.forEach(key => {
+					if (!(key in this.#config))												// report warning if unrecognized key
+						console.warn(`config: unrecognized option '${key}'`);
+				})
+		}
 
-		/** First thing is to parse the 'Tempo.Options' looking for overrides to Tempo.#defaults */
+		/** First task is to parse the 'Tempo.Options' looking for overrides to Tempo.#defaults */
 		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 		// if a timeZone provided, but no hemisphere.  try to infer hemisphere based on daylight-savings
 		if (this.#config.timeZone.id !== Tempo.#default.timeZone && isUndefined(opts.sphere)) {
@@ -419,7 +430,7 @@ export class Tempo {
 			if (sphere)
 				this.#config.sphere = sphere;
 			if (!opts.locale)
-				this.#config.locale = '';														// reset for retest
+				this.#config.locale = '';														// reset, so we can re-test
 
 			if (this.#config.debug)
 				console.log('timeZone: ', this.#config.timeZone.id);
@@ -432,7 +443,7 @@ export class Tempo {
 				console.log('sphere: ', this.#config.sphere);
 		}
 		// change of Fiscal month, setup Quarter
-		if (opts.fiscal) {																			// change of fiscal-year start month ?
+		if (opts.fiscal) {																			// change of fiscal-year starting month ?
 			const mon = Tempo.#stringPrefix(opts.fiscal) as Tempo.Calendar;
 			const idx = Tempo.MONTH[mon];
 
@@ -1042,13 +1053,13 @@ export namespace Tempo {
 	export type Options = {
 		timeZone?: string,
 		calendar?: string,
-		pattern?: (string | RegExp)[],
 		locale?: string,
-		sphere?: Tempo.Sphere,
-		fiscal?: Tempo.Calendar,
 		pivot?: number,
+		sphere?: Tempo.Sphere,
 		debug?: boolean,
 		catch?: boolean,
+		fiscal?: Tempo.Calendar,
+		pattern?: (string | RegExp)[],
 		value?: string,
 	}
 	export type Mutate = 'start' | 'mid' | 'end'
