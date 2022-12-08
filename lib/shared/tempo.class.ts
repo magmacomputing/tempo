@@ -14,10 +14,10 @@ import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isArray, isObj
 import { Temporal } from '@js-temporal/polyfill';
 
 // shortcut functions to common Tempo properties / methods.
-/** isTempo(arg)				*/ export const isTempo = (tempo?: any) => isType<Tempo>(tempo, 'Tempo');
-/** new Tempo().ts			*/ export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
-/** new Tempo()					*/ export const getTempo = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
-/** new Tempo().format()*/ export const fmtTempo = <K extends Tempo.FormatsKey>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) =>
+export const isTempo = (tempo?: any) => isType<Tempo>(tempo, 'Tempo');
+export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
+export const getTempo = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
+export const fmtTempo = <K extends Tempo.FormatsKey>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) =>
 	new Tempo(tempo, opts).format(fmt);
 
 /**
