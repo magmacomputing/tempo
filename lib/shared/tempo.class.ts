@@ -49,7 +49,7 @@ export class Tempo {
 	static #months = Array.from({ length: 13 }, () => Object.assign({})) as Tempo.Months;	// Array of settings related to a Month
 	static #configKey = '_Tempo_';														// for stash in persistent storage
 
-	/** user will need to know these in order to configure their own patterns (Tempo.units property) */
+	/** user will need to know these in order to configure their own patterns */
 	static readonly units: Record<string, RegExp> = {					// define some components to help interpret input-strings
 		yy: new RegExp(/(?<yy>(18|19|20|21)?\d{2})/),
 		mm: new RegExp(/(?<mm>0?[1-9]|1[012]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/),
