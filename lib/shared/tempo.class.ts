@@ -14,10 +14,10 @@ import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isArray, isObj
 import { Temporal } from '@js-temporal/polyfill';
 
 // shortcut functions to common Tempo properties / methods.
-/** isTempo(arg)				*/ export const isTempo = (tempo?: any) => isType<Tempo>(tempo, 'Tempo');
-/** new Tempo().ts			*/ export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
-/** new Tempo()					*/ export const getTempo = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
-/** new Tempo().format()*/ export const fmtTempo = <K extends Tempo.FormatsKey>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) =>
+export const isTempo = (tempo?: any) => isType<Tempo>(tempo, 'Tempo');
+export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
+export const getTempo = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
+export const fmtTempo = <K extends Tempo.FormatsKey>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) =>
 	new Tempo(tempo, opts).format(fmt);
 
 /**
@@ -49,7 +49,7 @@ export class Tempo {
 	static #months = Array.from({ length: 13 }, () => Object.assign({})) as Tempo.Months;	// Array of settings related to a Month
 	static #configKey = '_Tempo_';														// for stash in persistent storage
 
-	/** user will need to know these in order to configure their own patterns */
+	/** user will need to know these in order to configure their own patterns (Tempo.units property) */
 	static readonly units: Record<string, RegExp> = {					// define some components to help interpret input-strings
 		yy: new RegExp(/(?<yy>(18|19|20|21)?\d{2})/),
 		mm: new RegExp(/(?<mm>0?[1-9]|1[012]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/),
