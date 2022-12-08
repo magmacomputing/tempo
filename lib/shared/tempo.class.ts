@@ -17,7 +17,7 @@ import { Temporal } from '@js-temporal/polyfill';
 /** isTempo(arg)				*/ export const isTempo = (tempo?: any) => isType<Tempo>(tempo, 'Tempo');
 /** new Tempo().ts			*/ export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
 /** new Tempo()					*/ export const getTempo = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
-/** new Tempo().format()*/ export const fmtTempo = <K extends keyof Tempo.Formats>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) =>
+/** new Tempo().format()*/ export const fmtTempo = <K extends Tempo.FormatsKey>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) =>
 	new Tempo(tempo, opts).format(fmt);
 
 /**
@@ -537,7 +537,7 @@ export class Tempo {
 
 	/** calc DateTime duration */															until<U extends Tempo.Until>(until: U) { return this.#until(until) }
 	/** format elapsed time */																since<S extends Tempo.Until>(since: S) { return this.#since(since) }
-	/** apply formatting */																		format<K extends keyof Tempo.Formats>(fmt: K) { return this.#format(fmt) }
+	/** apply formatting */																		format<K extends Tempo.FormatsKey>(fmt: K) { return this.#format(fmt) }
 
 	/** add date/time unit */																	add(mutate: Tempo.Add) { return this.#offset(mutate) }
 	/** offset to start/mid/end of unit */										offset(offset: Tempo.Offset) { return this.#offset(offset) }
@@ -927,7 +927,7 @@ export class Tempo {
 		return new Tempo(zdt as unknown as typeof Temporal);
 	}
 
-	#format = <K extends keyof Tempo.Formats>(fmt: K): Tempo.Formats[K] => {
+	#format = <K extends Tempo.FormatsKey>(fmt: K): Tempo.Formats[K] => {
 		const bailOut = void 0 as unknown as Tempo.Formats[K];
 
 		if (isNull(this.#value))
@@ -1132,13 +1132,12 @@ export namespace Tempo {
 
 	/** pre-configured format strings */
 	export interface Formats {
-		[str: string]: string | number;													// allow for dynamic format-codes
 		[Tempo.FORMAT.display]: string;
 		[Tempo.FORMAT.dayDate]: string;
 		[Tempo.FORMAT.dayTime]: string;
 		[Tempo.FORMAT.dayFull]: string;
 		[Tempo.FORMAT.dayStamp]: string;
-		[Tempo.FORMAT.logStamp]: number;
+		[Tempo.FORMAT.logStamp]: string;
 		[Tempo.FORMAT.sortTime]: string;
 		[Tempo.FORMAT.monthDay]: string;
 		[Tempo.FORMAT.monthTime]: string;
@@ -1149,7 +1148,9 @@ export namespace Tempo {
 		[Tempo.FORMAT.yearQuarter]: string;
 		[Tempo.FORMAT.date]: string;
 		[Tempo.FORMAT.time]: string;
+		[str: string]: string | number;													// allow for dynamic format-codes
 	}
+	export type FormatsKey = keyof Tempo.Formats
 
 	export interface TypeFmt {
 		/** ddd, dd mmm yyyy */																	display: string;
@@ -1157,7 +1158,7 @@ export namespace Tempo {
 		/** ddd, yyyy-mmm-dd hh:mi */														dayTime: string;
 		/** ddd, yyyy-mmm-dd hh:mi:ss */												dayFull: string;
 		/** ddd, yyyy-mmm-dd hh:mi:ss.ff */											dayStamp: string;
-		/** hhmiss.ff */																				logStamp: number;
+		/** hhmiss.ff */																				logStamp: string;
 		/** yyyy-mm-dd hh:mi:ss */															sortTime: string;
 		/** ddd-mm */																						monthDay: string;
 		/** yyyy-mmm-dd hh:mi */																monthTime: string;
