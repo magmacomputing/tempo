@@ -6,7 +6,7 @@ import { getContext, CONTEXT } from '@module/shared/utility.library';
 import { getAccessors, omit } from '@module/shared/object.library';
 import { asString, pad, toProperCase, } from '@module/shared/string.library';
 import { asNumber, isNumeric, split } from '@module/shared/number.library';
-import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isString, isArray, isObject, isRegExp } from '@module/shared/type.library';
+import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isString, isArray, isObject, isRegExp, isNumber } from '@module/shared/type.library';
 
 // import '@module/shared/prototype.library';									// patch prototype
 
@@ -125,7 +125,7 @@ export class Tempo {
 	/** setup fiscal quarters, from a given start month */
 	static #fiscal(quarter: Tempo.Calendar, month: Tempo.Months) {
 		const start = enumKeys(Tempo.MONTH)
-			.findIndex(mon => mon === Tempo.#stringPrefix(quarter));
+			.findIndex(mon => mon === Tempo.#stringPrefix<Tempo.Calendar>(quarter));
 		if (start === -1)
 			return;																								// cannot determine start-Month
 
@@ -140,8 +140,8 @@ export class Tempo {
 		}
 	}
 
-	/** properCase first letters of day/month */
-	static #stringPrefix = (str: string, len = 3) => toProperCase(str.substring(0, len));
+	/** properCase first letters of week-day/calendar-month */
+	static #stringPrefix = <T extends Tempo.Weekday | Tempo.Calendar>(str: string, len = 3) => toProperCase(str.substring(0, len)) as T;
 
 	/** get first Canonical name of a supplied locale */
 	static #locale = (locale: string) => {
@@ -439,27 +439,19 @@ export class Tempo {
 				this.#config.sphere = sphere;
 			if (!opts.locale)
 				this.#config.locale = '';														// reset, so we can re-test
-
-			// if (this.#config.debug)
-			// 	console.log('timeZone: ', this.#config.timeZone.id);
 		}
-		// change of sphere, setup Seasons / Fiscal start-month
+		// change of sphere, setup new Seasons / Fiscal start-month
 		if (this.#config.sphere !== Tempo.#default.sphere) {
 			Tempo.#sphere(this.#config.sphere, this.#config.month);
 			opts.fiscal ??= Tempo.#startFiscal(this.#config.sphere);
-			// if (this.#config.debug)
-			// 	console.log('sphere: ', this.#config.sphere);
 		}
-		// change of Fiscal month, setup Quarter
+		// change of Fiscal month, setup new Quarters
 		if (opts.fiscal) {																			// change of fiscal-year starting month ?
-			const mon = Tempo.#stringPrefix(opts.fiscal) as Tempo.Calendar;
+			const mon = Tempo.#stringPrefix<Tempo.Calendar>(opts.fiscal);
 			const idx = Tempo.MONTH[mon];
 
-			if (this.#config.month[idx].quarter !== 1) {					// supplied fiscal is not Q1 in #config.month
-				// if (this.#config.debug)
-				// 	console.log('fiscal: ', opts.fiscal);
+			if (this.#config.month[idx].quarter !== 1)						// supplied fiscal is not Q1 in #config.month
 				Tempo.#fiscal(mon, this.#config.month);
-			}
 		}
 		// user-specified patterns to use when parsing this instance (might be array-of-array)
 		if (this.#opts.pattern) {
@@ -469,20 +461,17 @@ export class Tempo {
 		}
 		// put user-patterns at the beginning of the parse-array
 		this.#config.pattern.splice(this.#config.pattern.length, 0, ...Tempo.#pattern);
-		// change of Locale, swap pattern parse-order?
+		// change of Locale, swap 'dmy' pattern parse-order?
 		if (this.#config.locale !== Tempo.#default.locale) {
 			const locale = Tempo.#swap(this.#config.timeZone.id, this.#config.pattern);
 
 			if (isEmpty(this.#config.locale))
 				this.#config.locale = locale || Tempo.#default.locale;
 			this.#config.locale = Tempo.#locale(this.#config.locale);
-
-			// if (this.#config.debug)
-			// 	console.log('locale: ', this.#config.locale);
 		}
 
 		if (this.#config.debug)
-			console.log('tempo.config: ', this.config);
+			console.log('tempo.config: ', this.#config);					// show the resolved config options
 
 		/** We now have all the info we need to instantiate a new Tempo                          */
 		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -564,8 +553,9 @@ export class Tempo {
 
 	/** parse DateTime input */
 	#parse(tempo?: Tempo.DateTime) {
-		const today = this.#now.toZonedDateTime({ timeZone: this.#config.timeZone, calendar: this.#config.calendar });
-		const arg = this.#conform(tempo, today);								// if String, Number or BigInt, conform the input against known patterns
+		const today = this.#now																	// cast today to current timeZone, calendar
+			.toZonedDateTime({ timeZone: this.#config.timeZone, calendar: this.#config.calendar });
+		const arg = this.#conform(tempo, today);								// if String or Number, conform the input against known patterns
 		if (this.#config.debug)
 			console.log('tempo.parse: ', arg);
 
@@ -587,10 +577,12 @@ export class Tempo {
 
 			case 'Temporal.PlainDate':
 			case 'Temporal.PlainDateTime':
-				return arg.value.toZonedDateTime({ timeZone: this.#config.timeZone });
+				return arg.value
+					.toZonedDateTime({ timeZone: this.#config.timeZone });
 
 			case 'Temporal.PlainTime':
-				return arg.value.toZonedDateTime({ timeZone: this.#config.timeZone, plainDate: today.toPlainDate() });
+				return arg.value
+					.toZonedDateTime({ timeZone: this.#config.timeZone, plainDate: today.toPlainDate() });
 
 			case 'Temporal.PlainYearMonth':												// assume current day, else end-of-month
 				return arg.value
@@ -603,7 +595,8 @@ export class Tempo {
 					.toZonedDateTime(this.#config.timeZone);
 
 			case 'Temporal.Instant':
-				return arg.value.toZonedDateTime({ timeZone: this.#config.timeZone, calendar: this.#config.calendar });
+				return arg.value
+					.toZonedDateTime({ timeZone: this.#config.timeZone, calendar: this.#config.calendar });
 
 			case 'Tempo':
 				return arg.value.toTemporal();											// clone current Tempo
@@ -611,8 +604,8 @@ export class Tempo {
 			case 'Date':
 				return new Temporal.ZonedDateTime(BigInt(arg.value.getTime() * 1_000_000), this.#config.timeZone, this.#config.calendar);
 
-			case 'Number':
-			case 'BigInt':
+			case 'Number':																				// Number which didn't match a Tempo.pattern
+			case 'BigInt':																				// BigInt is not checked against a Tempo.pattern
 				const [prefix = '', suffix = ''] = arg.value.toString().split('.');
 				const nano = BigInt(suffix.substring(0, 9).padEnd(9, '0'));
 				const value = BigInt(prefix);
@@ -640,25 +633,27 @@ export class Tempo {
 		}
 	}
 
-	/** conform input against known patterns */
+	/** conform 'string | number' input against known patterns */
 	#conform(tempo: Tempo.DateTime | undefined, today: Temporal.ZonedDateTime) {
 		const arg = asType(tempo, { type: 'Tempo', class: Tempo });
 
-		if (!isType<string | number | bigint>(arg.value, 'String', 'Number', 'BigInt'))
-			return arg;																						// exit if type is not string | number | bigint
-
-		if (isString(arg.value) && /^[0-9]+n$/.test(arg.value))	// if string representation of BigInt literal
-			Object.assign(arg, { type: 'BigInt', value: BigInt(arg.value.slice(0, -1)) });
+		if (!isType<string | number>(arg.value, 'String', 'Number'))
+			return arg;																						// only conform string | number against known patterns (not bigint, etc)
 
 		const value = arg.value
-			.toString()																						// easier to work with strings
+			.toString()																						// easier to work with value as a string
 			.trimAll(/\(|\)|\t/gi)																// remove \( \) \t \s
 
-		// Attempt to match the value against each one of the regular expression patterns until a match is found
-		for (const { key, reg } of this.#config.pattern) {
+		if (isString(arg.value) && /^[0-9]+n$/.test(value))			// if string representation of BigInt literal
+			Object.assign(arg, { type: 'BigInt', value: BigInt(value.slice(0, -1)) });
+
+		if (isNumber(arg.value) && value.length <= 7)         	// cannot reliably interpret input number.  might be 'seconds', might be 'yymmdd', might be 'dmmyyyy'
+			throw new Error('Cannot safely parse number with less than 8-digits: use string');
+
+		for (const { key, reg } of this.#config.pattern) {			// test against regular-expression patterns until a match is found
 			const pat = value.match(reg);													// return any matches
 			if (isNull(pat) || isUndefined(pat.groups))						// if regexp named-groups not found
-				continue;																						// skip this iteration
+				continue;																						// 	skip this iteration
 
 			/**
 			 * If just day-of-week specified (with optional 'mod' and 'nbr'), calc date offset
@@ -671,7 +666,7 @@ export class Tempo {
 			 */
 			if (Object.keys(pat.groups).every(el => ['dow', 'mod', 'nbr'].includes(el)) && isDefined(pat.groups['dow'])) {
 				const { dow, mod, nbr } = pat.groups;
-				const weekday = Tempo.#stringPrefix(dow);
+				const weekday = Tempo.#stringPrefix<Tempo.Weekday>(dow);
 				const offset = enumKeys(Tempo.WEEKDAY).findIndex(el => el === weekday);
 				const adj = today.daysInWeek * Number(isEmpty(nbr) ? '1' : nbr);
 				let days = offset - today.dayOfWeek;								// number of days to offset from today
@@ -717,7 +712,7 @@ export class Tempo {
 			 * eg.	May				-> 05
 			 */
 			if (isDefined(pat.groups['mm']) && !isNumeric(pat.groups['mm'])) {
-				const mm = Tempo.#stringPrefix(pat.groups['mm']);
+				const mm = Tempo.#stringPrefix<Tempo.Calendar>(pat.groups['mm']);
 
 				pat.groups['mm'] = enumKeys(Tempo.MONTH).findIndex(el => el === mm).toString();
 			}
@@ -779,7 +774,7 @@ export class Tempo {
 					`[u-ca=${id.calendar}]`														// append calendar
 			})
 
-			if (this.#config?.debug)
+			if (this.#config?.debug)															// show the pattern that was matched, and the conformed value
 				console.log('tempo.match: "%s", ', key, JSON.stringify(pat.groups));
 			break;																								// stop checking patterns
 		}
@@ -1191,6 +1186,7 @@ export namespace Tempo {
 	export enum MONTHS { Every, January, February, March, April, May, June, July, August, September, October, November, December };
 	export enum DURATION { year, quarter, month, week, day, hour, minute, second };
 	export enum DURATIONS { years, quarters, months, weeks, days, hours, minutes, seconds };
+	export type Weekday = Exclude<keyof typeof Tempo.WEEKDAY, 'All'>;
 	export type Calendar = Exclude<keyof typeof Tempo.MONTH, 'All'>;
 
 	/** Compass points */
