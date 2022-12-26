@@ -14,11 +14,10 @@ import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isString, isAr
 import { Temporal } from '@js-temporal/polyfill';
 
 // shortcut functions to common Tempo properties / methods.
-export const isTempo = (tempo?: any) => isType<Tempo>(tempo, 'Tempo');
-export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
-export const getTempo = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
-export const fmtTempo = <K extends Tempo.FormatsKey>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) =>
-	new Tempo(tempo, opts).format(fmt);
+/** check valid Tempo */																		export const isTempo = (tempo?: any) => isType<Tempo>(tempo, 'Tempo');
+/** current timestamp (ms) */																export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
+/** create new Tempo */																			export const getTempo = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
+/** format a Tempo */	export const fmtTempo = <K extends Tempo.FormatsKey>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).format(fmt);
 
 /**
  * Wrapper Class around Temporal API  
@@ -48,6 +47,12 @@ export class Tempo {
 	static #pattern = [] as Tempo.Pattern[];									// Array of regex-patterns to test until a match
 	static #DateTime = Intl.DateTimeFormat().resolvedOptions();
 	static #months = Array.from({ length: 13 }, () => ({})) as Tempo.Months;	// Array of settings related to a Month
+	static #tstamp = {																				// lookup object for Tempo().ts resolution
+		'ss': 'epochSeconds',
+		'ms': 'epochMilliseconds',
+		'us': 'epochMicroseconds',
+		'ns': 'epochNanoseconds',
+	} as Record<Tempo.TStamp, keyof Temporal.ZonedDateTime>
 
 	/** user will need to know these in order to configure their own patterns */
 	static readonly units: Record<string, RegExp> = {					// define some components to help interpret input-strings
@@ -187,6 +192,7 @@ export class Tempo {
 			timeZone: init.timeZone || Tempo.#DateTime.timeZone,	// default TimeZone
 			locale: init.locale || Tempo.#DateTime.locale,				// default Locale
 			pivot: init.pivot || 75,															// default pivot-duration for two-digit years
+			tstamp: init.tstamp || 'ms',													// default millisecond timestamp
 			debug: init.debug || false,														// default debug-mode
 			catch: init.catch || false,														// default catch-mode
 			sphere: init.sphere || Tempo.#dst(Tempo.#DateTime.timeZone) || Tempo.COMPASS.North,							// default hemisphere (for 'season')
@@ -345,8 +351,8 @@ export class Tempo {
 		return getAccessors(Tempo) as (keyof Tempo)[];
 	}
 
-	/** Tempo config settings */
-	static get defaults() {
+	/** Tempo global config settings */
+	static get config() {
 		return Tempo.#default;
 	}
 
@@ -355,12 +361,14 @@ export class Tempo {
 		return Tempo.#pattern;
 	}
 
+	/** Promise resolve when static blocks are complete */
 	static get ready() {
-		return Tempo.#ready.promise;														// Promise resolved  when static blocks are complete
+		return Tempo.#ready.promise;
 	}
 
+	/** static blocks are now complete */
 	static {
-		Tempo.#ready.resolve(true);															// static blocks are now complete
+		Tempo.#ready.resolve(true);
 	}
 
 	// Instance Symbols    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -413,6 +421,7 @@ export class Tempo {
 			locale: opts.locale ?? Tempo.#default.locale,					// help determine which DateFormat to check first
 			pivot: opts.pivot ?? Tempo.#default.pivot,						// determines the century-cutoff for two-digit years
 			sphere: opts.sphere ?? Tempo.#default.sphere,					// allow for override of hemisphere
+			tstamp: opts.tstamp ?? Tempo.#default.tstamp,					// precision for Tempo timestamp
 			debug: opts.debug ?? Tempo.#default.debug,						// debug-mode for this instance
 			catch: opts.catch ?? Tempo.#default.catch,						// catch-mode for this instance
 			month: clone(Tempo.#months),													// clone the months
@@ -507,7 +516,7 @@ export class Tempo {
 	/** fractional seconds since last second */								get ff() { return Number(`0.${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`) }
 	/** number of weeks */																		get ww() { return this.#temporal.weekOfYear }
 	/** timezone */																						get tz() { return this.#temporal.timeZone.toString() }
-	/** milliseconds (timestamp) since Unix epoch */					get ts() { return this.#temporal.epochMilliseconds }
+	/** default as milliseconds since Unix epoch */						get ts() { return this.#temporal[Tempo.#tstamp[this.#config.tstamp]] as number | bigint }
 	/** weekday: Mon=1, Sun=7 */															get dow() { return this.#temporal.dayOfWeek }
 	/** short month name */																		get mmm() { return Tempo.MONTH[this.#temporal.month] }
 	/** long month name */																		get mon() { return Tempo.MONTHS[this.#temporal.month] }
@@ -1069,9 +1078,11 @@ export namespace Tempo {
 		debug?: boolean,
 		catch?: boolean,
 		fiscal?: Tempo.Calendar,
+		tstamp?: Tempo.TStamp,
 		pattern?: (string | RegExp)[],
 		value?: string,
 	}
+	export type TStamp = 'ss' | 'ms' | 'us' | 'ns'
 	export type Mutate = 'start' | 'mid' | 'end'
 	export type TimeUnit = Temporal.DateTimeUnit | 'quarter' | 'season'
 	export type DiffUnit = Temporal.PluralUnit<Temporal.DateTimeUnit> | 'quarters' | 'seasons'
@@ -1107,6 +1118,7 @@ export namespace Tempo {
 		pivot: number;
 		sphere: Tempo.Sphere;																		// hemisphere
 		fiscal: Tempo.Calendar;																	// month to start fiscal-year
+		tstamp: Tempo.TStamp;																		// precision for Tempo().ts
 		mmddyy: { locale: string; timeZones: string[]; }[];			// Array of locales that prefer 'mm-dd-yy' date order
 		pattern: { key: string, reg: string[] }[];							// Array of pattern strings, in order of preference
 	}
@@ -1121,6 +1133,7 @@ export namespace Tempo {
 		calendar: Temporal.Calendar,														// Calendar for this instance
 		pivot: number;																					// two-digit number to determine when to prepend '19' or '20' to a year
 		locale: string;																					// Locale for this instance
+		tstamp: Tempo.TStamp;																		// precision for Tempo().ts timestamp
 		sphere: Tempo.Sphere;																		// primarily for seasons
 		month: Tempo.Months;																		// tuple of months to assign quarter / season
 		debug?: boolean;																				// debug-mode for this instance
@@ -1134,6 +1147,7 @@ export namespace Tempo {
 		catch?: boolean;
 		sphere?: Tempo.Sphere;
 		fiscal?: Tempo.Calendar;
+		tstamp?: Tempo.TStamp;
 		calendar?: string;
 		timeZone?: string;
 		locale?: string;
