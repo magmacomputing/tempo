@@ -8,8 +8,8 @@ import { Temporal } from '@js-temporal/polyfill';
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
 
 /** 
- * return a object's type as a ProperCase string.  
- * If instance, return Class name
+ * return an object's type as a ProperCase string.  
+ * if instance, return Class name
  */
 export const getType = (obj?: any, ...instances: Instance[]) => {
 	const type = protoType(obj);
@@ -26,7 +26,7 @@ export const getType = (obj?: any, ...instances: Instance[]) => {
 					break;
 			}
 
-			return (instances.find(inst => obj instanceof inst.class)?.type	// allow for 'real' name for Instance, after minification
+			return (instances.find(inst => obj instanceof inst.class)?.type	// allow for 'real' name of Instance, after minification
 				|| name) as Types;																	// return Object name
 
 		case type === 'Function' && obj.valueOf().toString().startsWith('class '):
@@ -37,7 +37,7 @@ export const getType = (obj?: any, ...instances: Instance[]) => {
 	}
 }
 
-/** convert value to TypeValue<T>  */
+/** convert value to TypeValue<T> object */
 export const asType = <T>(obj?: T, ...instances: Instance[]) => ({ type: getType(obj, ...instances), value: obj } as TypeValue<T>);
 /** assert value is one of a list of Types */
 export const isType = <T>(obj: unknown, ...types: Types[]): obj is T => types.includes(getType(obj));
