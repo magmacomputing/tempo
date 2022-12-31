@@ -48,10 +48,10 @@ export class Tempo {
 	static #months = Array.from({ length: 13 }, () => ({})) as Tempo.Months;	// Array of settings related to a Month
 	static #dateTime = Intl.DateTimeFormat().resolvedOptions();
 	static #timeStamp = {																			// lookup object for Tempo().ts resolution
-		'ss': 'epochSeconds',
-		'ms': 'epochMilliseconds',
-		'us': 'epochMicroseconds',
-		'ns': 'epochNanoseconds',
+		ss: 'epochSeconds',
+		ms: 'epochMilliseconds',
+		us: 'epochMicroseconds',
+		ns: 'epochNanoseconds',
 	} as Record<Tempo.TimeStamp, keyof Temporal.ZonedDateTime>
 
 	/** user will need to know these in order to configure their own patterns */
@@ -144,6 +144,12 @@ export class Tempo {
 		}
 	}
 
+	/** setup map for Time periods */
+	static #period(config: Tempo.Period, period = {} as Tempo.Period) {
+		(Object.entries(period) as [keyof Tempo.Period, string][])
+			.forEach(([key, period]) => config[key] = period)
+	}
+
 	/** properCase first letters of week-day/calendar-month */
 	static #prefix = <T extends Tempo.Weekday | Tempo.Calendar>(str: string, len = 3) => toProperCase(str.substring(0, len)) as T;
 
@@ -192,34 +198,38 @@ export class Tempo {
 			calendar: init.calendar || Tempo.#dateTime.calendar,	// default Calendar
 			timeZone: init.timeZone || Tempo.#dateTime.timeZone,	// default TimeZone
 			locale: init.locale || Tempo.#dateTime.locale,				// default Locale
-			timeStamp: init.timeStamp || 'ms',										// default millisecond timestamp
 			pivot: init.pivot || 75,															// default pivot-duration for two-digit years
 			debug: init.debug || false,														// default debug-mode
 			catch: init.catch || false,														// default catch-mode
+			timeStamp: init.timeStamp || 'ms',										// default millisecond timestamp
 			sphere: init.sphere || Tempo.#dst(Tempo.#dateTime.timeZone) || Tempo.COMPASS.North,							// default hemisphere (for 'season')
 			fiscal: init.fiscal || Tempo.#startFiscal(init.sphere || Tempo.#dst(Tempo.#dateTime.timeZone)),	// default fiscalYear start-month
 			mmddyy: Tempo.#Locales																// built-in locales that parse with 'mm-dd-yy' date order
 				.map(locale => ({ locale: locale.baseName, timeZones: locale.timeZones })),										// timeZones in those locales
 			pattern: [																						// built-in patterns to be processed in this order
 				{ key: 'hms', reg: ['hms', 'am?'] },
-				// { key: 'ddmm', reg: ['dow', 'dd', 'sep', 'mm'] },
-				// { key: 'mmdd', reg: ['dow', 'mm', 'sep', 'dd'] },
 				{ key: 'ddmmyy', reg: ['dow?', 'dd?', 'sep', 'mm', 'sep', 'yy?'] },
 				{ key: 'mmddyy', reg: ['dow?', 'mm', 'sep', 'dd?', 'sep', 'yy?'] },
-				// { key: 'ddmmhms', reg: ['dow', 'dd', 'sep', 'mm', '/ /', 'hms'] },
-				// { key: 'mmddhms', reg: ['dow', 'mm', 'sep', 'dd', '/ /', 'hms'] },
 				{ key: 'ddmmyyhms', reg: ['dow?', 'sep', 'dd?', 'sep', 'mm', 'sep', 'yy?', 'sep', 'hms', 'am?'] },
 				{ key: 'mmddyyhms', reg: ['dow?', 'sep', 'mm', 'sep', 'dd', 'sep', 'yy?', '/ /', 'hms', 'am?'] },
 				{ key: 'yymmdd', reg: ['dow?', 'sep', 'yy', 'sep', 'mm', 'sep', 'dd?'] },
 				{ key: 'yymmddhms', reg: ['dow?', 'sep', 'yy', 'sep', 'mm', 'sep', 'dd', '/ /', 'hms', 'am?'] },
 				{ key: 'dow', reg: ['mod', 'dow', 'sep', 'hms?', 'am?'] },
 				{ key: 'yyqtr', reg: ['yy', 'sep', '/Q/', 'qtr'] },
-				// { key: 'mon', reg: ['mm'] },
-				// { key: 'yymm', reg: ['yy', 'sep', 'mm'] },
-			]
+			],
+			period: {																							// built-in periods to be mapped
+				midnight: '0:00',
+				morning: '8:00',
+				midmorning: '10:00',
+				midday: '12:00',
+				noon: '12:00',
+				afternoon: '15:00',
+				evening: '18:00',
+				night: '20:00',
+			}
 		} as Tempo.ConfigFile)
 
-		const country = Tempo.#dateTime.timeZone.split('/')[0];
+		const country = Tempo.#default.timeZone.split('/')[0];
 		switch (country) {																			// TODO: better country detection
 			case 'Australia':
 				Object.assign(Tempo.#default, { sphere: Tempo.COMPASS.South, fiscal: Tempo.#startFiscal(Tempo.COMPASS.South), locale: 'en-AU' });
@@ -257,6 +267,7 @@ export class Tempo {
 			.forEach((mon, idx) => Tempo.#months[idx].name = mon);// stash month-name into Tempo.#months
 		Tempo.#sphere(Tempo.#default.sphere, Tempo.#months);		// setup seasons
 		Tempo.#fiscal(Tempo.#default.fiscal, Tempo.#months);
+		Tempo.#period(Tempo.#default.period, init.period);			// setup default Time periods
 
 		const locale = Tempo.#swap(Tempo.#default.timeZone, Tempo.#default.pattern);
 		if (locale && !init.locale)
@@ -426,6 +437,7 @@ export class Tempo {
 			debug: opts.debug ?? Tempo.#default.debug,						// debug-mode for this instance
 			catch: opts.catch ?? Tempo.#default.catch,						// catch-mode for this instance
 			month: clone(Tempo.#months),													// clone the months
+			period: clone(Tempo.#default.period),									// clone the Time-periods
 			pattern: [],																					// additional instance-patterns
 		}
 		if (opts.debug) {
@@ -434,7 +446,7 @@ export class Tempo {
 				.filter(key => !['fiscal'].includes(key))						// except 'fiscal' which is used solely to derive #config.months
 				.forEach(key => {
 					if (!(key in this.#config))												// report warning if unrecognized key
-						console.warn(`config: unrecognized option '${key}'`);
+						console.warn(`config: dropping unrecognized option '${key}'`);
 				})
 		}
 
@@ -740,13 +752,16 @@ export class Tempo {
 			const qtr = Number(pat.groups['qtr'] < '3');					// if Q1 or Q2, then need to adjust 'yy'
 
 			/**
-			 * adjust for am/pm offset
-			 * eg.	10pm			-> 22:00:00
-			 * 			12:00am		-> 00:00:00
+			 * resolve hh:mi:ss or Time-period pattern
 			 */
-			if (isDefined(pat.groups['hms'])) {
-				let [hh, mi, ss] = split(pat.groups['hms'], ':') as [number, string, string];
+			if (isDefined(pat.groups['hms']) || isDefined(pat.groups['per'])) {
+				let [hh, mi, ss] = split(
+					isDefined(pat.groups['hms'])
+						? pat.groups['hms']
+						: this.#config.period[pat.groups['per'] as keyof Tempo.Period]
+					, ':') as [number, string, string]								// hh:mi:ss
 
+				// adjust for am/pm offset (eg. 10pm => 22:00:00, 12:00am => 00:00:00)
 				if (pat.groups['am']?.toLowerCase() === 'pm' && hh < 12)
 					hh += 12
 
@@ -1086,6 +1101,7 @@ export namespace Tempo {
 	export type Mutate = 'start' | 'mid' | 'end'
 	export type TimeUnit = Temporal.DateTimeUnit | 'quarter' | 'season'
 	export type DiffUnit = Temporal.PluralUnit<Temporal.DateTimeUnit> | 'quarters' | 'seasons'
+	export type Period = Record<'midnight' | 'morning' | 'midmorning' | 'midday' | 'noon' | 'afternoon' | 'evening' | 'night', string>
 
 	/** constructor parameter object */
 	export interface Parameter {
@@ -1118,9 +1134,10 @@ export namespace Tempo {
 		pivot: number;
 		sphere: Tempo.Sphere;																		// hemisphere
 		fiscal: Tempo.Calendar;																	// month to start fiscal-year
-		timeStamp: Tempo.TimeStamp;																		// precision for Tempo().ts
+		timeStamp: Tempo.TimeStamp;															// precision for Tempo().ts
 		mmddyy: { locale: string; timeZones: string[]; }[];			// Array of locales that prefer 'mm-dd-yy' date order
 		pattern: { key: string, reg: string[] }[];							// Array of pattern strings, in order of preference
+		period: Tempo.Period;																		// map of time periods
 	}
 
 	export interface Pattern {
@@ -1136,9 +1153,10 @@ export namespace Tempo {
 		timeStamp: Tempo.TimeStamp;															// precision for Tempo().ts timestamp
 		sphere: Tempo.Sphere;																		// primarily for seasons
 		month: Tempo.Months;																		// tuple of months to assign quarter / season
-		debug?: boolean;																				// debug-mode for this instance
-		catch?: boolean;																				// catch-mode for this instance
+		debug: boolean;																					// debug-mode for this instance
+		catch: boolean;																					// catch-mode for this instance
 		pattern: Tempo.Pattern[];																// conform patterns
+		period: Tempo.Period;																		// Time periods for this instance
 	}
 
 	/** use to set Tempo.defaults */
@@ -1152,6 +1170,7 @@ export namespace Tempo {
 		timeZone?: string;
 		locale?: string;
 		pivot?: number;
+		period?: Tempo.Period;
 	}
 
 	/** pre-configured format strings */
