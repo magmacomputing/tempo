@@ -10,6 +10,7 @@ import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isString, isAr
 
 // import '@module/shared/prototype.library';									// patch prototype
 
+/** TODO: Localization options on output?  on input? */
 /** TODO: THIS IMPORT CAN BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
 import { Temporal } from '@js-temporal/polyfill';
 
@@ -17,7 +18,7 @@ import { Temporal } from '@js-temporal/polyfill';
 /** check valid Tempo */																		export const isTempo = (tempo?: any) => isType<Tempo>(tempo, 'Tempo');
 /** current timestamp (ms) */																export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
 /** create new Tempo */																			export const getTempo = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
-/** format a Tempo */	export const fmtTempo = <K extends Tempo.FormatsKey>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).format(fmt);
+/** format a Tempo */																				export const fmtTempo = <K extends Tempo.FormatsKey>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).format(fmt);
 
 /**
  * Wrapper Class around Temporal API  
@@ -69,15 +70,15 @@ export class Tempo {
 		sep: new RegExp(/[\/\-\ \,]*/),													// list of separators between date-components
 		mod: new RegExp(/((?<mod>[\+\-\<\>][\=]?)(?<nbr>\d*))?/)// modifiers (+,-,<,<=,>,>=)
 	}
-	static {																									// now, combine some of the above units into common Time components
-		Tempo.units['hms'] = new RegExp('((?<hms>' +
-			`(${Tempo.units.hh.source})|` +												// just hh
-			`(${Tempo.units.hh.source}(:${Tempo.units.tm.source})?)|` +	// or hh:mi
-			`(${Tempo.units.hh.source}:${Tempo.units.tm.source}:${Tempo.units.tm.source}${Tempo.units.ff.source}?))|` +	// or hh:mi:ss(.ff)
-			`${Tempo.units.per.source})`													// or 'period' unit
-		)
-		Tempo.units['tzd'] = new RegExp(`(?<tzd>[+-]${Tempo.units.hms.source}|Z)`);
-	}
+	// static {																									// now, combine some of the above units into common Time components
+	// 	Tempo.units['hms'] = new RegExp('((?<hms>' +
+	// 		`(${Tempo.units.hh.source})|` +												// just hh
+	// 		`(${Tempo.units.hh.source}(:${Tempo.units.tm.source})?)|` +	// or hh:mi
+	// 		`(${Tempo.units.hh.source}:${Tempo.units.tm.source}:${Tempo.units.tm.source}${Tempo.units.ff.source}?))|` +	// or hh:mi:ss(.ff)
+	// 		`${Tempo.units.per.source})`													// or 'period' unit
+	// 	)
+	// 	Tempo.units['tzd'] = new RegExp(`(?<tzd>[+-]${Tempo.units.hms.source}|Z)`);
+	// }
 
 	// Static private methods ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -145,9 +146,20 @@ export class Tempo {
 	}
 
 	/** setup map for Time periods */
-	static #period(config: Tempo.Period, period = {} as Tempo.Period) {
+	static #period(config: Tempo.ConfigFile, period = {} as Tempo.Period) {
 		(Object.entries(period) as [keyof Tempo.Period, string][])
-			.forEach(([key, period]) => config[key] = period)
+			.forEach(([key, period]) => config.period[key] = period)
+
+		const periods = Object.keys(config.period).join('|');
+		Tempo.units.per = new RegExp(`(?<per>${periods})`);		// set the Tempo.units 'period' pattern
+
+		Tempo.units['hms'] = new RegExp('((?<hms>' +						// build the 'hms' pattern...
+			`(${Tempo.units.hh.source})|` +												// just hh
+			`(${Tempo.units.hh.source}(:${Tempo.units.tm.source})?)|` +	// or hh:mi
+			`(${Tempo.units.hh.source}:${Tempo.units.tm.source}:${Tempo.units.tm.source}${Tempo.units.ff.source}?))|` +	// or hh:mi:ss(.ff)
+			`${Tempo.units.per.source})`													// or 'period' unit
+		)
+		Tempo.units['tzd'] = new RegExp(`(?<tzd>[+-]${Tempo.units.hms.source}|Z)`);
 	}
 
 	/** properCase first letters of week-day/calendar-month */
@@ -189,7 +201,7 @@ export class Tempo {
 	// Static public methods ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/**
-	 * this allows Tempo to set a specific default configuration for subsequent 'new Tempo()' to inherit.  
+	 * this allows Tempo to set a specific default configuration for a subsequent 'new Tempo()' to inherit.  
 	 * Tempo.#default is set from init argument (if supplied), else local cache, else reasonable default values. 
 	 * useful primarily for 'order of parsing input', as well as .quarter and .season
 	 */
@@ -217,7 +229,7 @@ export class Tempo {
 				{ key: 'dow', reg: ['mod', 'dow', 'sep', 'hms?', 'am?'] },
 				{ key: 'yyqtr', reg: ['yy', 'sep', '/Q/', 'qtr'] },
 			],
-			period: {																							// built-in periods to be mapped
+			period: {																							// built-in time-periods to be mapped
 				midnight: '0:00',
 				morning: '8:00',
 				midmorning: '10:00',
@@ -267,7 +279,7 @@ export class Tempo {
 			.forEach((mon, idx) => Tempo.#months[idx].name = mon);// stash month-name into Tempo.#months
 		Tempo.#sphere(Tempo.#default.sphere, Tempo.#months);		// setup seasons
 		Tempo.#fiscal(Tempo.#default.fiscal, Tempo.#months);
-		Tempo.#period(Tempo.#default.period, init.period);			// setup default Time periods
+		Tempo.#period(Tempo.#default, init.period);							// setup default Time periods (before patterns!)
 
 		const locale = Tempo.#swap(Tempo.#default.timeZone, Tempo.#default.pattern);
 		if (locale && !init.locale)
@@ -576,7 +588,7 @@ export class Tempo {
 	#parse(tempo?: Tempo.DateTime) {
 		const today = this.#now																	// cast today to current timeZone, calendar
 			.toZonedDateTime({ timeZone: this.#config.timeZone, calendar: this.#config.calendar });
-		const arg = this.#conform(tempo, today);								// if String or Number, conform the input against known patterns
+		const arg = this.#conform(tempo!, today);								// if String or Number, conform the input against known patterns
 		if (this.#config.debug)
 			console.log('tempo.parse: ', arg);
 
@@ -655,7 +667,7 @@ export class Tempo {
 	}
 
 	/** evaluate 'string | number' input against known patterns */
-	#conform(tempo: Tempo.DateTime | undefined, today: Temporal.ZonedDateTime) {
+	#conform(tempo: Tempo.DateTime, today: Temporal.ZonedDateTime) {
 		const arg = asType(tempo, { type: 'Tempo', class: Tempo });
 
 		if (!isType<string | number>(arg.value, 'String', 'Number'))
@@ -681,13 +693,14 @@ export class Tempo {
 				continue;																						// skip this iteration
 
 			/**
-			 * if just day-of-week specified (with optional 'mod' and 'nbr' and 'hms'), calc date offset
+			 * if day-of-week specified (with optional 'mod', 'nbr', 'hms', 'am', 'per'), then calc relative weekday offset
 			 *   Wed		-> Wed this week													might be earlier or later or equal to current day
 			 *  -Wed		-> Wed last week													same as new Tempo('Wed').add({ weeks: -1 })
 			 *  +Wed		-> Wed next week													same as new Tempo('Wed').add({ weeks:  1 })
 			 * -3Wed		-> Wed three weeks ago  									same as new Tempo('Wed').add({ weeks: -3 })
 			 *  <Wed		-> Wed prior to today 										might be current or previous week
 			 * <=Wed		-> Wed prior to tomorrow									might be current or previous week
+			 * Wed noon	-> Wed this week at 12:00									also allow for time specifiers
 			 */
 			if (Object.keys(pat.groups).every(el => ['dow', 'mod', 'nbr', 'hms', 'am', 'per'].includes(el)) && isDefined(pat.groups['dow'])) {
 				const { dow, mod, nbr } = pat.groups;
@@ -754,12 +767,17 @@ export class Tempo {
 			/**
 			 * resolve hh:mi:ss or Time-period pattern
 			 */
-			if (isDefined(pat.groups['hms']) || isDefined(pat.groups['per'])) {
-				let [hh, mi, ss] = split(
-					isDefined(pat.groups['hms'])
-						? pat.groups['hms']
-						: this.#config.period[pat.groups['per'] as keyof Tempo.Period]
-					, ':') as [number, string, string]								// hh:mi:ss
+			if (isDefined(pat.groups['per'])) {										// re-test time-period against 'hms' pattern
+				const per = this.#config.period[pat.groups['per'] as keyof Tempo.Period];
+				const lkp = this.#config.pattern.find(pat => pat.key === 'hms');
+				if (lkp) {
+					const { hms, am } = per.match(lkp['reg'])?.groups || {};
+					pat.groups['hms'] = hms ?? per;										// use 'hms' pattern, else fallback to specified time-period
+					pat.groups['am'] = am;
+				}
+			}
+			if (isDefined(pat.groups['hms'])) {
+				let [hh, mi, ss] = split(pat.groups['hms'], ':') as [number, string, string];
 
 				// adjust for am/pm offset (eg. 10pm => 22:00:00, 12:00am => 00:00:00)
 				if (pat.groups['am']?.toLowerCase() === 'pm' && hh < 12)
