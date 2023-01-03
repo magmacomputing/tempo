@@ -1,6 +1,6 @@
 import { asArray } from '@module/shared/array.library';
 import { stringify } from '@module/shared/serialize.library';
-import { isString, type TValues } from '@module/shared/type.library'
+import { asType, type TValues } from '@module/shared/type.library'
 
 /**
  * Wrap a Promise<T>, its status and Resolve/Reject/Settle methods for later fulfilment   
@@ -17,10 +17,21 @@ export class Pledge<T> {
 
 	[Symbol.toStringTag]() { return 'Pledge' }
 
-	constructor(arg?: Pledge.Constructor | string) {
-		const { tag, onResolve = void 0, onReject = void 0, onSettle = void 0, ...flags } = isString(arg)
-			? { tag: arg }
-			: { ...arg }
+	constructor(opts?: Pledge.Constructor | Function | string) {
+		const { tag = void 0, onResolve = void 0, onReject = void 0, onSettle = void 0, body = void 0, ...flags } = (_ => {
+			const arg = asType(opts);
+			switch (arg.type) {
+				case 'String':
+					return { tag: arg.value };
+				case 'Object':
+				case 'Record':
+					return { ...arg.value as Pledge.Constructor };
+				case 'Function':
+					return { body: arg.value as Pledge.Body }
+				default:
+					throw new Error('Invalid Pledge argument')
+			}
+		})(opts);
 
 		this.#status = JSON.parse(JSON.stringify({							// remove undefined values
 			tag,
@@ -123,8 +134,17 @@ export namespace Pledge {
 	export type Resolve = (val: any) => any;									// function to call after Pledge resolves
 	export type Reject = (err: Error) => any;									// function to call after Pledge rejects
 	export type Settle = () => void;													// function to call after Pledge settles
+	export type Body = () => void;														// function to call 
 
-	export type Constructor = { tag?: string, onResolve?: TValues<Pledge.Resolve>, onReject?: TValues<Pledge.Reject>, onSettle?: TValues<Pledge.Settle>, catch?: boolean, debug?: boolean }
+	export type Constructor = {
+		tag?: string,
+		onResolve?: TValues<Pledge.Resolve>,
+		onReject?: TValues<Pledge.Reject>,
+		onSettle?: TValues<Pledge.Settle>,
+		body?: Pledge.Body,
+		catch?: boolean,
+		debug?: boolean
+	}
 
 	export enum STATE {
 		Pending = 'pending',
