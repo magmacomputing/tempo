@@ -63,22 +63,13 @@ export class Tempo {
 		dow: new RegExp(/(?<dow>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)/),
 		per: new RegExp(/(?<per>morning|midmorning|midday|noon|afternoon|evening|night|midnight)/),
 		qtr: new RegExp(/(?<qtr>1|2|3|4)/),
-		hh: new RegExp(/([01]\d|2[0-3])/),											// hh:  00 - 23
+		hh: new RegExp(/([01]?\d|2[0-4])/),											// hh:  00 - 24
 		tm: new RegExp(/([0-5]\d)/),														// tm:  00 - 59 (can be used for minutes and for seconds)
 		ff: new RegExp(/(\.\d{1,9})?/),													// up-to 9-digits for fractional seconds
 		am: new RegExp(/ ?(?<am>am|pm)/),												// am/pm suffix
 		sep: new RegExp(/[\/\-\ \,]*/),													// list of separators between date-components
 		mod: new RegExp(/((?<mod>[\+\-\<\>][\=]?)(?<nbr>\d*))?/)// modifiers (+,-,<,<=,>,>=)
 	}
-	// static {																									// now, combine some of the above units into common Time components
-	// 	Tempo.units['hms'] = new RegExp('((?<hms>' +
-	// 		`(${Tempo.units.hh.source})|` +												// just hh
-	// 		`(${Tempo.units.hh.source}(:${Tempo.units.tm.source})?)|` +	// or hh:mi
-	// 		`(${Tempo.units.hh.source}:${Tempo.units.tm.source}:${Tempo.units.tm.source}${Tempo.units.ff.source}?))|` +	// or hh:mi:ss(.ff)
-	// 		`${Tempo.units.per.source})`													// or 'period' unit
-	// 	)
-	// 	Tempo.units['tzd'] = new RegExp(`(?<tzd>[+-]${Tempo.units.hms.source}|Z)`);
-	// }
 
 	// Static private methods ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -151,9 +142,10 @@ export class Tempo {
 			.forEach(([key, period]) => config.period[key] = period)
 
 		const periods = Object.keys(config.period).join('|');
-		Tempo.units.per = new RegExp(`(?<per>${periods})`);		// set the Tempo.units 'period' pattern
+		Tempo.units.per = new RegExp(`(?<per>${periods})`);			// set the Tempo.units 'period' pattern
 
 		Tempo.units['hms'] = new RegExp('((?<hms>' +						// build the 'hms' pattern...
+			// `24|24:00|24:00:00|` +																// special for 'midnight'
 			`(${Tempo.units.hh.source})|` +												// just hh
 			`(${Tempo.units.hh.source}(:${Tempo.units.tm.source})?)|` +	// or hh:mi
 			`(${Tempo.units.hh.source}:${Tempo.units.tm.source}:${Tempo.units.tm.source}${Tempo.units.ff.source}?))|` +	// or hh:mi:ss(.ff)
@@ -206,92 +198,108 @@ export class Tempo {
 	 * useful primarily for 'order of parsing input', as well as .quarter and .season
 	 */
 	static init = (init: Tempo.Init = {}) => {
-		Object.assign(Tempo.#default, {
-			calendar: init.calendar || Tempo.#dateTime.calendar,	// default Calendar
-			timeZone: init.timeZone || Tempo.#dateTime.timeZone,	// default TimeZone
-			locale: init.locale || Tempo.#dateTime.locale,				// default Locale
-			pivot: init.pivot || 75,															// default pivot-duration for two-digit years
-			debug: init.debug || false,														// default debug-mode
-			catch: init.catch || false,														// default catch-mode
-			timeStamp: init.timeStamp || 'ms',										// default millisecond timestamp
-			sphere: init.sphere || Tempo.#dst(Tempo.#dateTime.timeZone) || Tempo.COMPASS.North,							// default hemisphere (for 'season')
-			fiscal: init.fiscal || Tempo.#startFiscal(init.sphere || Tempo.#dst(Tempo.#dateTime.timeZone)),	// default fiscalYear start-month
-			mmddyy: Tempo.#Locales																// built-in locales that parse with 'mm-dd-yy' date order
-				.map(locale => ({ locale: locale.baseName, timeZones: locale.timeZones })),										// timeZones in those locales
-			pattern: [																						// built-in patterns to be processed in this order
-				{ key: 'hms', reg: ['hms', 'am?'] },
-				{ key: 'ddmmyy', reg: ['dow?', 'dd?', 'sep', 'mm', 'sep', 'yy?'] },
-				{ key: 'mmddyy', reg: ['dow?', 'mm', 'sep', 'dd?', 'sep', 'yy?'] },
-				{ key: 'ddmmyyhms', reg: ['dow?', 'sep', 'dd?', 'sep', 'mm', 'sep', 'yy?', 'sep', 'hms', 'am?'] },
-				{ key: 'mmddyyhms', reg: ['dow?', 'sep', 'mm', 'sep', 'dd', 'sep', 'yy?', '/ /', 'hms', 'am?'] },
-				{ key: 'yymmdd', reg: ['dow?', 'sep', 'yy', 'sep', 'mm', 'sep', 'dd?'] },
-				{ key: 'yymmddhms', reg: ['dow?', 'sep', 'yy', 'sep', 'mm', 'sep', 'dd', '/ /', 'hms', 'am?'] },
-				{ key: 'dow', reg: ['mod', 'dow', 'sep', 'hms?', 'am?'] },
-				{ key: 'yyqtr', reg: ['yy', 'sep', '/Q/', 'qtr'] },
-			],
-			period: {																							// built-in time-periods to be mapped
-				midnight: '0:00',
-				morning: '8:00',
-				midmorning: '10:00',
-				midday: '12:00',
-				noon: '12:00',
-				afternoon: '15:00',
-				evening: '18:00',
-				night: '20:00',
-			}
-		} as Tempo.ConfigFile)
+		return Promise.race([																		// wait until static-blocks are fully loaded (with two-seconds timeout)
+			Tempo.#ready.promise,
+			new Promise<boolean>((_, reject) => setTimeout(_ => reject(new Error('Tempo setup timed out')), Tempo.TIME.second * 2)),
+		])
+			.then(_ => {
+				Object.assign(Tempo.#default, {
+					calendar: init.calendar || Tempo.#dateTime.calendar,// default Calendar
+					timeZone: init.timeZone || Tempo.#dateTime.timeZone,// default TimeZone
+					locale: init.locale || Tempo.#dateTime.locale,		// default Locale
+					pivot: init.pivot || 75,													// default pivot-duration for two-digit years
+					debug: init.debug || false,												// default debug-mode
+					catch: init.catch || false,												// default catch-mode
+					timeStamp: init.timeStamp || 'ms',								// default millisecond timestamp
+					sphere: init.sphere || Tempo.#dst(Tempo.#dateTime.timeZone) || Tempo.COMPASS.North,							// default hemisphere (for 'season')
+					fiscal: init.fiscal || Tempo.#startFiscal(init.sphere || Tempo.#dst(Tempo.#dateTime.timeZone)),	// default fiscalYear start-month
+					mmddyy: Tempo.#Locales														// built-in locales that parse with 'mm-dd-yy' date order
+						.map(locale => ({ locale: locale.baseName, timeZones: locale.timeZones })),										// timeZones in those locales
+					pattern: [																				// built-in patterns to be processed in this order
+						{ key: 'hms', reg: ['hms', 'am?'] },
+						{ key: 'ddmmyy', reg: ['dow?', 'dd?', 'sep', 'mm', 'sep', 'yy?'] },
+						{ key: 'mmddyy', reg: ['dow?', 'mm', 'sep', 'dd?', 'sep', 'yy?'] },
+						{ key: 'ddmmyyhms', reg: ['dow?', 'sep', 'dd?', 'sep', 'mm', 'sep', 'yy?', '/ /', 'hms', 'am?'] },
+						{ key: 'mmddyyhms', reg: ['dow?', 'sep', 'mm', 'sep', 'dd', 'sep', 'yy?', '/ /', 'hms', 'am?'] },
+						{ key: 'yymmdd', reg: ['dow?', 'sep', 'yy', 'sep', 'mm', 'sep', 'dd?'] },
+						{ key: 'yymmddhms', reg: ['dow?', 'sep', 'yy', 'sep', 'mm', 'sep', 'dd', '/ /', 'hms', 'am?'] },
+						{ key: 'dow', reg: ['mod', 'dow', 'sep', 'hms?', 'am?'] },
+						{ key: 'yyqtr', reg: ['yy', 'sep', '/Q/', 'qtr'] },
+					],
+					period: {																					// built-in time-periods to be mapped
+						midnight: '0:00',
+						morning: '8:00',
+						midmorning: '10:00',
+						midday: '12:00',
+						noon: '12:00',
+						afternoon: '15:00',
+						evening: '18:00',
+						night: '20:00',
+					}
+				} as Tempo.ConfigFile)
 
-		const country = Tempo.#default.timeZone.split('/')[0];
-		switch (country) {																			// TODO: better country detection
-			case 'Australia':
-				Object.assign(Tempo.#default, { sphere: Tempo.COMPASS.South, fiscal: Tempo.#startFiscal(Tempo.COMPASS.South), locale: 'en-AU' });
-				break;
-			default:
-		}
+				const country = Tempo.#default.timeZone.split('/')[0];
+				switch (country) {																	// TODO: better country detection
+					case 'Australia':
+						Object.assign(Tempo.#default, { sphere: Tempo.COMPASS.South, fiscal: Tempo.#startFiscal(Tempo.COMPASS.South), locale: 'en-AU' });
+						break;
+					default:
+				}
 
-		const context = getContext();														// Javascript runtime environment
-		let store: string | null = null;
-		switch (context.type) {
-			case CONTEXT.Browser:
-				store = context.global.localStorage.getItem(Tempo.#configKey);
-				break;
+				const context = getContext();												// Javascript runtime environment
+				let store: string | null = null;
+				switch (context.type) {
+					case CONTEXT.Browser:
+						store = context.global.localStorage.getItem(Tempo.#configKey);
+						break;
 
-			case CONTEXT.NodeJS:
-				store = context.global.process.env[Tempo.#configKey];
-				break;
+					case CONTEXT.NodeJS:
+						store = context.global.process.env[Tempo.#configKey];
+						break;
 
-			case CONTEXT.GoogleAppsScript:
-				store = context.global.PropertiesService?.getUserProperties().getProperty(Tempo.#configKey);
-				break;
-		}
+					case CONTEXT.GoogleAppsScript:
+						store = context.global.PropertiesService?.getUserProperties().getProperty(Tempo.#configKey);
+						break;
+				}
 
-		if (isDefined(store)) {																	// found a config in storage
-			const config = objectify(store) as Tempo.ConfigFile;	// config can override #default
+				if (isDefined(store)) {															// found a config in storage
+					const config = objectify(store) as Tempo.ConfigFile;// config can override #default
 
-			Object.assign(Tempo.#default, omit(config, 'pattern'));// override defaults from storage
-			(config.pattern ?? [])
-				.reverse()																					// prepend user-patterns from storage, as they have priority
-				.map(pat => Object.entries(pat)[0])
-				.forEach(([key, ref]) => Tempo.#default.pattern.unshift({ key, reg: asArray(ref) }));
-		}
+					Object.assign(Tempo.#default, omit(config, 'pattern', 'period'));// override defaults from storage
+					(config.pattern ?? [])
+						.reverse()																			// prepend user-patterns from storage, as they have priority
+						.map(pat => Object.entries(pat)[0])
+						.forEach(([key, ref]) => Tempo.#default.pattern.unshift({ key, reg: asArray(ref) }));
 
-		enumKeys(Tempo.MONTH)
-			.forEach((mon, idx) => Tempo.#months[idx].name = mon);// stash month-name into Tempo.#months
-		Tempo.#sphere(Tempo.#default.sphere, Tempo.#months);		// setup seasons
-		Tempo.#fiscal(Tempo.#default.fiscal, Tempo.#months);
-		Tempo.#period(Tempo.#default, init.period);							// setup default Time periods (before patterns!)
+					(Object.entries(config.period ?? {}) as [keyof Tempo.Period, string][])
+						.forEach(([key, period]) => Tempo.#default.period[key] = period)
+				}
 
-		const locale = Tempo.#swap(Tempo.#default.timeZone, Tempo.#default.pattern);
-		if (locale && !init.locale)
-			Tempo.#default.locale = locale;												// found an override locale based on timeZone
-		Tempo.#default.locale = Tempo.#locale(Tempo.#default.locale);
+				enumKeys(Tempo.MONTH)
+					.forEach((mon, idx) => Tempo.#months[idx].name = mon);// stash month-name into Tempo.#months
+				Tempo.#sphere(Tempo.#default.sphere, Tempo.#months);// setup seasons
+				Tempo.#fiscal(Tempo.#default.fiscal, Tempo.#months);
+				Tempo.#period(Tempo.#default, init.period);					// setup default Time periods (before patterns!)
 
-		Tempo.#pattern = [];																		// reset array of patterns
-		Tempo.#default.pattern																	// setup defaults as RegExp patterns
-			.forEach(({ key, reg }) => Tempo.#pattern.push({ key, reg: Tempo.regexp(...reg) }));
+				const locale = Tempo.#swap(Tempo.#default.timeZone, Tempo.#default.pattern);
+				if (locale && !init.locale)
+					Tempo.#default.locale = locale;										// found an override locale based on timeZone
+				Tempo.#default.locale = Tempo.#locale(Tempo.#default.locale);
 
-		if ((context.type === CONTEXT.Browser && init.debug !== false) || init.debug === true)
-			console.log('Tempo: ', omit(Tempo.#default, 'pattern'));
+				Tempo.#pattern = [];																// reset array of patterns
+				Tempo.#default.pattern															// setup defaults as RegExp patterns
+					.forEach(({ key, reg }) => Tempo.#pattern.push({ key, reg: Tempo.regexp(...reg) }));
+
+				if ((context.type === CONTEXT.Browser && init.debug !== false) || init.debug === true)
+					console.log('Tempo: ', omit(Tempo.#default, 'pattern'));
+
+				return true;
+			})
+			.catch(err => {
+				if (init.catch)
+					console.warn(err.message)
+				else throw new Error(err.message);									// re throw
+			})
 	}
 
 	/** convert array of <string | RegExp> to a single RegExp */
@@ -782,6 +790,10 @@ export class Tempo {
 				// adjust for am/pm offset (eg. 10pm => 22:00:00, 12:00am => 00:00:00)
 				if (pat.groups['am']?.toLowerCase() === 'pm' && hh < 12)
 					hh += 12
+				if (pat.groups['am']?.toLowerCase() === 'am' && hh >= 12)
+					hh -= 12
+				if (hh === 24)
+					hh = 0;																						// special for 'midnight'
 
 				pat.groups['hms'] = `T${pad(hh)}:${pad(mi)}:${pad(ss)}`;
 				pat.groups['dd'] ??= today.day.toString();					// if no 'day', use today
@@ -1324,5 +1336,4 @@ export namespace Tempo {
 /**
  * kick-start Tempo configuration with default config
  */
-Tempo.ready
-	.then(_ => Tempo.init())
+Tempo.init();
