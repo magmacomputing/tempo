@@ -137,15 +137,15 @@ export class Tempo {
 	}
 
 	/** setup map for Time periods */
-	static #period(config: Tempo.ConfigFile, period = {} as Tempo.Period) {
+	static #period(config: Tempo.ConfigFile | Tempo.Config, period = {} as Tempo.Period) {
 		(Object.entries(period) as [keyof Tempo.Period, string][])
 			.forEach(([key, period]) => config.period[key] = period)
 
+		// TODO: instance should not overwrite static
 		const periods = Object.keys(config.period).join('|');
 		Tempo.units.per = new RegExp(`(?<per>${periods})`);			// set the Tempo.units 'period' pattern
 
 		Tempo.units['hms'] = new RegExp('((?<hms>' +						// build the 'hms' pattern...
-			// `24|24:00|24:00:00|` +																// special for 'midnight'
 			`(${Tempo.units.hh.source})|` +												// just hh
 			`(${Tempo.units.hh.source}(:${Tempo.units.tm.source})?)|` +	// or hh:mi
 			`(${Tempo.units.hh.source}:${Tempo.units.tm.source}:${Tempo.units.tm.source}${Tempo.units.ff.source}?))|` +	// or hh:mi:ss(.ff)
@@ -203,6 +203,9 @@ export class Tempo {
 			new Promise<boolean>((_, reject) => setTimeout(_ => reject(new Error('Tempo setup timed out')), Tempo.TIME.second * 2)),
 		])
 			.then(_ => {
+			// 	const months = Array.from({length: 12}, (e, i) => {
+			// 		return new Date(null, i + 1, null).toLocaleDateString("fr", {month: "short"});
+			//  })
 				Object.assign(Tempo.#default, {
 					calendar: init.calendar || Tempo.#dateTime.calendar,// default Calendar
 					timeZone: init.timeZone || Tempo.#dateTime.timeZone,// default TimeZone
@@ -291,7 +294,7 @@ export class Tempo {
 					.forEach(({ key, reg }) => Tempo.#pattern.push({ key, reg: Tempo.regexp(...reg) }));
 
 				if ((context.type === CONTEXT.Browser && init.debug !== false) || init.debug === true)
-					console.log('Tempo: ', omit(Tempo.#default, 'pattern'));
+					console.log('Tempo: ', omit(Tempo.#default, 'pattern', 'period'));
 
 				return true;
 			})
@@ -493,6 +496,10 @@ export class Tempo {
 			if (this.#config.month[idx].quarter !== 1)						// supplied fiscal is not Q1 in #config.month
 				Tempo.#fiscal(mon, this.#config.month);
 		}
+		// user-specified time-periods to use when parsing this instance
+		if (this.#opts.period, this.#opts.pattern) {
+			Tempo.#period(this.#config, this.#opts.period);				// re-write the 'period' RegExp, and 'hms' pattern
+		}
 		// user-specified patterns to use when parsing this instance (might be array-of-array)
 		if (this.#opts.pattern) {
 			(isArray(this.#opts.pattern[0]) ? this.#opts.pattern as unknown as (NonNullable<Tempo.Options["pattern"]>)[] : [this.#opts.pattern])
@@ -512,7 +519,6 @@ export class Tempo {
 
 		if (this.#config.debug)
 			console.log('tempo.config: ', this.config);						// show the resolve config options
-		// console.log('tempo.config: ', this.#config);					// show the resolved config options
 
 		/** We now have all the info we need to instantiate a new Tempo                          */
 		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -679,10 +685,10 @@ export class Tempo {
 		const arg = asType(tempo, { type: 'Tempo', class: Tempo });
 
 		if (!isType<string | number>(arg.value, 'String', 'Number'))
-			return arg;																						// only conform String or Number against known patterns (not bigint, etc)
+			return arg;																						// only conform String or Number against known patterns (not BigInt, etc)
 
 		const value = arg.value
-			.toString()																						// easier to work with value as a string
+			.toString()																						// easier to work with value as a String
 			.trimAll(/\(|\)|\t/gi)																// remove \( \) \t \s
 
 		if (isString(arg.value)) {
@@ -1124,6 +1130,7 @@ export namespace Tempo {
 		catch?: boolean,
 		fiscal?: Tempo.Calendar,
 		timeStamp?: Tempo.TimeStamp,
+		period?: Tempo.Period,
 		pattern?: (string | RegExp)[],
 		value?: string,
 	}
