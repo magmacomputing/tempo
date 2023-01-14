@@ -1,24 +1,28 @@
 import { asArray } from '@module/shared/array.library';
 import { enumKeys } from '@module/shared/enum.library';
 import { Pledge } from '@module/shared/pledge.class';
-import { clone, stringify, objectify } from '@module/shared/serialize.library';
-import { getContext, CONTEXT } from '@module/shared/utility.library';
 import { getAccessors, omit } from '@module/shared/object.library';
+import { getContext, CONTEXT } from '@module/shared/utility.library';
+import { clone, stringify, objectify } from '@module/shared/serialize.library';
 import { asString, pad, toProperCase, } from '@module/shared/string.library';
 import { asNumber, isNumeric, split } from '@module/shared/number.library';
 import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isString, isArray, isObject, isRegExp, isNumber } from '@module/shared/type.library';
 
-// import '@module/shared/prototype.library';									// patch prototype
+import '@module/shared/prototype.library';									// patch prototype
 
-/** TODO: Localization options on output?  on input? */
+/**
+ * TODO: Localization options on output?  on input?  
+ * this affects month-names, day-names, season-names !
+*/
+
 /** TODO: THIS IMPORT CAN BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
 import { Temporal } from '@js-temporal/polyfill';
 
 // shortcut functions to common Tempo properties / methods.
-/** check valid Tempo */																		export const isTempo = (tempo?: any) => isType<Tempo>(tempo, 'Tempo');
-/** current timestamp (ms) */																export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
-/** create new Tempo */																			export const getTempo = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
-/** format a Tempo */																				export const fmtTempo = <K extends Tempo.FormatsKey>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).format(fmt);
+/** check valid Tempo */											export const isTempo = (tempo?: any) => isType<Tempo>(tempo, 'Tempo');
+/** current timestamp (ms) */									export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
+/** create new Tempo */												export const getTempo = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
+/** format a Tempo */													export const fmtTempo = <K extends Tempo.FormatsKey>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).format(fmt);
 
 /**
  * Wrapper Class around Temporal API  
@@ -39,7 +43,7 @@ export class Tempo {
 	static #ready = new Pledge<boolean>('Tempo');							// wait for static-blocks to settle
 
 	// start with defaults for all Tempo instances
-	static #Locales = [																				// Array of Locales that prefer 'mm-dd-yy' date order
+	static #locales = [																				// Array of Locales that prefer 'mm-dd-yy' date order
 		new Intl.Locale('en-US'),																// https://en.wikipedia.org/wiki/Date_format_by_country
 		new Intl.Locale('en-AS'),																// add to this Array if required
 	]
@@ -203,9 +207,9 @@ export class Tempo {
 			new Promise<boolean>((_, reject) => setTimeout(_ => reject(new Error('Tempo setup timed out')), Tempo.TIME.second * 2)),
 		])
 			.then(_ => {
-			// 	const months = Array.from({length: 12}, (e, i) => {
-			// 		return new Date(null, i + 1, null).toLocaleDateString("fr", {month: "short"});
-			//  })
+				// 	const months = Array.from({length: 12}, (e, i) => {
+				// 		return new Date(null, i + 1, null).toLocaleDateString("fr", {month: "short"});
+				//  })
 				Object.assign(Tempo.#default, {
 					calendar: init.calendar || Tempo.#dateTime.calendar,// default Calendar
 					timeZone: init.timeZone || Tempo.#dateTime.timeZone,// default TimeZone
@@ -216,7 +220,7 @@ export class Tempo {
 					timeStamp: init.timeStamp || 'ms',								// default millisecond timestamp
 					sphere: init.sphere || Tempo.#dst(Tempo.#dateTime.timeZone) || Tempo.COMPASS.North,							// default hemisphere (for 'season')
 					fiscal: init.fiscal || Tempo.#startFiscal(init.sphere || Tempo.#dst(Tempo.#dateTime.timeZone)),	// default fiscalYear start-month
-					mmddyy: Tempo.#Locales														// built-in locales that parse with 'mm-dd-yy' date order
+					mmddyy: Tempo.#locales														// built-in locales that parse with 'mm-dd-yy' date order
 						.map(locale => ({ locale: locale.baseName, timeZones: locale.timeZones })),										// timeZones in those locales
 					pattern: [																				// built-in patterns to be processed in this order
 						{ key: 'hms', reg: ['hms', 'am?'] },
@@ -707,7 +711,7 @@ export class Tempo {
 				continue;																						// skip this iteration
 
 			/**
-			 * if day-of-week specified (with optional 'mod', 'nbr', 'hms', 'am', 'per'), then calc relative weekday offset
+			 * if named-group 'dow' detected (with optional 'mod', 'nbr', 'hms', 'am', 'per'), then calc relative weekday offset
 			 *   Wed		-> Wed this week													might be earlier or later or equal to current day
 			 *  -Wed		-> Wed last week													same as new Tempo('Wed').add({ weeks: -1 })
 			 *  +Wed		-> Wed next week													same as new Tempo('Wed').add({ weeks:  1 })
@@ -716,7 +720,7 @@ export class Tempo {
 			 * <=Wed		-> Wed prior to tomorrow									might be current or previous week
 			 * Wed noon	-> Wed this week at 12:00									also allow for time specifiers
 			 */
-			if (Object.keys(pat.groups).every(el => ['dow', 'mod', 'nbr', 'hms', 'am', 'per'].includes(el)) && isDefined(pat.groups['dow'])) {
+			if (isDefined(pat.groups['dow']) && Object.keys(pat.groups).every(el => ['dow', 'mod', 'nbr', 'hms', 'am', 'per'].includes(el))) {
 				const { dow, mod, nbr } = pat.groups;
 				const weekday = Tempo.#prefix<Tempo.Weekday>(dow);
 				const offset = enumKeys(Tempo.WEEKDAY).findIndex(el => el === weekday);
