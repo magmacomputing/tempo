@@ -35,7 +35,7 @@ if (!String.prototype.hasOwnProperty('trimAll')) {
 		},
 	})
 }
-else console.error('Cannot extend String.trimAll');
+// else console.error('String.trimAll already defined');
 
 // if (!String.prototype.hasOwnProperty('replaceAll')) {
 // 	Object.defineProperty(String.prototype, 'replaceAll', {
@@ -50,7 +50,7 @@ else console.error('Cannot extend String.trimAll');
 // 		}
 // 	})
 // }
-// else console.error('Cannot extend String.replaceAll')
+// else console.error('String.replaceAll already defined')
 
 if (!String.prototype.hasOwnProperty('toProperCase')) {
 	Object.defineProperty(String.prototype, 'toProperCase', {
@@ -62,7 +62,7 @@ if (!String.prototype.hasOwnProperty('toProperCase')) {
 		}
 	})
 }
-else console.error('Cannot extend String.toProperCase');
+// else console.error('String.toProperCase already defined');
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // extend Array prototype
@@ -111,7 +111,7 @@ if (!Array.prototype.hasOwnProperty('keyedBy')) {
 		},
 	})
 }
-else console.error('Cannot extend Array.keyedBy');
+else console.error('Array.keyedBy already defined');
 
 if (!Array.prototype.hasOwnProperty('orderBy')) {
 	const obj = {
@@ -125,7 +125,7 @@ if (!Array.prototype.hasOwnProperty('orderBy')) {
 	Object.defineProperty(Array.prototype, 'orderBy', obj);
 	Object.defineProperty(Array.prototype, 'sortBy', obj);
 }
-else console.error('Cannot extend Array.orderBy/sortBy');
+else console.error('Array.orderBy/sortBy already defined');
 
 if (!Array.prototype.hasOwnProperty('truncate')) {
 	Object.defineProperty(Array.prototype, 'truncate', {
@@ -138,7 +138,7 @@ if (!Array.prototype.hasOwnProperty('truncate')) {
 		}
 	})
 }
-else console.error('Cannot extend Array.truncate');
+// else console.error('Array.truncate already defined');
 
 if (!Array.prototype.hasOwnProperty('distinct')) {
 	Object.defineProperty(Array.prototype, 'distinct', {
@@ -152,7 +152,7 @@ if (!Array.prototype.hasOwnProperty('distinct')) {
 		}
 	})
 }
-else console.error('Cannot extend Array.distinct');
+// else console.error('Array.distinct already defined');
 
 if (!Array.prototype.hasOwnProperty('cartesian')) {
 	Object.defineProperty(Array.prototype, 'cartesian', {
@@ -169,8 +169,9 @@ if (!Array.prototype.hasOwnProperty('cartesian')) {
 		}
 	})
 }
-else console.error('Cannot extend Array.cartesian');
+// else console.error('Array.cartesian already defined');
 
+extend(Array, 'tap', (fn: Function) => { fn(this); return this; })
 if (!Array.prototype.hasOwnProperty('tap')) {
 	Object.defineProperty(Array.prototype, 'tap', {
 		configurable: false,
@@ -179,4 +180,22 @@ if (!Array.prototype.hasOwnProperty('tap')) {
 		value: function (fn: Function) { fn(this); return this; }
 	})
 }
-else console.error('Cannot extend Array.tap');
+// else console.error('Array.tap already defined');
+
+/**
+ * extend an Object prototype to include new method
+ */
+const pat = /(  |\n)/g;																			// trim multiple <space> and all <newline>
+function extend(proto: StringConstructor | ArrayConstructor, property: string, value: Function) {
+	if (!proto.prototype.hasOwnProperty(property)) {
+		Object.defineProperty(proto.prototype, property, {
+			configurable: false,
+			enumerable: false,
+			writable: false,
+			value: value.bind,
+		})
+	} else {
+		// if (value.toString().replace(pat, '') !== (proto.prototype as Record<string, Function>)[property]?.toString().replace(pat, ''))
+		// 	console.error(`${proto.name}.${property} already defined`);
+	}
+}
