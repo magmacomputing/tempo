@@ -13,6 +13,19 @@ export function toProperCase<T extends string>(...str: T[]) {
 		.join(' ') as T
 }
 
+// This needs to be a Function declaration so that it is hoisted
+// (because it is referenced in prototype.library)
+/**
+ * clean a string to remove some standard characters (tab, spaces, linefeeds)
+ */
+export function clean(str: string) {
+	return str
+		.replace(/\t/g, ' ')																		// replace <tab> with <space>
+		.replace(/(\r\n|\n|\r)/g, ' ')													// replace <return> & <newline>
+		.replace(/\s{2,}/g, ' ')																// trim multiple <space>
+		.trim()																									// leading/trailing <space>
+}
+
 export const toCamelCase = <T extends string>(sentence: T) => {
 	let [word, ...rest] = sentence.match(/[A-Z\xC0-\xD6\xD8-\xDE]?[a-z\xDF-\xF6\xF8-\xFF]+|[A-Z\xC0-\xD6\xD8-\xDE]+(?![a-z\xDF-\xF6\xF8-\xFF])|\d+/g) ?? [''];
 
