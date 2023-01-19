@@ -6,24 +6,26 @@ import { isString, isObject, isNullish, assertCondition, assertString, nullToVal
 
 // This needs to be a Function declaration so that it is hoisted
 // (because it is referenced in prototype.library)
+/**
+ * clean a string to remove some standard characters (tab, spaces, linefeeds)
+ */
+export function clean(str: any, pat?: RegExp) {
+	return str
+		.toString()																							// force to String
+		.replace(pat!, '')																			// remove regexp, if supplied
+		.replace(/\t/g, ' ')																		// replace <tab> with <space>
+		.replace(/(\r\n|\n|\r)/g, ' ')													// replace <return> & <newline>
+		.replace(/\s{2,}/g, ' ')																// trim multiple <space>
+		.trim()																									// leading/trailing <space>
+}
+
+// This needs to be a Function declaration so that it is hoisted
+// (because it is referenced in prototype.library)
 export function toProperCase<T extends string>(...str: T[]) {
 	return str
 		.map(text => text.replace(/\w\S*/g,
 			word => word.charAt(0).toUpperCase() + word.substring(1).toLowerCase()))
 		.join(' ') as T
-}
-
-// This needs to be a Function declaration so that it is hoisted
-// (because it is referenced in prototype.library)
-/**
- * clean a string to remove some standard characters (tab, spaces, linefeeds)
- */
-export function clean(str: string) {
-	return str
-		.replace(/\t/g, ' ')																		// replace <tab> with <space>
-		.replace(/(\r\n|\n|\r)/g, ' ')													// replace <return> & <newline>
-		.replace(/\s{2,}/g, ' ')																// trim multiple <space>
-		.trim()																									// leading/trailing <space>
 }
 
 export const toCamelCase = <T extends string>(sentence: T) => {
@@ -92,9 +94,9 @@ export const makeTemplate = (templateString: Object) =>
 	(templateData: Object) =>
 		new Function(`{${Object.keys(templateData).join(',')}}`, 'return `' + templateString + '`')(templateData);
 
-export const asString = (str?: Object) => isNullish(str) ? '' : stringify(str); //isString(str) ? str : JSON.stringify(str);
-export const toLower = (str: Object) => isString(str) ? asString(str).toLowerCase().trim() : str;
-export const toUpper = (str: Object) => isString(str) ? asString(str).toUpperCase().trim() : str;
+export const asString = (str?: unknown) => isNullish(str) ? '' : stringify(str);
+export const toLower = <T>(str: T) => isString(str) ? asString(str).toLowerCase().trim() : str;
+export const toUpper = <T>(str: T) => isString(str) ? asString(str).toUpperCase().trim() : str;
 
 /** assert string is within bounds */
 type StrLen<Min, Max = Min> = string & { __value__: never };
