@@ -80,13 +80,10 @@ export function sortBy<T>(...keys: (string | SortBy)[]) {
 }
 
 /** Group documents by key-fields */
-export function keyedBy<T, K extends string>(table: T[], key: string): Record<K, T[]>;
-export function keyedBy<T>(table: T[], ...keys: string[]): Record<string, T[]>;
-export function keyedBy<T, K extends string>(table: T[], flatten: true, key: string): Record<K, T>;
-export function keyedBy<T>(table: T[], flatten: true, ...keys: string[]): Record<string, T>;
-export function keyedBy<T, K extends string>(table: T[], flatten: false, key: string): Record<K, T[]>;
-export function keyedBy<T>(table: T[], flatten: false, ...keys: string[]): Record<string, T[]>;
-export function keyedBy<T, K extends string>(table: T[], ...keys: [...K[]] | [boolean, ...K[]]) {
+export function keyedBy<T, K extends string>(table: T[], ...keys: string[]): Record<K, T[]>;
+export function keyedBy<T, K extends string>(table: T[], flatten: true, ...keys: string[]): Record<K, T>;
+export function keyedBy<T, K extends string>(table: T[], flatten: false, ...keys: string[]): Record<K, T[]>;
+export function keyedBy<T, K extends string>(table: T[], ...keys: [...string[]] | [boolean, ...string[]]) {
 	let flatten = false;
 	if (isBoolean(keys[0])) {
 		flatten = keys[0];
