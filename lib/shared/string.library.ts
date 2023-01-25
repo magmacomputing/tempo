@@ -4,12 +4,16 @@ import { isString, isObject, isNullish, assertCondition, assertString, nullToVal
 
 // General <string> functions
 
-// This needs to be a Function declaration so that it is hoisted
-// (because it is referenced in prototype.library)
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// This section needs to be Function declarations so that they are hoisted
+// (because they are referenced in prototype.library)
+
 /**
- * clean a string to remove some standard characters (tab, spaces, linefeeds)
+ * clean a string to remove some standard control-characters (tab, line-feed, carriage-return)  
+ * and trim redundant spaces.  
+ * allow for optional RegExp to specify additional match
  */
-export function clean(str: any, pat?: RegExp) {
+export function trimAll(str: any, pat?: RegExp) {
 	return str
 		.toString()																							// force to String
 		.replace(pat!, '')																			// remove regexp, if supplied
@@ -19,14 +23,14 @@ export function clean(str: any, pat?: RegExp) {
 		.trim()																									// leading/trailing <space>
 }
 
-// This needs to be a Function declaration so that it is hoisted
-// (because it is referenced in prototype.library)
 export function toProperCase<T extends string>(...str: T[]) {
 	return str
 		.map(text => text.replace(/\w\S*/g,
 			word => word.charAt(0).toUpperCase() + word.substring(1).toLowerCase()))
 		.join(' ') as T
 }
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 export const toCamelCase = <T extends string>(sentence: T) => {
 	let [word, ...rest] = sentence.match(/[A-Z\xC0-\xD6\xD8-\xDE]?[a-z\xDF-\xF6\xF8-\xFF]+|[A-Z\xC0-\xD6\xD8-\xDE]+(?![a-z\xDF-\xF6\xF8-\xFF])|\d+/g) ?? [''];
