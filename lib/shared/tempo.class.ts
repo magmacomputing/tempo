@@ -211,7 +211,7 @@ export class Tempo {
 				// 		return new Date(null, i + 1, null).toLocaleDateString("fr", {month: "short"});
 				//  })
 				Object.assign(Tempo.#default, {
-					level: 'static',																	// static configuration
+					level: Tempo.CONFIG.Static,												// static configuration
 					calendar: init.calendar || Tempo.#dateTime.calendar,// default Calendar
 					timeZone: init.timeZone || Tempo.#dateTime.timeZone,// default TimeZone
 					locale: init.locale || Tempo.#dateTime.locale,		// default Locale
@@ -456,7 +456,7 @@ export class Tempo {
 		this.#value = tempo;																		// stash original value
 		this.#opts = opts;																			// stash original arguments
 		this.#config = {																				// allow for override of defaults and config-file
-			level: 'instance',																		// instance configuration
+			level: Tempo.CONFIG.Instance,													// instance configuration
 			timeZone: new Temporal.TimeZone(opts.timeZone ?? Tempo.#default.timeZone),
 			calendar: new Temporal.Calendar(opts.calendar ?? Tempo.#default.calendar),
 			timeStamp: opts.timeStamp ?? Tempo.#default.timeStamp,// precision for Tempo timestamp
@@ -1188,8 +1188,9 @@ export namespace Tempo {
 		reg: RegExp;
 	}
 	/** configuration to use on Instance */
+	export enum CONFIG { Static = 'static', Instance = 'instance' }
 	export interface Config {
-		level: 'static' | 'instance',														// separate configurations
+		level: Tempo.CONFIG,																		// separate configurations
 		timeZone: Temporal.TimeZone,														// TimeZone for this instance
 		calendar: Temporal.Calendar,														// Calendar for this instance
 		pivot: number;																					// two-digit number to determine when to prepend '19' or '20' to a year

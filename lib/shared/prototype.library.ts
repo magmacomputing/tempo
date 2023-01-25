@@ -1,7 +1,7 @@
 // @ts-nocheck
 // no typescript checking to get around the 'this' binding warnings
 
-import { clean, toProperCase } from '@module/shared/string.library';
+import { trimAll, toProperCase } from '@module/shared/string.library';
 import { asArray, keyedBy, sortBy, type SortBy } from '@module/shared/array.library';
 
 // Prototype extensions
@@ -12,10 +12,10 @@ import { asArray, keyedBy, sortBy, type SortBy } from '@module/shared/array.libr
  * extend an Object's prototype to include new method, if possible
  */
 const patch = <T>(proto: T, property: string, method: Function) => {
-	if (proto.prototype.hasOwnProperty(property)) {						// if already defined
-		if (clean(method) !== clean(proto.prototype[property]))
+	if (proto.prototype.hasOwnProperty(property)) {						// if already defined,
+		if (trimAll(method) !== trimAll(proto.prototype[property]))	// show error if different method definition
 			console.error(`${proto.name}.${property} already defined`);
-	} else {																									// show error if different method definition
+	} else {
 		Object.defineProperty(proto.prototype, property, {
 			configurable: false,
 			enumerable: false,
@@ -27,6 +27,7 @@ const patch = <T>(proto: T, property: string, method: Function) => {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // extend String prototype
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 declare global {
 	interface String {
 		/** remove redundant spaces to a new string */					trimAll(pat?: RegExp): string;
@@ -35,11 +36,12 @@ declare global {
 	}
 }
 
-patch(String, 'trimAll', function (pat?: RegExp) { return clean(this, pat); });
+patch(String, 'trimAll', function (pat?: RegExp) { return trimAll(this, pat); });
 patch(String, 'toProperCase', function () { return toProperCase(this) });
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // extend Array prototype
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 declare global {
 	interface Array<T> {
 		/** reduce Array to a keyed-Object */										keyedBy<K extends string>(...keys: string[]): Record<K, T[]>;
