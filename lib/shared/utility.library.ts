@@ -44,7 +44,7 @@ export enum CONTEXT {
 	'Deno' = 'deno',
 	'GoogleAppsScript' = 'google-apps-script',
 }
-/** determine Javascript environment context */
+/** determine JavaScript environment context */
 export const getContext = () => {
 	const global = globalThis as any;
 

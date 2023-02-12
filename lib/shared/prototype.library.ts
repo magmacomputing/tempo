@@ -9,7 +9,7 @@ import { asArray, keyedBy, sortBy, type SortBy } from '@module/shared/array.libr
 // so that they are 'hoisted' prior to extending a prototype
 
 /**
- * extend an Object's prototype to include new method, if possible
+ * extend an Object's prototype to include new method, if no clash
  */
 const patch = <T>(proto: T, property: string, method: Function) => {
 	if (proto.prototype.hasOwnProperty(property)) {						// if already defined,

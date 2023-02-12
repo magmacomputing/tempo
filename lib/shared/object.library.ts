@@ -155,6 +155,10 @@ export const compareObject = (obj1 = {}, obj2 = {}) => {
 	return JSON.stringify(obj1, keys) === JSON.stringify(obj2, keys);
 }
 
+/** extend an object with the properties of another */
+export const extend = <T extends {}, U>(obj: T, ...objs: U[]) =>
+	Object.assign(obj, ...objs) as T;
+
 /** get a string-array of 'getter' names for a Class */
 export const getAccessors = <T>(obj: any = {}) => {
 	const getters = Object.getOwnPropertyDescriptors(obj.prototype);
