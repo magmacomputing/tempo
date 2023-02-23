@@ -13,7 +13,7 @@ import { isString, isObject, isNullish, assertCondition, assertString, nullToVal
  * and trim redundant spaces.  
  * allow for optional RegExp to specify additional match
  */
-export function trimAll(str: any, pat?: RegExp) {
+export function trimAll(str: string | number, pat?: RegExp) {
 	return str
 		.toString()																							// force to String
 		.replace(pat!, '')																			// remove regexp, if supplied
