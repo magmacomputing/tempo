@@ -746,11 +746,9 @@ export class Tempo {
 					case '=':
 						break;
 					case '+':																					// next week
-					case '+=':
 						days += adj;
 						break;
 					case '-':																					// last week
-					case '-=':
 						days -= adj;
 						break;
 					case '<':																					// latest dow (this week or prev)
@@ -758,6 +756,7 @@ export class Tempo {
 							days -= adj;
 						break;
 					case '<=':																				// latest dow (prior to today)
+					case '-=':
 						if (today.dayOfWeek < offset)
 							days -= adj;
 						break;
@@ -766,6 +765,7 @@ export class Tempo {
 							days += adj;
 						break;
 					case '>=':
+					case '+=':
 						if (today.dayOfWeek > offset)
 							days += adj;
 						break;
@@ -1057,7 +1057,7 @@ export class Tempo {
 	}
 
 	#format = <K extends Tempo.FormatKeys>(fmt: K): Tempo.Format[K] => {
-		const bailOut = void 0 as unknown as Tempo.Format[K];
+		const bailOut = void 0 as unknown as Tempo.Format[K];		// allow for return of 'undefined'
 
 		if (isNull(this.#value))
 			return bailOut;																				// don't format <null> dates
@@ -1344,7 +1344,7 @@ export namespace Tempo {
 		dayDate = 'ddd, yyyy-mmm-dd',
 		dayTime = 'ddd, yyyy-mmm-dd hh:mi',
 		dayFull = 'ddd, yyyy-mmm-dd hh:mi:ss',									// useful for Sheets cell-format
-		dayStamp = 'ddd, yyyy-mmm-dd hh:mi:ss.ff',							// Day, Date and Time to nanosecond
+		dayStamp = 'ddd, yyyy-mmm-dd hh:mi:ss.ff',							// day, date and time to nanosecond
 		logStamp = 'hhmiss.ff',																	// useful for stamping logs 
 		sortTime = 'yyyy-mm-dd hh:mi:ss',												// useful for sorting display-strings
 		monthDay = 'dd-mmm',																		// useful for readable month and day
