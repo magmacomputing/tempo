@@ -1358,7 +1358,7 @@ export namespace Tempo {
 		time = 'hh:mi:ss',																			// just Time portion
 	}
 
-	/** number of seconds per unit-of-time */
+	/** approx number of seconds per unit-of-time */
 	export enum TIME {
 		year = 31_536_000,
 		quarter = 2_628_000 * 3,
