@@ -20,7 +20,7 @@ import { Temporal } from '@js-temporal/polyfill';
 
 // shortcut functions to common Tempo properties / methods.
 /** check valid Tempo */											export const isTempo = (tempo?: any) => isType<Tempo>(tempo, 'Tempo');
-/** current timestamp (ms) */									export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
+/** current timestamp (ts) */									export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
 /** create new Tempo */												export const getTempo = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
 /** format a Tempo */													export const fmtTempo = <K extends Tempo.FormatKeys>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).format(fmt);
 
