@@ -40,7 +40,10 @@ import { Temporal } from '@js-temporal/polyfill';
  */
 export class Tempo {
 	// Static variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	static #ready = new Pledge<boolean>('Tempo');							// wait for static-blocks to settle
+	static #pledge = {
+		static: new Pledge<boolean>('Static'),									// wait for static-blocks to settle
+		init: new Pledge<boolean>('Init'),											// wait for Tempo.init() to settle
+	}
 
 	// start with defaults for all Tempo instances
 	static #locales = [																				// Array of Locales that prefer 'mm-dd-yy' date order
@@ -202,11 +205,14 @@ export class Tempo {
 	 * useful primarily for 'order of parsing input', as well as .quarter and .season
 	 */
 	static init = (init: Tempo.Init = {}) => {
-		return Promise.race([																		// wait until static-blocks are fully loaded (or two-seconds timeout)
-			Tempo.#ready.promise,
+		return Promise.race([
+			Tempo.#pledge.static.promise,													// wait until static-blocks are fully loaded (or two-seconds timeout)
 			new Promise<boolean>((_, reject) => setTimeout(_ => reject(new Error('Tempo setup timed out')), Tempo.TIME.second * 2)),
 		])
 			.then(_ => {
+				if (Tempo.#pledge.init.status.state !== Pledge.STATE.Pending)
+					Tempo.#pledge.init = new Pledge<boolean>('Init');	// reset Init Pledge
+
 				Object.assign(Tempo.#default, {
 					level: Tempo.CONFIG.Static,												// static configuration
 					calendar: init.calendar || Tempo.#dateTime.calendar,// default Calendar
@@ -243,7 +249,7 @@ export class Tempo {
 					}
 				} as Tempo.ConfigFile)
 
-				const country = Tempo.#default.timeZone.toLowerCase().split('/')[0];
+				const [country] = Tempo.#default.timeZone.toLowerCase().split('/');
 				switch (country) {																	// TODO: better country detection
 					case 'australia':
 						Object.assign(Tempo.#default, { sphere: Tempo.COMPASS.South, fiscal: Tempo.#startFiscal(Tempo.COMPASS.South), locale: 'en-AU' });
@@ -310,6 +316,7 @@ export class Tempo {
 					console.warn(err.message)
 				else throw new Error(err.message);									// re throw
 			})
+			.finally(() => Tempo.#pledge.init.resolve(true));			// indicate Tempo.init() has completed
 	}
 
 	/** convert list of <string | RegExp> to a single RegExp */
@@ -363,7 +370,7 @@ export class Tempo {
 	 */
 	static compare = (tempo1: Tempo.DateTime, tempo2?: Tempo.DateTime) => {
 		const one = new Tempo(tempo1), two = new Tempo(tempo2);
-		return Number((one.epoch > two.epoch) || -(one.epoch < two.epoch)) + 0;
+		return Number((one.nano > two.nano) || -(one.nano < two.nano)) + 0;
 	}
 
 	/** write a default configuration into persistent storage */
@@ -413,14 +420,15 @@ export class Tempo {
 		return Tempo.#pattern;
 	}
 
-	/** Promise resolve when static blocks are complete */
+	/** Promise resolve when Tempo.init() is complete */
 	static get ready() {
-		return Tempo.#ready.promise;
+		return Tempo.#pledge.static.promise
+			.then(_ => Tempo.#pledge.init.promise)
 	}
 
 	/** static blocks are now complete */
 	static {
-		Tempo.#ready.resolve(true);
+		Tempo.#pledge.static.resolve(true);
 	}
 
 	// Instance Symbols    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -429,7 +437,7 @@ export class Tempo {
 	[Symbol.toPrimitive](hint?: 'string' | 'number' | 'default') {
 		if (this.#config.debug)
 			console.log('Tempo.hint: ', hint);
-		return this.epoch;
+		return this.nano;
 	}
 
 	/** iterate over Tempo properties */
@@ -583,8 +591,8 @@ export class Tempo {
 	/** long weekday name */																	get day() { return Tempo.WEEKDAYS[this.#temporal.dayOfWeek] }
 	/** quarter: Q1-Q4 */																			get qtr() { return Math.trunc(this.#config.month[this.mm].quarter) }
 	/** meteorological season: Spring/Summer/Autumn/Winter */	get season() { return this.#config.month[this.mm].season.split('.')[0] as keyof typeof Tempo.SEASON }
-	/** nanoseconds (BigInt) since Unix epoch */							get epoch() { return this.#temporal.epochNanoseconds }
-	/** epoch object */																				get age() {
+	/** nanoseconds (BigInt) since Unix epoch */							get nano() { return this.#temporal.epochNanoseconds }
+	/** units since epoch */																	get epoch() {
 		return {
 			/** seconds since epoch */														ss: this.#temporal.epochSeconds,
 			/** milliseconds since epoch */												ms: this.#temporal.epochMilliseconds,
@@ -1409,4 +1417,4 @@ export namespace Tempo {
 /**
  * kick-start Tempo configuration with default config
  */
-Tempo.init();
+await Tempo.init();
