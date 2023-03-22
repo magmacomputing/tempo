@@ -1,5 +1,5 @@
-import { isNumeric } from '@module/shared/number.library';
-import { isDefined } from '@module/shared/type.library';
+import { isNumeric } from '@module/shared/number.library.js';
+import { isDefined } from '@module/shared/type.library.js';
 
 /** General utility functions */
 

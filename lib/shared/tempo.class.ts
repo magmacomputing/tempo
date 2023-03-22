@@ -1,14 +1,14 @@
-import { Pledge } from '@module/shared/pledge.class';
-import { asArray } from '@module/shared/array.library';
-import { enumKeys } from '@module/shared/enum.library';
-import { getAccessors, omit } from '@module/shared/object.library';
-import { getContext, CONTEXT } from '@module/shared/utility.library';
-import { clone, stringify, objectify } from '@module/shared/serialize.library';
-import { asString, pad, toProperCase, trimAll, } from '@module/shared/string.library';
-import { asNumber, isNumeric, split } from '@module/shared/number.library';
-import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isString, isArray, isObject, isRegExp, isNumber } from '@module/shared/type.library';
+import { Pledge } from '@module/shared/pledge.class.js';
+import { asArray } from '@module/shared/array.library.js';
+import { enumKeys } from '@module/shared/enum.library.js';
+import { getAccessors, omit } from '@module/shared/object.library.js';
+import { getContext, CONTEXT } from '@module/shared/utility.library.js';
+import { clone, stringify, objectify } from '@module/shared/serialize.library.js';
+import { asString, pad, toProperCase, trimAll, } from '@module/shared/string.library.js';
+import { asNumber, isNumeric, split } from '@module/shared/number.library.js';
+import { asType, isType, isEmpty, isNull, isDefined, isUndefined, isString, isArray, isObject, isRegExp } from '@module/shared/type.library.js';
 
-import '@module/shared/prototype.library';									// patch prototype
+import '@module/shared/prototype.library.js';								// patch prototype
 
 /**
  * TODO: Localization options on output?  on input?  
@@ -19,10 +19,10 @@ import '@module/shared/prototype.library';									// patch prototype
 import { Temporal } from '@js-temporal/polyfill';
 
 // shortcut functions to common Tempo properties / methods.
-/** check valid Tempo */											export const isTempo = (tempo?: any) => isType<Tempo>(tempo, 'Tempo');
-/** current timestamp (ts) */									export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
-/** create new Tempo */												export const getTempo = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
-/** format a Tempo */													export const fmtTempo = <K extends Tempo.FormatKeys>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).format(fmt);
+/** check valid Tempo */			export const isTempo = (tempo?: any) => isType<Tempo>(tempo, 'Tempo');
+/** current timestamp (ts) */	export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
+/** create new Tempo */				export const getTempo = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
+/** format a Tempo */					export const fmtTempo = <K extends Tempo.FormatKeys>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).format(fmt);
 
 /**
  * Wrapper Class around Temporal API  
@@ -40,7 +40,7 @@ import { Temporal } from '@js-temporal/polyfill';
  */
 export class Tempo {
 	// Static variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	static #pledge = {
+	static #ready = {
 		static: new Pledge<boolean>('Static'),									// wait for static-blocks to settle
 		init: new Pledge<boolean>('Init'),											// wait for Tempo.init() to settle
 	}
@@ -206,12 +206,12 @@ export class Tempo {
 	 */
 	static init = (init: Tempo.Init = {}) => {
 		return Promise.race([
-			Tempo.#pledge.static.promise,													// wait until static-blocks are fully loaded (or two-seconds timeout)
-			new Promise<boolean>((_, reject) => setTimeout(_ => reject(new Error('Tempo setup timed out')), Tempo.TIME.second * 2)),
+			Tempo.#ready.static.promise,													// wait until static-blocks are fully parsed (or two-seconds timeout)
+			new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('Tempo setup timed out')), Tempo.TIME.second * 2)),
 		])
 			.then(_ => {
-				if (Tempo.#pledge.init.status.state !== Pledge.STATE.Pending)
-					Tempo.#pledge.init = new Pledge<boolean>('Init');	// reset Init Pledge
+				if (Tempo.#ready.init.status.state !== Pledge.STATE.Pending)
+					Tempo.#ready.init = new Pledge<boolean>('Init');	// reset Init Pledge
 
 				Object.assign(Tempo.#default, {
 					level: Tempo.CONFIG.Static,												// static configuration
@@ -316,7 +316,7 @@ export class Tempo {
 					console.warn(err.message)
 				else throw new Error(err.message);									// re throw
 			})
-			.finally(() => Tempo.#pledge.init.resolve(true));			// indicate Tempo.init() has completed
+			.finally(() => Tempo.#ready.init.resolve(true));			// indicate Tempo.init() has completed
 	}
 
 	/** convert list of <string | RegExp> to a single RegExp */
@@ -420,15 +420,15 @@ export class Tempo {
 		return Tempo.#pattern;
 	}
 
-	/** Promise resolve when Tempo.init() is complete */
+	/** indicate when Tempo.init() is complete */
 	static get ready() {
-		return Tempo.#pledge.static.promise
-			.then(_ => Tempo.#pledge.init.promise)
+		return Tempo.#ready.static.promise
+			.then(_ => Tempo.#ready.init.promise)
 	}
 
-	/** static blocks are now complete */
+	/** end of static blocks */
 	static {
-		Tempo.#pledge.static.resolve(true);
+		Tempo.#ready.static.resolve(true);
 	}
 
 	// Instance Symbols    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1415,6 +1415,7 @@ export namespace Tempo {
 }
 
 /**
- * kick-start Tempo configuration with default config
+ * kick-start Tempo configuration with default config  
+ * use top-level await to indicate Tempo is ready
  */
 await Tempo.init();

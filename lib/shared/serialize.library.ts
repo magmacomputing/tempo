@@ -1,6 +1,6 @@
-import { Tempo } from '@module/shared/tempo.class';
-import { isNumeric } from '@module/shared/number.library';
-import { isType, asType, isEmpty, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types } from '@module/shared/type.library';
+import { Tempo } from '@module/shared/tempo.class.js';
+import { isNumeric } from '@module/shared/number.library.js';
+import { isType, asType, isEmpty, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types } from '@module/shared/type.library.js';
 
 // be aware that 'structuredClone' preserves \<undefined> values...  
 // but JSON.stringify() does not

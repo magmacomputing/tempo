@@ -1,5 +1,5 @@
-import { isNumeric } from '@module/shared/number.library';
-import { isNumber } from '@module/shared/type.library';
+import { isNumeric } from '@module/shared/number.library.js';
+import { isNumber } from '@module/shared/type.library.js';
 
 /**
  * Typescript Enums have three types:  

@@ -1,5 +1,5 @@
-import { clone } from '@module/shared/serialize.library';
-import { isObject, isArray, isString, isNull, isUndefined, isReference, isFunction, type TValues } from '@module/shared/type.library';
+import { clone } from '@module/shared/serialize.library.js';
+import { isObject, isArray, isString, isNull, isUndefined, isReference, isFunction, type TValues } from '@module/shared/type.library.js';
 
 const regex = /(?<matchWord>.*)\[(?<matchIdx>.)\]$/;				// a pattern to find array-references
 
