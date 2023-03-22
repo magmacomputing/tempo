@@ -1,6 +1,6 @@
-import { isNumeric } from '@module/shared/number.library';
-import { stringify } from '@module/shared/serialize.library';
-import { isString, isObject, isNullish, assertCondition, assertString, nullToValue } from '@module/shared/type.library';
+import { isNumeric } from '@module/shared/number.library.js';
+import { stringify } from '@module/shared/serialize.library.js';
+import { isString, isObject, isNullish, assertCondition, assertString, nullToValue } from '@module/shared/type.library.js';
 
 // General <string> functions
 

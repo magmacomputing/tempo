@@ -1,5 +1,5 @@
-import type { Tempo } from '@module/shared/tempo.class';
-import type { Pledge } from '@module/shared/pledge.class';
+import type { Tempo } from '@module/shared/tempo.class.js';
+import type { Pledge } from '@module/shared/pledge.class.js';
 
 // TODO:  remove this after Temporal reaches Stage-4
 import { Temporal } from '@js-temporal/polyfill';

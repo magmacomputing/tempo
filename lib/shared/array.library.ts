@@ -1,7 +1,7 @@
-import { asString } from '@module/shared/string.library';
-import { getPath } from '@module/shared/object.library';
-import { cloneify } from '@module/shared/serialize.library';
-import { asType, isNumber, isDate, isIterable, isString, isBoolean, isArrayLike, nullToValue } from '@module/shared/type.library';
+import { asString } from '@module/shared/string.library.js';
+import { getPath } from '@module/shared/object.library.js';
+import { cloneify } from '@module/shared/serialize.library.js';
+import { asType, isNumber, isDate, isIterable, isString, isBoolean, isArrayLike, nullToValue } from '@module/shared/type.library.js';
 
 /** Coerce value into value[], if not already value[], with optional fill Object */
 export function asArray<T>(arr: Exclude<ArrayLike<T>, string> | undefined): T[];

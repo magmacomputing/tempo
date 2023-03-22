@@ -1,6 +1,6 @@
-import { asArray } from '@module/shared/array.library';
-import { stringify } from '@module/shared/serialize.library';
-import { asType, type TValues } from '@module/shared/type.library'
+import { asArray } from '@module/shared/array.library.js';
+import { stringify } from '@module/shared/serialize.library.js';
+import { asType, type TValues } from '@module/shared/type.library.js'
 
 /**
  * Wrap a Promise<T>, its status and Resolve/Reject/Settle methods for later fulfilment   

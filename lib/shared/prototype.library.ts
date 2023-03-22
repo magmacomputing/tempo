@@ -1,8 +1,8 @@
 // @ts-nocheck
 // no typescript checking to get around the 'this' binding warnings
 
-import { trimAll, toProperCase } from '@module/shared/string.library';
-import { asArray, keyedBy, sortBy, type SortBy } from '@module/shared/array.library';
+import { trimAll, toProperCase } from '@module/shared/string.library.js';
+import { asArray, keyedBy, sortBy, type SortBy } from '@module/shared/array.library.js';
 
 // Prototype extensions
 // Remember to define any imports as a Function declaration (not a Function expression)
