@@ -103,7 +103,7 @@ export class Tempo {
 			['ddmmyy', 'mmddyy'],																	// swap ddmmyy for mmddyy
 			['ddmmyyhms', 'mmddyyhms'],														// swap ddmmyyhms for mmddyyhms
 		] as const;
-		const idx = Tempo.#default.mmddyy.findIndex(itm => itm.timeZones.includes(tz));
+		const idx = Tempo.#default.mmddyy.findIndex(itm => itm.timeZones?.includes(tz));
 		const locale = idx !== -1
 			? Tempo.#default.mmddyy[idx].locale										// found an Intl.Locale that contains our timeZone
 			: void 0
