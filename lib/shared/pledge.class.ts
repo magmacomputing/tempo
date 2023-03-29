@@ -1,15 +1,22 @@
 import { asArray } from '@module/shared/array.library.js';
 import { stringify } from '@module/shared/serialize.library.js';
-import { asType, type TValues } from '@module/shared/type.library.js'
+import { isString, type TValues } from '@module/shared/type.library.js'
 
 /**
- * Wrap a Promise<T>, its status and Resolve/Reject/Settle methods for later fulfilment   
+ * Wrap a Promise's resolve/reject/finally methods for later fulfilment   
  ```
 	 new Pledge<T>({tag: string, onResolve?: () => void, onReject?: () => void, onSettle?: () => void, catch: boolean, debug: boolean})
 	 new Pledge<T>(tag?: string) 
  ```
  */
 export class Pledge<T> {
+	static #options: Pledge.Constructor = {};
+
+	static init(opts: Pledge.Constructor) {
+		Object.assign(Pledge.#options, opts);										// allow for pre-defined instance options
+		console.log('Pledge: ', Pledge.#options);
+	}
+
 	#status: Pledge.Status<T>;
 	#promise: Promise<T>;
 	#resolve!: (value: T | PromiseLike<T>) => void;
@@ -17,26 +24,20 @@ export class Pledge<T> {
 
 	[Symbol.toStringTag]() { return 'Pledge' }
 
-	constructor(opts?: Pledge.Constructor | Function | string) {
-		const { tag = void 0, onResolve = void 0, onReject = void 0, onSettle = void 0, body = void 0, ...flags } = (_ => {
-			const arg = asType(opts);
-			switch (arg.type) {
-				case 'String':
-					return { tag: arg.value };
-				case 'Object':
-				case 'Record':
-					return { ...arg.value as Pledge.Constructor };
-				case 'Function':
-					return { body: arg.value as Pledge.Body }
-				default:
-					throw new Error('Invalid Pledge argument')
-			}
-		})(opts);
+	constructor(arg?: Pledge.Constructor | string) {
+		const {
+			tag = Pledge.#options.tag,
+			onResolve = Pledge.#options.onResolve,
+			onReject = Pledge.#options.onReject,
+			onSettle = Pledge.#options.onSettle,
+			...flags } = isString(arg)
+				? { tag: arg }																			// if String, assume 'tag'
+				: { ...arg }																				// else 'options'
 
 		this.#status = JSON.parse(JSON.stringify({							// remove undefined values
 			tag,
-			catch: flags.catch,
-			debug: flags.debug,
+			catch: flags.catch ?? Pledge.#options.catch,
+			debug: flags.debug ?? Pledge.#options.debug,
 			state: Pledge.STATE.Pending,
 		}));
 
@@ -134,17 +135,8 @@ export namespace Pledge {
 	export type Resolve = (val: any) => any;									// function to call after Pledge resolves
 	export type Reject = (err: Error) => any;									// function to call after Pledge rejects
 	export type Settle = () => void;													// function to call after Pledge settles
-	export type Body = () => void;														// function to call 
 
-	export type Constructor = {
-		tag?: string,
-		onResolve?: TValues<Pledge.Resolve>,
-		onReject?: TValues<Pledge.Reject>,
-		onSettle?: TValues<Pledge.Settle>,
-		body?: Pledge.Body,
-		catch?: boolean,
-		debug?: boolean
-	}
+	export type Constructor = { tag?: string, onResolve?: TValues<Pledge.Resolve>, onReject?: TValues<Pledge.Reject>, onSettle?: TValues<Pledge.Settle>, catch?: boolean, debug?: boolean }
 
 	export enum STATE {
 		Pending = 'pending',
