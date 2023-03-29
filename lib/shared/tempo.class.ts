@@ -423,7 +423,7 @@ export class Tempo {
 	/** indicate when Tempo.init() is complete */
 	static get ready() {
 		return Tempo.#ready.static.promise
-			.then(_ => Tempo.#ready.init.promise)
+			.then(() => Tempo.#ready.init.promise)
 	}
 
 	/** end of static blocks */
