@@ -57,7 +57,7 @@ export const getPath = <T>(obj: any, path: TValues<string>, dflt?: any, indx?: s
 		? getPath(clone, rest, dflt, matchIdx)									// recurse into object
 		: clone || dflt
 }
-export const getPath1 = <T>(obj: any, path: string, dflt?: T, idx?: string | number) => {
+export const getPath1 = <T>(obj: unknown, path: string, dflt?: T, idx?: string | number) => {
 	const words = path.replace(' ', '').split('.');
 
 	if (isArray(obj)) {
@@ -67,7 +67,7 @@ export const getPath1 = <T>(obj: any, path: string, dflt?: T, idx?: string | num
 			return dflt;
 	}
 
-	let res = obj;
+	let res = obj as Record<string, any>;
 	path
 		.replace(' ', '')
 		.split('.')
