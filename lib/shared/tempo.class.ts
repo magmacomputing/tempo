@@ -606,9 +606,8 @@ export class Tempo {
 	}
 
 	// Public Methods	 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	/** calc DateTime duration */															until<U extends Tempo.Until>(until: U) { return this.#until(until) }
-	/** format elapsed time */																since<S extends Tempo.Until>(since: S) { return this.#since(since) }
+	/** calc DateTime duration */															until<U extends Tempo.DateTime | Tempo.Until>(until?: U) { return this.#until(until) }
+	/** format elapsed time */																since<S extends Tempo.DateTime | Tempo.Until>(since?: S) { return this.#since(since) }
 	/** apply formatting */																		format<K extends Tempo.FormatKeys>(fmt: K) { return this.#format(fmt) }
 
 	/** add date/time unit */																	add(mutate: Tempo.Add) { return this.#offset(mutate) }
@@ -1126,15 +1125,18 @@ export class Tempo {
 		}
 	}
 
-	/** calculate the difference between Tempos  (past is positive, future is negative) */
-	#until<U extends Tempo.Until>({ tempo, opts, unit }: U): U["unit"] extends Tempo.DiffUnit ? number : Tempo.Duration;
-	#until({ tempo, opts, unit } = {} as Tempo.Until) {
+	/** calculate the difference between two Tempos  (past is positive, future is negative) */
+	#until<U extends Tempo.DateTime | Tempo.Until>(arg?: U): U extends Tempo.Until ? U["unit"] extends Tempo.DiffUnit ? number : Tempo.Duration : Tempo.Duration
+	#until<U extends Tempo.DateTime | Tempo.Until>(arg?: U): number | Tempo.Duration {
+		const { tempo, opts, unit } = isObject(arg)
+			? arg as Tempo.Until																	// if a Record detected, then assume Tempo.Until
+			: { tempo: arg } as Tempo.Until;											// else build a Record and assume Tempo.Parameter["tempo"]
 		const offset = new Tempo(tempo, opts).#temporal;
 		const dur = {} as Tempo.Duration;
 
 		const duration = this.#temporal.until(offset, { largestUnit: unit === 'quarters' || unit === 'seasons' ? 'months' : (unit || 'years') });
 		for (const getter of Tempo.durations)
-			dur[getter] = duration[getter] ?? 0;
+			dur[getter] = duration[getter] ?? 0;									// init all duration-values to '0'
 
 		Object.assign(dur, {
 			iso: duration.toString(),
@@ -1156,9 +1158,12 @@ export class Tempo {
 	}
 
 	/** format the elapsed time between two Tempos (to milliseconds) */
-	#since({ tempo, opts, unit } = {} as Tempo.Until) {
+	#since(arg?: Tempo.DateTime | Tempo.Until) {
+		const { tempo, opts, unit } = isObject(arg)
+			? arg as Tempo.Until																	// if a Record passed, then assume Tempo.Until
+			: { tempo: arg } as Tempo.Until;											// else build a Record and assume Tempo.Parameter["tempo"]
 		const { days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = this.#until({ tempo, opts });
-		const since = `${pad(seconds)}.${pad(milliseconds, 3)}}`// default since
+		const since = `${pad(seconds)}.${pad(milliseconds, 3)}`;// default since
 
 		switch (unit) {
 			case 'days':
@@ -1217,7 +1222,7 @@ export namespace Tempo {
 		tempo?: Tempo.DateTime;
 		opts?: Tempo.Options;
 	}
-	/** configuration to use for #until() argument */
+	/** configuration to use for #until() and #since() argument */
 	export interface Until extends Tempo.Parameter {
 		unit?: Tempo.DiffUnit;
 	}
