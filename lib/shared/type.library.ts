@@ -43,7 +43,7 @@ export const asType = <T>(obj?: T, ...instances: Instance[]) => ({ type: getType
 export const isType = <T>(obj: unknown, ...types: Types[]): obj is T => types.includes(getType(obj));
 
 /** Type-Guards: assert \<obj> is of \<type> */
-export const isPrimitive = (obj?: unknown): obj is Primitive => isType(obj, 'String', 'Number', 'BigInt', 'Boolean', 'Symbol', 'Undefined', 'Void', 'Null');
+export const isPrimitive = (obj?: unknown): obj is Primitive => isType(obj, 'String', 'Number', 'BigInt', 'Boolean', 'Symbol', 'Undefined', 'Void', 'Null', 'Record', 'Tuple');
 export const isReference = (obj?: unknown): obj is Object => !isPrimitive(obj);
 export const isIterable = <T>(obj: unknown): obj is Iterable<T> => Symbol.iterator in Object(obj) && !isString(obj);
 
