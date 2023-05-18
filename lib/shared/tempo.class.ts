@@ -479,8 +479,8 @@ export class Tempo {
 		this.#units = {};																				// units to use on this instance
 		this.#config = {																				// allow for override of defaults and config-file
 			level: Tempo.CONFIG.Instance,													// instance configuration
-			timeZone: new Temporal.TimeZone(opts.timeZone ?? Tempo.#default.timeZone),
-			calendar: new Temporal.Calendar(opts.calendar ?? Tempo.#default.calendar),
+			timeZone: new Temporal.TimeZone(opts.timeZone ?? Tempo.#default.timeZone).id,
+			calendar: new Temporal.Calendar(opts.calendar ?? Tempo.#default.calendar).id,
 			timeStamp: opts.timeStamp ?? Tempo.#default.timeStamp,// precision for Tempo timestamp
 			locale: opts.locale ?? Tempo.#default.locale,					// help determine which DateFormat to check first
 			pivot: opts.pivot ?? Tempo.#default.pivot,						// determines the century-cutoff for two-digit years
@@ -504,8 +504,8 @@ export class Tempo {
 		/** First task is to parse the 'Tempo.Options' looking for overrides to Tempo.#defaults */
 		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 		// if a timeZone provided, but no hemisphere.  try to infer hemisphere based on daylight-savings
-		if (this.#config.timeZone.id !== Tempo.#default.timeZone && isUndefined(opts.sphere)) {
-			const sphere = Tempo.#dst(this.#config.timeZone.id);
+		if (this.#config.timeZone !== Tempo.#default.timeZone && isUndefined(opts.sphere)) {
+			const sphere = Tempo.#dst(this.#config.timeZone);
 			if (sphere)
 				this.#config.sphere = sphere;
 			if (!opts.locale)
@@ -538,7 +538,7 @@ export class Tempo {
 		this.#config.pattern.splice(this.#config.pattern.length, 0, ...Tempo.#pattern);
 		// change of Locale, swap 'dmy' pattern parse-order?
 		if (this.#config.locale !== Tempo.#default.locale) {
-			const locale = Tempo.#swap(this.#config.timeZone.id, this.#config.pattern);
+			const locale = Tempo.#swap(this.#config.timeZone, this.#config.pattern);
 
 			if (isEmpty(this.#config.locale))
 				this.#config.locale = locale || Tempo.#default.locale;
@@ -582,7 +582,7 @@ export class Tempo {
 	/** nanoseconds since last microsecond */									get ns() { return this.#temporal.nanosecond }
 	/** fractional seconds since last second */								get ff() { return Number(`0.${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`) }
 	/** number of weeks */																		get ww() { return this.#temporal.weekOfYear }
-	/** timezone */																						get tz() { return this.#temporal.timeZone.toString() }
+	/** timezone */																						get tz() { return this.#temporal.timeZoneId }
 	/** default as milliseconds since Unix epoch */						get ts() { return this.#temporal[Tempo.#timeStamp[this.#config.timeStamp]] as number | bigint }
 	/** weekday: Mon=1, Sun=7 */															get dow() { return this.#temporal.dayOfWeek }
 	/** short month name */																		get mmm() { return Tempo.MONTH[this.#temporal.month] }
@@ -592,6 +592,7 @@ export class Tempo {
 	/** quarter: Q1-Q4 */																			get qtr() { return Math.trunc(this.#config.month[this.mm].quarter) }
 	/** meteorological season: Spring/Summer/Autumn/Winter */	get season() { return this.#config.month[this.mm].season.split('.')[0] as keyof typeof Tempo.SEASON }
 	/** nanoseconds (BigInt) since Unix epoch */							get nano() { return this.#temporal.epochNanoseconds }
+	/** Instance configuration */															get config() { return { ...this.#config } }
 	/** units since epoch */																	get epoch() {
 		return {
 			/** seconds since epoch */														ss: this.#temporal.epochSeconds,
@@ -599,10 +600,6 @@ export class Tempo {
 			/** microseconds since epoch */												us: this.#temporal.epochMicroseconds,
 			/** nanoseconds since epoch */												ns: this.#temporal.epochNanoseconds,
 		}
-	}
-	/** Instance configuration */															get config() {
-		const id = this.#temporalId();
-		return { ...this.#config, calendar: id.calendar, timeZone: id.timeZone }
 	}
 
 	// Public Methods	 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -618,9 +615,8 @@ export class Tempo {
 	/** as Date object */																			toDate() { return new Date(this.#temporal.round({ smallestUnit: 'millisecond' }).epochMilliseconds) }
 	/** as String */																					toString() { return this.#temporal.toString() }
 	/** as Object */																					toJSON() {
-		const config = (({ month, pattern, calendar, timeZone, ...rest }) => rest)(this.#config);
-		const id = this.#temporalId();
-		return ({ ...config, calendar: id.calendar, timeZone: id.timeZone, value: this.toString() });
+		const config = (({ month, pattern, ...rest }) => rest)(this.#config);
+		return ({ ...config, value: this.toString() });
 	}
 
 	// Private methods	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -652,7 +648,7 @@ export class Tempo {
 			case 'Temporal.PlainDate':
 			case 'Temporal.PlainDateTime':
 				return arg.value
-					.toZonedDateTime({ timeZone: this.#config.timeZone });
+					.toZonedDateTime(this.#config.timeZone);
 
 			case 'Temporal.PlainTime':
 				return arg.value
@@ -848,7 +844,6 @@ export class Tempo {
 			 * finished analyzing pattern.  
 			 * now rebuild 'arg' into a string that Temporal can recognize
 			 */
-			const id = this.#temporalId();
 			Object.assign(arg, {
 				type: 'String',
 				value: `
@@ -857,8 +852,8 @@ export class Tempo {
 						${pad(Number(pat.groups['dd']) || '1')}\
 						${pat.groups['hms'] ?? ''}`
 					.trimAll(/\t/g) + 																// remove <tab> and redundant <space>
-					`[${id.timeZone}]` +															// append timeZone
-					`[u-ca=${id.calendar}]`														// append calendar
+					`[${this.#config.timeZone}]` +										// append timeZone
+					`[u-ca=${this.#config.calendar}]`									// append calendar
 			})
 
 			if (this.#config?.debug)															// show the pattern that was matched, and the conformed value
@@ -901,12 +896,6 @@ export class Tempo {
 			hh = 0;																								// special for 'midnight'
 
 		return `${hh}:${mi}:${ss}`;
-	}
-
-	/** display IDs for calendar and timeZone */
-	#temporalId() {
-		const { calendar: { id: calendar }, timeZone: { id: timeZone } } = this.#config;
-		return { calendar, timeZone }
 	}
 
 	/** create a new offset Tempo */
@@ -1262,8 +1251,8 @@ export namespace Tempo {
 	export enum CONFIG { Static = 'static', Instance = 'instance' }
 	export interface Config {
 		level: Tempo.CONFIG,																		// separate configurations
-		timeZone: Temporal.TimeZone,														// TimeZone for this instance
-		calendar: Temporal.Calendar,														// Calendar for this instance
+		timeZone: string,																				// TimeZone Id for this instance
+		calendar: string,																				// Calendar Id for this instance
 		pivot: number;																					// two-digit number to determine when to prepend '19' or '20' to a year
 		locale: string;																					// Locale for this instance
 		timeStamp: Tempo.TimeStamp;															// precision for Tempo().ts timestamp
@@ -1272,7 +1261,7 @@ export namespace Tempo {
 		debug: boolean;																					// debug-mode for this instance
 		catch: boolean;																					// catch-mode for this instance
 		pattern: Tempo.Pattern[];																// conform patterns
-		period: Tempo.Periods;																		// Time periods for this instance
+		period: Tempo.Periods;																	// Time periods for this instance
 	}
 
 	/** use to set Tempo.defaults */
