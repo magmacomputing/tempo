@@ -182,8 +182,8 @@ export class Tempo {
 	static #dst = (tzone: string) => {
 		const yy = Temporal.Now.plainDateISO().year;						// current year
 		const tz = new Temporal.TimeZone(tzone);
-		const jan = tz.getOffsetNanosecondsFor(Temporal.Instant.from(`${yy}-01-01Z`));
-		const jun = tz.getOffsetNanosecondsFor(Temporal.Instant.from(`${yy}-06-01Z`));
+		const jan = tz.getOffsetNanosecondsFor(Temporal.Instant.from(`${yy}-01-01T00:00+00:00`));
+		const jun = tz.getOffsetNanosecondsFor(Temporal.Instant.from(`${yy}-06-01T00:00+00:00`));
 		const dst = jan - jun;																	// timezone offset difference between Jan and Jun
 
 		switch (true) {
@@ -204,12 +204,12 @@ export class Tempo {
 	 * Tempo.#default is set from init argument (if supplied), else local cache, else reasonable default values. 
 	 * useful primarily for 'order of parsing input', as well as .quarter and .season
 	 */
-	static init = (init: Tempo.Init = {}) => {
+	static init = (init: Tempo.Init = {}) => {	
 		return Promise.race([
 			Tempo.#ready.static.promise,													// wait until static-blocks are fully parsed (or two-seconds timeout)
 			new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('Tempo setup timed out')), Tempo.TIME.second * 2)),
 		])
-			.then(_ => {
+			.then(_ => {			
 				if (Tempo.#ready.init.status.state !== Pledge.STATE.Pending)
 					Tempo.#ready.init = new Pledge<boolean>('Init');	// reset Init Pledge
 
@@ -722,8 +722,9 @@ export class Tempo {
 				throw new Error('Cannot safely interpret number with less than 8-digits: use string');
 		}
 
-		for (const { key, reg } of this.#config.pattern) {			// test against regular-expression patterns until a match is found
+		for (const { key, reg } of this.#config.pattern) {			// test against regular-expression patterns until a match is found		
 			const pat = value.match(reg);													// return any matches
+	
 			if (isNull(pat) || isUndefined(pat.groups))						// if regexp named-groups not found
 				continue;																						// 	skip this iteration
 
@@ -1395,8 +1396,8 @@ export namespace Tempo {
 		epoch: 0,																								// TODO: is this needed ?
 		maxDate: new Date('9999-12-31T23:59:59'),
 		minDate: new Date('1000-01-01T00:00:00'),
-		maxStamp: Temporal.Instant.from('9999-12-31+00:00').epochSeconds,
-		minStamp: Temporal.Instant.from('1000-01-01+00:00').epochSeconds,
+		maxStamp: Temporal.Instant.from('9999-12-31T23:59:59.999999+00:00').epochSeconds,
+		minStamp: Temporal.Instant.from('1000-01-01T00:00+00:00').epochSeconds,
 	} as const
 
 	/** Seasons */
