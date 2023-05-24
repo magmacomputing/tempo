@@ -42,7 +42,7 @@ export function cloneify<T>(obj: T, sentinel?: Function): T {
 function replacer(key: string, obj: any): any { return isEmpty(key) ? obj : stringize(obj) }
 function reviver() { return (_key: string, val: any) => decode(val) }
 
-/** encode control characters, then replace a subset back to text-string */
+/** encode control characters, then replace a safe-subset back to text-string */
 function encode(val: string) {
 	return encodeURI(val)
 		.replace(/%20/g, ' ')
@@ -73,10 +73,12 @@ function decode(val: string) {
 }
 
 /** check type can be stringify'd */
-const isStringable: (val: unknown) => boolean = (val) => !isType(val, 'Function', 'AsyncFunction', 'Symbol', 'WeakMap', 'WeakSet', 'WeakRef');
+const isStringable: (val: unknown) => boolean = (val) =>
+	!isType(val, 'Function', 'AsyncFunction', 'Symbol', 'WeakMap', 'WeakSet', 'WeakRef');
 
 /** string representation of a single-key Object */
-const oneKey = (type: Types, value: string) => `{"${type}": ${value}}`;
+const oneKey = (type: Types, value: string) =>
+	`{"${type}": ${value}}`;
 
 /**
  * For items which are not currently serializable via standard JSON.stringify (Undefined, BigInt, Set, Map, etc.)  
