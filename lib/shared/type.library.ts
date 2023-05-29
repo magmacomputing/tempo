@@ -62,7 +62,7 @@ export const isRecord = (obj?: unknown): obj is Record<any, any> => isType(obj, 
 export const isTuple = <T>(obj?: unknown): obj is Array<T> => isType(obj, 'Tuple');
 
 export const isNull = (obj?: unknown): obj is null => isType(obj, 'Null');
-export const isNullish = (obj: {} | Nullish): obj is Nullish => isType<undefined | null>(obj, 'Null', 'Undefined', 'Void');
+export const isNullish = (obj: {} | Nullish): obj is Nullish => isType<undefined | null | void>(obj, 'Null', 'Undefined', 'Void', 'Empty');
 export const isUndefined = (obj?: unknown): obj is undefined => isType<undefined>(obj, 'Undefined');
 export const isDefined = <T>(obj: T): obj is NonNullable<T> => !isNullish(obj);
 
@@ -127,7 +127,7 @@ export type Types =
 	'Object' |
 	'Array' | 'ArrayLike' |
 	'Null' |
-	'Undefined' | 'Void' |
+	'Undefined' | 'Void' | 'Empty' |
 	'Date' |
 	'Function' | 'AsyncFunction' |
 	'Class' |
