@@ -54,13 +54,13 @@ export function sortBy<T>(...keys: (string | SortBy)[]) {
 		.map(key => isString(key) ? { field: key } : key)				// build Array of sort-options
 
 	return (a: Record<string, T>, b: Record<string, T>) => {
-		let result = 0;																					// result will be negative | zero | positive
+		let result = 0;
 
 		sortOptions.forEach(key => {
 			if (result === 0) {																		// no need to look further if result !== 0
 				const dir = key.dir === 'desc' ? -1 : 1;
-				const valueA = getPath<number>(a, key.field, nullToValue(key.default, 0), key.index);
-				const valueB = getPath<number>(b, key.field, nullToValue(key.default, 0), key.index);
+				const valueA = getPath<any>(a, key.field, nullToValue(key.default, 0), key.index);
+				const valueB = getPath<any>(b, key.field, nullToValue(key.default, 0), key.index);
 
 				switch (true) {
 					case isNumber(valueA) && isNumber(valueB):
