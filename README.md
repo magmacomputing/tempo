@@ -1,15 +1,14 @@
 # Tempo
 A Wrapper around the Javascript Temporal object
 
-The new proposed Ecmascript Temporal object (currently at Stage 3)
+The new proposed Ecmascript Temporal object (currently at Stage 3 as-at July-2023)
 will bring many benefits to Developers.
 
 The trade-off for this is additional syntax to learn and multiple APIs.
 In addition, parsing of strings (to Temporal objects) is very strict.
 
-This Wrapper is intended to make the use of Temporal much easier.
-It does this by presenting a single constructor and returns an immutable Tempo instance
-that builds on a Temporal.ZonedDateTime.
+This library is intended to make the use of Temporal much easier
+by instantiating a class that wraps an immutable Temporal.ZonedDateTime
 
 *~~~
 # syntax:
@@ -18,9 +17,9 @@ that builds on a Temporal.ZonedDateTime.
 		new Tempo(20220301, {debug: true, catch: true})
 
 		A Tempo will set its options from
-		*> some internal default settings
-		*> optionally overridden by some config-file settings (see :configuration)
-		*> optionally overridden by some invocation settings  (see :options)
+		*> internal default settings
+		*> optionally overridden by config-file settings (see :configuration)
+		*> optionally overridden by invocation settings  (see :options)
 
 *~~~
 # options:
@@ -40,7 +39,7 @@ that builds on a Temporal.ZonedDateTime.
 		pivot: number															// the two-digit year number that determines which century to prepend (default: 75)
 																							// for example, 50-May-01  will be interpreted as 1950-May-01 because it was less than 75 years from now
 		season: [summer, autumn, winter, spring]	// an array of Temporal.MonthDay that determine when a season starts
-		quarter: [date, date, date, date]					// an array of Temporal.MonthDay that determine when a financial quarter starts
+		quarter: [Date, Date, Date, Date]					// an array of Temporal.MonthDay that determine when a financial quarter starts
 		format: string[]													// an array of Temporal properties that can be used to parse the first argument
 	
 *~~~
@@ -94,36 +93,61 @@ instance:
 	SEASON																			// Summer/Autumn/Winter/Spring
 
 # consts
-	DATE																				// epoch=0/maxDate=PlainDate(9999-12-31)/minDate=PlainDate(1000-01-01)/maxStamp=Instant(9999-12-31).epochSeconds/minStamp=Instant(1000-01-01).epochSeconds
+	DATE {
+		epoch: 0,
+		maxDate: PlainDate('9999-12-31'),
+		minDate: PlainDate('1000-01-01'),
+		maxStamp: Instant('9999-12-31').epochSeconds,
+		minStamp: Instant('1000-01-01').epochSeconds,
+	}
 
-	QUARTERS																		// [, Tempo.MONTH.Jul, Tempo.MONTH.Oct, Tempo.MONTH.Jan, Tempo.MONTH.Apr]
-	SEASONS																			// [, Tempo.SEASON.Summer, Tempo.SEASON.Summer, Tempo.SEASON.Autumn, Tempo.SEASON.Autumn, Tempo.SEASON.Autumn, Tempo.SEASON.Winter, Tempo.SEASON.Winter, Tempo.SEASON.Winter, Tempo.SEASON.Spring, Tempo.SEASON.Spring, Tempo.SEASON.Spring, Tempo.SEASON.Summer]
+	QUARTERS [																								// QUARTERS[quarter-number]
+		,
+		Tempo.MONTH.Jul,
+		Tempo.MONTH.Oct,
+		Tempo.MONTH.Jan,
+		Tempo.MONTH.Apr,
+	]
 
+	SEASONS [																									// SEASONS[month-number]
+		,
+		Tempo.SEASON.Summer,
+		Tempo.SEASON.Summer,
+		Tempo.SEASON.Autumn,
+		Tempo.SEASON.Autumn,
+		Tempo.SEASON.Autumn,
+		Tempo.SEASON.Winter,
+		Tempo.SEASON.Winter,
+		Tempo.SEASON.Winter,
+		Tempo.SEASON.Spring,
+		Tempo.SEASON.Spring,
+		Tempo.SEASON.Spring,
+		Tempo.SEASON.Summer,
+	]
 *~~~
 # methods:
 static:
-  from()																			// a helper function to return a new Tempo
+  from()																										// a helper function to return a new Tempo
 
-instance:
-																							// for the following assume 'const tempo = new Tempo()'
-	diff(Tempo, unit:string, args:format)				// calculate the difference between two Tempo's
-																							// e.g.   tempo.diff(new Tempo('01-Jan'), 'days')
-	elapse(Tempo, args:format)									// format elapsed Diff-strings (useful for logging)
-																							// e.g.		tempo.elapsed()   might return "0:12:54.554"
-	format(args:format)													// applies a format-string to a Tempo
-																							// e.g.		tempo.format('HH:MI:SS seconds')
+instance:																										// for the following assume 'const tempo = new Tempo()'
+	diff(Tempo, unit:string, args:format)											// calculate the difference between two Tempo's
+																														// e.g.   tempo.diff(new Tempo('01-Jan'), 'days')
+	elapse(Tempo, args:format)																// format elapsed Diff-strings (useful for logging)
+																														// e.g.		tempo.elapsed()   might return "0:12:54.554"
+	format(args:format)																				// applies a format-string to a Tempo
+																														// e.g.		tempo.format('HH:MI:SS seconds')
 
-	add(offset: number, unit: string)						// returns a new Tempo offset by a value and component
-																							// e.g.		tempo.add(1, 'days')
-	startOf(unit: string)												// returns a new Tempo offset to a position (start, middle, end) of a unit
-	midOf(unit: string)													// e.g.		tempo.startOf('hour')
-	endOf(unit: string)													// e.g.		tempo.endOf('month')
+	add(offset: number, unit: string)													// returns a new Tempo offset by a value and component
+																														// e.g.		tempo.add(1, 'days')
+	startOf(unit: string)																			// returns a new Tempo offset to a position (start, middle, end) of a unit
+	midOf(unit: string)																				// e.g.		tempo.startOf('hour')
+	endOf(unit: string)																				// e.g.		tempo.endOf('month')
 
-	toTemporal()																// returns the underlying Temporal.ZonedDateTime
-	toDate()																		// returns the Tempo as a Javascript Date
-	toString()																	// returns the Temporal.ZonedDateTime.toString()
-	toJSON()																		// returns the Temporal.ZonedDateTime.toJSON()
-	isValid()																		// returns a boolean to indicate if the underlying Tempo was successfully parsed
+	toTemporal()																							// returns the underlying Temporal.ZonedDateTime
+	toDate()																									// returns the Tempo as a Javascript Date
+	toString()																								// returns the Temporal.ZonedDateTime.toString()
+	toJSON()																									// returns the Temporal.ZonedDateTime.toJSON()
+	isValid()																									// returns a boolean to indicate if the underlying Tempo was successfully parsed
 
 *~~~
 # patterns:
@@ -136,7 +160,7 @@ instance:
 
 *~~~
 # configuration:
-	You will need to install a polyfill, until the standard reaches your Browser.
+	You will need to install a polyfill until the Temporal standard reaches your Browser.
 	I recommend the following:
 
 	npm install @js-temporal/polyfill
