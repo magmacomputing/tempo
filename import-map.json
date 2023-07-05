@@ -12,5 +12,19 @@
 	"@module/shared/tempo.class": "/lib/shared/tempo.class.js",
 	"@module/shared/type.library": "/lib/shared/type.library.js",
 	"@module/shared/utility.library": "/lib/shared/utility.library.js",
-	"@module/shared/serialize.library": "/lib/shared/serialize.library.js"
+	"@module/shared/serialize.library": "/lib/shared/serialize.library.js",
+	"@module/shared/application.library.js": "/lib/shared/application.library.js",
+	"@module/shared/array.library.js": "/lib/shared/array.library.js",
+	"@module/shared/cipher.class.js": "/lib/shared/cipher.class.js",
+	"@module/shared/logger.library.js": "/lib/shared/logger.library.js",
+	"@module/shared/number.library.js": "/lib/shared/number.library.js",
+	"@module/shared/object.library.js": "/lib/shared/object.library.js",
+	"@module/shared/pledge.class.js": "/lib/shared/pledge.class.js",
+	"@module/shared/enum.library.js": "/lib/shared/emum.library.js",
+	"@module/shared/prototype.library.js": "/lib/shared/prototype.library.js",
+	"@module/shared/string.library.js": "/lib/shared/string.library.js",
+	"@module/shared/tempo.class.js": "/lib/shared/tempo.class.js",
+	"@module/shared/type.library.js": "/lib/shared/type.library.js",
+	"@module/shared/utility.library.js": "/lib/shared/utility.library.js",
+	"@module/shared/serialize.library.js": "/lib/shared/serialize.library.js"
 }
