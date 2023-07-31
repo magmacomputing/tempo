@@ -15,28 +15,37 @@ import '@module/shared/prototype.library.js';								// patch prototype
  * this affects month-names, day-names, season-names !
  */
 
-/** TODO: THIS IMPORT CAN BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
+/** TODO: THIS IMPORT NEEDS TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
 import { Temporal } from '@js-temporal/polyfill';
 
 // shortcut functions to common Tempo properties / methods.
-/** check valid Tempo */			export const isTempo = (tempo?: any) => isType<Tempo>(tempo, 'Tempo');
-/** current timestamp (ts) */	export const getStamp = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).ts;
-/** create new Tempo */				export const getTempo = (tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts);
-/** format a Tempo */					export const fmtTempo = <K extends Tempo.FormatKeys>(fmt: K, tempo?: Tempo.DateTime, opts: Tempo.Options = {}) => new Tempo(tempo, opts).format(fmt);
+type Args<T> = {																						// Type for consistency in expected arguments
+	(tempo?: Tempo.DateTime, opts?: Tempo.Options): T;				// parse Tempo.DateTime, default to Temporal.Instant.now()
+	(opts: Tempo.Options): T;																	// provide just Tempo.Options (use {value:'XXX'} for specific Tempo.DateTime)
+}
+type Fmt = {																								// used for the fmtTempo() shortcut
+	<F extends Tempo.FormatKeys>(fmt: F, tempo?: Tempo.DateTime, opts?: Tempo.Options): Tempo.Format[F];
+	<F extends Tempo.FormatKeys>(fmt: F, opts: Tempo.Options): Tempo.Format[F];
+}
+
+/** check valid Tempo */			export const isTempo = (tempo?: unknown) => isType<Tempo>(tempo, 'Tempo');
+/** current timestamp (ts) */	export const getStamp = ((tempo, opts) => new Tempo(tempo, opts).ts) as Args<number | bigint>;
+/** create new Tempo */				export const getTempo = ((tempo, opts) => new Tempo(tempo, opts)) as Args<Tempo>;
+/** format a Tempo */					export const fmtTempo = ((fmt, tempo, opts) => new Tempo(tempo, opts).format(fmt)) as Fmt;
 
 /**
  * Wrapper Class around Temporal API  
  * ````
- * new Tempo(DateTime, Options) or
- * Tempo.from(DateTime, Options) or
- * getTempo(DateTime, Options)  
+ * (Instance)						new Tempo(DateTime, Options) or
+ * (Static Method)			Tempo.from(DateTime, Options) or
+ * (shortcut Function)	getTempo(DateTime, Options)  
  * 	DateTime?:	string | number | Tempo	- value to be interpreted as a Temporal.ZonedDateTime, default 'now'
  * 	Options?: 	object			- arguments to assist with parsing the <date> and configuring the instance
  * ````
  * A Tempo is an object that is used to wrap a Temporal.ZonedDateTime.  
  * It's strength is in it's flexibility to parse string|number|bigint|DateTime.  
  * It has accessors that report the value as DateTime components ('yy', 'dd', 'hh', ...)  
- * It has methods to perform manipulations (add, format, diff, offset, ...)  
+ * It has simple methods to perform manipulations (add, format, diff, offset, ...)  
  */
 export class Tempo {
 	// Static variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -204,12 +213,12 @@ export class Tempo {
 	 * Tempo.#default is set from init argument (if supplied), else local cache, else reasonable default values. 
 	 * useful primarily for 'order of parsing input', as well as .quarter and .season
 	 */
-	static init = (init: Tempo.Init = {}) => {	
+	static init = (init: Tempo.Init = {}) => {
 		return Promise.race([
 			Tempo.#ready.static.promise,													// wait until static-blocks are fully parsed (or two-seconds timeout)
 			new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('Tempo setup timed out')), Tempo.TIME.second * 2)),
 		])
-			.then(_ => {			
+			.then(_ => {
 				if (Tempo.#ready.init.status.state !== Pledge.STATE.Pending)
 					Tempo.#ready.init = new Pledge<boolean>('Init');	// reset Init Pledge
 
@@ -464,9 +473,9 @@ export class Tempo {
 	/** prebuilt formats object, for convenience */						fmt = {} as Tempo.TypeFmt;
 
 	// Constructor  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	constructor(tempo?: Tempo.DateTime, opts?: Tempo.Options);// arg1: value to interpret (default to Temporal.Now.instant()), arg2: options to tailor the instance
+	constructor(opts: Tempo.Options);													// arg1: options to tailor the instance
 
-	constructor(tempo?: Tempo.DateTime, opts?: Tempo.Options);// arg1: value to interpret. arg2: options to tailor the instance
-	constructor(opts?: Tempo.Options);												// arg1: options to tailor the instance (value Temporal.Now.instant() is implied)
 	constructor(tempo?: Tempo.DateTime | Tempo.Options, opts: Tempo.Options = {}) {
 		if (isObject(tempo)) {
 			Object.assign(opts, tempo);														// shift the 1st argument to the 2nd
@@ -724,7 +733,7 @@ export class Tempo {
 
 		for (const { key, reg } of this.#config.pattern) {			// test against regular-expression patterns until a match is found		
 			const pat = value.match(reg);													// return any matches
-	
+
 			if (isNull(pat) || isUndefined(pat.groups))						// if regexp named-groups not found
 				continue;																						// 	skip this iteration
 
@@ -1196,8 +1205,17 @@ export namespace Tempo {
 		timeStamp?: Tempo.TimeStamp,
 		period?: Tempo.Periods,
 		pattern?: StringPattern[],
+		fmt?: keyof Tempo.Format,
 		value?: string,
 	}
+	/** Expected arguments */
+	export interface Arguments {
+		(): Tempo;
+		(tempo: Tempo.DateTime, options?: Tempo.Options): Tempo;
+		(opts: Tempo.Options): Tempo;
+	}
+
+	/** Timestamp precision */
 	export type TimeStamp = 'ss' | 'ms' | 'us' | 'ns'
 	export type TimeStamps = Record<Tempo.TimeStamp, keyof Temporal.ZonedDateTime>
 	export type Mutate = 'start' | 'mid' | 'end'
