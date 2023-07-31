@@ -18,21 +18,6 @@ import '@module/shared/prototype.library.js';								// patch prototype
 /** TODO: THIS IMPORT NEEDS TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
 import { Temporal } from '@js-temporal/polyfill';
 
-// shortcut functions to common Tempo properties / methods.
-type Args<T> = {																						// Type for consistency in expected arguments
-	(tempo?: Tempo.DateTime, opts?: Tempo.Options): T;				// parse Tempo.DateTime, default to Temporal.Instant.now()
-	(opts: Tempo.Options): T;																	// provide just Tempo.Options (use {value:'XXX'} for specific Tempo.DateTime)
-}
-type Fmt = {																								// used for the fmtTempo() shortcut
-	<F extends Tempo.FormatKeys>(fmt: F, tempo?: Tempo.DateTime, opts?: Tempo.Options): Tempo.Format[F];
-	<F extends Tempo.FormatKeys>(fmt: F, opts: Tempo.Options): Tempo.Format[F];
-}
-
-/** check valid Tempo */			export const isTempo = (tempo?: unknown) => isType<Tempo>(tempo, 'Tempo');
-/** current timestamp (ts) */	export const getStamp = ((tempo, opts) => new Tempo(tempo, opts).ts) as Args<number | bigint>;
-/** create new Tempo */				export const getTempo = ((tempo, opts) => new Tempo(tempo, opts)) as Args<Tempo>;
-/** format a Tempo */					export const fmtTempo = ((fmt, tempo, opts) => new Tempo(tempo, opts).format(fmt)) as Fmt;
-
 /**
  * Wrapper Class around Temporal API  
  * ````
@@ -512,9 +497,9 @@ export class Tempo {
 
 		/** First task is to parse the 'Tempo.Options' looking for overrides to Tempo.#defaults */
 		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-		// if a timeZone provided, but no hemisphere.  try to infer hemisphere based on daylight-savings
+		// timeZone provided but no hemisphere
 		if (this.#config.timeZone !== Tempo.#default.timeZone && isUndefined(opts.sphere)) {
-			const sphere = Tempo.#dst(this.#config.timeZone);
+			const sphere = Tempo.#dst(this.#config.timeZone);			// infer hemisphere based on daylight-savings
 			if (sphere)
 				this.#config.sphere = sphere;
 			if (!opts.locale)
@@ -1432,3 +1417,18 @@ export namespace Tempo {
  * use top-level await to indicate Tempo is ready
  */
 await Tempo.init();
+
+// shortcut functions to common Tempo properties / methods.
+type Args<T> = {																						// Type for consistency in expected arguments
+	(tempo?: Tempo.DateTime, opts?: Tempo.Options): T;				// parse Tempo.DateTime, default to Temporal.Instant.now()
+	(opts: Tempo.Options): T;																	// provide just Tempo.Options (use {value:'XXX'} for specific Tempo.DateTime)
+}
+type Fmt = {																								// used for the fmtTempo() shortcut
+	<F extends Tempo.FormatKeys>(fmt: F, tempo?: Tempo.DateTime, opts?: Tempo.Options): Tempo.Format[F];
+	<F extends Tempo.FormatKeys>(fmt: F, opts: Tempo.Options): Tempo.Format[F];
+}
+
+/** check valid Tempo */			export const isTempo = (tempo?: unknown) => isType<Tempo>(tempo, 'Tempo');
+/** current timestamp (ts) */	export const getStamp = ((tempo, opts) => new Tempo(tempo, opts).ts) as Args<number | bigint>;
+/** create new Tempo */				export const getTempo = ((tempo, opts) => new Tempo(tempo, opts)) as Args<Tempo>;
+/** format a Tempo */					export const fmtTempo = ((fmt, tempo, opts) => new Tempo(tempo, opts).format(fmt)) as Fmt;
