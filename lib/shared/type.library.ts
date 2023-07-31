@@ -4,7 +4,7 @@ import type { Pledge } from '@module/shared/pledge.class.js';
 // TODO:  remove this after Temporal reaches Stage-4
 import { Temporal } from '@js-temporal/polyfill';
 
-/** the actual type reported by ECMAScript */
+/** the primitive type reported by ECMAScript */
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
 
 /** 
@@ -85,7 +85,7 @@ export const isEmpty = <T>(obj?: T) => false
 	|| (isString(obj) && obj.trim().length === 0)
 	|| (isArray(obj) && obj.length === 0)
 	|| (isRecord(obj) && Object.keys(obj).length === 0)
-	|| (isTuple<T>(obj) && obj.length === 0)
+	|| (isTuple(obj) && obj.length === 0)
 	|| (isSet(obj) && obj.size === 0)
 	|| (isMap(obj) && obj.size === 0)
 
