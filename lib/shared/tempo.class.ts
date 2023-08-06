@@ -1173,9 +1173,9 @@ export class Tempo {
 
 /** Tempo types / interfaces / enums */
 export namespace Tempo {
-	/** the argument 'types' that this Class will attempt to interpret via Temporal API */
+	/** the value that Tempo will attempt to interpret as a valid ISO date / time */
 	export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | null
-	/** the options that this Class will use to interpret a Tempo.DateTime */
+	/** the options that Tempo will use to interpret a Tempo.DateTime */
 	export type StringPattern = string | RegExp
 
 	export type Options = {
