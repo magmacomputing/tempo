@@ -65,26 +65,28 @@ declare global {
 	}
 }
 
-function fn(...keys: any[]) { return this.sort(sortBy(...keys)); }
-patch(Array, 'orderBy', fn);
-patch(Array, 'sortBy', fn);
+function fn(...keys: (string | SortBy)[]) { return this.sort(sortBy(...keys)); }
+patch(Array, 'orderBy', fn);																// order array by named keys
+patch(Array, 'sortBy', fn);																	// sort array by named keys
 
-patch(Array, 'keyedBy', function (...keys: any[]) { return keyedBy(this, ...keys); });
+patch(Array, 'keyedBy', function (...keys: string[]) {
+	return keyedBy(this, ...keys);														// group an array in an object with named keys
+});
 
 patch(Array, 'tap', function (fn: Function) {
-	fn(this);
-	return this;
+	fn(this);																									// run an arbitrary function
+	return this;																							// then return the original array
 })
 
 patch(Array, 'truncate', function () {
-	this.fill(null).length = 0;
+	this.fill(null).length = 0;																// wipe the contents, then set the 'length' to zero
 	return this;
 })
 
 patch(Array, 'distinct', function (selector: (value: any, index: number, array: any[]) => []) {
 	return selector
-		? this.map(selector).distinct()
-		: asArray(new Set(this))
+		? this.map(selector).distinct()													// run the mapping selector, then recurse
+		: asArray(new Set(this))																// eliminate duplicates
 })
 
 patch(Array, 'cartesian', function (...args: any[]) {
@@ -92,6 +94,6 @@ patch(Array, 'cartesian', function (...args: any[]) {
 	const cartFn = (a: any[], b: any[]) => (<any[]>[]).concat(...a.map(d => b.map(e => (<any[]>[]).concat(d, e))));
 
 	return b.length
-		? this.cartesian(cartFn(a, b), ...c)
-		: asArray(a || [])
+		? this.cartesian(cartFn(a, b), ...c)										// run the cartFn function, then recurse
+		: asArray(a || [])																			// return the collated result
 })
