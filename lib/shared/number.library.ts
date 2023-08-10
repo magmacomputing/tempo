@@ -1,24 +1,62 @@
 import { asArray } from '@module/shared/array.library.js';
 import { asString } from '@module/shared/string.library.js';
-import { isInteger, type TValues } from '@module/shared/type.library.js';
+import { asType, isInteger, isString, type TValues } from '@module/shared/type.library.js';
+
+/** string representation of a BigInt */
+export const regInteger = /^[0-9]+n$/;
 
 /** convert String to Number */
 export function asNumber(str?: string | number | bigint) {
-	return parseFloat(str?.toString() ?? 'NaN')
+	return parseFloat(str?.toString() ?? 'NaN');
 }
 
-/** test if can convert String to Number */
-export function isNumeric(str?: string | number | bigint): str is number {
-	return !isNaN(asNumber(str)) && isFinite(str as number)
+/** convert String to BigInt */
+export function asInteger<T extends string | number | bigint>(str?: T) {
+	const arg = asType(str);
+
+	switch (arg.type) {
+		case 'BigInt':
+			return arg.value;																			// already a BigInt
+		case 'Number':
+			return BigInt(arg.value);															// cast as BigInt
+		case 'String':
+			return regInteger.test(arg.value)
+				? BigInt(arg.value.slice(0, -1))
+				: arg.value;
+		default:
+			return str as Exclude<T, number>;
+	}
 }
 
-/** return as Number if possible, else String */
+/** test if can convert String to Numeric */
+export function isNumeric(str?: string | number | bigint) {
+	const arg = asType(str);
+
+	switch (arg.type) {
+		case 'Number':
+		case 'BigInt':
+			return true;
+
+		case 'String':
+			return regInteger.test(arg.value)
+				? true																							// is BigInt
+				: !isNaN(asNumber(str)) && isFinite(str as number)	// test if Number
+
+		default:
+			return false;
+	}
+}
+
+/** return as Numeric if possible, else String */
 export const ifNumeric = (str?: string | number | bigint, stripZero = false) => {
 	switch (true) {
 		case isInteger(str):																		// bigint
 			return str;
-		case isNumeric(str) && (!str.toString().startsWith('0') || stripZero):
+		case isString(str) && /^[0-9]+n$/.test(str!):						// string representation of a BigInt
+			return BigInt(str!.toString().slice(0, -1));
+		case isNumeric(str) && (!str!.toString().startsWith('0') || stripZero):
 			return asNumber(str);
+
 		default:
 			return str;
 	}
@@ -34,7 +72,7 @@ export const toHex = (num: TValues<number> = [], len = 64) =>
 
 /** apply an Ordinal suffix */
 export const suffix = (idx: number) => {
-	const str = asString(idx + 1);
+	const str = asString(idx /** + 1 */);
 
 	switch (true) {
 		case str.endsWith('1') && !str.endsWith('11'):
