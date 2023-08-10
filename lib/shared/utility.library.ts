@@ -1,4 +1,4 @@
-import { isNumeric } from '@module/shared/number.library.js';
+import { asNumber, isNumeric } from '@module/shared/number.library.js';
 import { isDefined } from '@module/shared/type.library.js';
 
 /** General utility functions */
@@ -35,7 +35,8 @@ export const getScript = (nbr = 1) =>
 	decodeURI(new Error().stack?.match(/([^ \n\(@])*([a-z]*:\/\/\/?)*?[a-z0-9\/\\]*\.js/ig)?.[nbr] ?? '');
 
 /** pad a string with non-blocking spaces, to help right-align a display */
-export const padString = (str: string | number, pad = 6) => (isNumeric(str) ? str.toFixed(2).toString() : str ?? '').padStart(pad, '\u007F');
+export const padString = (str: string | number | bigint, pad = 6) =>
+	(isNumeric(str) ? asNumber(str).toFixed(2).toString() : str.toString() ?? '').padStart(pad, '\u007F');
 
 export enum CONTEXT {
 	'Unknown' = 'unknown',
