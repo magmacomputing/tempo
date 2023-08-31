@@ -2,15 +2,15 @@ import { asArray } from '@module/shared/array.library.js';
 import { asString } from '@module/shared/string.library.js';
 import { asType, isInteger, isString, type TValues } from '@module/shared/type.library.js';
 
-/** string representation of a BigInt */
-export const regInteger = /^[0-9]+n$/;
+/** RegExp string representation of a BigInt */
+export const patInteger = /^[0-9]+n$/;
 
 /** convert String to Number */
 export function asNumber(str?: string | number | bigint) {
 	return parseFloat(str?.toString() ?? 'NaN');
 }
 
-/** convert String to BigInt */
+/** convert String|Number to BigInt */
 export function asInteger<T extends string | number | bigint>(str?: T) {
 	const arg = asType(str);
 
@@ -18,9 +18,9 @@ export function asInteger<T extends string | number | bigint>(str?: T) {
 		case 'BigInt':
 			return arg.value;																			// already a BigInt
 		case 'Number':
-			return BigInt(arg.value);															// cast as BigInt
+			return BigInt(Math.trunc(arg.value));									// cast as BigInt
 		case 'String':
-			return regInteger.test(arg.value)
+			return /^[0-9]+n$/.test(arg.value)										// String representation of a BigInt
 				? BigInt(arg.value.slice(0, -1))
 				: arg.value;
 		default:
@@ -38,7 +38,7 @@ export function isNumeric(str?: string | number | bigint) {
 			return true;
 
 		case 'String':
-			return regInteger.test(arg.value)
+			return /^[0-9]+n$/.test(arg.value)
 				? true																							// is BigInt
 				: !isNaN(asNumber(str)) && isFinite(str as number)	// test if Number
 
@@ -52,8 +52,10 @@ export const ifNumeric = (str?: string | number | bigint, stripZero = false) => 
 	switch (true) {
 		case isInteger(str):																		// bigint
 			return str;
+
 		case isString(str) && /^[0-9]+n$/.test(str!):						// string representation of a BigInt
-			return BigInt(str!.toString().slice(0, -1));
+			return asInteger(str);
+
 		case isNumeric(str) && (!str!.toString().startsWith('0') || stripZero):
 			return asNumber(str);
 
