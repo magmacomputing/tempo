@@ -260,7 +260,9 @@ export class Tempo {
 						night: '20:00',
 					},
 					event: [																					// built-in date-events to be mapped (must be lower-case keys)
-						['new.?years?( *day)?', '01 Jan'],
+						['new.?years? ?eve', '31-Dec'],
+						['nye', '31 Dec'],
+						['new.?years?( ?day)?', '01 Jan'],
 						['ny', '01 Jan'],
 						['christmas', '25 Dec'],
 						['xmas', '25 Dec'],
