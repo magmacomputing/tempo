@@ -279,36 +279,7 @@ export class Tempo {
 				}
 
 				// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-				// look for a stored config-file
-				const context = getContext();												// JavaScript runtime environment
-				let store: string | null = null;
-				switch (context.type) {
-					case CONTEXT.Browser:
-						store = context.global.localStorage.getItem(Tempo.#configKey);
-						break;
-
-					case CONTEXT.NodeJS:
-						store = context.global.process.env[Tempo.#configKey];
-						break;
-
-					case CONTEXT.GoogleAppsScript:
-						store = context.global.PropertiesService?.getUserProperties().getProperty(Tempo.#configKey);
-						break;
-				}
-
-				if (isDefined(store)) {															// found a config in storage
-					const config = objectify(store) as Tempo.ConfigFile;// config can override #default
-
-					Object.assign(Tempo.#default, omit(config, 'pattern', 'period'));// override defaults from storage
-
-					(config.pattern ?? [])
-						.reverse()																			// prepend user-patterns from storage, as they have priority
-						.map(pat => Object.entries(pat)[0])
-						.forEach(([key, ref]) => Tempo.#default.pattern.unshift({ key, reg: asArray(ref) }));
-
-					Object.assign(Tempo.#default.period, config.period ?? {});
-				}
-				// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+				Tempo.load();																				// look for a stored config-file
 
 				enumKeys(Tempo.MONTH)
 					.forEach((mon, idx) => Tempo.#months[idx].name = mon);// stash month-name into Tempo.#months
@@ -330,7 +301,7 @@ export class Tempo {
 				Tempo.#default.pattern															// setup defaults as RegExp patterns
 					.forEach(({ key, reg }) => Tempo.#pattern.push({ key, reg: Tempo.regexp(...reg) }));
 
-				if ((context.type === CONTEXT.Browser && init.debug !== false) || init.debug === true)
+				if ((getContext().type === CONTEXT.Browser && init.debug !== false) || init.debug === true)
 					console.log('Tempo: ', omit(Tempo.#default, 'pattern', 'period'));
 
 				return true;
@@ -341,6 +312,40 @@ export class Tempo {
 				else throw new Error(err.message);									// re throw
 			})
 			.finally(() => Tempo.#ready.init.resolve(true));			// indicate Tempo.init() has completed
+	}
+
+	/**
+	 * load a Tempo config-file into Tempo.#default
+	 */
+	static load() {
+		const context = getContext();														// JavaScript runtime environment
+		let store: string | null = null;
+		switch (context.type) {
+			case CONTEXT.Browser:
+				store = context.global.localStorage.getItem(Tempo.#configKey);
+				break;
+
+			case CONTEXT.NodeJS:
+				store = context.global.process.env[Tempo.#configKey];
+				break;
+
+			case CONTEXT.GoogleAppsScript:
+				store = context.global.PropertiesService?.getUserProperties().getProperty(Tempo.#configKey);
+				break;
+		}
+
+		if (isDefined(store)) {																	// found a config in storage
+			const config = objectify(store) as Tempo.ConfigFile;	// config can override #default
+
+			Object.assign(Tempo.#default, omit(config, 'pattern', 'period'));// override defaults from storage
+
+			(config.pattern ?? [])
+				.reverse()																					// prepend user-patterns from storage, as they have priority
+				.map(pat => Object.entries(pat)[0])
+				.forEach(([key, ref]) => Tempo.#default.pattern.unshift({ key, reg: asArray(ref) }));
+
+			Object.assign(Tempo.#default.period, config.period ?? {});
+		}
 	}
 
 	/** convert list of <string | RegExp> to a single RegExp */
