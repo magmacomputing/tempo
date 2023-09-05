@@ -647,8 +647,8 @@ export class Tempo {
 	/** format elapsed time */																since<S extends Tempo.DateTime | Tempo.Until>(since?: S) { return this.#since(since) }
 	/** apply formatting */																		format<K extends Tempo.FormatKeys>(fmt: K) { return this.#format(fmt) }
 
-	/** add date/time unit */																	add(mutate: Tempo.Add) { return this.#offset(mutate) }
-	/** offset to start/mid/end of unit */										offset(offset: Tempo.Offset) { return this.#offset(offset) }
+	/** add date/time unit */																	add(mutate: Tempo.Add) { return this.#set(mutate) }
+	/** set to start/mid/end/period of unit */								set(offset: Tempo.Set) { return this.#set(offset) }
 
 	/** is valid Tempo */																			isValid() { return !isEmpty(this) }
 	/** as Temporal.ZonedDateTime */													toTemporal() { return this.#temporal }
@@ -983,92 +983,121 @@ export class Tempo {
 	}
 
 	/** create a new offset Tempo */
-	#offset = (args: (Tempo.Add | Tempo.Offset)) => {
-		let zdt = this.#temporal;																// start with the Tempo instance
+	#set = (args: (Tempo.Add | Tempo.Set)) => {
+		const zdt = Object.entries(args)												// loop through each mutation
+			.reduce((zdt, [key, unit]) => {												// apply each mutation to preceding
+				const type = ['start', 'mid', 'end', 'add', 'period'].indexOf(key);
+				const one = unit.endsWith('s') ? unit.slice(0, -1) : unit;
+				const { mutate, offset, single } = ((type) => {
+					switch (type) {
+						case 0:
+						case 1:
+						case 2:
+							return { mutate: key, offset: 0, single: one }
 
-		Object.entries(args)																		// iterate through mutations
-			.forEach(([key, unit]) => {
-				const { mutate, offset, single } = ['start', 'mid', 'end'].includes(key)
-					? { mutate: key, offset: 0, single: unit.endsWith('s') ? unit.slice(0, -1) : unit }
-					: ['set'].includes(key)
-						? { mutate: key, offset: unit, single: 'period' }
-						: { mutate: 'add', offset: Number(unit), single: key.endsWith('s') ? key.slice(0, -1) : key }
+						case 3:
+							return { mutate: 'add', offset: Number(unit), single: one }
+
+						case 4:
+							return { mutate: key, offset: unit, single: 'period' }
+
+						default:
+							return { mutate: 'unknown', offset: Number(unit), single: void 0 }
+					}
+				})(type);																						// IIFE to parse arguments
 
 				switch (`${mutate}.${single}`) {
 					case 'set.period':
 						const period = offset as Tempo.Period;
 						const tm = this.#config.period[period];					// TODO
-
-						break;
+						return zdt;
 
 					case 'start.year':
-						zdt = zdt.with({ month: Tempo.MONTH.Jan, day: 1 }).startOfDay();
-						break;
+						return zdt
+							.with({ month: Tempo.MONTH.Jan, day: 1 })
+							.startOfDay();
 					case 'start.season':
 						const season1 = this.#config.month.findIndex(mon => mon.season === (this.season + .1));
-						zdt = zdt.with({ day: 1, month: season1 }).startOfDay();
-						break;
+						return zdt
+							.with({ day: 1, month: season1 })
+							.startOfDay();
 					case 'start.quarter':
 					case 'start.qtr':
 						const qtr1 = this.#config.month.findIndex(mon => mon.quarter === (this.qtr + .1));
-						zdt = zdt.with({ day: 1, month: qtr1 }).startOfDay();
-						break;
+						return zdt
+							.with({ day: 1, month: qtr1 })
+							.startOfDay();
 					case 'start.month':
-						zdt = zdt.with({ day: 1 }).startOfDay();
-						break;
+						return zdt
+							.with({ day: 1 })
+							.startOfDay();
 					case 'start.week':
-						zdt = zdt.with({ day: this.dd - this.dow + Tempo.WEEKDAY.Mon }).startOfDay();
-						break;
+						return zdt
+							.with({ day: this.dd - this.dow + Tempo.WEEKDAY.Mon })
+							.startOfDay();
 					case 'start.day':
-						zdt = zdt.startOfDay();
-						break;
+						return zdt
+							.startOfDay();
 					case 'start.hour':
-						zdt = zdt.round({ smallestUnit: 'hour', roundingMode: 'trunc' });
-						break;
+						return zdt
+							.round({ smallestUnit: 'hour', roundingMode: 'trunc' });
 					case 'start.minute':
-						zdt = zdt.round({ smallestUnit: 'minute', roundingMode: 'trunc' });
-						break;
+						return zdt
+							.round({ smallestUnit: 'minute', roundingMode: 'trunc' });
 					case 'start.second':
-						zdt = zdt.round({ smallestUnit: 'second', roundingMode: 'trunc' });
-						break;
+						return zdt
+							.round({ smallestUnit: 'second', roundingMode: 'trunc' });
 
 					case 'mid.year':
-						zdt = zdt.with({ month: Tempo.MONTH.Jul, day: 1 }).startOfDay();
-						break;
+						return zdt
+							.with({ month: Tempo.MONTH.Jul, day: 1 })
+							.startOfDay();
 					case 'mid.season':
 						const season2 = this.#config.month.findIndex(mon => mon.season === (this.season + .2));
-						zdt = zdt.with({ day: Math.trunc(zdt.daysInMonth / 2), month: season2 }).startOfDay();
-						break;
+						return zdt
+							.with({ day: Math.trunc(zdt.daysInMonth / 2), month: season2 })
+							.startOfDay();
 					case 'mid.quarter':
 					case 'mid.qtr':
 						const qtr2 = this.#config.month.findIndex(mon => mon.quarter === (this.qtr + .2));
-						zdt = zdt.with({ day: Math.trunc(zdt.daysInMonth / 2), month: qtr2 }).startOfDay();
-						break;
+						return zdt
+							.with({ day: Math.trunc(zdt.daysInMonth / 2), month: qtr2 })
+							.startOfDay();
 					case 'mid.month':
-						zdt = zdt.with({ day: Math.trunc(zdt.daysInMonth / 2) }).startOfDay();
-						break;
+						return zdt
+							.with({ day: Math.trunc(zdt.daysInMonth / 2) })
+							.startOfDay();
 					case 'mid.week':
-						zdt = zdt.with({ day: this.dd - this.dow + Tempo.WEEKDAY.Thu }).startOfDay();
-						break;
+						return zdt
+							.with({ day: this.dd - this.dow + Tempo.WEEKDAY.Thu })
+							.startOfDay();
 					case 'mid.day':
-						zdt = zdt.round({ smallestUnit: 'day', roundingMode: 'trunc' }).add({ hours: 12 });
-						break;
+						return zdt
+							.round({ smallestUnit: 'day', roundingMode: 'trunc' })
+							.add({ hours: 12 });
 					case 'mid.hour':
-						zdt = zdt.round({ smallestUnit: 'hour', roundingMode: 'trunc' }).add({ minutes: 30 });
-						break;
+						return zdt
+							.round({ smallestUnit: 'hour', roundingMode: 'trunc' })
+							.add({ minutes: 30 });
 					case 'mid.minute':
-						zdt = zdt.round({ smallestUnit: 'minute', roundingMode: 'trunc' }).add({ seconds: 30 });
-						break;
+						return zdt
+							.round({ smallestUnit: 'minute', roundingMode: 'trunc' })
+							.add({ seconds: 30 });
 					case 'mid.second':
-						zdt = zdt.round({ smallestUnit: 'second', roundingMode: 'trunc' }).add({ milliseconds: 500 });
-						break;
+						return zdt
+							.round({ smallestUnit: 'second', roundingMode: 'trunc' })
+							.add({ milliseconds: 500 });
 
 					case 'end.year':
-						zdt = zdt.add({ years: 1 }).with({ month: Tempo.MONTH.Jan, day: 1 }).startOfDay().subtract({ nanoseconds: 1 });
-						break;
+						return zdt
+							.add({ years: 1 })
+							.with({ month: Tempo.MONTH.Jan, day: 1 })
+							.startOfDay()
+							.subtract({ nanoseconds: 1 });
 					case 'end.season':
 						const season3 = this.#config.month.findIndex(mon => mon.season === (this.season + .3));
-						zdt = zdt.with({ month: season3 })
+						return zdt
+							.with({ month: season3 })
 							.add({ months: 1 })
 							.with({ day: 1 })
 							.startOfDay()
@@ -1076,62 +1105,71 @@ export class Tempo {
 					case 'end.quarter':
 					case 'end.qtr':
 						const qtr3 = this.#config.month.findIndex(mon => mon.quarter === (this.qtr + .3));
-						zdt = zdt.with({ month: qtr3 })
+						return zdt
+							.with({ month: qtr3 })
 							.add({ months: 1 })
 							.with({ day: 1 })
 							.startOfDay()
 							.subtract({ nanoseconds: 1 });
-						break;
 					case 'end.month':
-						zdt = zdt.add({ months: 1 }).with({ day: 1 }).startOfDay().subtract({ nanoseconds: 1 });
-						break;
+						return zdt
+							.add({ months: 1 })
+							.with({ day: 1 })
+							.startOfDay()
+							.subtract({ nanoseconds: 1 });
 					case 'end.week':
-						zdt = zdt.with({ day: this.dd - this.dow + Tempo.WEEKDAY.Sun + 1 }).startOfDay().subtract({ nanoseconds: 1 });
-						break;
+						return zdt
+							.with({ day: this.dd - this.dow + Tempo.WEEKDAY.Sun + 1 })
+							.startOfDay()
+							.subtract({ nanoseconds: 1 });
 					case 'end.day':
-						zdt = zdt.round({ smallestUnit: 'day', roundingMode: 'ceil' }).subtract({ nanoseconds: 1 });
-						break;
+						return zdt
+							.round({ smallestUnit: 'day', roundingMode: 'ceil' })
+							.subtract({ nanoseconds: 1 });
 					case 'end.hour':
-						zdt = zdt.round({ smallestUnit: 'hour', roundingMode: 'ceil' }).subtract({ nanoseconds: 1 });
-						break;
+						return zdt
+							.round({ smallestUnit: 'hour', roundingMode: 'ceil' })
+							.subtract({ nanoseconds: 1 });
 					case 'end.minute':
-						zdt = zdt.round({ smallestUnit: 'minute', roundingMode: 'ceil' }).subtract({ nanoseconds: 1 });
-						break;
+						return zdt
+							.round({ smallestUnit: 'minute', roundingMode: 'ceil' })
+							.subtract({ nanoseconds: 1 });
 					case 'end.second':
-						zdt = zdt.round({ smallestUnit: 'second', roundingMode: 'ceil' }).subtract({ nanoseconds: 1 });
-						break;
+						return zdt
+							.round({ smallestUnit: 'second', roundingMode: 'ceil' })
+							.subtract({ nanoseconds: 1 });
 
 					case 'add.year':
-						zdt = zdt.add({ years: offset });
-						break;
+						return zdt
+							.add({ years: offset });
 					case 'add.season':
 					case 'add.quarter':
 					case 'add.qtr':
-						zdt = zdt.add({ months: offset * 3 });
-						break;
+						return zdt
+							.add({ months: offset * 3 });
 					case 'add.month':
-						zdt = zdt.add({ months: offset });
-						break;
+						return zdt
+							.add({ months: offset });
 					case 'add.week':
-						zdt = zdt.add({ weeks: offset });
-						break;
+						return zdt
+							.add({ weeks: offset });
 					case 'add.day':
-						zdt = zdt.add({ days: offset });
-						break;
+						return zdt
+							.add({ days: offset });
 					case 'add.hour':
-						zdt = zdt.add({ hours: offset });
-						break;
+						return zdt
+							.add({ hours: offset });
 					case 'add.minute':
-						zdt = zdt.add({ minutes: offset });
-						break;
+						return zdt
+							.add({ minutes: offset });
 					case 'add.second':
-						zdt = zdt.add({ seconds: offset });
-						break;
+						return zdt
+							.add({ seconds: offset });
 
 					default:
 						throw new Error(`Unexpected method(${mutate}) and offset(${single})`);
 				}
-			})
+			}, this.#temporal)																		// start with the Tempo zonedDateTime
 
 		return new Tempo(zdt as unknown as typeof Temporal);
 	}
@@ -1293,7 +1331,6 @@ export namespace Tempo {
 	/** Timestamp precision */
 	export type TimeStamp = 'ss' | 'ms' | 'us' | 'ns'
 	export type TimeStamps = Record<Tempo.TimeStamp, keyof Temporal.ZonedDateTime>
-	export type Mutate = 'start' | 'mid' | 'end'
 	export type TimeUnit = Temporal.DateTimeUnit | 'quarter' | 'season'
 	export type DiffUnit = Temporal.PluralUnit<Temporal.DateTimeUnit> | 'quarters' | 'seasons'
 	export type Period = 'midnight' | 'morning' | 'midmorning' | 'midday' | 'noon' | 'afternoon' | 'evening' | 'night'
@@ -1313,7 +1350,8 @@ export namespace Tempo {
 	export interface Until extends Tempo.Parameter {
 		unit?: Tempo.DiffUnit;
 	}
-	export type Offset = Partial<Record<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit> & Record<'set', Tempo.Period>>
+	export type Mutate = 'start' | 'mid' | 'end'
+	export type Set = Partial<Record<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit> & Record<'period', Tempo.Period>>
 	export type Add = Partial<Record<Tempo.TimeUnit | Tempo.DiffUnit, number>>
 
 	/** detail about a Month */
