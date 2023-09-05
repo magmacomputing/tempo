@@ -41,3 +41,30 @@ export const enumValues = <T extends {}>(enumType: T) =>		// Enum values
 export const enumEntries = <T extends {}>(enumType: T) =>		// Enum entries
 	enumKeys(enumType)
 		.map(key => [key, enumType[key]] as [keyof T, T[keyof T]]);
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+/**
+ * This section is for 'Objects as Enums'  
+ * https://www.typescriptlang.org/docs/handbook/enums.html#objects-vs-enums
+*/
+
+// type Enum<E> = E[keyof E];
+// type Enum<E> = Record<keyof E, E[keyof E]>
+// type Enum<E> = Record<keyof  E, unknown>
+type Enum<T> = {
+	[id: string]: T | string;
+	[nu: number]: string;
+}
+
+export const objCount = <T>(enumType: Enum<T>) =>
+	Object.keys(enumType).length;
+
+export const objKeys = <T>(enumType: Enum<T>) =>
+	Object.keys(enumType);
+
+export const objValues = <T>(enumType: Enum<T>) =>
+	Object.values(enumType);
+
+export const objEntries = <T>(enumType: Enum<T>) =>
+	Object.entries(enumType);
