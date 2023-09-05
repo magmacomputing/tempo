@@ -18,7 +18,7 @@ import '@module/shared/prototype.library.js';								// patch prototype
 /** TODO: THIS IMPORT NEEDS TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
 import { Temporal } from '@js-temporal/polyfill';
 
-const Version = '1.0.0';																		// semantic version
+const Version = '0.0.1';																		// semantic version
 
 /**
  * Wrapper Class around Temporal API  
@@ -279,7 +279,7 @@ export class Tempo {
 				}
 
 				// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-				Tempo.load();																				// look for a stored config-file
+				Tempo.read();																				// look for a stored config-file
 
 				enumKeys(Tempo.MONTH)
 					.forEach((mon, idx) => Tempo.#months[idx].name = mon);// stash month-name into Tempo.#months
@@ -317,7 +317,7 @@ export class Tempo {
 	/**
 	 * load a Tempo config-file into Tempo.#default
 	 */
-	static load() {
+	static read() {
 		const context = getContext();														// JavaScript runtime environment
 		let store: string | null = null;
 		switch (context.type) {
@@ -479,8 +479,15 @@ export class Tempo {
 		}
 	}
 
-	/** default string description */
-	get [Symbol.toStringTag]() { return 'Tempo' }
+	/** dispose Tempo */
+	[Symbol.dispose]() {																			// for future implementation
+		if (this.config.debug)
+			console.log('dispose: ', this.#value);
+	}
+
+	get [Symbol.toStringTag]() {															// default string description
+		return 'Tempo';
+	}
 
 	// Instance variables  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
