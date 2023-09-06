@@ -665,7 +665,7 @@ export class Tempo {
 	#parse(tempo?: Tempo.DateTime) {
 		const today = this.#now																	// cast instantiation to current timeZone, calendar
 			.toZonedDateTime({ timeZone: this.#config.timeZone, calendar: this.#config.calendar });
-		const arg = this.#conform(tempo!, today);								// if String or Number, conform the input against known patterns
+		const arg = this.#conform(tempo, today);								// if String or Number, conform the input against known patterns
 		if (this.#config.debug)
 			console.log('tempo.parse: ', arg);
 
@@ -745,7 +745,7 @@ export class Tempo {
 	}
 
 	/** evaluate 'string | number' input against known patterns */
-	#conform(tempo: Tempo.DateTime, today: Temporal.ZonedDateTime) {
+	#conform(tempo: Tempo.DateTime | undefined, today: Temporal.ZonedDateTime) {
 		const arg = asType(tempo);
 
 		if (!isType<string | number>(arg.value, 'String', 'Number'))
@@ -759,8 +759,8 @@ export class Tempo {
 			if (/^[0-9]+n$/.test(value))													// if string representation of BigInt literal
 				return Object.assign(arg, { type: 'BigInt', value: asInteger(value) });
 		} else {
-			if (value.length <= 7)         												// cannot reliably interpret input number.  might be 'ss' or 'yymmdd' or 'dmmyyyy'
-				throw new Error('Cannot safely interpret number with less than 8-digits: use string');
+			if (value.length <= 7)         												// cannot reliably interpret small numbers.  might be 'ss' or 'yymmdd' or 'dmmyyyy'
+				throw new Error('Cannot safely interpret number with less than 8-digits: use string instead');
 		}
 
 		for (const { key, reg } of this.#config.pattern) {			// test against regular-expression patterns until a match is found		
@@ -768,13 +768,6 @@ export class Tempo {
 
 			if (isNull(pat) || isUndefined(pat.groups))						// if regexp named-groups not found
 				continue;																						// 	skip this iteration
-
-			/**
-			 * if named-group 'dt' detected (with optional 'mod', 'nbr' and date-events), then calc date offset
-			 */
-			// if (isDefined(pat.groups['dt']) && Object.keys(pat.groups).every(el => ['dt', 'mod', 'nbr', 'dd', 'mm', 'yy', 'evt'].includes(el))) {
-			// 	const { evt, mod, nbr } = pat.groups;
-			// }
 
 			/**
 			 * if named-group 'dow' detected (with optional 'mod', 'nbr', and time-units), then calc relative weekday offset
@@ -829,6 +822,12 @@ export class Tempo {
 				pat.groups['dd'] = day.toString();									// and day
 			}
 
+			/**
+			 * if named-group 'dt' detected (with optional 'mod', 'nbr' and date-events), then calc date offset
+ 			*/
+			// if (isDefined(pat.groups['dt']) && Object.keys(pat.groups).every(el => ['dt', 'mod', 'nbr', 'dd', 'mm', 'yy', 'evt'].includes(el))) {
+			// 	const { evt, mod, nbr } = pat.groups;
+			// }
 			/**
 			 * if a date-event pattern was detected, translate it into its calendar values  
 			 * we really are just expecting 'Day-Month' with optional 'Year' in the event-text at this release
@@ -985,31 +984,39 @@ export class Tempo {
 	/** create a new offset Tempo */
 	#set = (args: (Tempo.Add | Tempo.Set)) => {
 		const zdt = Object.entries(args)												// loop through each mutation
-			.reduce((zdt, [key, unit]) => {												// apply each mutation to preceding
-				const type = ['start', 'mid', 'end', 'add', 'period'].indexOf(key);
-				const one = unit.endsWith('s') ? unit.slice(0, -1) : unit;
-				const { mutate, offset, single } = ((type) => {
-					switch (type) {
-						case 0:
-						case 1:
-						case 2:
-							return { mutate: key, offset: 0, single: one }
+			.reduce((zdt, [key, unit]) => {												// apply each mutation to preceding one
+				const { mutate, offset, single } = ((key) => {
+					switch (key) {
+						case 'start':
+						case 'mid':
+						case 'end':
+							return { mutate: key, offset: 0, single: unit.endsWith('s') ? unit.slice(0, -1) : unit }
 
-						case 3:
-							return { mutate: 'add', offset: Number(unit), single: one }
+						case 'period':
+							return { mutate: 'set', offset: unit, single: 'period' }
 
-						case 4:
-							return { mutate: key, offset: unit, single: 'period' }
+						case 'event':
+							return { mutate: 'set', offset: unit, single: 'event' }
 
 						default:
-							return { mutate: 'unknown', offset: Number(unit), single: void 0 }
+							return { mutate: 'add', offset: Number(unit), single: key.endsWith('s') ? key.slice(0, -1) : key }
 					}
-				})(type);																						// IIFE to parse arguments
+				})(key);																						// IIFE to analyze arguments
+				// const { mutate, offset, single } = ['start', 'mid', 'end'].includes(key)
+				// 	? { mutate: key, offset: 0, single: unit.endsWith('s') ? unit.slice(0, -1) : unit }
+				// 	: ['period'].includes(key)
+				// 		? { mutate: 'set', offset: unit, single: 'period' }
+				// 		: ['event'].includes(key)
+				// 			? { mutate: 'set', offset: unit, single: 'event' }
+				// 			: { mutate: 'add', offset: Number(unit), single: key.endsWith('s') ? key.slice(0, -1) : key }
 
 				switch (`${mutate}.${single}`) {
 					case 'set.period':
 						const period = offset as Tempo.Period;
 						const tm = this.#config.period[period];					// TODO
+						return zdt;
+
+					case 'set.event':																	// TODO
 						return zdt;
 
 					case 'start.year':
@@ -1167,7 +1174,7 @@ export class Tempo {
 							.add({ seconds: offset });
 
 					default:
-						throw new Error(`Unexpected method(${mutate}) and offset(${single})`);
+						throw new Error(`Unexpected method(${mutate}), unit(${unit}) and offset(${single})`);
 				}
 			}, this.#temporal)																		// start with the Tempo zonedDateTime
 
@@ -1351,7 +1358,7 @@ export namespace Tempo {
 		unit?: Tempo.DiffUnit;
 	}
 	export type Mutate = 'start' | 'mid' | 'end'
-	export type Set = Partial<Record<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit> & Record<'period', Tempo.Period>>
+	export type Set = Partial<Record<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit> & Record<'period', Tempo.Period> & Record<'event', Tempo.EventKey>>
 	export type Add = Partial<Record<Tempo.TimeUnit | Tempo.DiffUnit, number>>
 
 	/** detail about a Month */
