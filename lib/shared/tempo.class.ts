@@ -824,7 +824,7 @@ export class Tempo {
 
 			/**
 			 * if named-group 'dt' detected (with optional 'mod', 'nbr' and date-events), then calc date offset
- 			*/
+				*/
 			// if (isDefined(pat.groups['dt']) && Object.keys(pat.groups).every(el => ['dt', 'mod', 'nbr', 'dd', 'mm', 'yy', 'evt'].includes(el))) {
 			// 	const { evt, mod, nbr } = pat.groups;
 			// }
@@ -864,10 +864,10 @@ export class Tempo {
 				pat.groups['mm'] = enumKeys(Tempo.MONTH).findIndex(el => el === mm).toString();
 			}
 
-			/** if 'Q1' or 'Q2' specified, might need to adjust year */
+			// if 'Q1' or 'Q2' specified, might need to adjust year
 			const qtr = Number(pat.groups['qtr'] < '3');					// if Q1 or Q2, then need to adjust 'yy' later on
 
-			/** resolve a quarter-number into a month-number */
+			// resolve a quarter-number into a month-number
 			if (isDefined(pat.groups['qtr'])) {
 				const key = Number(`${pat.groups['qtr']}.1`);				// '.1' means start of quarter
 				const idx = this.#config.month
@@ -875,9 +875,7 @@ export class Tempo {
 				pat.groups['mm'] = idx.toString();									// set month to beginning of quarter
 			}
 
-			/**
-			 * if a time-period pattern was detected, translate it into its clock values
-			 */
+			// if a time-period pattern was detected, translate it into its clock values
 			if (isDefined(pat.groups['per'])) {										// re-test time-period against 'tm' pattern
 				const per = this.#config.period[pat.groups['per'] as Tempo.Period];
 				const lkp = this.#config.pattern.find(pat => pat.key === 'tm');
@@ -887,25 +885,18 @@ export class Tempo {
 				}
 			}
 
-			/**
-			 * if a clock-value pattern was detected (at least 'hh'), translate it into a UTC-time string
-			 */
+			// if a clock-value pattern was detected (at least 'hh'), translate it into a UTC-time string
 			if (isDefined(pat.groups['hh'])) {										// assemble into a hh:mm:ss value
-				const am = pat.groups['am']?.toLowerCase();					// 'am' or 'pm'
-				let hh = Number(pat.groups['hh']);
+				const am = pat.groups['am'] as Tempo.Midday;				// 'am' or 'pm'
+				let hh = pat.groups['hh'];
 
-				// adjust for am/pm offset (eg. 10pm => 22:00:00, 12:00am => 00:00:00)
-				if (am === 'pm' && hh < 12)
-					hh += 12
-				if (am === 'am' && hh >= 12)
-					hh -= 12
 				pat.groups['dd'] ??= today.day.toString();					// if no 'day', use today
-
-				if (hh === 24) {
-					hh = 0;																						// special for 'midnight'
+				if (hh === '24')																		// special for 'midnight'
 					pat.groups['dd'] = (Number(pat.groups['dd']) + 1).toString();
-				}
+
+				this.#adjustMidday(hh, am);													// adjust for midday offset (eg. 10pm => 22:00:00, 12:00am => 00:00:00)
 				pat.groups['utc'] = `T${pad(hh)}:${pad(pat.groups['mi'])}:${pad(pat.groups['ss'])}`;
+
 				if (pat.groups['ff'])
 					pat.groups['utc'] += '.' + pat.groups['ff'];			// append fractional seconds
 			}
@@ -950,6 +941,22 @@ export class Tempo {
 	}
 
 	/**
+	 * 
+	 */
+	#adjustMidday(hh: string | number, am: Tempo.Midday) {
+		let hour = Number(hh);
+
+		if (am?.toLowerCase() === 'pm' && hour < 12)
+			hour += 12;
+		if (am?.toLowerCase() === 'am' && hour >= 12)
+			hour -= 12;
+		if (hour === 24)
+			hour = 0;																							// special for 'midnight'
+
+		return hour;
+	}
+
+	/**
 	 * parse a time-string against known patterns.  
 	 * returns a 'hh:mm:ss' string.  
 	 * input is a period (like 'midnight' or 'noon') or a pattern (like '10:30am')
@@ -968,15 +975,9 @@ export class Tempo {
 			return;
 
 		// the 'match' result against the 'tm' RegExp should return named-group strings for 'hh', 'mi', 'ss' and 'am'
-		let [hh, mi, ss, am] = split(match.groups['tm'], ':') as [number, string, string, string];
+		let [hh, mi, ss, am] = split(match.groups['tm'], ':') as [number, string, string, Tempo.Midday];
 
-		// adjust for am/pm offset (eg. 10pm => 22:00:00, 12:00am => 00:00:00)
-		if (am?.toLowerCase() === 'pm' && hh < 12)
-			hh += 12
-		if (am?.toLowerCase() === 'am' && hh >= 12)
-			hh -= 12
-		if (hh === 24)
-			hh = 0;																								// special for 'midnight'
+		hh = this.#adjustMidday(hh, am);													// adjust for am/pm offset (eg. 10pm => 22:00:00, 12:00am => 00:00:00)
 
 		return `${hh}:${mi}:${ss}`;
 	}
@@ -1305,6 +1306,7 @@ export class Tempo {
 	}
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /** Tempo types / interfaces / enums */
 export namespace Tempo {
 	/** the value that Tempo will attempt to interpret as a valid ISO date / time */
@@ -1340,13 +1342,12 @@ export namespace Tempo {
 	export type TimeStamps = Record<Tempo.TimeStamp, keyof Temporal.ZonedDateTime>
 	export type TimeUnit = Temporal.DateTimeUnit | 'quarter' | 'season'
 	export type DiffUnit = Temporal.PluralUnit<Temporal.DateTimeUnit> | 'quarters' | 'seasons'
+	export type Midday = 'am' | 'pm'
 	export type Period = 'midnight' | 'morning' | 'midmorning' | 'midday' | 'noon' | 'afternoon' | 'evening' | 'night'
 	export type Periods = Record<Tempo.Period, string>
 	export type Units = Record<string, RegExp>
 	export type EventKey = 'new.?year' | 'ny' | 'christmas' | 'xmas'
 	export type Events = [Tempo.EventKey, string][]
-	// export type Events = { key: Tempo.Event, value: string }[]
-	// export type Events = Record<Tempo.Event, string>
 
 	/** constructor parameter object */
 	export interface Parameter {
