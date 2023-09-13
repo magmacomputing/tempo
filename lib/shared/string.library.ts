@@ -111,6 +111,11 @@ export const strlen = <Min extends number, Max extends number>(str: unknown, min
 	return str as StrLen<Min, Max>;
 }
 
-/** pad a string with leading character */
-export const pad = (nbr: string | number | bigint = 0, max = 2, fill?: string | number) =>
-	nbr.toString().padStart(max, nullToValue(fill, isNumeric(nbr) ? '0' : ' ').toString());
+/**
+ * pad a string with leading character, so result is fixed (default '2') length  
+ * max default is 2  
+ * if nbr is string pad with \<space>  
+ * if nbr is number pad with \<zero>
+ */
+export const pad = (nbr: string | number | bigint = 0, len = 2, fill?: string | number) =>
+	nbr.toString().padStart(len, nullToValue(fill, isNumeric(nbr) ? '0' : ' ').toString());
