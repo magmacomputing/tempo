@@ -872,7 +872,7 @@ export class Tempo {
 				const key = Number(`${pat.groups['qtr']}.1`);				// '.1' means start of quarter
 				const idx = this.#config.month
 					.findIndex(mon => mon.quarter === key);
-				pat.groups['mm'] = idx.toString();									// set month to beginning of quarter
+				pat.groups['mm'] = pad(idx);												// set month to beginning of quarter
 			}
 
 			// if a time-period pattern was detected, translate it into its clock values
@@ -891,10 +891,10 @@ export class Tempo {
 				let hh = pat.groups['hh'];
 
 				pat.groups['dd'] ??= today.day.toString();					// if no 'day', use today
-				if (hh === '24')																		// special for 'midnight'
-					pat.groups['dd'] = (Number(pat.groups['dd']) + 1).toString();
+				if (hh === '24')																		// special for 'midnight', add one to day
+					pat.groups['dd'] = pad(Number(pat.groups['dd']) + 1);
 
-				this.#adjustMidday(hh, am);													// adjust for midday offset (eg. 10pm => 22:00:00, 12:00am => 00:00:00)
+				hh = this.#midday(hh, am);													// adjust for midday offset (eg. 10pm => 22:00:00, 12:00am => 00:00:00)
 				pat.groups['utc'] = `T${pad(hh)}:${pad(pat.groups['mi'])}:${pad(pat.groups['ss'])}`;
 
 				if (pat.groups['ff'])
@@ -941,9 +941,10 @@ export class Tempo {
 	}
 
 	/**
-	 * 
+	 * use the 'am|pm' value to check the 'hh' clock value  
+	 * returns 'hh' in 24-hour format
 	 */
-	#adjustMidday(hh: string | number, am: Tempo.Midday) {
+	#midday(hh: string | number, am: Tempo.Midday) {
 		let hour = Number(hh);
 
 		if (am?.toLowerCase() === 'pm' && hour < 12)
@@ -953,7 +954,7 @@ export class Tempo {
 		if (hour === 24)
 			hour = 0;																							// special for 'midnight'
 
-		return hour;
+		return pad(hour);																				// pad with leading zeroes
 	}
 
 	/**
@@ -975,9 +976,9 @@ export class Tempo {
 			return;
 
 		// the 'match' result against the 'tm' RegExp should return named-group strings for 'hh', 'mi', 'ss' and 'am'
-		let [hh, mi, ss, am] = split(match.groups['tm'], ':') as [number, string, string, Tempo.Midday];
+		let [hh, mi, ss, am] = split(match.groups['tm'], ':') as [string, string, string, Tempo.Midday];
 
-		hh = this.#adjustMidday(hh, am);													// adjust for am/pm offset (eg. 10pm => 22:00:00, 12:00am => 00:00:00)
+		hh = this.#midday(hh, am);															// adjust for am/pm offset (eg. 10pm => 22:00:00, 12:00am => 00:00:00)
 
 		return `${hh}:${mi}:${ss}`;
 	}
@@ -1212,7 +1213,7 @@ export class Tempo {
 				return `${yy}Q${this.qtr}`;
 
 			default:
-				const am = asString(fmt).includes('hh')							// if 'twelve-hour' is present in fmtString
+				const am = asString(fmt).includes('HH')							// if 'twelve-hour' (uppercase 'HH') is present in fmtString
 					? this.hh >= 12 ? 'pm' : 'am'											// noon is considered 'pm'
 					: ''																							// else no am/pm suffix needed
 
@@ -1224,14 +1225,14 @@ export class Tempo {
 					.replace(/d{3}/g, this.ddd)
 					.replace(/d{2}/g, pad(this.dd))
 					.replace(/h{2}/g, pad(this.hh))
-					.replace(/mi/g, pad(this.mi))
-					.replace(/s{2}/g, pad(this.ss))
 					.replace(/H{2}$/g, pad(this.hh >= 13 ? this.hh % 12 : this.hh) + am)
 					.replace(/H{2}/g, pad(this.hh >= 13 ? this.hh % 12 : this.hh))
-					.replace(/MI$/g, pad(this.mi) + am)								// append 'am' if 'MI' at end of fmtString, and it follows 'HH'
-					.replace(/MI/g, pad(this.mi))
-					.replace(/S{2}$/g, pad(this.ss) + am)							// append 'am' if 'SS' at end of fmtString, and it follows 'HH'
-					.replace(/S{2}/g, pad(this.ss))
+					.replace(/MI$/gi, pad(this.mi) + am)							// append 'am' if 'MI' at end of fmtString, and it follows 'HH'
+					.replace(/MI/gi, pad(this.mi))
+					// .replace(/mi/g, pad(this.mi))
+					.replace(/S{2}$/gi, pad(this.ss) + am)						// append 'am' if 'SS' at end of fmtString, and it follows 'HH'
+					.replace(/S{2}/gi, pad(this.ss))
+					// .replace(/s{2}/g, pad(this.ss))
 					.replace(/ts/g, this.ts.toString())
 					.replace(/ms/g, pad(this.ms, 3))
 					.replace(/us/g, pad(this.us, 3))
