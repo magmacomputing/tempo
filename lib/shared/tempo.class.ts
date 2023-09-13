@@ -942,7 +942,7 @@ export class Tempo {
 
 	/**
 	 * use the 'am|pm' value to check the 'hh' clock value  
-	 * returns 'hh' in 24-hour format
+	 * returns 'hh' in 12-hour format
 	 */
 	#midday(hh: string | number, am: Tempo.Midday) {
 		let hour = Number(hh);
