@@ -112,10 +112,11 @@ export const strlen = <Min extends number, Max extends number>(str: unknown, min
 }
 
 /**
- * pad a string with leading character, so result is fixed (default '2') length  
- * max default is 2  
- * if nbr is string pad with \<space>  
- * if nbr is number pad with \<zero>
+ * pad a string with leading character  
+ * @param		nbr	input value to pad
+ * @param		len	fill-length (default: 2)
+ * @param		fill	character (default \<space> for string and \<zero> for number)
+ * @returns	fixed-length string padded on the left with fill-character
  */
 export const pad = (nbr: string | number | bigint = 0, len = 2, fill?: string | number) =>
 	nbr.toString().padStart(len, nullToValue(fill, isNumeric(nbr) ? '0' : ' ').toString());
