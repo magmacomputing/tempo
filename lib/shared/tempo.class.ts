@@ -19,6 +19,7 @@ import '@module/shared/prototype.library.js';								// patch prototype
 import { Temporal } from '@js-temporal/polyfill';
 
 const Version = '0.0.1';																		// semantic version
+const StorageKey = '_Tempo_';																// for stash in persistent storage
 
 /**
  * Wrapper Class around Temporal API  
@@ -46,7 +47,6 @@ export class Tempo {
 		new Intl.Locale('en-US'),																// https://en.wikipedia.org/wiki/Date_format_by_country
 		new Intl.Locale('en-AS'),																// add to this Array if required
 	]
-	static #configKey = '_Tempo_';														// for stash in persistent storage
 	static #default = {} as Tempo.ConfigFile;
 	static #pattern = [] as Tempo.Pattern[];									// Array of regex-patterns to test until a match
 	static #months = Array.from({ length: 13 }, () => ({})) as Tempo.Months;	// Array of settings related to a Month
@@ -322,15 +322,15 @@ export class Tempo {
 		let store: string | null = null;
 		switch (context.type) {
 			case CONTEXT.Browser:
-				store = context.global.localStorage.getItem(Tempo.#configKey);
+				store = context.global.localStorage.getItem(StorageKey);
 				break;
 
 			case CONTEXT.NodeJS:
-				store = context.global.process.env[Tempo.#configKey];
+				store = context.global.process.env[StorageKey];
 				break;
 
 			case CONTEXT.GoogleAppsScript:
-				store = context.global.PropertiesService?.getUserProperties().getProperty(Tempo.#configKey);
+				store = context.global.PropertiesService?.getUserProperties().getProperty(StorageKey);
 				break;
 		}
 
@@ -409,16 +409,20 @@ export class Tempo {
 
 		switch (context.type) {
 			case CONTEXT.Browser:
-				context.global.localStorage.setItem(Tempo.#configKey, stash);
+				context.global.localStorage.setItem(StorageKey, stash);
 				break;
 
 			case CONTEXT.NodeJS:
-				context.global.process.env[Tempo.#configKey] = stash;
+				context.global.process.env[StorageKey] = stash;
 				break;
 
 			case CONTEXT.GoogleAppsScript:
-				context.global.PropertiesService?.getUserProperties().setProperty(Tempo.#configKey, stash);
+				context.global.PropertiesService?.getUserProperties().setProperty(StorageKey, stash);
 				break;
+
+			default:
+				if (Tempo.#default.debug)
+					console.warn('Unexpected Javascript Context: ', context.type);
 		}
 	}
 
@@ -430,13 +434,13 @@ export class Tempo {
 
 	/** static Tempo.Duration getter, where matched in Tempo.TIMES */
 	static get durations() {
-		return getAccessors<Temporal.DurationLike>(Temporal.Duration)
+		return getAccessors<Temporal.Duration>(Temporal.Duration)
 			.filter(key => enumKeys(Tempo.TIMES).includes(key));
 	}
 
 	/** static Tempo property getter */
 	static get properties() {
-		return getAccessors(Tempo) as (keyof Tempo)[];
+		return getAccessors<Tempo>(Tempo);
 	}
 
 	/** Tempo global config settings */
