@@ -53,13 +53,13 @@ export const isInteger = (obj?: unknown): obj is bigint => isType(obj, 'BigInt')
 export const isDigit = (obj?: unknown): obj is number | bigint => isType(obj, 'Number', 'BigInt');
 export const isBoolean = <T>(obj?: T): obj is Extract<T, boolean> => isType(obj, 'Boolean');
 export const isArray = <T>(obj: T | T[]): obj is Array<T> => isType(obj, 'Array');
-export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => protoType(obj) === 'Object' && 'length' in obj && Object.keys(obj).every(key => key === 'length' || !isNaN(Number(key)));
-export const isObject = <T>(obj?: unknown): obj is Record<string, any> => isType(obj, 'Object');
+export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => protoType(obj) === 'Object' && Object.keys(obj).every(key => key === 'length' || !isNaN(Number(key)));
+export const isObject = <T>(obj?: T): obj is T => isType(obj, 'Object');
 export const isDate = (obj?: unknown): obj is Date => isType(obj, 'Date');
 export const isRegExp = (obj?: unknown): obj is RegExp => isType(obj, 'RegExp');
 // TODO
-export const isRecord = (obj?: unknown): obj is Record<any, any> => isType(obj, 'Record');
-export const isTuple = <T>(obj?: unknown): obj is Array<T> => isType(obj, 'Tuple');
+export const isRecord = (obj?: unknown): obj is Readonly<Record<any, any>> => isType(obj, 'Record');
+export const isTuple = <T>(obj?: unknown): obj is Readonly<Array<T>> => isType(obj, 'Tuple');
 
 export const isNull = (obj?: unknown): obj is null => isType(obj, 'Null');
 export const isNullish = (obj: {} | Nullish): obj is Nullish => isType<undefined | null | void>(obj, 'Null', 'Undefined', 'Void', 'Empty');
@@ -81,13 +81,13 @@ export const nullToValue = <T, R>(obj: T, value: R) => obj ?? value;
 /** object has no values */
 export const isEmpty = <T>(obj?: T) => false
 	|| isNullish(obj)
-	|| (isObject(obj) && Object.keys(obj).length === 0)
+	|| (isObject(obj) && Object.keys(obj as Record<any, any>).length === 0)
 	|| (isString(obj) && obj.trim().length === 0)
 	|| (isArray(obj) && obj.length === 0)
-	|| (isRecord(obj) && Object.keys(obj).length === 0)
-	|| (isTuple(obj) && obj.length === 0)
 	|| (isSet(obj) && obj.size === 0)
 	|| (isMap(obj) && obj.size === 0)
+	|| (isTuple(obj) && obj.length === 0)
+	|| (isRecord(obj) && Object.keys(obj).length === 0)
 
 export function assertCondition(condition: boolean, message?: string): asserts condition {
 	if (!condition)
@@ -103,7 +103,7 @@ export type TValues<T> = TValue<T> | Array<TValue<T>> | Extract<T, undefined>;
 /** cast <T | T[]> as T[] */
 export type TArray<T> = Array<TValue<T>>;
 
-/** bottom values */
+/** bottom value */
 export type Nullish = null | undefined | void;
 export type TPlural<T extends string> = `${T}s`;
 export type ValueOf<T> = T[keyof T];

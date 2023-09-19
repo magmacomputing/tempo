@@ -238,7 +238,7 @@ function traverse(obj: any, sentinel?: Function): any {
 }
 
 /** Rebuild an Object from its single-key representation */
-function typeify(json: unknown, sentinel?: Function) {
+function typeify(json: object, sentinel?: Function) {
 	if (!isObject(json))
 		return json;																						// only JSON Objects
 
