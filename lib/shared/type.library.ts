@@ -4,7 +4,7 @@ import type { Pledge } from '@module/shared/pledge.class.js';
 // TODO:  remove this after Temporal reaches Stage-4
 import { Temporal } from '@js-temporal/polyfill';
 
-/** the primitive type reported by ECMAScript */
+/** the primitive type reported by toStringTag() */
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
 
 /** 
