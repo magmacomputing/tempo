@@ -7,18 +7,27 @@ import { isType, asType, isEmpty, isString, isObject, isArray, isFunction, isRec
 
 /** make a deep-copy, using standard browser or JSON functions */
 export function clone<T>(obj: T) {
-	let copy = obj;																						// default to original object
+	let copy = { ...obj };																		// default to original object
 
 	try {
 		if (!globalThis.structuredClone)
 			throw new Error('clone: structuredClone');						// skip, if not supported
 		copy = structuredClone?.(obj);
 	} catch (error) {
-		try {
-			copy = JSON.parse(JSON.stringify(obj));								// run any toString() methods
-		} catch (error) {
-			console.warn('Could not clone object: ', obj);
-		}
+		copy = cleanify(obj);
+	}
+
+	return copy;
+}
+
+/** return a copy, remove \<undefined> */
+export function cleanify<T>(obj: T) {
+	let copy = { ...obj };
+
+	try {
+		copy = JSON.parse(JSON.stringify(obj));									// run any toString() methods
+	} catch (error) {
+		console.warn('Could not clean object: ', obj);
 	}
 
 	return copy;

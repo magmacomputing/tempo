@@ -63,7 +63,7 @@ export const isTuple = <T>(obj?: unknown): obj is Readonly<Array<T>> => isType(o
 
 export const isNull = (obj?: unknown): obj is null => isType(obj, 'Null');
 export const isNullish = (obj: {} | Nullish): obj is Nullish => isType<undefined | null | void>(obj, 'Null', 'Undefined', 'Void', 'Empty');
-export const isUndefined = (obj?: unknown): obj is undefined => isType<undefined>(obj, 'Undefined');
+export const isUndefined = (obj?: unknown): obj is undefined => isType<undefined>(obj, 'Undefined', 'Void');
 export const isDefined = <T>(obj: T): obj is NonNullable<T> => !isNullish(obj);
 
 export const isClass = (obj?: unknown): obj is Function => isType(obj, 'Class');
