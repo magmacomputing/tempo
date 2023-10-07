@@ -211,7 +211,7 @@ export class Tempo {
 
 	/**
 	 * this allows Tempo to set a specific default configuration for a subsequent 'new Tempo()' to inherit.  
-	 * Tempo.#default is set from init argument (if supplied), else local cache, else reasonable default values. 
+	 * Tempo.#default is set from init argument (if supplied), else local cache, else reasonable default values.   
 	 * useful primarily for 'order of parsing input', as well as .quarter and .season
 	 */
 	static init = (init: Tempo.Init = {}) => {
@@ -293,7 +293,8 @@ export class Tempo {
 					Tempo.#default.locale = locale;										// found an override locale based on timeZone
 				Tempo.#default.locale = Tempo.#locale(Tempo.#default.locale);
 
-				Object.assign(Tempo.#default.event, init.event);		// add the argument events
+				if (isDefined(init.event))
+					Tempo.#addEvent(Tempo.#default, init.event);			// add the argument events
 				Tempo.#event(Tempo.#default, Tempo.units);					// setup special Date events (before patterns!)
 
 				Object.assign(Tempo.#default.period, init.period);	// add the argument periods
@@ -346,15 +347,23 @@ export class Tempo {
 				.map(pat => Object.entries(pat)[0])
 				.forEach(([key, ref]) => Tempo.#default.pattern.unshift({ key, reg: asArray(ref) }));
 
-			// Event is provided as a single tuple [eventKey, dateString], or an array of tuples
-			if (isDefined(config.event) && !isArray(config.event[0]))
-				config.event = [config.event as unknown as Tempo.Event];
-			(config.event ?? [])
-				.reverse()																					// prepend user-events from storage, as they have priority
-				.forEach(([key, val]) => Tempo.#default.event.unshift([key, val]));
+			if (isDefined(config.event))
+				Tempo.#addEvent(Tempo.#default, config.event);
 
 			Object.assign(Tempo.#default.period, config.period ?? {});
 		}
+	}
+
+	/**
+	 * add a new Event to a config  
+	 * e.g. Tempo.init({event:['canada ?day', '01-Jun']})
+	 */
+	static #addEvent(config: Tempo.ConfigFile | Tempo.Config, event: Tempo.Events) {
+		if (!isArray(event[0]))																	// event is provided as a single tuple [eventKey, dateString], or an array of tuples
+			event = [event as unknown as Tempo.Event];
+		(event ?? [])
+			.reverse()																						// prepend user-events from storage, as they have priority
+			.forEach(([key, val]) => config.event.unshift([key, val]));
 	}
 
 	/** convert list of <string | RegExp> to a single RegExp */
@@ -574,9 +583,10 @@ export class Tempo {
 		// user-specified time-periods to use when parsing this instance
 		if (this.#opts.period)
 			Tempo.#period(this.#config, this.#units);							// set instance 'per' and 'tm' patterns
-		if (this.#opts.event)
+		if (this.#opts.event) {
+			Tempo.#addEvent(this.#config, this.#opts.event);			// add the user-event to the config
 			Tempo.#event(this.#config, this.#units);							// set instance 'evt' and 'dt' patterns
-
+		}
 		// user-specified patterns to use when parsing this instance (might be array-of-array)
 		if (this.#opts.pattern) {
 			(isArray(this.#opts.pattern[0]) ? this.#opts.pattern as unknown as (NonNullable<Tempo.Options["pattern"]>)[] : [this.#opts.pattern])
@@ -1702,6 +1712,7 @@ export namespace Tempo {
 	}
 }
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /**
  * kick-start Tempo configuration with default config  
  * use top-level await to indicate Tempo is ready
