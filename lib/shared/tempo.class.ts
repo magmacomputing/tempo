@@ -87,8 +87,10 @@ export class Tempo {
 	 * because it will include a list of events ('e.g. 'new_years' | 'xmas'), we need to rebuild it if the user adds a new event
 	 */
 	static #event(config: Tempo.ConfigFile | Tempo.Config, units: Tempo.Units) {
-		const events = config.event.map(([key, _], idx) => `(?<evt${idx}>${key.toLowerCase()})`).join('|');
-		units['evt'] = new RegExp(`(${events})`, 'i');					// set the Tempo.units 'event' pattrn
+		const events = config.event
+		// .map(())
+		// const events = config.event.map(([key, _], idx) => `(?<evt${idx}>${key.toLowerCase()})`).join('|');
+		units['evt'] = new RegExp(`(${events})`, 'i');					// set the Tempo.units 'event' pattern
 
 		const date = Tempo.regexp('dd', 'sep', 'mm', 'sep', 'yy?', '/|/', 'evt').source.slice(1, -1);
 		units['dt'] = new RegExp(date, 'i');										// set the Tempo.units 'dt' pattern (without anchors)
@@ -237,37 +239,37 @@ export class Tempo {
 					mmddyy: Tempo.#locales														// built-in locales that parse with 'mm-dd-yy' date order
 						.map(locale => ({ locale: locale.baseName, timeZones: locale.timeZones })),										// timeZones in those locales
 					pattern: [																				// built-in patterns to be processed in this order
-						{ key: 'tm', reg: ['tm'] },											// clock or period
-						{ key: 'dt', reg: ['dt'] },											// calendar or event
-						{ key: 'ddmmyy', reg: ['dow?', 'dd?', 'sep', 'mm', 'sep', 'yy?'] },
-						{ key: 'mmddyy', reg: ['dow?', 'mm', 'sep', 'dd?', 'sep', 'yy?'] },
-						{ key: 'ddmmyytm', reg: ['dow?', 'sep', 'dd?', 'sep', 'mm', 'sep', 'yy?', '/ /', 'tm?'] },
-						{ key: 'mmddyytm', reg: ['dow?', 'sep', 'mm', 'sep', 'dd', 'sep', 'yy?', '/ /', 'tm?'] },
-						{ key: 'yymmdd', reg: ['dow?', 'sep', 'yy', 'sep', 'mm', 'sep', 'dd?'] },
-						{ key: 'yymmddtm', reg: ['dow?', 'sep', 'yy', 'sep', 'mm', 'sep', 'dd', '/ /', 'tm?'] },
-						{ key: 'dow', reg: ['mod?', 'dow', 'sep', 'tm?'] },
-						{ key: 'evt', reg: ['mod?', 'evt', 'sep', 'tm?'] },
-						{ key: 'yyqtr', reg: ['yy', 'sep', '/Q/', 'qtr'] },
+						{ key: 'tm', pat: ['tm'] },											// clock or period
+						{ key: 'dt', pat: ['dt'] },											// calendar or event
+						{ key: 'ddmmyy', pat: ['dow?', 'dd?', 'sep', 'mm', 'sep', 'yy?'] },
+						{ key: 'mmddyy', pat: ['dow?', 'mm', 'sep', 'dd?', 'sep', 'yy?'] },
+						{ key: 'ddmmyytm', pat: ['dow?', 'sep', 'dd?', 'sep', 'mm', 'sep', 'yy?', '/ /', 'tm?'] },
+						{ key: 'mmddyytm', pat: ['dow?', 'sep', 'mm', 'sep', 'dd', 'sep', 'yy?', '/ /', 'tm?'] },
+						{ key: 'yymmdd', pat: ['dow?', 'sep', 'yy', 'sep', 'mm', 'sep', 'dd?'] },
+						{ key: 'yymmddtm', pat: ['dow?', 'sep', 'yy', 'sep', 'mm', 'sep', 'dd', '/ /', 'tm?'] },
+						{ key: 'dow', pat: ['mod?', 'dow', 'sep', 'tm?'] },
+						{ key: 'evt', pat: ['mod?', 'evt', 'sep', 'tm?'] },
+						{ key: 'yyqtr', pat: ['yy', 'sep', '/Q/', 'qtr'] },
 					],
-					period: {																					// built-in time-periods to be mapped
-						midnight: '0:00',
-						morning: '8:00',
-						midmorning: '10:00',
-						midday: '12:00',
-						noon: '12:00',
-						afternoon: '15:00',
-						evening: '18:00',
-						night: '20:00',
-					},
+					period: [																					// built-in time-periods to be mapped
+						{ 'midnight': '0:00' },
+						{ 'morning': '8:00' },
+						{ 'midmorning': '10:00' },
+						{ 'midday': '12:00' },
+						{ 'noon': '12:00' },
+						{ 'afternoon': '15:00' },
+						{ 'evening': '18:00' },
+						{ 'night': '20:00' },
+					],
 					event: [																					// built-in date-events to be mapped (must be lower-case keys)
-						['new.?years? ?eve', '31-Dec'],
-						['nye', '31 Dec'],
-						['new.?years?( ?day)?', '01 Jan'],
-						['ny', '01 Jan'],
-						['christmas ?eve', '24 Dec'],
-						['christmas', '25 Dec'],
-						['xmas ?eve', '24 Dec'],
-						['xmas', '25 Dec'],
+						{ 'new.?years? ?eve': '31-Dec' },
+						{ 'nye': '31 Dec' },
+						{ 'new.?years?( ?day)?': '01 Jan' },
+						{ 'ny': '01 Jan' },
+						{ 'christmas ?eve': '24 Dec' },
+						{ 'christmas': '25 Dec' },
+						{ 'xmas ?eve': '24 Dec' },
+						{ 'xmas': '25 Dec' },
 					],
 					version: Version,																	// current semantic-version release
 				} as Tempo.ConfigFile)
@@ -300,9 +302,7 @@ export class Tempo {
 				Object.assign(Tempo.#default.period, init.period);	// add the argument periods
 				Tempo.#period(Tempo.#default, Tempo.units);					// setup special Time units (before patterns!)
 
-				Tempo.#pattern = [];																// reset array of patterns
-				Tempo.#default.pattern															// setup defaults as RegExp patterns
-					.forEach(({ key, reg }) => Tempo.#pattern.push({ key, reg: Tempo.regexp(...reg) }));
+				// Tempo.#addPattern(Tempo.#pattern, Tempo.#default.pattern.map(pat => pat.reg));
 
 				if ((getContext().type === CONTEXT.Browser && init.debug !== false) || init.debug === true)
 					console.log('Tempo: ', omit(Tempo.#default, 'pattern', 'period'));
@@ -345,7 +345,7 @@ export class Tempo {
 			(config.pattern ?? [])
 				.reverse()																					// prepend user-patterns from storage, as they have priority
 				.map(pat => Object.entries(pat)[0])
-				.forEach(([key, ref]) => Tempo.#default.pattern.unshift({ key, reg: asArray(ref) }));
+				.forEach(([key, ref]) => Tempo.#default.pattern.unshift({ key, pat: asArray(ref) }));
 
 			if (isDefined(config.event))
 				Tempo.#addEvent(Tempo.#default, config.event);
@@ -356,14 +356,39 @@ export class Tempo {
 
 	/**
 	 * add a new Event to a config  
-	 * e.g. Tempo.init({event:['canada ?day', '01-Jun']})
+	 * e.g. Tempo.init({event: {'canada ?day': '01-Jun', 'aus(tralia)? ?day': '26-Jan'} })
 	 */
-	static #addEvent(config: Tempo.ConfigFile | Tempo.Config, event: Tempo.Events) {
-		if (!isArray(event[0]))																	// event is provided as a single tuple [eventKey, dateString], or an array of tuples
-			event = [event as unknown as Tempo.Event];
-		(event ?? [])
+	static #addEvent(config: Tempo.Config, event: Tempo.ConfigFile["event"]) {
+		asArray(event)
 			.reverse()																						// prepend user-events from storage, as they have priority
-			.forEach(([key, val]) => config.event.unshift([key, val]));
+			.forEach(evt => Object.entries(evt)
+				.forEach(([key, evt]) => config.event.unshift({ key, evt }))
+			);
+	}
+
+	/**
+	 * add a new Period to a config
+	 * e.g.  Tempo.init({period: {'nye': '01 Jan'} })
+	 */
+	static #addPeriod(config: Tempo.Config, period: Tempo.ConfigFile["period"]) {
+		asArray(period)
+			.reverse()
+			.forEach(per => Object.entries(per)
+				.forEach(([key, per]) => config.period.unshift({ key, per }))
+			);
+	}
+
+	/**
+	 * build RegExp patterns  
+	 */
+	static #addPattern(patterns: Tempo.Pattern[], pattern: Tempo.StringPattern[]) {
+		patterns = [];																					// reset array of patterns
+		// pattern																									// setup as RegExp patterns
+		// 	.forEach(({ key, reg }) => patterns.push({ key, pat: Tempo.regexp(...reg) }));
+
+		(isArray(pattern[0]) ? pattern as unknown as (NonNullable<Tempo.StringPattern[]>)[] : [pattern])
+			.map((pat, idx) => ({ key: '_' + idx, pat: Tempo.regexp(Tempo.units, ...pat) }))
+			.forEach(pattern => patterns.push(pattern));
 	}
 
 	/** convert list of <string | RegExp> to a single RegExp */
@@ -459,12 +484,12 @@ export class Tempo {
 
 	/** Tempo global config settings */
 	static get config() {
-		return Tempo.#default;
+		return { ...Tempo.#default };
 	}
 
 	/** array of regex patterns used when parsing Tempo.DateTime argument */
 	static get patterns() {
-		return Tempo.#pattern;
+		return { ...Tempo.#pattern };
 	}
 
 	/** indicate when Tempo.init() is complete */
@@ -514,7 +539,7 @@ export class Tempo {
 	#opts: Tempo.Options;																			// constructor arguments
 	#units: Tempo.Units;																			// instance overrides
 	#instant: Temporal.Instant;																// instantiation Temporal Instant
-	#temporal!: Temporal.ZonedDateTime;												// underlying Temporal DateTime
+	#zdt!: Temporal.ZonedDateTime;												// underlying Temporal DateTime
 	/** prebuilt formats object, for convenience */						fmt = {} as Tempo.TypeFmt;
 
 	// Constructor  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -581,17 +606,15 @@ export class Tempo {
 				Tempo.#fiscal(mon, this.#config.month);
 		}
 		// user-specified time-periods to use when parsing this instance
-		if (this.#opts.period)
+		if (isDefined(this.#opts.period))
 			Tempo.#period(this.#config, this.#units);							// set instance 'per' and 'tm' patterns
-		if (this.#opts.event) {
+		if (isDefined(this.#opts.event)) {
 			Tempo.#addEvent(this.#config, this.#opts.event);			// add the user-event to the config
 			Tempo.#event(this.#config, this.#units);							// set instance 'evt' and 'dt' patterns
 		}
 		// user-specified patterns to use when parsing this instance (might be array-of-array)
-		if (this.#opts.pattern) {
-			(isArray(this.#opts.pattern[0]) ? this.#opts.pattern as unknown as (NonNullable<Tempo.Options["pattern"]>)[] : [this.#opts.pattern])
-				.map((pat, idx) => ({ key: '_' + idx, reg: Tempo.regexp(this.#units, ...pat) }))
-				.forEach(pattern => this.#config.pattern.push(pattern));
+		if (isDefined(this.#opts.pattern)) {
+			Tempo.#addPattern(this.#config.pattern, this.#opts.pattern);
 		}
 		// put user-patterns at the beginning of the parse-array
 		this.#config.pattern.splice(this.#config.pattern.length, 0, ...Tempo.#pattern);
@@ -610,7 +633,7 @@ export class Tempo {
 		/** we now have all the info we need to instantiate a new Tempo                          */
 		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 		try {
-			this.#temporal = this.#parse(tempo);									// attempt to interpret the DateTime arg
+			this.#zdt = this.#parse(tempo);												// attempt to interpret the DateTime arg
 
 			if (['iso8601', 'gregory'].includes(this.config.calendar)) {
 				enumKeys(Tempo.FORMAT)															// add all the pre-defined FORMATs to the instance (ie  Tempo().fmt.{})
@@ -625,34 +648,34 @@ export class Tempo {
 
 	// Public getters	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	/** 4-digit year */																				get yy() { return this.#temporal.year }
-	/** month: Jan=1, Dec=12 */																get mm() { return this.#temporal.month }
-	/** day of month */																				get dd() { return this.#temporal.day }
-	/** hours since midnight: 24-hour format */								get hh() { return this.#temporal.hour }
-	/** minutes since last hour */														get mi() { return this.#temporal.minute }
-	/** seconds since last minute */													get ss() { return this.#temporal.second }
-	/** milliseconds since last second */											get ms() { return this.#temporal.millisecond }
-	/** microseconds since last millisecond */								get us() { return this.#temporal.microsecond }
-	/** nanoseconds since last microsecond */									get ns() { return this.#temporal.nanosecond }
+	/** 4-digit year */																				get yy() { return this.#zdt.year }
+	/** month: Jan=1, Dec=12 */																get mm() { return this.#zdt.month }
+	/** day of month */																				get dd() { return this.#zdt.day }
+	/** hours since midnight: 24-hour format */								get hh() { return this.#zdt.hour }
+	/** minutes since last hour */														get mi() { return this.#zdt.minute }
+	/** seconds since last minute */													get ss() { return this.#zdt.second }
+	/** milliseconds since last second */											get ms() { return this.#zdt.millisecond }
+	/** microseconds since last millisecond */								get us() { return this.#zdt.microsecond }
+	/** nanoseconds since last microsecond */									get ns() { return this.#zdt.nanosecond }
 	/** fractional seconds since last second */								get ff() { return Number(`0.${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`) }
-	/** number of weeks */																		get ww() { return this.#temporal.weekOfYear }
-	/** timezone */																						get tz() { return this.#temporal.timeZoneId }
-	/** default as milliseconds since Unix epoch */						get ts() { return this.#temporal[Tempo.#timeStamp[this.#config.timeStamp]] as number | bigint }
-	/** weekday: Mon=1, Sun=7 */															get dow() { return this.#temporal.dayOfWeek }
-	/** short month name */																		get mmm() { return Tempo.MONTH[this.#temporal.month] }
-	/** long month name */																		get mon() { return Tempo.MONTHS[this.#temporal.month] }
-	/** short weekday name */																	get ddd() { return Tempo.WEEKDAY[this.#temporal.dayOfWeek] }
-	/** long weekday name */																	get day() { return Tempo.WEEKDAYS[this.#temporal.dayOfWeek] }
+	/** number of weeks */																		get ww() { return this.#zdt.weekOfYear }
+	/** timezone */																						get tz() { return this.#zdt.timeZoneId }
+	/** default as milliseconds since Unix epoch */						get ts() { return this.#zdt[Tempo.#timeStamp[this.#config.timeStamp]] as number | bigint }
+	/** weekday: Mon=1, Sun=7 */															get dow() { return this.#zdt.dayOfWeek }
+	/** short month name */																		get mmm() { return Tempo.MONTH[this.#zdt.month] }
+	/** long month name */																		get mon() { return Tempo.MONTHS[this.#zdt.month] }
+	/** short weekday name */																	get ddd() { return Tempo.WEEKDAY[this.#zdt.dayOfWeek] }
+	/** long weekday name */																	get day() { return Tempo.WEEKDAYS[this.#zdt.dayOfWeek] }
 	/** quarter: Q1-Q4 */																			get qtr() { return Math.trunc(this.#config.month[this.mm].quarter) }
 	/** meteorological season: Spring/Summer/Autumn/Winter */	get season() { return this.#config.month[this.mm].season.split('.')[0] as keyof typeof Tempo.SEASON }
-	/** nanoseconds (BigInt) since Unix epoch */							get nano() { return this.#temporal.epochNanoseconds }
+	/** nanoseconds (BigInt) since Unix epoch */							get nano() { return this.#zdt.epochNanoseconds }
 	/** Instance configuration */															get config() { return { ...this.#config } }
 	/** units since epoch */																	get epoch() {
 		return {
-			/** seconds since epoch */														ss: this.#temporal.epochSeconds,
-			/** milliseconds since epoch */												ms: this.#temporal.epochMilliseconds,
-			/** microseconds since epoch */												us: this.#temporal.epochMicroseconds,
-			/** nanoseconds since epoch */												ns: this.#temporal.epochNanoseconds,
+			/** seconds since epoch */														ss: this.#zdt.epochSeconds,
+			/** milliseconds since epoch */												ms: this.#zdt.epochMilliseconds,
+			/** microseconds since epoch */												us: this.#zdt.epochMicroseconds,
+			/** nanoseconds since epoch */												ns: this.#zdt.epochNanoseconds,
 		}
 	}
 
@@ -665,9 +688,10 @@ export class Tempo {
 	/** set to start/mid/end/period of unit */								set(offset: Tempo.Set) { return this.#set(offset) }
 
 	/** is valid Tempo */																			isValid() { return !isEmpty(this) }
-	/** as Temporal.ZonedDateTime */													toTemporal() { return this.#temporal }
-	/** as Date object */																			toDate() { return new Date(this.#temporal.round({ smallestUnit: 'millisecond' }).epochMilliseconds) }
-	/** as String */																					toString() { return this.#temporal.toString() }
+	/** as Temporal.ZonedDateTime */													toDateTime() { return this.#zdt }
+	/** as Temporal.Instant */																toInstant() { return this.#zdt.toInstant() }
+	/** as Date object */																			toDate() { return new Date(this.#zdt.round({ smallestUnit: 'millisecond' }).epochMilliseconds) }
+	/** as String */																					toString() { return this.#zdt.toString() }
 	/** as Object */																					toJSON() { return { ...omit(this.#config, 'month', 'pattern'), value: this.toString() } }
 
 	// Private methods	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -721,7 +745,7 @@ export class Tempo {
 
 			case 'Tempo':
 				return arg.value
-					.toTemporal();																		// clone current Tempo
+					.toDateTime();																		// clone current Tempo
 
 			case 'Date':
 				return new Temporal.ZonedDateTime(BigInt(arg.value.getTime() * 1_000_000), this.#config.timeZone, this.#config.calendar);
@@ -774,7 +798,7 @@ export class Tempo {
 				throw new Error('Cannot safely interpret number with less than 8-digits: use string instead');
 		}
 
-		for (const { key, reg } of this.#config.pattern) {			// test against regular-expression patterns until a match is found		
+		for (const { key, pat: reg } of this.#config.pattern) {	// test against regular-expression patterns until a match is found		
 			const pat = value.match(reg);													// return any matches
 
 			if (isNull(pat) || isUndefined(pat.groups))						// if regexp named-groups not found
@@ -817,7 +841,7 @@ export class Tempo {
 				const per = this.#config.period[pat.groups['per'] as Tempo.Period];
 				const lkp = this.#config.pattern.find(pat => pat.key === 'tm');
 				if (lkp) {
-					const { hh, mi, ss, ff, am } = per.match(lkp['reg'])?.groups || {};
+					const { hh, mi, ss, ff, am } = per.match(lkp['pat'])?.groups || {};
 					Object.assign(pat.groups, { hh, mi, ss, ff, am });
 				}
 			}
@@ -1026,7 +1050,7 @@ export class Tempo {
 		if (per)																								// if arg is a Period,
 			time = per;																						// 	then substitute the associated 'time' string
 
-		const match = time.match(pat.reg);											// match the time-string against the 'tm' Pattern
+		const match = time.match(pat.pat);											// match the time-string against the 'tm' Pattern
 		if (!match?.groups)																			//	else early exit
 			return '00:00:00';
 
@@ -1069,12 +1093,12 @@ export class Tempo {
 		const grp = {} as Record<string, string>;								// RegExp.groups on a match
 
 		if (dmy) {
-			const match = eventDate.match(dmy['reg'])?.groups;		// try a match on 'dmy' first
+			const match = eventDate.match(dmy['pat'])?.groups;		// try a match on 'dmy' first
 			if (match)
 				Object.assign(grp, match);
 		}
 		if (isEmpty(grp) && ymd) {
-			const match = eventDate.match(ymd['reg'])?.groups;		// try a match on 'ymd' if 'dmy' failed
+			const match = eventDate.match(ymd['pat'])?.groups;		// try a match on 'ymd' if 'dmy' failed
 			if (match)
 				Object.assign(grp, match);
 		}
@@ -1168,7 +1192,7 @@ export class Tempo {
 							return zdt;
 						}
 
-						const evt = offset.match(pat.reg)?.groups ?? {};// for example, {evt7: "xmas"}
+						const evt = offset.match(pat.pat)?.groups ?? {};// for example, {evt7: "xmas"}
 						const { yy: year, mm: month, dd: day } = this.#parseEvent(evt, zdt);
 
 						return zdt
@@ -1330,7 +1354,7 @@ export class Tempo {
 					default:
 						throw new Error(`Unexpected method(${mutate}), unit(${unit}) and offset(${single})`);
 				}
-			}, this.#temporal)																		// start with the Tempo zonedDateTime
+			}, this.#zdt)																					// start with the Tempo zonedDateTime
 
 		return new Tempo(zdt as unknown as typeof Temporal);
 	}
@@ -1360,7 +1384,7 @@ export class Tempo {
 
 				const [full, part] = split(this.#config.month[this.mm].quarter);
 				const mon = (full - 1) * 3 + part - 1;
-				const yy = this.#temporal.with({ day: 1 }).add({ months: -mon }).add({ months: 11 }).year;
+				const yy = this.#zdt.with({ day: 1 }).add({ months: -mon }).add({ months: 11 }).year;
 
 				return `${yy}Q${this.qtr}`;
 
@@ -1403,10 +1427,10 @@ export class Tempo {
 		const { tempo, opts, unit } = isObject(arg)
 			? arg as Tempo.Until																	// if a Record detected, then assume Tempo.Until
 			: { tempo: arg } as Tempo.Until;											// else build a Record and assume Tempo.Parameter["tempo"]
-		const offset = new Tempo(tempo, opts).#temporal;
+		const offset = new Tempo(tempo, opts).#zdt;
 		const dur = {} as Tempo.Duration;
 
-		const duration = this.#temporal.until(offset, { largestUnit: unit === 'quarters' || unit === 'seasons' ? 'months' : (unit || 'years') });
+		const duration = this.#zdt.until(offset, { largestUnit: unit === 'quarters' || unit === 'seasons' ? 'months' : (unit || 'years') });
 		for (const getter of Tempo.durations)
 			dur[getter] = duration[getter] ?? 0;									// init all duration-values to '0'
 
@@ -1425,7 +1449,7 @@ export class Tempo {
 				return (duration.months / 3) + (duration.years * 4);// three months = 1 quarter | season
 
 			default:																							// sum-up the duration components
-				return duration.total({ relativeTo: this.#temporal, unit });
+				return duration.total({ relativeTo: this.#zdt, unit });
 		}
 	}
 
@@ -1478,7 +1502,7 @@ export namespace Tempo {
 		fiscal?: Tempo.Calendar,
 		timeStamp?: Tempo.TimeStamp,
 		period?: Tempo.Periods,
-		event?: Tempo.Event[],
+		event?: Tempo.Events,
 		pattern?: StringPattern[],
 		fmt?: keyof Tempo.Format,
 		value?: string,
@@ -1496,12 +1520,16 @@ export namespace Tempo {
 	export type TimeUnit = Temporal.DateTimeUnit | 'quarter' | 'season'
 	export type DiffUnit = Temporal.PluralUnit<Temporal.DateTimeUnit> | 'quarters' | 'seasons'
 	export type Midday = 'am' | 'pm'
-	export type Period = 'midnight' | 'morning' | 'midmorning' | 'midday' | 'noon' | 'afternoon' | 'evening' | 'night'
-	export type Periods = Record<Tempo.Period, string>
 	export type Units = Record<string, RegExp>
-	export type EventKey = 'new.?year' | 'ny' | 'christmas' | 'xmas'
-	export type Event = [Tempo.EventKey, string]
-	export type Events = Tempo.Event[]
+
+	export type Period = 'midnight' | 'morning' | 'midmorning' | 'midday' | 'noon' | 'afternoon' | 'evening' | 'night'
+	export type Periods = Record<string, string>[]
+
+	export type Event = 'new.?year' | 'ny' | 'christmas' | 'xmas'
+	export type Events = Record<string, string>[]
+
+	export interface Pattern { key: string; pat: Tempo.StringPattern[]; }
+	export type Patterns = Tempo.Pattern[]
 
 	/** constructor parameter object */
 	export interface Parameter {
@@ -1513,7 +1541,7 @@ export namespace Tempo {
 		unit?: Tempo.DiffUnit;
 	}
 	export type Mutate = 'start' | 'mid' | 'end'
-	export type Set = Partial<Record<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit> & Record<'period', Tempo.Period> & Record<'event', Tempo.EventKey>>
+	export type Set = Partial<Record<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit> & Record<'period', Tempo.Period> & Record<'event', Tempo.Event>>
 	export type Add = Partial<Record<Tempo.TimeUnit | Tempo.DiffUnit, number>>
 
 	/** detail about a Month */
@@ -1537,15 +1565,11 @@ export namespace Tempo {
 		fiscal: Tempo.Calendar;																	// month to start fiscal-year
 		timeStamp: Tempo.TimeStamp;															// precision for Tempo().ts
 		mmddyy: { locale: string; timeZones: string[]; }[];			// Array of locales that prefer 'mm-dd-yy' date order
-		pattern: { key: string, reg: string[] }[];							// Array of pattern strings, in order of preference
-		period: Tempo.Periods;																	// map of time periods
-		event: Tempo.Events;																		// map of known dates (usually only day-month, year inferred)
+		pattern: Tempo.Patterns;																// Array of pattern strings, in order of preference
+		period: Tempo.Periods[0] | Tempo.Periods;								// Array of time periods
+		event: Tempo.Events[0] | Tempo.Events;									// Array of known dates (usually only day-month, year inferred)
 	}
 
-	export interface Pattern {
-		key: string;
-		reg: RegExp;
-	}
 	/** configuration to use on Instance */
 	export enum CONFIG { Static = 'static', Instance = 'instance' }
 	export interface Config {
@@ -1560,7 +1584,7 @@ export namespace Tempo {
 		month: Tempo.Months;																		// tuple of months to assign quarter / season
 		debug: boolean;																					// debug-mode for this instance
 		catch: boolean;																					// catch-mode for this instance
-		pattern: Tempo.Pattern[];																// conform patterns
+		pattern: Tempo.Patterns;																// conform patterns
 		period: Tempo.Periods;																	// time periods for this instance
 		event: Tempo.Events;																		// known dates for this instance
 	}
@@ -1576,8 +1600,8 @@ export namespace Tempo {
 		timeZone?: string;
 		locale?: string;
 		pivot?: number;
-		period?: Tempo.Periods;
-		event?: Tempo.Events;
+		period?: Tempo.Periods[0] | Tempo.Periods;							// either a Period object as {per1: 'hh:mi', per2: 'hh:mi:ss'} or an array of Periods
+		event?: Tempo.Events[0] | Tempo.Events;									// either a Event object as {evt1: 'ddd-mm', evt2: 'ddd-mm'} or an array of Events
 	}
 
 	/** pre-configured format strings */

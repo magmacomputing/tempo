@@ -144,7 +144,7 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 			return `${arg.type === 'Record' ? '#' : ''}{`
 				+ Object.entries(arg.value)
 					.filter(([, val]) => isStringable(val))
-					.map(([key, val]) => '"' + key + '":' + stringize(val))
+					.map(([key, val]) => `"${key}":${stringize(val)}]`)
 				+ `}`;
 
 		case 'Array':
@@ -158,7 +158,7 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 		case 'Map':
 			const map = Array.from(arg.value.entries())
 				.filter(([, val]) => isStringable(val))
-				.map(([key, val]) => '[' + stringize(key) + ',' + stringize(val) + ']')
+				.map(([key, val]) => `[${stringize(key)},${stringize(val)}]`)
 				.join(',')
 			return oneKey(arg.type, `[${map}]`);
 
@@ -281,9 +281,9 @@ function typeify(json: object, sentinel?: Function) {
 		case 'Set':
 			return new Set(value);
 		case 'Record':
-		// return Record(segment) ;															// TODO
+		// return Record(value) ;																// TODO
 		case 'Tuple':
-		// return Tuple.from(segment) ;													// TODO
+		// return Tuple.from(value) ;														// TODO
 
 		case 'Tempo':
 			return new Tempo(value);
