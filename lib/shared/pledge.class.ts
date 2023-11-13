@@ -36,8 +36,8 @@ export class Pledge<T> {
 
 		this.#status = JSON.parse(JSON.stringify({							// remove undefined values
 			tag,
-			catch: flags.catch ?? Pledge.#options.catch,
 			debug: flags.debug ?? Pledge.#options.debug,
+			catch: flags.catch ?? Pledge.#options.catch,
 			state: Pledge.STATE.Pending,
 		}));
 
@@ -136,7 +136,13 @@ export namespace Pledge {
 	export type Reject = (err: Error) => any;									// function to call after Pledge rejects
 	export type Settle = () => void;													// function to call after Pledge settles
 
-	export type Constructor = { tag?: string, onResolve?: TValues<Pledge.Resolve>, onReject?: TValues<Pledge.Reject>, onSettle?: TValues<Pledge.Settle>, catch?: boolean, debug?: boolean }
+	export type Constructor = {
+		tag?: string,
+		onResolve?: TValues<Pledge.Resolve>,
+		onReject?: TValues<Pledge.Reject>,
+		onSettle?: TValues<Pledge.Settle>,
+		catch?: boolean, debug?: boolean,
+	}
 
 	export enum STATE {
 		Pending = 'pending',
@@ -146,8 +152,8 @@ export namespace Pledge {
 
 	export interface Status<T> {
 		tag?: string;
-		catch?: boolean;
 		debug?: boolean;
+		catch?: boolean;
 		state: Pledge.STATE;
 		fulfil?: {
 			onResolve?: Pledge.Resolve[];
