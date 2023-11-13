@@ -118,12 +118,19 @@ export const isEqual = (obj1: any = {}, obj2: any = {}): boolean => {
 }
 
 /** omit top-level keys from an Object */
-// export const omit = <T extends object>(obj: T, ...keys: (keyof T)[]) => {
-export function omit<T extends object>(obj: T, ...keys: (keyof T)[]) {
-	let res = clone(obj);																			// create a safe 'stringified' copy
+export function omit<T extends {}>(obj: T, ...keys: (keyof T)[]) {
+	let res = clone(obj);																			// create a safe copy
 
 	keys.forEach(key => Reflect.deleteProperty(res, key));
 	return res as T;
+}
+
+/** mutate Object reference with all ownKeys removed */
+export function purge<T extends {}>(obj: T) {
+	Reflect.ownKeys(obj)
+		.forEach(key => Reflect.deleteProperty(obj, key));
+
+	return obj;
 }
 
 export const pluck = <T, K extends keyof T>(objs: T[], key: K): T[K][] =>
@@ -135,7 +142,9 @@ export const getMethods = (obj: any, all = false) => {
 	let currentObj = obj;
 
 	do {
-		Object.getOwnPropertyNames(currentObj).map(key => properties.add(key))
+		Object
+			.getOwnPropertyNames(currentObj)
+			.map(key => properties.add(key))
 	} while (all && (currentObj = Object.getPrototypeOf(currentObj)));
 
 	return [...properties.keys()].filter((key: any) => isFunction(obj[key]));
@@ -143,7 +152,9 @@ export const getMethods = (obj: any, all = false) => {
 
 
 export const countProperties = (obj = {}) =>
-	Object.getOwnPropertyNames(obj).length;
+	Object
+		.getOwnPropertyNames(obj)
+		.length;
 
 /** shallow compare two simple Objects */
 export const compareObject = (obj1 = {}, obj2 = {}) => {

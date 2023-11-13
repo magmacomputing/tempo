@@ -54,7 +54,7 @@ export const enumEntries = <T extends {}>(enumType: T) =>		// Enum entries
 // type Enum<E> = Record<keyof  E, unknown>
 type Enum<T> = {
 	[id: string]: T | string;
-	[nu: number]: string;
+	[nbr: number]: string;
 }
 
 export const objCount = <T>(enumType: Enum<T>) =>

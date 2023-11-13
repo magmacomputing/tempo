@@ -104,7 +104,8 @@ const oneKey = (type: Types, value: string) =>
  * serialize Objects for string-safe stashing in WebStorage, Cache, etc  
  * uses JSON.stringify where available, else returns stringified single-key Object "{[type]: value}"  
  */
-export const stringify = (obj: any) => stringize(obj, false);
+export const stringify = (obj: any) =>
+	stringize(obj, false);
 
 /**
  * internal function to process stringify-requests (and hide second parameter)  
