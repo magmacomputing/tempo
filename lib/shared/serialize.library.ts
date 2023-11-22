@@ -92,7 +92,7 @@ const oneKey = (type: Types, value: string) =>
 /**
  * For items which are not currently serializable via standard JSON.stringify (Undefined, BigInt, Set, Map, etc.)  
  * this creates a stringified, single-key Object to represent the value; for example  "{ 'BigInt': '123' }"  
- * I would have preferred to use something more robust than strings for the keys  (perhaps a Symbol?),  
+ * I would have preferred to use something more robust than strings for the keys  (perhaps a Symbol? but that doesn't fit in well with serializing to a String),  
  * as this single-key Object is open to abuse.  But the risk is acceptable within the scope of small projects.  
  * 
  * Drawbacks:  
