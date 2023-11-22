@@ -23,7 +23,6 @@ import { Temporal } from '@js-temporal/polyfill';
 const Version = '0.0.1';																		// semantic version
 const StorageKey = '_Tempo_';																// for stash in persistent storage
 const Default = {																						// reasonable defaults for initial Tempo
-	level: 'static',
 	version: Version,
 	pivot: 75,
 	catch: false,
@@ -36,7 +35,7 @@ const Default = {																						// reasonable defaults for initial Tempo
 		new Intl.Locale('en-AS'),																// add to this Array if required
 	]
 		.map(locale => ({ locale: locale.baseName, timeZones: locale.timeZones })),
-	format: new Map([																					// patterns to be checked, and in this order
+	format: new Map([																					// built-in formats to be checked, and in this order
 		['tm', ['tm']],																					// clock or period
 		['dt', ['dt']],																					// calendar or event
 		['ddmmyy', ['dow?', 'dd?', 'sep', 'mm', 'sep', 'yy?']],
@@ -72,7 +71,7 @@ const Default = {																						// reasonable defaults for initial Tempo
 } as Partial<Tempo.Config>
 
 /**
- * Wrapper Class around Temporal API  
+ * Wrapper class around Temporal.ZonedDateTime 
  * ````
  * (Instance)		new Tempo(DateTime, Options) or
  * (Static Method)		Tempo.from(DateTime, Options) or
@@ -93,8 +92,9 @@ export class Tempo {
 		init: new Pledge<boolean>('Init'),											// wait for Tempo.init() to settle
 	}
 
-	static #patterns = [] as Tempo.Conform[];									// Array of regex-patterns to test against a input-string for a match
-	static #months = Array.from({ length: 13 }, () => ({})) as Tempo.Months;	// Array of settings related to a Month
+	static #pattern = [] as Tempo.Conform[];									// Array of regex-patterns to test against a input-string for a match
+	// static #months = Array.from({ length: 13 }, () => ({})) as Tempo.Months;	// Array of settings related to a Month
+	static #months = asArray<Tempo.Months>({ length: 13 })
 
 	static #timeStamp = {																			// lookup object for Tempo().ts resolution
 		ss: 'epochSeconds',
@@ -260,73 +260,122 @@ export class Tempo {
 		const jun = tz.getOffsetNanosecondsFor(Temporal.Instant.from(`${yy}-${Tempo.MONTH.Jun}-01T00:00+00:00`));
 		const dst = jan - jun;																	// timezone offset difference between Jan and Jun
 
-		switch (true) {
-			case dst < 0:
-				return Tempo.COMPASS.North;
-			case dst > 0:
-				return Tempo.COMPASS.South;
-			case dst === 0:																				// timeZone does not observe DST
-			default:
-				return void 0;
-		}
+		if (dst < 0)
+			return Tempo.COMPASS.North;
+
+		if (dst > 0)
+			return Tempo.COMPASS.South;
+
+		return void 0;																					// timeZone does not observe DST
 	}
 
 	/**
-	 * conform format of Format / Event / Period in a config into a Map  
-	 * This is needed because we allow the user to provide detail flexibly as an {} or an {}[]
+	 * conform input of Format / Event / Period options into a Map  
+	 * This is needed because we allow the user to provide detail flexibly as an {} or an {}[] or a Map([])
 	 * for example:    
-	 * 	Tempo.init({pattern: {'ddmm': ['dd', 'sep?', 'mm']}})
+	 * 	Tempo.init({ format: {'ddmm': ['dd', 'sep?', 'mm']} })
+	 * 	Tempo.init({ format: {'yy': /20\d{2}/, 'mm': /[0-9|1|2]\d/ } })
+	 *	Tempo.init({ format: 'dow' })													(can be a single string)
+	 *	Tempo.init({ format: ['dow?', / /, 'dd'] })						(dont have to provide a 'key' for the format)
+	 *	Tempo.init({ format: new Map([['dow'],['yy']]) })			(unlikely, but can be a single string)
+	 *	Tempo.init({ format: new Map([['name1', ['dow','yy']], ['name2', ['mm', 'sep?', 'dd']]]) })
+
 	 * 	Tempo.init({event: {'canada ?day': '01-Jun', 'aus(tralia)? ?day': '26-Jan'} })  
 	 * 	Tempo.init({period: [{'morning tea': '09:30' }, {'elevenses': '11:00' }]})  
 	 * 	new Tempo('birthday', {event: [{birth(day)?: '20-May'}, {anniversay: '01-Jul'}] })
 	 */
-	static #fixOptions(option: Tempo.Options = {}) {
-		(['format', 'event', 'period'] as const)
+	static #setConfig(config: Tempo.Config, option: Tempo.Options = {}) {
+		if (isDefined(option['format'])) {
+			const arg = asType(option['format']);
+			const map = new Map() as typeof config["format"];			// build a Map
+			let idx = -1;
+
+			switch (arg.type) {
+				case 'Map':
+
+					break;
+
+				case 'Object':																			// add key-value pairs to Map()
+					Object.entries(arg.value)
+						.forEach(([key, val]) => map.set(key, asArray(val)));
+					break;
+
+				case 'String':																			// add string with unique key to Map()
+					map.set(`usr${++idx}`, asArray(arg.value));
+					break;
+
+				case 'RegExp':																			// add pattern with unique key to Map()
+					map.set(`usr${++idx}`, asArray(arg.value.source));
+					break;
+
+				case 'Array':
+					if (isObject(arg.value[0])) {											// add array of objects to Map()
+						arg.value
+							.forEach(obj => Object.entries(obj)
+								.forEach(([key, val]) => map.set(key, asArray(val)))
+							)
+					}
+					else map.set(`usr${++idx}`, arg.value as unknown as Tempo.StringPattern[]);
+					break;
+
+				default:
+					break;
+			}
+
+			config["format"] = map;
+		}
+
+		(['event', 'period'] as const)
 			.forEach(conform => {
-				if (isDefined(option[conform])) {										// if we have a config to conform
-					const arr = [] as any[];													// dont care about the type
+				if (isDefined(option[conform])) {										// if we have a config to conform\
+					const arg = asType(option[conform]);
+					config[conform] = new Map();
 
-					asArray(option[conform])
-						.forEach(itm => Object.entries(itm)
-							.forEach(([key, val]) => arr.push({ [key]: val }))
-						)
+					switch (arg.type) {
+						case 'Object':
+						case 'Array':
+							asArray(arg.value as Record<string, any>)
+								.forEach(itm => Object.entries(itm)
+									.forEach(([key, val]) => config[conform].set(key, val)))
+							break;
 
-					option[conform] = arr;														// re-write the config as Map<string,{}>
+						case 'Map':
+							config[conform] = arg.value as Map<string, any>;
+							break;
+					}
 				}
 			})
-
-		return option;
 	}
 
 	/**
-	 * add user Pattern | Event | Period to a config  
+	 * add user Format | Event | Period to a config  
 	 * for Tempo.init({...config}), these will be from an ini-file or config  
 	 * for new Tempo(_, {...config}), these will be from Tempo.Options on the constructor  
 	 */
-	static #addConfig(config: Tempo.Config, init: Tempo.Options = {}) {
-		let arr = asArray(config.format) as Extract<Tempo.Config["format"], any[]>;
+	// static #addConfig(config: Tempo.Config, init: Tempo.Options = {}) {
+	// 	let arr = asArray(config.format) as Extract<Tempo.Config["format"], any[]>;
 
-		asArray(init.format)
-			.reverse()																						// prepend user-patterns, as they have priority
-			.map(pat => Object.entries(pat)[0])
-			.forEach(([key, reg]) => (arr.unshift({ [key]: asArray(reg) })))
+	// 	asArray(init.format)
+	// 		.reverse()																						// prepend user-patterns, as they have priority
+	// 		.map(pat => Object.entries(pat)[0])
+	// 		.forEach(([key, reg]) => (arr.unshift({ [key]: asArray(reg) })))
 
-		arr = asArray(config.event) as Extract<Tempo.Config["event"], any[]>;
-		asArray(init.event)
-			.reverse()																						// prepend user-events, as they have priority
-			.forEach(evt => Object.entries(evt)
-				.reverse()
-				.forEach(([key, evt]) => arr.unshift({ [key]: evt }))
-			)
+	// 	arr = asArray(config.event) as Extract<Tempo.Config["event"], any[]>;
+	// 	asArray(init.event)
+	// 		.reverse()																						// prepend user-events, as they have priority
+	// 		.forEach(evt => Object.entries(evt)
+	// 			.reverse()
+	// 			.forEach(([key, evt]) => arr.unshift({ [key]: evt }))
+	// 		)
 
-		arr = asArray(config.period) as Extract<Tempo.Config["period"], any[]>;
-		asArray(init.period)
-			.reverse()																						// prepend user-periods, as they have priority
-			.forEach(evt => Object.entries(evt)
-				.reverse()
-				.forEach(([key, evt]) => arr.unshift({ [key]: evt }))
-			)
-	}
+	// 	arr = asArray(config.period) as Extract<Tempo.Config["period"], any[]>;
+	// 	asArray(init.period)
+	// 		.reverse()																						// prepend user-periods, as they have priority
+	// 		.forEach(evt => Object.entries(evt)
+	// 			.reverse()
+	// 			.forEach(([key, evt]) => arr.unshift({ [key]: evt }))
+	// 		)
+	// }
 
 	/** build RegExp patterns */
 	static #makePattern(patterns: Tempo.Conform[], pattern: Tempo.Pattern[]) {
@@ -358,7 +407,7 @@ export class Tempo {
 	 * this allows Tempo to set a specific default configuration for a subsequent a 'new Tempo()' instance to inherit.  
 	 * Tempo.#config is set from a) local storage b) merged with init argument (if supplied), else c) reasonable default values.   
 	 */
-	static init = (init: Tempo.Options = {}) => {
+	static init = (init: Omit<Tempo.Options, "value"> = {}) => {
 		return Promise.race([
 			Tempo.#ready.static.promise,													// wait until static-blocks are fully parsed (or two-seconds timeout)
 			new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('Tempo setup timed out')), Tempo.TIME.second * 2)),
@@ -369,7 +418,7 @@ export class Tempo {
 				if (isEmpty(init))
 					purge(Tempo.#config);															// reset Tempo defaults
 				else
-					Tempo.#fixOptions(init);
+					Tempo.#setConfig(Tempo.#config, init);
 
 				const dateTime = Intl.DateTimeFormat().resolvedOptions();
 				const prior = Tempo.#config;												// reference to previous defaults
@@ -387,7 +436,7 @@ export class Tempo {
 					sphere: Tempo.COMPASS.North,
 					fiscal: 'Jan',
 					mmddyy: locales.map(locale => ({ locale: locale.baseName, timeZones: locale.timeZones })),
-					format: new Map([																// patterns to be checked, and in this order
+					format: new Map([																	// patterns to be checked, and in this order
 						['tm', ['tm']],																	// clock or period
 						['dt', ['dt']],																	// calendar or event
 						['ddmmyy', ['dow?', 'dd?', 'sep', 'mm', 'sep', 'yy?']],
@@ -423,7 +472,7 @@ export class Tempo {
 				}
 
 				if (isEmpty(Tempo.#config))
-					Tempo.#addConfig(Tempo.#config, Tempo.read());		// look for a stored json-file to setup #config
+					Tempo.#setConfig(Tempo.#config, Tempo.read());		// look for a stored json-file to setup #config
 
 				Tempo.#addConfig(Tempo.#config, init);							// override #config with the init-values
 
@@ -501,7 +550,7 @@ export class Tempo {
 
 				Tempo.#makeEvent(Tempo.#config, Tempo.units);			// setup special Date unit (before patterns!)
 				Tempo.#makePeriod(Tempo.#config, Tempo.units);			// setup special Time unit (before patterns!)
-				Tempo.#makePattern(Tempo.#patterns, Tempo.units);		// setup Regex DateTime patterns
+				Tempo.#makePattern(Tempo.#pattern, Tempo.units);		// setup Regex DateTime patterns
 
 				// Tempo.#makePattern(Tempo.#patterns, Tempo.#config.pattern.map(pat => pat.reg));
 
@@ -516,7 +565,7 @@ export class Tempo {
 
 	/** read Options from persistent storage */
 	static read() {
-		return Tempo.#fixOptions(getStore(StorageKey));
+		return getStore(StorageKey);
 	}
 
 	/** write Options into persistent storage */
@@ -620,7 +669,7 @@ export class Tempo {
 
 	/** array of regex patterns used when parsing Tempo.DateTime argument */
 	static get patterns() {
-		return { ...Tempo.#patterns };
+		return { ...Tempo.#pattern };
 	}
 
 	/** indicate when Tempo.init() is complete */
@@ -751,7 +800,7 @@ export class Tempo {
 			Tempo.#makePattern(this.#config.patterns, this.#opts.format);
 		}
 		// put user-patterns at the beginning of the parse-array
-		this.#config.patterns.splice(this.#config.patterns.length, 0, ...Tempo.#patterns);
+		this.#config.patterns.splice(this.#config.patterns.length, 0, ...Tempo.#pattern);
 		// change of Locale, swap 'dmy' pattern parse-order?
 		if (this.#config.locale !== Tempo.#config.locale) {
 			const locale = Tempo.#swap(this.#config);
@@ -1580,37 +1629,39 @@ export class Tempo {
 export namespace Tempo {
 	/** the value that Tempo will attempt to interpret as a valid ISO date / time */
 	export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | null
-	export type StringPattern = string | RegExp
-	export type StringSymbol = string | symbol
+	export type StringPattern = (string | RegExp)
 
 	/** the Options Object found in a json-file, or a call to Tempo.Init({}) or a call to 'new Tempo({}) */
-	type InputFormat<T> = Record<string, T> | Record<string, T>[] | Map<string, T>
+	type InputFormat<T> = Record<string, T | T[]> | Record<string, T | T[]>[]
 	export interface Options {
+		debug?: boolean;
+		catch?: boolean;
 		timeZone?: string;
 		calendar?: string;
 		locale?: string;
 		pivot?: number;
 		sphere?: Tempo.Sphere;
-		debug?: boolean;
-		catch?: boolean;
 		fiscal?: Tempo.Calendar;
 		timeStamp?: Tempo.TimeStamp;														// granularity of new Tempo().ts
-		fmt?: keyof Tempo.Format;
-		locales?: string | string[];														// Array of locale names that prefer 'mm-dd-yy' date order
-		format?: string | InputFormat<Tempo.StringPattern | Tempo.StringPattern[]>;
+		// fmt?: keyof Tempo.Format;
+		mmddyy?: string | string[];															// Array of locale names that prefer 'mm-dd-yy' date order
+		format?: InputFormat<Tempo.StringPattern>;
 		event?: InputFormat<string>;
 		period?: InputFormat<string>;
 		value?: string;
 	}
 
-	/** the Config that Tempo will use to interpret a Tempo.DateTime */
 	export enum LEVEL { Static = 'static', Instance = 'instance' }
-	export interface Config extends Required<Exclude<Options, "value" | "fmt" | "locales">> {
+	/**
+	 * the Config that Tempo will use to interpret a Tempo.DateTime  
+	 * derived from user-supplied options, else json-stored options, else reasonable-default options
+	 */
+	export interface Config extends Required<Omit<Options, "value" | "mmddyy" | "format" | "event" | "period">> {
 		level: Tempo.LEVEL,																			// separate configurations 
 		version: string;																				// semantic version
 		mmddyy: { locale: string; timeZones: string[]; }[];			// Array of locales that prefer 'mm-dd-yy' date order
 		months: Tempo.Months;
-		format: Map<string, Tempo.StringPattern[]>;
+		format: Map<string, Tempo.StringPattern | Tempo.StringPattern[]>;
 		event: Map<string, string>;
 		period: Map<string, string>;
 	}
@@ -1793,12 +1844,12 @@ await Tempo.init();
 
 // shortcut functions to common Tempo properties / methods
 type Params<T> = {																					// Type for consistency in expected arguments
-	(tempo?: Tempo.DateTime, opts?: Tempo.Config): T;				// parse Tempo.DateTime, default to Temporal.Instant.now()
-	(opts: Tempo.Config): T;																	// provide just Tempo.Options (use {value:'XXX'} for specific Tempo.DateTime)
+	(tempo?: Tempo.DateTime, opts?: Tempo.Options): T;				// parse Tempo.DateTime, default to Temporal.Instant.now()
+	(opts: Tempo.Options): T;																	// provide just Tempo.Options (use {value:'XXX'} for specific Tempo.DateTime)
 }
 type Fmt = {																								// used for the fmtTempo() shortcut
-	<F extends Tempo.FormatKeys>(fmt: F, tempo?: Tempo.DateTime, opts?: Tempo.Config): Tempo.Format[F];
-	<F extends Tempo.FormatKeys>(fmt: F, opts: Tempo.Config): Tempo.Format[F];
+	<F extends Tempo.FormatKeys>(fmt: F, tempo?: Tempo.DateTime, opts?: Tempo.Options): Tempo.Format[F];
+	<F extends Tempo.FormatKeys>(fmt: F, opts: Tempo.Options): Tempo.Format[F];
 }
 
 /** check valid Tempo */			export const isTempo = (tempo?: unknown) => isType<Tempo>(tempo, 'Tempo');
