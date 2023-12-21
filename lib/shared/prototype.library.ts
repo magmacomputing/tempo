@@ -1,6 +1,7 @@
 // @ts-nocheck
 // no typescript checking to get around the 'this' binding warnings
 
+import type { Entry } from '@module/shared/object.library.js';
 import { trimAll, toProperCase } from '@module/shared/string.library.js';
 import { asArray, keyedBy, sortBy, type SortBy } from '@module/shared/array.library.js';
 
@@ -38,6 +39,15 @@ declare global {
 
 patch(String, 'trimAll', function (pat?: RegExp) { return trimAll(this, pat); });
 patch(String, 'toProperCase', function () { return toProperCase(this) });
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// extend Object prototype
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// declare global {
+// 	interface ObjectConstructor {
+// 		entries<T extends {}>(object: T): ReadonlyArray<Entry<T>>
+// 	}
+// }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // extend Array prototype

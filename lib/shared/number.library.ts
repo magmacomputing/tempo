@@ -47,13 +47,13 @@ export function isNumeric(str?: string | number | bigint) {
 	}
 }
 
-/** return as Numeric if possible, else String */
+/** return as Number if possible, else String */
 export const ifNumeric = (str?: string | number | bigint, stripZero = false) => {
 	switch (true) {
 		case isInteger(str):																		// bigint
 			return str;
 
-		case isString(str) && /^[0-9]+n$/.test(str!):						// string representation of a BigInt
+		case isString(str) && /^[0-9]+n$/.test(str):						// string representation of a BigInt
 			return asInteger(str);
 
 		case isNumeric(str) && (!str!.toString().startsWith('0') || stripZero):

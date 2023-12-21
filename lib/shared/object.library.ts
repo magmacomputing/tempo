@@ -119,18 +119,21 @@ export const isEqual = (obj1: any = {}, obj2: any = {}): boolean => {
 
 /** omit top-level keys from an Object */
 export function omit<T extends {}>(obj: T, ...keys: (keyof T)[]) {
-	let res = clone(obj);																			// create a safe copy
+	let res = clone<T>(obj);																	// create a safe copy
 
 	keys.forEach(key => Reflect.deleteProperty(res, key));
-	return res as T;
+	return res;
 }
 
-/** mutate Object reference with all ownKeys removed */
+/** mutate Object | Array reference with all ownKeys removed */
 export function purge<T extends {}>(obj: T) {
 	Reflect.ownKeys(obj)
 		.forEach(key => Reflect.deleteProperty(obj, key));
 
-	return obj;
+	if (isArray(obj))
+		Reflect.set(obj, 'length', 0);													// explicit set length
+
+	return obj;																								// return Object reference, even though Object has been mutated
 }
 
 export const pluck = <T, K extends keyof T>(objs: T[], key: K): T[K][] =>
@@ -149,7 +152,6 @@ export const getMethods = (obj: any, all = false) => {
 
 	return [...properties.keys()].filter((key: any) => isFunction(obj[key]));
 }
-
 
 export const countProperties = (obj = {}) =>
 	Object
