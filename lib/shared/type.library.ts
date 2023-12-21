@@ -120,9 +120,7 @@ type Primitive = string | number | bigint | boolean | symbol | void | undefined 
 type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling)
 export type Temporals = Exclude<keyof typeof Temporal, 'Now'>;
 
-export type Entries<T> = {																	// to help with Object.entries
-	[K in keyof T]: [K, T[K]];
-}[keyof T][];
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 export type Types =
 	'String' |
@@ -198,3 +196,28 @@ export type TypeValue<T> =
 
 	{ type: 'Tempo', value: Tempo } |
 	{ type: 'Pledge', value: Pledge<T> }
+
+// https://dev.to/harry0000/a-bit-convenient-typescript-type-definitions-for-objectentries-d6g
+type TupleEntry<T extends readonly unknown[], I extends unknown[] = [], R = never> =
+	T extends readonly [infer Head, ...infer Tail]
+	? TupleEntry<Tail, [...I, unknown], R | [`${I['length']}`, Head]>
+	: R
+
+type ObjectEntry<T extends {}> =
+	T extends object
+	? { [K in keyof T]: [K, Required<T>[K]] }[keyof T] extends infer E
+	? E extends [infer K extends string | number, infer V]
+	? [`${K}`, V]
+	: never
+	: never
+	: never
+
+export type Entry<T extends {}> =
+	T extends readonly [unknown, ...unknown[]]
+	? TupleEntry<T>
+	: T extends ReadonlyArray<infer U>
+	? [`${number}`, U]
+	: ObjectEntry<T>
+
+/** [keyof T, K[T]][] */
+export type Entries<T extends {}> = ReadonlyArray<Entry<T>>

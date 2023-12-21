@@ -1,6 +1,6 @@
+import { objectify, stringify } from '@module/shared/serialize.library.js';
 import { asNumber, isNumeric } from '@module/shared/number.library.js';
 import { isDefined, isString } from '@module/shared/type.library.js';
-import { objectify, stringify } from './serialize.library';
 
 /** General utility functions */
 
@@ -38,6 +38,16 @@ export const getScript = (nbr = 1) =>
 /** pad a string with non-blocking spaces, to help right-align a display */
 export const padString = (str: string | number | bigint, pad = 6) =>
 	(isNumeric(str) ? asNumber(str).toFixed(2).toString() : str.toString() ?? '').padStart(pad, '\u007F');
+
+/**
+ * introduce a wait-timer that will Error() on timeOut.  
+ * best used with Promise.race([xxx, sleep()]  
+ * @param msg			string to display on a timeout 
+ * @param timeOut	how many milliseconds to sleep  
+ * @returns Promise  
+ */
+export const sleep = (msg = 'sleep: timed out', timeOut = 2000) =>						// default 2-second timeout
+	new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), timeOut));
 
 export enum CONTEXT {
 	'Unknown' = 'unknown',
