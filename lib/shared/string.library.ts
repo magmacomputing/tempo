@@ -15,7 +15,7 @@ import { isString, isObject, isNullish, assertCondition, assertString, nullToVal
  */
 export function trimAll(str: string | number, pat?: RegExp) {
 	return str
-		.toString()																							// force to String
+		.toString()																							// coerce to String
 		.replace(pat!, '')																			// remove regexp, if supplied
 		.replace(/\t/g, ' ')																		// replace <tab> with <space>
 		.replace(/(\r\n|\n|\r)/g, ' ')													// replace <return> & <newline>
@@ -23,6 +23,7 @@ export function trimAll(str: string | number, pat?: RegExp) {
 		.trim()																									// leading/trailing <space>
 }
 
+/** every word has its first letter capitalized */
 export function toProperCase<T extends string>(...str: T[]) {
 	return str
 		.map(text => text.replace(/\w\S*/g,
@@ -59,9 +60,8 @@ type Sprintf = {
 	(fmt: string, ...msg: any[]): string;											// either a format-string, followed by arguments
 	(...msg: any[]): string;																	// or just an array of arguments
 }
-/**
- * use sprintf-style formatting on a string.  
- */
+
+/** use sprintf-style formatting on a string */
 export const sprintf: Sprintf = (fmt: {}, ...msg: any[]) => {
 	let sfmt = asString(fmt);																	// avoid mutate fmt
 
