@@ -28,16 +28,16 @@ const StorageKey = '_Tempo_';																// for stash in persistent storage
 /**
  * user will need to know these in order to configure their own patterns  
  * a {unit} is a simple regex	json													e.g. { yy: /(18|19|20|21)?\d{2}/ }  
- * unit keys are combined to build a {layout}								e.g. { ymd: ['yy', 'mm', 'dd' ]    
- * internally, {layouts} are built into a regex {pattern}		e.g. Map([[ ymd, /^ ... $/ ]])    
- * the {pattern} will be used to parse a string | number in the constructor {DateTime} argument  
+ * {unit} keys are combined to build a {layout}							e.g. { ymd: ['yy', 'mm', 'dd' ]    
+ * internally, {layout}s are built into a regex {pattern}		e.g. Map([[ 'ymd', /^ ... $/ ]])    
+ * the {pattern} will be used to parse a string | number in the constructor {DateTime} argument    
  */
 const Units = {																							// define some components to help interpret input-strings
 	yy: new RegExp(/(?<yy>(18|19|20|21)?\d{2})/),
 	mm: new RegExp(/(?<mm>0?[1-9]|1[012]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/),
 	dd: new RegExp(/(?<dd>0?[1-9]|[12][0-9]|3[01])/),
-	dow: new RegExp(/(?<dow>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)/),
-	qtr: new RegExp(/(?<qtr>(?<=q)[1|2|3|4])/),								// qtr: Q1 - Q4
+	dow: new RegExp(/((?<dow>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)(?:[\/\-\s\,])*)/),
+	qtr: new RegExp(/q(?<qtr>[1|2|3|4])/),										// qtr: Q1 - Q4
 	hh: new RegExp(/(?<hh>2[0-4]|[01]?\d)/),									// hh:  00 - 24
 	mi: new RegExp(/(\:(?<mi>[0-5]\d))/),											// mi:  00 - 59
 	ss: new RegExp(/(\:(?<ss>[0-5]\d))/),											// ss:	00 - 59
