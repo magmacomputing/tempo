@@ -7,8 +7,8 @@
     "lib": "lib"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "prebuild": "rm -rf web && mkdir web",
+    "test": "jest",
+    "prebuild": "rm -rf web/lib && mkdir web/lib",
     "build": "tsc --build && ./node_modules/.bin/import-remap --from dist --to web --recursive",
     "postbuild": "rm -rf dist"
   },
