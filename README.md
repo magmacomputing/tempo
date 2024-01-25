@@ -23,9 +23,9 @@ by instantiating a class that wraps an immutable Temporal.ZonedDateTime
 
 *~~~
 # options:
-		Tempo can take up-to two arguments
+		Tempo() will take up-to two arguments
 
-		The first is always the 'date-time' to use when creating a Tempo.
+		The first is the 'date-time' to use when creating a Tempo.
 		It can supplied as a string, number, Date, null, undefined, another Tempo, or a Temporal Date/Time object.
 		Null and Undefined tell Tempo to use the current date-time
 
@@ -42,6 +42,9 @@ by instantiating a class that wraps an immutable Temporal.ZonedDateTime
 		quarter: [Date, Date, Date, Date]					// an array of Temporal.MonthDay that determine when a financial quarter starts
 		format: string[]													// an array of Temporal properties that can be used to parse the first argument
 	
+
+		As an overload, the object can be provided in the first argument.  
+		If {value:'xxx'} is not supplied, then the current date-time is used.
 *~~~
 # properties
 static:
