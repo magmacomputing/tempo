@@ -497,7 +497,7 @@ export class Tempo {
 	}
 
 	/** write Options into persistent storage */
-	static write(config?: Tempo.Options) {
+	static write(config?: Partial<Tempo.Options>) {
 		setStore(StorageKey, config);
 	}
 
