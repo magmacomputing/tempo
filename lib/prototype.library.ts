@@ -1,7 +1,6 @@
 // @ts-nocheck
 // no typescript checking to get around the 'this' binding warnings
 
-import type { Entry } from '@module/shared/object.library.js';
 import { trimAll, toProperCase } from '@module/shared/string.library.js';
 import { asArray, keyedBy, sortBy, type SortBy } from '@module/shared/array.library.js';
 

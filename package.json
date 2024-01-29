@@ -9,7 +9,7 @@
   "scripts": {
     "test": "vitest run",
     "prebuild": "rm -rf web && mkdir web",
-    "build": "tsc --build && ./node_modules/.bin/import-remap --from dist --to web --recursive",
+    "build": "tsc --build && ./node_modules/.bin/import-remap --from dist/lib --to web --recursive",
     "postbuild": "rm -rf dist"
   },
   "repository": {
