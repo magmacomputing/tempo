@@ -781,8 +781,8 @@ export class Tempo {
 	/** format elapsed time */																since<S extends Tempo.DateTime | Tempo.Until>(since?: S) { return this.#since(since) }
 	/** apply formatting */																		format<K extends Tempo.Formats>(fmt: K) { return this.#format(fmt) }
 
-	/** add date/time unit */																	add(mutate: Tempo.Add) { return this.#set(mutate) }
-	/** set to start/mid/end/period of unit */								set(offset: Tempo.Set) { return this.#set(offset) }
+	/** add to date/time property */													add(mutate: Tempo.Add) { return this.#add(mutate) }
+	/** set to start/mid/end/period of property */						set(offset: Tempo.Set) { return this.#set(offset) }
 
 	/** is valid Tempo */																			isValid() { return !isEmpty(this) }
 	/** as Temporal.ZonedDateTime */													toDateTime() { return this.#zdt }
@@ -1206,7 +1206,44 @@ export class Tempo {
 		return lkp(this.#local, Tempo.#global, ...keys);
 	}
 
-	/** create a new offset Tempo */
+	/** create new Tempo with {offset} property */
+	#add = (arg: Tempo.Add) => {
+		const mutate = 'add';
+		const zdt = Object.entries(arg)													// loop through each mutation
+			.reduce((zdt, [key, offset]) => {											// apply each mutation to preceding one
+				const single = singular(key);
+				const plural = single + 's';
+
+				switch (`${mutate}.${single}`) {
+					case 'add.year':
+					case 'add.month':
+					case 'add.week':
+					case 'add.day':
+					case 'add.hour':
+					case 'add.minute':
+					case 'add.second':
+					case 'add.millisecond':
+					case 'add.microsecond':
+					case 'add.nanosecond':
+						return zdt
+							.add({ [plural]: offset });
+
+					case 'add.season':
+					case 'add.quarter':
+					case 'add.qtr':
+						return zdt
+							.add({ months: offset * 3 });
+
+					default:
+						throw new Error(`Unexpected method(${mutate}), unit(${key}) and offset(${offset})`);
+				}
+
+			}, this.#zdt)
+
+		return new Tempo(zdt as unknown as typeof Temporal, this.#options);
+	}
+
+	/** create a new Tempo with {adjust} property */
 	#set = (args: (Tempo.Add | Tempo.Set)) => {
 		const zdt = Object.entries(args)												// loop through each mutation
 			.reduce((zdt, [key, unit]) => {												// apply each mutation to preceding one
@@ -1219,13 +1256,11 @@ export class Tempo {
 
 						case 'period':
 						case 'event':
-							return { mutate: 'set', offset: unit, single: key }
-
 						default:
-							return { mutate: 'add', offset: Number(unit), single: singular(key) }
+							return { mutate: 'set', offset: unit, single: singular(key) }
+
 					}
 				})(key);																						// IIFE to analyze arguments
-				const plural = single + 's';												// Temporal durations require plural
 
 				switch (`${mutate}.${single}`) {
 					case 'set.period':
@@ -1254,6 +1289,19 @@ export class Tempo {
 
 						return zdt
 							.withPlainDate({ year, month, day });					// mutate the event 'date'
+
+					case 'set.year':
+					case 'set.month':
+					// case 'set.week':
+					case 'set.day':
+					case 'set.hour':
+					case 'set.minute':
+					case 'set.second':
+					case 'set.millisecond':
+					case 'set.microsecond':
+					case 'set.nanosecond':
+						return zdt
+							.with({ [single]: offset });
 
 					case 'start.year':
 						return zdt
@@ -1389,23 +1437,6 @@ export class Tempo {
 						return zdt
 							.round({ smallestUnit: offset, roundingMode: 'ceil' })
 							.subtract({ nanoseconds: 1 });
-
-					// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-					case 'add.year':
-					case 'add.month':
-					case 'add.week':
-					case 'add.day':
-					case 'add.hour':
-					case 'add.minute':
-					case 'add.second':
-						return zdt
-							.add({ [plural]: offset });
-
-					case 'add.season':
-					case 'add.quarter':
-					case 'add.qtr':
-						return zdt
-							.add({ months: offset * 3 });
 
 					default:
 						throw new Error(`Unexpected method(${mutate}), unit(${unit}) and offset(${single})`);
