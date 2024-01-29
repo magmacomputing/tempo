@@ -25,14 +25,14 @@ enum Level {
 	Error,
 	Silent,
 }
-type method = Extract<keyof Console, 'log' | 'info' | 'debug' | 'warn' | 'error'>;
+export type Logger = Extract<keyof Console, 'log' | 'info' | 'debug' | 'warn' | 'error'>;
 
 /** break a fmt/msg into a Console[type] and 'message' */
 const fprintf = (fmt?: any, ...msg: any[]) => {
 	let type = 'log';
 
 	if (isString(fmt)) {
-		const keys = ['log', 'info', 'debug', 'warn', 'error'] as method[];
+		const keys = ['log', 'info', 'debug', 'warn', 'error'] as Logger[];
 		const match = fmt.match(/(\w*;)/i) ?? [];
 		const part = match[1];
 
@@ -44,5 +44,5 @@ const fprintf = (fmt?: any, ...msg: any[]) => {
 
 	const message = sprintf(fmt, ...msg);
 
-	return [type, message] as [method, string];
+	return [type, message] as [Logger, string];
 }
