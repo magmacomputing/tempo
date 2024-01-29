@@ -1,4 +1,4 @@
-import { Tempo } from '../lib/shared/tempo.class';
+import { Tempo } from '../lib/tempo.class';
 
 const label = 'accessors:';
 const date = new Date();
