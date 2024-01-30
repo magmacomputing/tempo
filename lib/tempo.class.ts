@@ -5,7 +5,7 @@ import { enumKeys } from '@module/shared/enum.library.js';
 import { sprintf } from '@module/shared/string.library.js';
 import { clone } from '@module/shared/serialize.library.js';
 import { getAccessors, purge } from '@module/shared/object.library.js';
-import { asNumber, asInteger, isNumeric, split } from '@module/shared/number.library.js';
+import { asNumber, asInteger, isNumeric, split, ifNumeric } from '@module/shared/number.library.js';
 import { getContext, CONTEXT, getStore, setStore, sleep } from '@module/shared/utility.library.js';
 import { asString, pad, singular, toProperCase, trimAll, } from '@module/shared/string.library.js';
 import { asType, getType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp } from '@module/shared/type.library.js';
@@ -66,12 +66,12 @@ const Default = {
 	monthDay: ['en-US', 'en-AS'],															// array of Locales that prefer 'mm-dd-yy' date order: https://en.wikipedia.org/wiki/Date_format_by_country
 	layout: new Map([																					// built-in layouts to be checked, and in this order
 		['dow', ['mod?', 'dow', 'tm?']],												// special pattern (only one that uses {dow} unit), used for day-of-week calcs
-		['ddmmyy', ['dow?', 'dd', 'sep', 'mm?', 'sep', 'yy?', 'tm?']],
-		['mmddyy', ['dow?', 'mm?', 'sep', 'dd', 'sep', 'yy?', 'tm?']],
-		['yymmdd', ['dow?', 'yy', 'sep', 'mm', 'sep', 'dd?', 'tm?']],
 		['dt', ['dt']],																					// calendar or event
 		['tm', ['tm']],																					// clock or period
 		['dtm', ['dt', /[\/\-\s\,]*/, 'tm?']],									// event and time-period
+		['ddmmyy', ['dow?', 'dd', 'sep', 'mm?', 'sep', 'yy?', 'tm?']],
+		['mmddyy', ['dow?', 'mm?', 'sep', 'dd', 'sep', 'yy?', 'tm?']],
+		['yymmdd', ['dow?', 'yy', 'sep', 'mm', 'sep', 'dd?', 'tm?']],
 		['qtr', ['yy', 'sep', 'qtr']],													// yyyyQq	(for example, '2024Q2')
 	]),
 	period: [																									// built-in time-periods to be mapped to time-components
@@ -919,7 +919,6 @@ export class Tempo {
 			const groups = this.#match(reg, value);								// return any matches
 			if (isEmpty(groups))
 				continue;																						// no match, so skip this iteration
-			const keys = Object.keys(groups);											// useful for checking which groups were matched
 
 			// if the weekday-pattern is detected, translate it into its calendar values
 			if (isDefined(groups['dow']))													// parse day-of-week
@@ -1095,8 +1094,8 @@ export class Tempo {
 	 * <=Wed		-> Wed prior to tomorrow											might be current or previous week
 	 *  Wed noon-> Wed this week at 12:00pm										also allow for time-period specifiers (in #parsePeriod)
 	 */
-	#parseWeekday(group: Internal.StringObject, zdt: Temporal.ZonedDateTime) {
-		const { dow, mod, nbr, ...rest } = group as { dow: Tempo.Weekday, mod: Tempo.Modifier, nbr: string };
+	#parseWeekday(groups: Internal.StringObject, zdt: Temporal.ZonedDateTime) {
+		const { dow, mod, nbr, ...rest } = groups as { dow: Tempo.Weekday, mod: Tempo.Modifier, nbr: string };
 
 		// the 'dow' pattern might contain 'time' units	 (hh, mi, per), but they are parsed separately
 		// note that we only look for the first-three characters  so the 'per5' will match the requirement for 'per'
@@ -1109,12 +1108,12 @@ export class Tempo {
 				+ this.#parseModifier({ mod, adjust, offset, period: zdt.dayOfWeek })
 
 			const { year, month, day } = zdt.add({ days });
-			group['yy'] = pad(year, 4);														// set the now current year
-			group['mm'] = pad(month, 2);													// and month
-			group['dd'] = pad(day, 2);														// and day
+			groups['yy'] = pad(year, 4);													// set the now current year
+			groups['mm'] = pad(month, 2);													// and month
+			groups['dd'] = pad(day, 2);														// and day
 		}
 
-		return group;																						// return the calculated {yy, mm, dd} 
+		return groups;																					// return the calculated {yy, mm, dd} 
 	}
 
 	/**
@@ -1163,15 +1162,15 @@ export class Tempo {
 	 * @returns a {yy, mm, dd} object  
 	 */
 	#parseEvent(groups: Internal.StringObject, zdt: Temporal.ZonedDateTime, required = false) {
-		const { mod, nbr, ...rest } = groups as { mod: Tempo.Modifier, nbr: string };
+		const { mod, nbr, ...rest } = groups as { mod: Tempo.Modifier, nbr: string, [key: string]: string; };
 		const adjust = Number(isEmpty(nbr) ? '1' : nbr);
 		const event = Object.keys(rest)
 			.find(itm => itm.match(/^evt\d+$/));
-		const date = { yy: zdt.year, mm: zdt.month, dd: zdt.day };
+		const date = this.#num({ yy: rest["yy"] ?? zdt.year, mm: rest["mm"] ?? zdt.month, dd: rest["dd"] ?? zdt.day });
 
 		if (isUndefined(event)) {
 			if (required)
-				Tempo.#catch(this.#local.config, 'Invalid event key');
+				Tempo.#catch(this.#local.config, 'Invalid Event key');
 			return date;																					// return default
 		}
 
@@ -1194,16 +1193,27 @@ export class Tempo {
 
 		this.#fixMonth(grp);																		// conform month-name to month-number
 
-		let [yy, mm, dd] = (({ yy, mm, dd }) => [isNullish(yy) ? zdt.year : +yy, isNullish(mm) ? zdt.month : +mm, isNullish(dd) ? zdt.day : +dd])(grp);
+		// let [yy, mm, dd] = (({ yy, mm, dd }) => [isNullish(yy) ? zdt.year : +yy, isNullish(mm) ? zdt.month : +mm, isNullish(dd) ? zdt.day : +dd])(grp);
+		let { yy, mm, dd } = this.#num({ yy: grp["yy"] ?? date.yy, mm: grp["mm"] ?? date.mm, dd: grp["dd"] ?? date.dd });
 		const offset = Number(pad(mm, 2) + '.' + pad(dd, 2));		// the event month.day
 		const base = Number(pad(zdt.month, 2) + '.' + pad(zdt.day + 1, 2));
 
 		// adjust the {yy} if a Modifier is present
 		yy += this.#parseModifier({ mod, adjust, offset, period: base })
 
-		Object.assign(date, grp, { yy: pad(yy, 4) });						// remove Undefined
+		Object.assign(date, grp, { yy });
 
 		return date;
+	}
+
+	/** convert an object's values to numeric, if possible */
+	#num = (groups: Internal.StringObject) => {
+		return Object.entries(groups)
+			.reduce((acc, [key, val]) => {
+				if (isNumeric(val))
+					acc[key] = ifNumeric(val) as number;
+				return acc;
+			}, {} as Record<string, number>)
 	}
 
 	/** create new Tempo with {offset} property */
