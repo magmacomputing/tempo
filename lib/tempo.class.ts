@@ -1,13 +1,14 @@
+// #region library modules~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 import { Pledge } from '@module/shared/pledge.class.js';
 import { asArray } from '@module/shared/array.library.js';
 import { enumKeys } from '@module/shared/enum.library.js';
 import { sprintf } from '@module/shared/string.library.js';
-import { cleanify, clone } from '@module/shared/serialize.library.js';
+import { clone } from '@module/shared/serialize.library.js';
 import { getAccessors, purge } from '@module/shared/object.library.js';
 import { asNumber, asInteger, isNumeric, split } from '@module/shared/number.library.js';
 import { getContext, CONTEXT, getStore, setStore, sleep } from '@module/shared/utility.library.js';
 import { asString, pad, singular, toProperCase, trimAll, } from '@module/shared/string.library.js';
-import { asType, getType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isMap } from '@module/shared/type.library.js';
+import { asType, getType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp } from '@module/shared/type.library.js';
 
 import type { Logger } from '@module/shared/logger.library.js';
 import type { Entries } from '@module/shared/type.library.js';
@@ -16,14 +17,14 @@ import '@module/shared/prototype.library.js';								// patch prototype
 
 /** TODO: THIS IMPORT NEEDS TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
 import { Temporal } from '@js-temporal/polyfill';
+// #endregion
 
 /**
  * TODO: Localization options on output?  on input?  
  * this affects month-names, day-names, season-names !  
  */
 
-// Const variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+// #region Const variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 const Version = '0.0.1';																		// semantic version
 const StorageKey = '_Tempo_';																// for stash in persistent storage
 
@@ -94,6 +95,7 @@ const Default = {
 		['xmas', '25 Dec'],
 	],
 } as Tempo.Options
+// #endregion Const variables
 
 /**
  * Wrapper class around Temporal.ZonedDateTime 
@@ -110,8 +112,7 @@ const Default = {
  * It has simple methods to perform manipulations (add, format, diff, offset, ...)  
  */
 export class Tempo {
-	// Static variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+	// #region Static private properties~~~~~~~~~~~~~~~~~~~~~~
 	static #ready = {
 		static: new Pledge<boolean>('static'),									// wait for static-blocks to settle
 		init: new Pledge<boolean>('Init'),											// wait for Tempo.init() to settle
@@ -131,7 +132,9 @@ export class Tempo {
 		ns: 'epochNanoseconds',
 	} as Internal.TimeStamps
 
-	// Static private methods ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// #endregion
+
+	// #region Static private methods~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/**
 	 * {dt} is a special regex that combines date-related {units} (dd, mm -or- evt) into a pattern against which a string can be tested.  
@@ -213,12 +216,6 @@ export class Tempo {
 		)																												// 1=first, 2=mid, 3=last month of season
 			.forEach((season, idx) => { if (idx !== 0) shape.months[idx].season = `${season}.${idx % 3 + 1}` as Tempo.Month["season"] });
 	}
-
-	// /** Northern -or- Southern hemisphere start of QTR1.  TODO: better checking */
-	// static #startFiscal(sphere: Tempo.Sphere = Tempo.COMPASS.North) {
-	// 	const start = sphere === Tempo.COMPASS.North ? Tempo.MONTH.Oct : Tempo.MONTH.Jul;
-	// 	return Tempo.MONTH[start] as Tempo.Calendar;
-	// }
 
 	/** setup fiscal quarters, from a given start month */
 	static #fiscal(shape: Internal.Shape) {
@@ -413,21 +410,27 @@ export class Tempo {
 	 * use debug:boolean to determine if console()  
 	 * use catch:boolean to determine whether to throw or return  
 	 */
-	static #debug(config: Tempo.Config, method: Logger = 'info', ...msg: any[]) {
+	static #info = Tempo.#debug.bind(this, 'info');
+	static #warn = Tempo.#debug.bind(this, 'warn');
+	static #error = Tempo.#debug.bind(this, 'error');
+	static #debug(method: Logger = 'info', config: Tempo.Config, ...msg: any[]) {
 		if (config.debug)
 			console[method](sprintf(...msg));
 	}
 
 	static #catch(config: Tempo.Config, ...msg: any[]) {
-		Tempo.#debug(config, 'error', ...msg);									// assume 'error'
-
-		if (config.catch)																				// catch error
+		if (config.catch) {
+			Tempo.#warn(config, ...msg);													// warn {error}
 			return;
+		}
 
+		Tempo.#error(config, ...msg);														// assume {error}
 		throw new Error(sprintf(...msg));
 	}
 
-	// Static public methods ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// #endregion Static private methods
+
+	// #region Static public methods~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/**
 	 * set a default configuration for a subsequent a 'new Tempo()' instance to inherit.  
@@ -623,11 +626,13 @@ export class Tempo {
 		Tempo.#ready['static'].resolve(true);
 	}
 
-	// Instance Symbols    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// #endregion Static public methods
+
+	// #region Instance symbols~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/** allow for auto-convert of Tempo to BigInt */
 	[Symbol.toPrimitive](hint?: 'string' | 'number' | 'default') {
-		Tempo.#debug(this.config, 'info', getType(this), '.hint: ', hint);
+		Tempo.#info(this.config, getType(this), '.hint: ', hint);
 		// if (this.#local.config.debug)
 		// 	console.log(`${getType(this)}.hint: ${hint}`);
 		return this.nano;
@@ -653,13 +658,15 @@ export class Tempo {
 		return 'Tempo';																					// hard-coded to avoid minification mangling
 	}
 
-	// Instance variables  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// #endregion Instance symbols
+
+	// #region Instance properties~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/** constructor tempo */																	#tempo?: Tempo.DateTime;
 	/** constructor options */																#options = {} as Tempo.Options;
 	/** instantiation Temporal Instant */											#instant: Temporal.Instant;
 	/** underlying Temporal ZonedDateTime */									#zdt!: Temporal.ZonedDateTime;
-	/** prebuilt formats, for convenience */									fmt = {} as Tempo.Mammy;
+	/** prebuilt formats, for convenience */									fmt = {} as Tempo.FormatType;
 	/** instance values to complement static values */				#local = {
 		/** instance configuration */															config: {} as Tempo.Config,
 		/** instance units */																			units: {} as Tempo.Units,
@@ -667,7 +674,9 @@ export class Tempo {
 		/** instance patterns */																	patterns: new Map() as Internal.RegexpMap,
 	}
 
-	// Constructor  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// #endregion Instance properties
+
+	// #region Constructor~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	/**
 	 * instantiate a new Tempo()
 	 * @param tempo 		Value to interpret (default to Temporal.Now.instant())
@@ -750,8 +759,9 @@ export class Tempo {
 		}
 	}
 
-	// Public getters	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// #endregion Constructor
 
+	// #region Instance public accessors~~~~~~~~~~~~~~~~~~~~~~
 	/** 4-digit year */																				get yy() { return this.#zdt.year }
 	/** month: Jan=1, Dec=12 */																get mm() { return this.#zdt.month }
 	/** day of month */																				get dd() { return this.#zdt.day }
@@ -782,8 +792,9 @@ export class Tempo {
 			/** nanoseconds since epoch */												ns: this.#zdt.epochNanoseconds,
 		} as Record<'ss' | 'ms', number> & Record<'us' | 'ns', bigint>
 	}
+	// #endregion Instance public accessors
 
-	// Public Methods	 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// #region Instance public methods~~~~~~~~~~~~~~~~~~~~~~~~
 	/** calc DateTime duration */															until<U extends Tempo.DateTime | Tempo.Until>(until?: U) { return this.#until(until) }
 	/** format elapsed time */																since<S extends Tempo.DateTime | Tempo.Until>(since?: S) { return this.#since(since) }
 	/** apply formatting */																		format<K extends Tempo.Formats>(fmt: K) { return this.#format(fmt) }
@@ -798,14 +809,15 @@ export class Tempo {
 	/** as String */																					toString() { return this.#zdt.toString() }
 	/** as Object */																					toJSON() { return { ...this.#local.config, value: this.toString() } }
 
-	// Private methods	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// #endregion Instance public methods
 
+	// #region Instance private methods~~~~~~~~~~~~~~~~~~~~~~~
 	/** parse DateTime input */
 	#parse(tempo?: Tempo.DateTime) {
 		const today = this.#instant															// cast instantiation to current timeZone, calendar
 			.toZonedDateTime({ timeZone: this.#local.config.timeZone, calendar: this.#local.config.calendar });
 		const arg = this.#conform(tempo, today);								// if String or Number, conform the input against known patterns
-		Tempo.#debug(this.#local.config, 'info', 'tempo.parse: ', arg);
+		Tempo.#info(this.#local.config, 'tempo.parse: ', arg);
 
 		switch (arg.type) {
 			case 'Null':																					// TODO: special Tempo for null?
@@ -981,8 +993,7 @@ export class Tempo {
 					`[u-ca=${this.#local.config.calendar}]`						// append calendar
 			})
 
-			Tempo.#debug(this.config, 'info', 'tempo.match: ',
-				key, JSON.stringify(groups));												// show the pattern that was matched, and the conformed value
+			Tempo.#info(this.config, 'tempo.match: ', key, groups)// show the pattern that was matched, and the conformed value
 
 			break;																								// stop checking patterns
 		}
@@ -1556,10 +1567,10 @@ export class Tempo {
 				return `${pad(minutes)}:${since}`;
 		}
 	}
+	// #endregion Instance private methods
 }
 
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// Tempo types / interfaces / enums
+// #region Tempo types / interfaces / enums~~~~~~~~~~~~~~~~~
 export namespace Tempo {
 	/** the value that Tempo will attempt to interpret as a valid ISO date / time */
 	export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | null
@@ -1649,7 +1660,7 @@ export namespace Tempo {
 
 	export type Modifier = '=' | '-' | '+' | '<' | '<=' | '-=' | '>' | '>=' | '+='
 
-	export interface Mammy {
+	export interface FormatType {
 		/** ddd, dd mmm yyyy */																	display: string;
 		/** ddd, yyyy-mmm-dd */																	dayDate: string;
 		/** ddd, yyyy-mmm-dd hh:mi */														dayTime: string;
@@ -1756,8 +1767,9 @@ export namespace Tempo {
 		Winter,
 	}
 }
+// #endregion Tempo types / interfaces / enums
 
-/** namespace that doesn't need to be shared externally */
+// #region Namespace that doesn't need to be shared externally
 namespace Internal {
 	export enum LEVEL { Global = 'global', Local = 'local' }
 
@@ -1778,11 +1790,12 @@ namespace Internal {
 
 	export type TimeStamps = Record<Tempo.TimeStamp, keyof Temporal.ZonedDateTime>
 }
+// #endregion Namespace
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /**
  * kick-start Tempo configuration with default config  
- * use top-level await to indicate when Tempo is ready  
+ * use top-level await to hold until Tempo is ready  
  */
 await Tempo.init();
 
