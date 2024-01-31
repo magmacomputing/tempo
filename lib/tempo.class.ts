@@ -1485,11 +1485,14 @@ export class Tempo {
 				return `${yy}Q${this.qtr}`;
 
 			default:
-				const am = asString(fmt).includes('HH')							// if 'twelve-hour' (uppercase 'HH') is present in fmtString,
+				const mer = asString(fmt).includes('HH')						// if 'twelve-hour' (uppercase 'HH') is present in fmtString,
 					? this.hh >= 12 ? 'pm' : 'am'											// noon and later is considered 'pm'
-					: ''																							// else no am/pm suffix needed
+					: ''																							// else no meridian am/pm suffix needed
 
 				return asString(fmt)
+					.replace(/:m{2}$/gi, ':' + pad(this.mi) + mer)		// special to intercept ':mm' which should properly be ':mi'
+					.replace(/:m{2}/gi, ':' + pad(this.mi))
+					.replace(/m{2}:/gi, pad(this.mi) + ':')
 					.replace(/y{4}/g, pad(this.yy))
 					.replace(/y{2}/g, pad(this.yy).substring(2, 4))
 					.replace(/m{3}/gi, this.mmm)
@@ -1497,16 +1500,14 @@ export class Tempo {
 					.replace(/d{3}/gi, this.ddd)
 					.replace(/d{2}/g, pad(this.dd))
 					.replace(/h{2}/g, pad(this.hh))
-					.replace(/H{2}$/g, pad(this.hh >= 13 ? this.hh % 12 : this.hh) + am)
+					.replace(/H{2}$/g, pad(this.hh >= 13 ? this.hh % 12 : this.hh) + mer)
 					.replace(/H{2}/g, pad(this.hh >= 13 ? this.hh % 12 : this.hh))
-					.replace(/mi$/gi, pad(this.mi) + am)							// append 'am' if 'MI' at end of fmtString, and it follows 'HH'
+					.replace(/mi$/gi, pad(this.mi) + mer)							// append 'am' if 'mi' at end of fmtString, and it follows 'HH'
 					.replace(/mi/gi, pad(this.mi))
-					// .replace(/mi/g, pad(this.mi))
-					.replace(/s{2}$/gi, pad(this.ss) + am)						// append 'am' if 'SS' at end of fmtString, and it follows 'HH'
+					.replace(/s{2}$/gi, pad(this.ss) + mer)						// append 'am' if 'ss' at end of fmtString, and it follows 'HH'
 					.replace(/s{2}/gi, pad(this.ss))
-					// .replace(/s{2}/g, pad(this.ss))
 					.replace(/ts/g, this.ts.toString())
-					.replace(/ms/g, pad(this.ms, 3))
+					.replace(/ms/g, pad(this.ms, 3)) 
 					.replace(/us/g, pad(this.us, 3))
 					.replace(/ns/g, pad(this.ns, 3))
 					.replace(/f{2}/g, `${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`)
@@ -1514,6 +1515,7 @@ export class Tempo {
 					.replace(/dow/g, this.dow.toString())
 					.replace(/day/g, this.day)
 					.replace(/qtr/g, this.qtr.toString())
+					.replace(/q{1,3}/g, this.qtr.toString())					// special to interpret up-to-3 'q' as {qtr}
 		}
 	}
 
