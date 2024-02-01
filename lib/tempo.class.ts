@@ -70,7 +70,7 @@ const Default = {
 		['tm', ['tm']],																					// clock or period
 		['dtm', ['dt', /[\/\-\s\,]*/, 'tm?']],									// event and time-period
 		['ddmmyy', ['dow?', 'dd', 'sep', 'mm?', 'sep', 'yy?', 'tm?']],
-		['mmddyy', ['dow?', 'mm?', 'sep', 'dd', 'sep', 'yy?', 'tm?']],
+		['mmddyy', ['dow?', 'mm', 'sep', 'dd?', 'sep', 'yy?', 'tm?']],
 		['yymmdd', ['dow?', 'yy', 'sep', 'mm', 'sep', 'dd?', 'tm?']],
 		['qtr', ['yy', 'sep', 'qtr']],													// yyyyQq	(for example, '2024Q2')
 	]),
@@ -1162,7 +1162,7 @@ export class Tempo {
 	 * @returns a {yy, mm, dd} object  
 	 */
 	#parseEvent(groups: Internal.StringObject, zdt: Temporal.ZonedDateTime, required = false) {
-		const { mod, nbr, ...rest } = groups as { mod: Tempo.Modifier, nbr: string, [key: string]: string; };
+		const { mod, nbr, ...rest } = groups as { mod: Tempo.Modifier, [key: string]: string; };
 		const adjust = Number(isEmpty(nbr) ? '1' : nbr);
 		const event = Object.keys(rest)
 			.find(itm => itm.match(/^evt\d+$/));
@@ -1193,7 +1193,6 @@ export class Tempo {
 
 		this.#fixMonth(grp);																		// conform month-name to month-number
 
-		// let [yy, mm, dd] = (({ yy, mm, dd }) => [isNullish(yy) ? zdt.year : +yy, isNullish(mm) ? zdt.month : +mm, isNullish(dd) ? zdt.day : +dd])(grp);
 		let { yy, mm, dd } = this.#num({ yy: grp["yy"] ?? date.yy, mm: grp["mm"] ?? date.mm, dd: grp["dd"] ?? date.dd });
 		const offset = Number(pad(mm, 2) + '.' + pad(dd, 2));		// the event month.day
 		const base = Number(pad(zdt.month, 2) + '.' + pad(zdt.day + 1, 2));
@@ -1201,7 +1200,7 @@ export class Tempo {
 		// adjust the {yy} if a Modifier is present
 		yy += this.#parseModifier({ mod, adjust, offset, period: base })
 
-		Object.assign(date, grp, { yy });
+		Object.assign(date, grp, { yy: pad(yy, 4) });
 
 		return date;
 	}
@@ -1266,14 +1265,16 @@ export class Tempo {
 
 						case 'period':
 						case 'event':
+						case 'date':
+						case 'time':
 						default:
 							return { mutate: 'set', offset: unit, single: singular(key) }
-
 					}
 				})(key);																						// IIFE to analyze arguments
 
 				switch (`${mutate}.${single}`) {
 					case 'set.period':
+					case 'set.time':
 						const tm = this.#local.patterns.get('tm');
 						if (isNullish(tm)) {
 							Tempo.#catch(this.#local.config, `Cannot find "tm" pattern`);
@@ -1287,6 +1288,7 @@ export class Tempo {
 							.withPlainTime(time);													// mutate the period 'clock'
 
 					case 'set.event':
+					case 'set.date':
 						const dt = this.#local.patterns.get('dt');
 						if (isNullish(dt)) {														// cannot find the 'dt' pattern
 							Tempo.#catch(this.#local.config, 'Cannot find "dt" pattern');
@@ -1507,7 +1509,7 @@ export class Tempo {
 					.replace(/s{2}$/gi, pad(this.ss) + mer)						// append 'am' if 'ss' at end of fmtString, and it follows 'HH'
 					.replace(/s{2}/gi, pad(this.ss))
 					.replace(/ts/g, this.ts.toString())
-					.replace(/ms/g, pad(this.ms, 3)) 
+					.replace(/ms/g, pad(this.ms, 3))
 					.replace(/us/g, pad(this.us, 3))
 					.replace(/ns/g, pad(this.ns, 3))
 					.replace(/f{2}/g, `${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`)
@@ -1636,7 +1638,7 @@ export namespace Tempo {
 		unit?: Tempo.DiffUnit;
 	}
 	export type Mutate = 'start' | 'mid' | 'end'
-	export type Set = Partial<Record<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit> & Record<'period', Internal.StringObject> & Record<'event', Internal.StringObject>>
+	export type Set = Partial<Record<Tempo.Mutate, Tempo.TimeUnit | Tempo.DiffUnit> & Record<'period', Internal.StringObject> & Record<'event', Internal.StringObject> & Record<'time' | 'date', string>>
 	export type Add = Partial<Record<Tempo.TimeUnit | Tempo.DiffUnit, number>>
 
 	/** detail about a Month */
