@@ -51,9 +51,7 @@ const Units = {																							// define some components to help interpre
 } as Tempo.Units
 // 2 computed Units ('tm' and 'dt') are added during 'Tempo.init()' and 'new Tempo()' (if defining a new Event or Period)
 
-/**
- * Reasonable defaults for initial Tempo options
- */
+/** Reasonable defaults for initial Tempo options */
 const Default = {
 	version: Version,
 	pivot: 75,
@@ -998,7 +996,7 @@ export class Tempo {
 					`[u-ca=${this.#local.config.calendar}]`						// append calendar
 			})
 
-			this.#local.config.parse += '.' + key;								// stash the {key} of the pattern that was matched
+			this.#local.config.parse += `.{${key}}`;							// append the {key} of the pattern that was matched
 			Tempo.#info(this.config, 'tempo.match: ', key, groups)// show the pattern that was matched, and the conformed value
 
 			break;																								// stop checking patterns
@@ -1125,14 +1123,14 @@ export class Tempo {
 
 	/**
 	 * match input against 'tm' pattern.  
-	 * {groups} contains a period (like {per5:'afternoon'}) or a time-components (like {hh:'15', mi: '00', mer:'pm'})  
+	 * {groups} contains a {period} (like {per5:'afternoon'}) or {time}-components (like {hh:'15', mi: '00', mer:'pm'})  
 	 * returns a 'hh:mm:ss.ff' string, and mutates {groups} with resolved time-components  
 	 */
 	#parsePeriod(groups: Internal.StringObject = {}, required = false) {
 		const period = Object.keys(groups)
 			.find(itm => itm.match(/^per\d+$/))
 
-		if (!groups["hh"] && !period) {													// must contain either {time} or {period}
+		if (!groups["hh"] && !period) {													// must contain either 'time' (as least {hh}) or {period}
 			if (required)
 				Tempo.#catch(this.#local.config, `Match-group does not contain a time or period`);
 			return '00:00:00';
