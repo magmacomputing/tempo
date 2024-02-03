@@ -817,6 +817,7 @@ export class Tempo {
 		const today = this.#instant															// cast instantiation to current timeZone, calendar
 			.toZonedDateTime({ timeZone: this.#local.config.timeZone, calendar: this.#local.config.calendar });
 		const arg = this.#conform(tempo, today);								// if String or Number, conform the input against known patterns
+
 		Tempo.#info(this.#local.config, 'tempo.parse: ', arg);
 
 		switch (arg.type) {
@@ -896,6 +897,7 @@ export class Tempo {
 	/** evaluate 'string | number' input against known patterns */
 	#conform(tempo: Tempo.DateTime | undefined, today: Temporal.ZonedDateTime) {
 		const arg = asType(tempo);
+		this.#local.config.parse = arg.type;										// the parse-rule that matches {tempo}
 
 		if (!isType<string | number>(arg.value, 'String', 'Number'))
 			return arg;																						// only conform String or Number against known patterns (not BigInt, etc)
@@ -903,12 +905,16 @@ export class Tempo {
 		const value = trimAll(arg.value, /\(|\)/g);							// cast as String, remove \( \) and control-characters
 
 		if (isString(arg.value)) {															// if original value is String
-			if (isEmpty(value))																		// don't conform empty string
+			if (isEmpty(value)) {																	// don't conform empty string
+				this.#local.config.parse = 'Empty';									// matched an empty-String
 				return Object.assign(arg, { type: 'Void', value: void 0 });
-			if (/^[0-9]+n$/.test(value))													// if string representation of BigInt literal
+			}
+			if (/^[0-9]+n$/.test(value)) {												// if string representation of BigInt literal
+				this.#local.config.parse = 'BigInt';								// matched a bigint-String
 				return Object.assign(arg, { type: 'BigInt', value: asInteger(value) });
+			}
 		} else {
-			if (value.length <= 7) {         											// cannot reliably interpret small numbers:  might be 'ss' or 'yymmdd' or 'dmmyyyy'
+			if (value.length <= 7) {         											// cannot reliably interpret small numbers:  might be {ss} or {yymmdd} or {dmmyyyy}
 				Tempo.#catch(this.#local.config, 'Cannot safely interpret number with less than 8-digits: use string instead');
 				return arg;
 			}
@@ -937,10 +943,10 @@ export class Tempo {
 
 			// resolve a quarter-number into a month-number
 			if (isDefined(groups['qtr'])) {
-				const key = Number(`${groups['qtr']}.1`);						// '.1' means start of quarter
+				const key = Number(`${groups['qtr']}.1`);						// '.1' means start of {quarter}
 				const idx = this.#local.months
 					.findIndex(mon => mon.quarter === key);
-				groups['mm'] = pad(idx);														// set month to beginning of quarter
+				groups['mm'] = pad(idx);														// set {month} to beginning of {quarter}
 			}
 
 			// if a time-period pattern is detected, translate it into its clock values
@@ -951,8 +957,8 @@ export class Tempo {
 				const am = groups['mer'] as Tempo.Meridian;					// {am} or {pm}
 				let hh = groups['hh'];
 
-				groups['dd'] ??= today.day.toString();							// if no {dd}, use today
-				if (hh === '24')																		// special for midnight; add one to day
+				groups['dd'] ??= today.day.toString();							// if no {dd}, use {today}
+				if (hh === '24')																		// special for midnight; add one to {day}
 					groups['dd'] = pad(Number(groups['dd']) + 1);
 
 				hh = this.#midday(hh, am);													// adjust for midday offset (eg. 10pm => 22:00:00, 12:00am => 00:00:00)
@@ -967,9 +973,9 @@ export class Tempo {
 			 * 22			-> 2022
 			 * 34			-> 1934
 			 */
-			if (/^\d{2}$/.test(groups['yy'])) {										// if yy match just-two digits
+			if (/^\d{2}$/.test(groups['yy'])) {										// if {yy} match just-two digits
 				const [, pivot] = split(today
-					.subtract({ 'years': this.#local.config.pivot })				// arbitrary-years ago is pivot for century
+					.subtract({ 'years': this.#local.config.pivot })	// arbitrary-years ago is pivot for century
 					.year / 100, '.')																	// split on decimal-point
 				const [century] = split(today.year / 100, '.');			// current century
 				const yy = Number(groups['yy']);										// as number
@@ -992,6 +998,7 @@ export class Tempo {
 					`[u-ca=${this.#local.config.calendar}]`						// append calendar
 			})
 
+			this.#local.config.parse += '.' + key;								// stash the {key} of the pattern that was matched
 			Tempo.#info(this.config, 'tempo.match: ', key, groups)// show the pattern that was matched, and the conformed value
 
 			break;																								// stop checking patterns
@@ -1614,6 +1621,7 @@ export namespace Tempo {
 	export interface Config extends Required<Omit<Options, "value" | "monthDay" | "layout">> {
 		level: Internal.LEVEL,																	// separate configurations 
 		version: string;																				// semantic version
+		parse: string;																					// which parse-rule matched the input
 		monthDay: { locale: string; timeZones: string[]; }[];		// Array of locales/timeZones that prefer 'mm-dd-yy' date order
 		layout: Map<string, Internal.StringPattern[]>;					// coerce {layout} to Map<string, (string | RegExp)[]>
 	}
