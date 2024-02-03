@@ -904,11 +904,11 @@ export class Tempo {
 
 		if (isString(arg.value)) {															// if original value is String
 			if (isEmpty(value)) {																	// don't conform empty string
-				this.#local.config.parse.pattern = 'Empty';					// matched an empty-String
+				this.#local.config.parse.match = 'Empty';						// matched an empty-String
 				return Object.assign(arg, { type: 'Void', value: void 0 });
 			}
 			if (/^[0-9]+n$/.test(value)) {												// if string representation of BigInt literal
-				this.#local.config.parse.pattern = 'BigInt';				// matched a bigint-String
+				this.#local.config.parse.match = 'BigInt';				// matched a bigint-String
 				return Object.assign(arg, { type: 'BigInt', value: asInteger(value) });
 			}
 		} else {
@@ -918,13 +918,12 @@ export class Tempo {
 			}
 		}
 
-		// const patterns = this.#local.patterns.entries();
 		for (const [key, reg] of this.#local.patterns) {				// test against regular-expression patterns until a match is found
 			const groups = this.#match(reg, value);								// return any matches
 
 			if (isEmpty(groups))
 				continue;																						// no match, so skip this iteration
-			this.#local.config.parse.pattern = key;								// stash the {key} of the pattern that was matched
+			this.#local.config.parse.match = key;								// stash the {key} of the pattern that was matched
 
 			// if the weekday-pattern is detected, translate it into its calendar values
 			if (isDefined(groups['dow']))													// parse day-of-week
@@ -1621,7 +1620,7 @@ export namespace Tempo {
 		level: Internal.LEVEL,																	// separate configurations 
 		version: string;																				// semantic version
 		parse: {
-			pattern?: string;																			// which parse-pattern matched the input
+			match?: string;																				// which parse-pattern matched the input
 			type: Types;																					// the type of the original input
 			value: any;																						// the value of the original input
 		}

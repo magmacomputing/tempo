@@ -11,7 +11,8 @@ describe(`${label}`, () => {
   console.log('Date:\t%s\nInst:\t%s\nTempo:\t%s', date, tempo.toInstant().toString({ timeZone: 'UTC' }), tempo.toString());
 
   test(`${label} get the right day-of-week (${date.getDay()})`, () => {
-    expect(tempo.dow).toBe(date.getDay())
+    const dow = date.getDay() || 7;
+    expect(tempo.dow).toBe(dow)
   })
 
   test(`${label} get the right day-of-month (${date.getDate()})`, () => {
