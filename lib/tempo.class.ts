@@ -11,7 +11,7 @@ import { asString, pad, singular, toProperCase, trimAll, } from '@module/shared/
 import { asType, getType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp } from '@module/shared/type.library.js';
 
 import type { Logger } from '@module/shared/logger.library.js';
-import type { Entries } from '@module/shared/type.library.js';
+import type { Entries, Types } from '@module/shared/type.library.js';
 
 import '@module/shared/prototype.library.js';								// patch prototype
 
@@ -895,7 +895,7 @@ export class Tempo {
 	/** evaluate 'string | number' input against known patterns */
 	#conform(tempo: Tempo.DateTime | undefined, today: Temporal.ZonedDateTime) {
 		const arg = asType(tempo);
-		this.#local.config.parse = arg.type;										// the parse-rule that matches {tempo}
+		this.#local.config.parse = { type: arg.type, value: arg.value };
 
 		if (!isType<string | number>(arg.value, 'String', 'Number'))
 			return arg;																						// only conform String or Number against known patterns (not BigInt, etc)
@@ -904,11 +904,11 @@ export class Tempo {
 
 		if (isString(arg.value)) {															// if original value is String
 			if (isEmpty(value)) {																	// don't conform empty string
-				this.#local.config.parse = 'Empty';									// matched an empty-String
+				this.#local.config.parse.pattern = 'Empty';					// matched an empty-String
 				return Object.assign(arg, { type: 'Void', value: void 0 });
 			}
 			if (/^[0-9]+n$/.test(value)) {												// if string representation of BigInt literal
-				this.#local.config.parse = 'BigInt';								// matched a bigint-String
+				this.#local.config.parse.pattern = 'BigInt';				// matched a bigint-String
 				return Object.assign(arg, { type: 'BigInt', value: asInteger(value) });
 			}
 		} else {
@@ -921,8 +921,10 @@ export class Tempo {
 		// const patterns = this.#local.patterns.entries();
 		for (const [key, reg] of this.#local.patterns) {				// test against regular-expression patterns until a match is found
 			const groups = this.#match(reg, value);								// return any matches
+
 			if (isEmpty(groups))
 				continue;																						// no match, so skip this iteration
+			this.#local.config.parse.pattern = key;								// stash the {key} of the pattern that was matched
 
 			// if the weekday-pattern is detected, translate it into its calendar values
 			if (isDefined(groups['dow']))													// parse day-of-week
@@ -996,7 +998,6 @@ export class Tempo {
 					`[u-ca=${this.#local.config.calendar}]`						// append calendar
 			})
 
-			this.#local.config.parse += `.{${key}}`;							// append the {key} of the pattern that was matched
 			Tempo.#info(this.config, 'tempo.match: ', key, groups)// show the pattern that was matched, and the conformed value
 
 			break;																								// stop checking patterns
@@ -1619,7 +1620,11 @@ export namespace Tempo {
 	export interface Config extends Required<Omit<Options, "value" | "monthDay" | "layout">> {
 		level: Internal.LEVEL,																	// separate configurations 
 		version: string;																				// semantic version
-		parse: string;																					// which parse-rule matched the input
+		parse: {
+			pattern?: string;																			// which parse-pattern matched the input
+			type: Types;																					// the type of the original input
+			value: any;																						// the value of the original input
+		}
 		monthDay: { locale: string; timeZones: string[]; }[];		// Array of locales/timeZones that prefer 'mm-dd-yy' date order
 		layout: Map<string, Internal.StringPattern[]>;					// coerce {layout} to Map<string, (string | RegExp)[]>
 	}
