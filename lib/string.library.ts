@@ -66,7 +66,7 @@ export const sprintf: Sprintf = (fmt: {}, ...msg: any[]) => {
 	let sfmt = asString(fmt);																	// avoid mutate fmt
 
 	if (!isString(fmt)) {																			// might be an Object
-		msg.unshift(JSON.stringify(fmt));												// push to start of msg[]
+		msg.unshift(stringify(fmt));														// push to start of msg[]
 		sfmt = '';																							// reset the string-format
 	}
 
@@ -77,10 +77,10 @@ export const sprintf: Sprintf = (fmt: {}, ...msg: any[]) => {
 		.map(match => Number(match[1]))													// which parameters are in the fmt
 	msg.forEach((_, idx) => {
 		if (!params.includes(idx))															// if more args than params
-			sfmt += `${sfmt.length === 0 ? '' : ', '}\${${idx}}`	//  append a dummy params to fmt
+			sfmt += `${sfmt.length === 0 ? '' : sfmt.endsWith(':') ? ' ' : ', '}\${${idx}}`	//  append a dummy params to fmt
 	})
 
-	return sfmt.replace(regexp, (_, idx) => isObject(msg[idx]) ? JSON.stringify(msg[idx]) : msg[idx]);
+	return sfmt.replace(regexp, (_, idx) => isObject(msg[idx]) ? stringify(msg[idx]) : msg[idx]);
 }
 
 /** apply a plural suffix, if greater than '1' */

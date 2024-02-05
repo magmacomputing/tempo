@@ -489,8 +489,8 @@ export class Tempo {
 				Tempo.#makePeriod(Tempo.#global);										// setup special Time unit (before patterns!)
 				Tempo.#makePattern(Tempo.#global);									// setup Regex DateTime patterns
 
-				if ((getContext().type === CONTEXT.Browser && options.debug !== false) || options.debug === true)
-					console.log('Tempo: ', Tempo.#global.config);
+				if (getContext().type === CONTEXT.Browser || options.debug === true)
+					Tempo.#info(Tempo.config, 'Tempo:', Tempo.#global.config);
 
 				return true;
 			})
@@ -631,8 +631,6 @@ export class Tempo {
 	/** allow for auto-convert of Tempo to BigInt */
 	[Symbol.toPrimitive](hint?: 'string' | 'number' | 'default') {
 		Tempo.#info(this.config, getType(this), '.hint: ', hint);
-		// if (this.#local.config.debug)
-		// 	console.log(`${getType(this)}.hint: ${hint}`);
 		return this.nano;
 	}
 
@@ -648,8 +646,7 @@ export class Tempo {
 
 	/** dispose Tempo */
 	[Symbol.dispose]() {																			// for future implementation
-		if (this.config.debug)
-			console.log('dispose: ', this.#tempo);
+		Tempo.#info(this.config, 'dispose: ', this.#tempo);
 	}
 
 	get [Symbol.toStringTag]() {															// default string description
@@ -738,8 +735,7 @@ export class Tempo {
 		if (isDefined(this.#options.layout))
 			Tempo.#makePattern(this.#local);											// set instance {patterns}
 
-		if (this.#local.config.debug)
-			console.log('tempo.config: ', this.config);						// show the resolved config options
+		Tempo.#info(this.config, 'tempo.config:', this.config);	// show the resolved config options
 
 		/** we now have all the info we need to instantiate a new Tempo                          */
 		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -816,7 +812,7 @@ export class Tempo {
 			.toZonedDateTime({ timeZone: this.#local.config.timeZone, calendar: this.#local.config.calendar });
 		const arg = this.#conform(tempo, today);								// if String or Number, conform the input against known patterns
 
-		Tempo.#info(this.#local.config, 'tempo.parse: ', arg);
+		Tempo.#info(this.#local.config, 'tempo.conform:', arg);
 
 		switch (arg.type) {
 			case 'Null':																					// TODO: special Tempo for null?
@@ -873,15 +869,19 @@ export class Tempo {
 				switch (true) {
 					case !isEmpty(suffix):														// seconds, with a fractional sub-second
 					case prefix.length <= 10:													// looks like 'seconds'
+						this.#local.config.parse.match = 'ss';
 						epoch = value * BigInt(1_000_000_000) + nano;
 						break;
 					case prefix.length <= 13:													// looks like 'milliseconds'
+						this.#local.config.parse.match = 'ms';
 						epoch = value * BigInt(1_000_000);
 						break;
 					case prefix.length <= 16:													// looks like 'microseconds'
+						this.#local.config.parse.match = 'us';
 						epoch = value * BigInt(1_000);
 						break;
 					default:																					// looks like 'nanoseconds'
+						this.#local.config.parse.match = 'ns';
 						epoch = value;
 						break;
 				}
@@ -894,7 +894,7 @@ export class Tempo {
 
 	/** evaluate 'string | number' input against known patterns */
 	#conform(tempo: Tempo.DateTime | undefined, today: Temporal.ZonedDateTime) {
-		const arg = asType(tempo);
+		const arg = asType(tempo); arg
 		this.#local.config.parse = { type: arg.type, value: arg.value };
 
 		if (!isType<string | number>(arg.value, 'String', 'Number'))
@@ -908,7 +908,7 @@ export class Tempo {
 				return Object.assign(arg, { type: 'Void', value: void 0 });
 			}
 			if (/^[0-9]+n$/.test(value)) {												// if string representation of BigInt literal
-				this.#local.config.parse.match = 'BigInt';				// matched a bigint-String
+				this.#local.config.parse.match = 'BigInt';					// matched a bigint-String
 				return Object.assign(arg, { type: 'BigInt', value: asInteger(value) });
 			}
 		} else {
@@ -923,7 +923,7 @@ export class Tempo {
 
 			if (isEmpty(groups))
 				continue;																						// no match, so skip this iteration
-			this.#local.config.parse.match = key;								// stash the {key} of the pattern that was matched
+			this.#local.config.parse.match = key;									// stash the {key} of the pattern that was matched
 
 			// if the weekday-pattern is detected, translate it into its calendar values
 			if (isDefined(groups['dow']))													// parse day-of-week
@@ -997,7 +997,7 @@ export class Tempo {
 					`[u-ca=${this.#local.config.calendar}]`						// append calendar
 			})
 
-			Tempo.#info(this.config, 'tempo.match: ', key, groups)// show the pattern that was matched, and the conformed value
+			Tempo.#info(this.config, 'tempo.groups:', key, groups)// show the pattern that was matched, and the conformed value
 
 			break;																								// stop checking patterns
 		}
@@ -1006,8 +1006,8 @@ export class Tempo {
 	}
 
 	/**
-	 * use the {am | pm} arg to check the {hh} clock value  
-	 * returns {hh} in 12-hour format
+	 * use the {am | pm} meridian to check the {hh} clock value  
+	 * returns {hh} in 24-hour format
 	 */
 	#midday(hh: string | number, mer?: Tempo.Meridian) {
 		let hour = Number(hh);
@@ -1617,13 +1617,9 @@ export namespace Tempo {
 	 * derived from user-supplied options, else json-stored options, else reasonable-default options
 	 */
 	export interface Config extends Required<Omit<Options, "value" | "monthDay" | "layout">> {
-		level: Internal.LEVEL,																	// separate configurations 
 		version: string;																				// semantic version
-		parse: {
-			match?: string;																				// which parse-pattern matched the input
-			type: Types;																					// the type of the original input
-			value: any;																						// the value of the original input
-		}
+		level: Internal.LEVEL,																	// separate configurations 
+		parse: Internal.Parse,																	// detail about how the Tempo constructor parsed the supplied value
 		monthDay: { locale: string; timeZones: string[]; }[];		// Array of locales/timeZones that prefer 'mm-dd-yy' date order
 		layout: Map<string, Internal.StringPattern[]>;					// coerce {layout} to Map<string, (string | RegExp)[]>
 	}
@@ -1807,6 +1803,12 @@ namespace Internal {
 		/** Tempo units to aid in parsing */										units: Tempo.Units,
 		/** Map of regex-patterns to match input-string */			patterns: Internal.RegexpMap,
 		/** Array of settings related to a Month */							months: Tempo.Months,
+	}
+
+	export interface Parse {
+		match?: string;																					// which parse-pattern matched the input
+		type: Types;																						// the type of the original input
+		value: any;																							// the value of the original input
 	}
 
 	export type StringObject = Record<string, string>
