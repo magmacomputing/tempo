@@ -4,7 +4,7 @@ import { asArray } from '@module/shared/array.library.js';
 import { enumKeys } from '@module/shared/enum.library.js';
 import { sprintf } from '@module/shared/string.library.js';
 import { clone } from '@module/shared/serialize.library.js';
-import { getAccessors, purge } from '@module/shared/object.library.js';
+import { getAccessors, pick, purge } from '@module/shared/object.library.js';
 import { asNumber, asInteger, isNumeric, split, ifNumeric } from '@module/shared/number.library.js';
 import { getContext, CONTEXT, getStore, setStore, sleep } from '@module/shared/utility.library.js';
 import { asString, pad, singular, toProperCase, trimAll, } from '@module/shared/string.library.js';
@@ -944,25 +944,11 @@ export class Tempo {
 			}
 
 			/**
-			 * change two-digit year into four-digits using 'pivot-year' to determine century
-			 * 22			-> 2022
-			 * 34			-> 1934
-			 */
-			if (/^\d{2}$/.test(groups["yy"])) {										// if {yy} match just-two digits
-				const [, pivot] = split(today
-					.subtract({ 'years': this.#local.config.pivot })	// arbitrary-years ago is pivot for century
-					.year / 100, '.')																	// split on decimal-point
-				const [century] = split(today.year / 100, '.');			// current century
-				const yy = Number(groups["yy"]);										// as number
-				groups["yy"] = `${century - Number(yy > pivot)}${groups["yy"]}`;
-			}
-
-			/**
-			 * set the date-component defaults  
+			 * set the date-component defaults  ]
 			 */
 			groups["yy"] = pad(((Number(groups["yy"]) || today.year) - qtr), 4);
 			groups["mm"] = pad(Number(groups["mm"]) || today.month);
-			groups["dd"] = pad(Number(groups["dd"]) || '1');
+			groups["dd"] = pad(Number(groups["dd"]) || today.day);
 			const zdt = today.withPlainDate({ year: +groups["yy"], month: +groups["mm"], day: +groups["dd"] });
 
 			// if a time-period pattern is detected, translate it into its clock values
@@ -1002,7 +988,7 @@ export class Tempo {
 
 		/**
 		 * resolve a month-name into a month-number.  
-		 * (some browsers do not allow month-names)  
+		 * (some browsers do not allow month-names when parsing a Date)  
 		 * eg.  May  -> 05
 		*/
 		if (isDefined(groups["mm"]) && !isNumeric(groups["mm"])) {
@@ -1110,55 +1096,83 @@ export class Tempo {
 
 	/**
 	 * match input against 'evt' pattern.  
-	 * {event} is the object that contains the RegExp named group key-pairs  
+	 * {event} is the object that contains the RegExp named key-pairs group  
 	 * for example, 'evt7' refers to the Tempo.Events[7] tuple, e.g. ['xmas', '25-Dec']  
 	 * returns an adjusted ZonedDateTime, and mutates {groups} with resolved time-components  
 	 */
 	#parseEvent(groups: Internal.RegExpGroups, today: Temporal.ZonedDateTime, required = false) {
-		const { mod, nbr, ...rest } = groups as { mod: Tempo.Modifier, [key: string]: string; };
+		const { mod, nbr, yy, mm, dd, ...rest } = groups as { mod: Tempo.Modifier, [key: string]: string; };
 		const adjust = Number(isEmpty(nbr) ? '1' : nbr);
 		const event = Object.keys(rest)
 			.find(itm => itm.match(/^evt\d+$/));									// for example, the key of {evt4: 'xmas'}
 
-		let { yy, mm, dd } = this.#num({ yy: rest["yy"] ?? today.year, mm: rest["mm"] ?? today.month, dd: rest["dd"] ?? today.day });
+		if (isEmpty(event) && isEmpty(yy) && isEmpty(mm) && isEmpty(dd)) {
+			if (required)
+				Tempo.#catch(this.#local.config, `Match-group does not contain a date or event`);
+			return today;																					// return default
+		}
 
-		// if (isUndefined(event)) {
-		// 	if (required)
-		// 		Tempo.#catch(this.#local.config, `Match-group does not contain a date or event`);
-		// 	return today;																					// return default
-		// }
+		const date = Object.assign(this.#num({									// set defaults to use when match does not fill all date-components
+			yy: yy ?? today.year,																	// supplied year, else current year
+			mm: mm ?? today.month,																// supplied month, else current month
+			dd: dd ?? today.day,																	// supplied day, else current day
+		})) as { yy: number, mm: number, dd: number };
 
-		if (event) {																						// we have either an {event} or date-components
+		if (event) {
 			const idx = Number(event[3]);
 			const [_, evt] = this.#local.config.event[idx];				// fetch the indexed tuple's value
-			if (isUndefined(evt)) {
-				Tempo.#catch(this.config, `No definition for Event key: ${evt}`);
-				return today;
-			}
-
 			const dmy = this.#local.patterns.get('ddmmyy');
 			const ymd = this.#local.patterns.get('yymmdd');
 			const grp = {} as Internal.RegExpGroups;							// RegExp.groups on a match
 
-			if (dmy)
-				Object.assign(grp, this.#match(dmy, evt));					// try a match on 'dmy' first
+			if (isUndefined(evt)) {
+				Tempo.#catch(this.config, `No definition for Event key: "${evt}"`);
+				return today;
+			}
+			if (isUndefined(dmy)) {
+				Tempo.#catch(this.config, `No definition for Pattern key: "dmy"`);
+				return today;
+			}
+			if (isUndefined(ymd)) {
+				Tempo.#catch(this.config, `No definition for Pattern key: "ymd"`);
+				return today;
+			}
 
-			if (isEmpty(grp) && ymd)
-				Object.assign(grp, this.#match(ymd, evt));					// try a match on 'ymd' if 'dmy' failed
+			if (dmy)																							// try a match on 'dmy' first
+				Object.assign(grp, pick(this.#match(dmy, evt), 'yy', 'mm', 'dd'));
 
-			({ yy, mm, dd } = this.#num(grp));										// update the matched date-components
+			if (isEmpty(grp) && ymd)															// try a match on 'ymd' if 'dmy' failed
+				Object.assign(grp, pick(this.#match(ymd, evt), 'yy', 'mm', 'dd'));
 
-			const offset = Number(pad(mm, 2) + '.' + pad(dd, 2));	// the event month.day
-			const period = Number(pad(today.month, 2) + '.' + pad(today.day + 1, 2));
-
-			// adjust the {yy} if a Modifier is present
-			yy += this.#parseModifier({ mod, adjust, offset, period })
-
-			Object.assign(groups, grp, { yy: pad(yy, 4) });				// stash the values back into the RegExp groups
+			Object.assign(date, grp);															// mutate the {date} object with the results of the 'dmy' or 'ymd' match
 		}
 
+		/**
+		 * change two-digit year into four-digits using 'pivot-year' to determine century
+		 * 22			-> 2022
+		 * 34			-> 1934
+		*/
+		if (/^\d{2}$/.test(date.yy.toString())) {								// if {yy} match just-two digits
+			const [, pivot] = split(today
+				.subtract({ 'years': this.#local.config.pivot })		// arbitrary-years ago is pivot for century
+				.year / 100, '.')																		// split on decimal-point
+			const [century] = split(today.year / 100, '.');				// current century
+			date.yy += (century - Number(date.yy > pivot)) * 100;
+		}
+
+		// adjust the {yy} if a Modifier is present
+		const offset = Number(pad(mm, 2) + '.' + pad(dd, 2));		// the event month.day
+		const period = Number(pad(today.month, 2) + '.' + pad(today.day + 1, 2));
+		date.yy += this.#parseModifier({ mod, adjust, offset, period });
+
+		Object.assign(groups, {																	// mutate the original {groups} object
+			yy: pad(date.yy, 4),
+			mm: pad(date.mm, 2),
+			dd: pad(date.dd, 2),
+		});
+
 		return today
-			.withPlainDate({ year: yy, month: mm, day: dd });
+			.withPlainDate({ year: date.yy, month: date.mm, day: date.dd });
 	}
 
 	/**
@@ -1198,8 +1212,9 @@ export class Tempo {
 
 		if (hh >= 24) {
 			const days = Math.trunc(hh / 24);											// number of days to offset
+			today = today.add({ days });													// move the date forward
+
 			hh = hh % 24;																					// midnight is '00:00'
-			today.add({ days });																	// move the date forward
 			groups["yy"] = pad(today.year, 4);										// year might have changed
 			groups["mm"] = pad(today.month, 2);										// month might have changed
 			groups["dd"] = pad(today.day, 2);											// day has changed
@@ -1283,14 +1298,13 @@ export class Tempo {
 						case 'date':
 						case 'time':
 						case 'dow':
+						default:
 							return { mutate: 'set', single: singular(key), offset: unit }
 
-						default:
-							throw new Error(`Unexpected method: ${key}`);
+						// 	throw new Error(`Unexpected method: ${key}`);
 					}
 				})(key);																						// IIFE to analyze arguments
 
-				// let { year, month, day, hour, minute, second, millisecond, microsecond, nanosecond } = this.#zdt;
 				let groups = {};
 
 				switch (`${mutate}.${single}`) {
@@ -1302,7 +1316,7 @@ export class Tempo {
 							return zdt;
 						}
 
-						groups = this.#match(tm, offset);								// for example, {per5: "afternoon"}
+						groups = this.#match(tm, offset);								// for example, {per5: "afternoon"} or {hh: "10", mer: "pm"}
 						return this.#parsePeriod(groups, zdt, true);		// mutate to the period 'time'
 
 					case 'set.event':
@@ -1313,7 +1327,7 @@ export class Tempo {
 							return zdt;
 						}
 
-						groups = this.#match(dt, offset);								// for example, {evt7: "xmas"}
+						groups = this.#match(dt, offset);								// for example, {evt7: "xmas"} or {dd: "20", mm: "May"}
 						return this.#parseEvent(groups, zdt, true);			// mutate to the event 'date'
 
 					case 'set.dow':

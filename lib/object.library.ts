@@ -136,6 +136,18 @@ export function purge<T extends {}>(obj: T) {
 	return obj;																								// return Object reference, even though Object has been mutated
 }
 
+/** extract a subset of keys from an object */
+export const pick = <T extends Record<string, any>, K extends string>(obj: T, ...keys: K[]): Partial<T> => {
+	const ownKeys = Object.getOwnPropertyNames(obj);
+
+	return keys.reduce((acc, key) => {
+		if (ownKeys.includes(key))
+			acc[key] = obj[key];
+		return acc;
+	}, {} as T);
+}
+
+/** extract a named key from an array of objects */
 export const pluck = <T, K extends keyof T>(objs: T[], key: K): T[K][] =>
 	objs.map(obj => obj[key]);
 
