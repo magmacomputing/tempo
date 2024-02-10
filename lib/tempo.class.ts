@@ -944,11 +944,16 @@ export class Tempo {
 			}
 
 			/**
-			 * set the date-component defaults  ]
+			 * set the date-component defaults
 			 */
-			groups["yy"] = pad(((Number(groups["yy"]) || today.year) - qtr), 4);
-			groups["mm"] = pad(Number(groups["mm"]) || today.month);
-			groups["dd"] = pad(Number(groups["dd"]) || today.day);
+			groups["yy"] = pad(((Number(groups["yy"]) ?? today.year) - qtr), 4);
+			groups["mm"] = pad(Number(groups["mm"]) ?? today.month);
+			if (isUndefined(groups["dd"])) {											// if missing, infer {dd} no later than daysInMonth
+				const plainYearMonth = Temporal.PlainDate.from({ year: +groups["yy"], month: +groups["mm"] });
+				today = today.with({ day: Math.min(today.day, plainYearMonth.daysInMonth) });
+			}
+			groups["dd"] = pad(Number(groups["dd"]) ?? today.day);
+
 			const zdt = today.withPlainDate({ year: +groups["yy"], month: +groups["mm"], day: +groups["dd"] });
 
 			// if a time-period pattern is detected, translate it into its clock values
@@ -1085,11 +1090,11 @@ export class Tempo {
 
 		const days = offset - today.dayOfWeek										// number of days to offset from today
 			+ this.#parseModifier({ mod, adjust, offset, period: today.dayOfWeek });
-		const { year, month, day } = today.add({ days });				// adjust {today} to new date
 
-		groups["yy"] = pad(year, 4);														// set the now current year
-		groups["mm"] = pad(month, 2);														// and month
-		groups["dd"] = pad(day, 2);															// and day
+		today = today.add({ days });														// adjust {today} to new day
+		groups["yy"] = pad(today.year, 4);											// set the now current year
+		groups["mm"] = pad(today.month, 2);											// and month
+		groups["dd"] = pad(today.day, 2);												// and day
 
 		return today;																						// return the computed date-values
 	}
@@ -1101,7 +1106,7 @@ export class Tempo {
 	 * returns an adjusted ZonedDateTime, and mutates {groups} with resolved time-components  
 	 */
 	#parseEvent(groups: Internal.RegExpGroups, today: Temporal.ZonedDateTime, required = false) {
-		const { mod, nbr, yy, mm, dd, ...rest } = groups as { mod: Tempo.Modifier, [key: string]: string; };
+		const { mod, nbr, dow, yy, mm, dd, ...rest } = groups as { mod: Tempo.Modifier, [key: string]: string; };
 		const adjust = Number(isEmpty(nbr) ? '1' : nbr);
 		const event = Object.keys(rest)
 			.find(itm => itm.match(/^evt\d+$/));									// for example, the key of {evt4: 'xmas'}
@@ -1161,9 +1166,12 @@ export class Tempo {
 		}
 
 		// adjust the {yy} if a Modifier is present
-		const offset = Number(pad(mm, 2) + '.' + pad(dd, 2));		// the event month.day
-		const period = Number(pad(today.month, 2) + '.' + pad(today.day + 1, 2));
-		date.yy += this.#parseModifier({ mod, adjust, offset, period });
+		if (isUndefined(groups["dow"])) {												// if {dow} present, the {mod} has already been used
+			const offset = Number(pad(mm, 2) + '.' + pad(dd, 2));	// the event month.day
+			const period = Number(pad(today.month, 2) + '.' + pad(today.day + 1, 2));
+			date.yy += this.#parseModifier({ mod, adjust, offset, period });
+
+		}
 
 		Object.assign(groups, {																	// mutate the original {groups} object
 			yy: pad(date.yy, 4),
