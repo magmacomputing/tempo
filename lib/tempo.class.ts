@@ -613,6 +613,22 @@ export class Tempo {
 		return Tempo.#global.patterns;
 	}
 
+	/** Tempo / Temporal map */
+	static get map() {
+		return {
+			'yy': 'year',
+			'mm': 'month',
+			'ww': 'week',
+			'dd': 'day',
+			'hh': 'hour',
+			'mi': 'minute',
+			'ss': 'second',
+			'ms': 'millisecond',
+			'us': 'microsecond',
+			'ns': 'nanosecond',
+		}
+	}
+
 	/** indicate when Tempo.init() is complete */
 	static get ready() {
 		return Tempo.#ready['static'].promise
@@ -1064,27 +1080,28 @@ export class Tempo {
 	#parseWeekday(groups: Internal.RegExpGroups, today: Temporal.ZonedDateTime, required = false) {
 		const { dow, mod, nbr, ...rest } = groups as { dow: Tempo.Weekday, mod: Tempo.Modifier, nbr: string };
 
-		if (isUndefined(groups["dow"])) {
+		if (isUndefined(groups["dow"])) {												// this is not a {dow} pattern match
 			if (required)
 				Tempo.#catch(this.#local.config, `Match-group does not contain a day-of-week`);
 			return today;
 		}
 
 		/**
-		 * the 'dow' pattern might contain 'time' units	 (hh, mi, per), but they are parsed separately  
-		 * for example: {dow: 'Wed', hh: '10', mer: 'pm'}  
+		 * the 'dow' pattern might yield 'time' keys, but they are parsed separately  
+		 * for example: {dow: 'Wed', hh: '10', mer: 'pm'} or {'dow: 'Wed', period: 'per5'}  
 		 * note that we only look for the first-three characters  e.g. the 'per5' period will match the requirement for 'per'  
 		 * we early-exit if we find anything other than {dow} and time-units
 		 */
 		const timeKeys = ['hh', 'mi', 'ss', 'ff', 'mer', 'per'];
-		const hasTime = Object.keys(rest).every(el => timeKeys.includes(el.substring(0, 3)));
+		const hasTime = Object.keys(rest)
+			.every(key => timeKeys.includes(key.substring(0, 3)));// first three-characters of key included in {timeKeys}
 		if (!hasTime) {
 			if (required)
 				Tempo.#catch(this.#local.config, `Unexpected match-groups detected: ${groups}`);
 			return today;
 		}
 
-		const weekday = Tempo.#prefix(dow);
+		const weekday = Tempo.#prefix(dow);											// conform weekday-name
 		const offset = enumKeys(Tempo.WEEKDAY).findIndex(el => el === weekday);
 		const adjust = today.daysInWeek * Number(isEmpty(nbr) ? '1' : nbr);
 
@@ -1360,6 +1377,20 @@ export class Tempo {
 					case 'set.nanosecond':
 						return zdt
 							.with({ [single]: offset });
+
+					case 'set.yy':
+					case 'set.mm':
+					// case 'set.week':
+					case 'set.dd':
+					case 'set.hh':
+					case 'set.mi':
+					case 'set.ss':
+					case 'set.ms':
+					case 'set.us':
+					case 'set.ns':
+						const value = Reflect.get(Tempo.map, single);
+						return zdt
+							.with({ [value]: offset });
 
 					case 'start.year':
 						return zdt
