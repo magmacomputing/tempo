@@ -47,33 +47,34 @@ export const isPrimitive = (obj?: unknown): obj is Primitive => isType(obj, 'Str
 export const isReference = (obj?: unknown): obj is Object => !isPrimitive(obj);
 export const isIterable = <T>(obj: unknown): obj is Iterable<T> => Symbol.iterator in Object(obj) && !isString(obj);
 
-export const isString = (obj?: unknown): obj is string => isType(obj, 'String');
-export const isNumber = (obj?: unknown): obj is number => isType(obj, 'Number');
-export const isInteger = (obj?: unknown): obj is bigint => isType(obj, 'BigInt');
-export const isDigit = (obj?: unknown): obj is number | bigint => isType(obj, 'Number', 'BigInt');
+export const isString = <T>(obj?: T): obj is Extract<T, string> => isType(obj, 'String');
+export const isNumber = <T>(obj?: T): obj is Extract<T, number> => isType(obj, 'Number');
+export const isInteger = <T>(obj?: T): obj is Extract<T, bigint> => isType(obj, 'BigInt');
+export const isDigit = <T>(obj?: T): obj is Extract<T, number | bigint> => isType(obj, 'Number', 'BigInt');
 export const isBoolean = <T>(obj?: T): obj is Extract<T, boolean> => isType(obj, 'Boolean');
 export const isArray = <T>(obj: T | T[]): obj is Array<T> => isType(obj, 'Array');
 export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => protoType(obj) === 'Object' && Object.keys(obj).includes('length') && Object.keys(obj).every(key => key === 'length' || !isNaN(Number(key)));
-export const isObject = <T>(obj?: T): obj is T => isType(obj, 'Object');
-export const isDate = (obj?: unknown): obj is Date => isType(obj, 'Date');
-export const isRegExp = (obj?: unknown): obj is RegExp => isType(obj, 'RegExp');
-export const isSymbol = (obj?: unknown): obj is Symbol => isType(obj, 'Symbol');
-// TODO
-export const isRecord = (obj?: unknown): obj is Readonly<Record<any, any>> => isType(obj, 'Record');
-export const isTuple = <T>(obj?: unknown): obj is Readonly<Array<T>> => isType(obj, 'Tuple');
+export const isObject = <T>(obj?: T): obj is Extract<T, Record<any, any>> => isType(obj, 'Object');
+export const isDate = <T>(obj?: T): obj is Extract<T, Date> => isType(obj, 'Date');
+export const isRegExp = <T>(obj?: T): obj is Extract<T, RegExp> => isType(obj, 'RegExp');
+export const isSymbol = <T>(obj?: T): obj is Extract<T, Symbol> => isType(obj, 'Symbol');
 
-export const isNull = (obj?: unknown): obj is null => isType(obj, 'Null');
-export const isNullish = (obj: {} | Nullish): obj is Nullish => isType<undefined | null | void>(obj, 'Null', 'Undefined', 'Void', 'Empty');
-export const isUndefined = (obj?: unknown): obj is undefined => isType<undefined>(obj, 'Undefined', 'Void');
+// TODO
+export const isRecord = <T>(obj?: T): obj is Readonly<Extract<T, Record<any, any>>> => isType(obj, 'Record');
+export const isTuple = <T>(obj?: T): obj is Readonly<Extract<T, Array<T>>> => isType(obj, 'Tuple');
+
+export const isNull = <T>(obj?: T): obj is Extract<T, null> => isType(obj, 'Null');
+export const isNullish = <T>(obj: T): obj is Extract<T, Nullish> => isType<undefined | null | void>(obj, 'Null', 'Undefined', 'Void', 'Empty');
+export const isUndefined = <T>(obj?: T): obj is undefined => isType<undefined>(obj, 'Undefined', 'Void');
 export const isDefined = <T>(obj: T): obj is NonNullable<T> => !isNullish(obj);
 
-export const isClass = (obj?: unknown): obj is Function => isType(obj, 'Class');
-export const isFunction = (obj?: unknown): obj is Function => isType(obj, 'Function', 'AsyncFunction');
-export const isPromise = <T>(obj?: unknown): obj is Promise<T> => isType(obj, 'Promise');
+export const isClass = <T>(obj?: T): obj is Extract<T, Function> => isType(obj, 'Class');
+export const isFunction = <T>(obj?: T): obj is Extract<T, Function> => isType(obj, 'Function', 'AsyncFunction');
+export const isPromise = <T>(obj?: T): obj is Extract<T, Promise<any>> => isType(obj, 'Promise');
 export const isMap = <K, V>(obj?: unknown): obj is Map<K, V> => isType(obj, 'Map');
 export const isSet = <K>(obj?: unknown): obj is Set<K> => isType(obj, 'Set');
 export const isError = (err: unknown): err is Error => isType(err, 'Error');
-export const isTemporal = (obj: unknown): obj is Temporals => protoType(obj).startsWith('Temporal.');
+export const isTemporal = <T>(obj: T): obj is Extract<T, Temporals> => protoType(obj).startsWith('Temporal.');
 
 export const nullToZero = <T>(obj: T) => obj ?? 0;
 export const nullToEmpty = <T>(obj: T) => obj ?? '';

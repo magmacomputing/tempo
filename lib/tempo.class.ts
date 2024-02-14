@@ -67,9 +67,9 @@ const Default = {
 		['dt', ['dt']],																					// calendar or event
 		['tm', ['tm']],																					// clock or period
 		['dtm', ['dt', /[\/\-\s\,]*/, 'tm?']],									// event and time-period
-		['ddmmyy', ['dow?', 'dd', 'sep', 'mm?', 'sep', 'yy?', 'tm?']],
-		['mmddyy', ['dow?', 'mm', 'sep', 'dd?', 'sep', 'yy?', 'tm?']],
-		['yymmdd', ['dow?', 'yy', 'sep', 'mm', 'sep', 'dd?', 'tm?']],
+		['ddmmyy', ['dow?', 'dd', 'sep', 'mm', 'sep', 'yy?', 'tm?']],
+		['mmddyy', ['dow?', 'mm', 'sep', 'dd', 'sep', 'yy?', 'tm?']],
+		['yymmdd', ['dow?', 'yy', 'sep', 'mm', 'sep', 'dd?', '/([\sT]${tm})?/']],
 		['qtr', ['yy', 'sep', 'qtr']],													// yyyyQq	(for example, '2024Q2')
 	]),
 	period: [																									// built-in time-periods to be mapped to time-components
@@ -162,9 +162,9 @@ export class Tempo {
 			.join('|')																						// make an 'Or' pattern for the period-keys
 		shape.units["per"] = new RegExp(periods, 'i');					// set the units 'period' pattern
 
-		const time = Tempo.regexp('hh', 'mi?', 'ss?', 'ff?', 'mer?', '/|/', 'per')
+		const time = Tempo.regexp('hh', 'mi?', 'ss?', 'ff?', 'mer?', '/|/', '(per)')
 			.source.slice(1, -1);																	// set the {tm} pattern (without anchors)
-		shape.units["tm"] = new RegExp(`\\s*${time}`, 'i');			// prepend an optional <space> to the {time} patterns
+		shape.units["tm"] = new RegExp(`${time}`, 'i');					// set the {tm} unit
 		shape.units["tzd"] = new RegExp(`(?<tzd>[+-]${time}|Z)`, 'i');
 	}
 
@@ -544,7 +544,7 @@ export class Tempo {
 					throw new Error(`Cannot find user-pattern "${match}" in Tempo.units`);
 
 				if (isBrace)
-					source = `(${source})`;														// resource 'braces'
+					source = `(${source})`;														// restore 'braces'
 				if (isOpt)
 					source += '?';																		// restore 'optional' modifier
 
@@ -610,6 +610,11 @@ export class Tempo {
 	/** Tempo global config settings */
 	static get config() {
 		return { ...Tempo.#global.config }
+	}
+
+	/** Tempo global units */
+	static get units() {
+		return { ...Tempo.#global.units }
 	}
 
 	/** Tempo initial default settings */
@@ -917,7 +922,7 @@ export class Tempo {
 
 	/** evaluate 'string | number' input against known patterns */
 	#conform(tempo: Tempo.DateTime | undefined, today: Temporal.ZonedDateTime) {
-		const arg = asType(tempo); arg
+		const arg = asType(tempo);
 		this.#local.config.parse = { type: arg.type, value: arg.value };
 
 		if (!isType<string | number>(arg.value, 'String', 'Number'))
@@ -964,19 +969,14 @@ export class Tempo {
 				groups["mm"] = pad(idx);														// set {month} to beginning of {quarter}
 			}
 
-			// set the date-component defaults
-			groups["yy"] = pad(((Number(groups["yy"]) ?? today.year) - qtr), 4);
-			groups["mm"] = pad(Number(groups["mm"]) ?? today.month);
-			if (isUndefined(groups["dd"])) {											// if missing, infer {dd} no later than daysInMonth
-				const plainYearMonth = Temporal.PlainDate.from({ year: +groups["yy"], month: +groups["mm"] });
-				today = today.with({ day: Math.min(today.day, plainYearMonth.daysInMonth) });
-			}
-			groups["dd"] = pad(Number(groups["dd"]) ?? today.day);
-
-			const zdt = today.withPlainDate({ year: +groups["yy"], month: +groups["mm"], day: +groups["dd"] });
-
-			// if a time-period pattern is detected, translate it into its clock values
-			this.#parsePeriod(groups, zdt);												// all date-components are set, now check time-components
+			// all date-components are set, check for overflow
+			const date = Temporal.PlainDate.from({
+				year: Number(groups["yy"] ?? today.year),
+				month: Number(groups["mm"] ?? today.month),
+				day: Number(groups["dd"] ?? today.day)
+			},
+				{ overflow: 'constrain' })
+			this.#parsePeriod(groups, today.withPlainDate(date));	// if a time-period pattern is detected, translate it into its clock values
 
 			/**
 			 * finished analyzing a matched pattern.  
@@ -985,9 +985,9 @@ export class Tempo {
 			Object.assign(arg, {
 				type: 'String',
 				value: `
-						${groups["yy"]}-\
-						${groups["mm"]}-\
-						${groups["dd"]}\
+						${pad(date.year - qtr, 4)}-\
+						${pad(date.month)}-\
+						${pad(date.day)}\
 						${groups["utc"] ?? ''}`													// append time-string
 					.trimAll(/\t/g) + 																// remove <tab> and redundant <space>
 					`[${this.#local.config.timeZone}]` +							// append timeZone
@@ -1226,7 +1226,7 @@ export class Tempo {
 			const idx = Number(period[3]);												// get the {period} index (for example 'per5')
 			const [, per] = this.#local.config.period[idx];				// fetch the indexed tuple's value (for example the value of {'per5', 'afternoon'})
 
-			if (!tm) {
+			if (isUndefined(tm)) {
 				Tempo.#catch(this.#local.config, `Cannot find {tm} pattern`);
 				return today;
 			}
@@ -1243,9 +1243,10 @@ export class Tempo {
 
 		if (hh >= 24) {
 			const days = Math.trunc(hh / 24);											// number of days to offset
+
+			hh = hh % 24;																					// midnight is '00:00' on the next-day
 			today = today.add({ days });													// move the date forward
 
-			hh = hh % 24;																					// midnight is '00:00'
 			groups["yy"] = pad(today.year, 4);										// year might have changed
 			groups["mm"] = pad(today.month, 2);										// month might have changed
 			groups["dd"] = pad(today.day, 2);											// day has changed
