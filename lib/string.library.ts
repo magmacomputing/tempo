@@ -62,7 +62,9 @@ type Sprintf = {
 }
 
 /** use sprintf-style formatting on a string */
-export const sprintf: Sprintf = (fmt: {}, ...msg: any[]) => {
+export function sprintf(fmt: string, ...msg: any[]): any;
+export function sprintf(...msg: any[]): string;
+export function sprintf(fmt: {}, ...msg: any[]) {
 	let sfmt = asString(fmt);																	// avoid mutate fmt
 
 	if (!isString(fmt)) {																			// might be an Object
@@ -102,7 +104,7 @@ export const makeTemplate = (templateString: Object) =>
 	(templateData: Object) =>
 		new Function(`{${Object.keys(templateData).join(',')}}`, 'return `' + templateString + '`')(templateData);
 
-export const asString = (str?: unknown) => isNullish(str) ? '' : stringify(str);
+export function asString(str?: unknown) { return isNullish(str) ? '' : stringify(str) };
 export const toLower = <T>(str: T) => isString(str) ? asString(str).toLowerCase().trim() : str;
 export const toUpper = <T>(str: T) => isString(str) ? asString(str).toUpperCase().trim() : str;
 

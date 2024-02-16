@@ -37,8 +37,8 @@ const StorageKey = '_Tempo_';																// for stash in persistent storage
  */
 const Units = {																							// define some components to help interpret input-strings
 	yy: new RegExp(/(?<yy>(18|19|20|21)?\d{2})/),
-	mm: new RegExp(/(?<mm>0?[1-9]|1[012]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/),
-	dd: new RegExp(/(?<dd>0?[1-9]|[12][0-9]|3[01])/),
+	mm: new RegExp(/(?<mm>0[1-9]|1[012]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/),
+	dd: new RegExp(/(?<dd>0[1-9]|[12][0-9]|3[01])/),
 	dow: new RegExp(/((?<dow>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)(?:[\/\-\s\,])*)/),
 	qtr: new RegExp(/q(?<qtr>[1|2|3|4])/),										// qtr: Q1 - Q4
 	hh: new RegExp(/(?<hh>2[0-4]|[01]?\d)/),									// hh:  00 - 24
@@ -47,7 +47,7 @@ const Units = {																							// define some components to help interpre
 	ff: new RegExp(/(\.(?<ff>\d{1,9}))/),											// up-to 9-digits for fractional seconds
 	mer: new RegExp(/(\s*(?<mer>am|pm))/),										// meridian am/pm suffix
 	sep: new RegExp(/(?<sep>[\/\-\s\,]*)/),										// list of separators between date-components
-	mod: new RegExp(/(?<mod>[\+\-\<\>][\=]?)?(?<nbr>\d*)\s*/),// modifiers (+,-,<,<=,>,>=)
+	mod: new RegExp(/((?<mod>[\+\-\<\>][\=]?)?(?<nbr>\d*)\s*)/),// modifiers (+,-,<,<=,>,>=)
 } as Tempo.Units
 // 2 computed Units ('tm' and 'dt') are added during 'Tempo.init()' and 'new Tempo()' (if defining a new Event or Period)
 
@@ -63,14 +63,14 @@ const Default = {
 	fiscal: 'Jan',
 	monthDay: ['en-US', 'en-AS'],															// array of Locales that prefer 'mm-dd-yy' date order: https://en.wikipedia.org/wiki/Date_format_by_country
 	layout: new Map([																					// built-in layouts to be checked, and in this order
-		['dow', ['mod?', 'dow', 'tm?']],												// special pattern (only one that requires {dow} unit), used for day-of-week calcs
-		['dt', ['dt']],																					// calendar or event
-		['tm', ['tm']],																					// clock or period
-		['dtm', ['dt', /[\/\-\s\,]*/, 'tm?']],									// event and time-period
-		['ddmmyy', ['dow?', 'dd', 'sep', 'mm', 'sep', 'yy?', 'tm?']],
-		['mmddyy', ['dow?', 'mm', 'sep', 'dd', 'sep', 'yy?', 'tm?']],
-		['yymmdd', ['dow?', 'yy', 'sep', 'mm', 'sep', 'dd?', '/([\sT]${tm})?/']],
-		['qtr', ['yy', 'sep', 'qtr']],													// yyyyQq	(for example, '2024Q2')
+		['dow', '{mod}?{dow}({sep}{tm})?'],											// special pattern (only one that requires {dow} unit), used for day-of-week calcs
+		['dt', '{dt}'],																					// calendar or event
+		['tm', '{tm}'],																					// clock or period
+		['dtm', '({dt})(?:[\\/\\-\\s\,])+({tm})'],							// event and time-period
+		['dmy', '{dow}?{dd}{sep}{mm}({sep}{yy})?([\\s]{tm})?'],
+		['mdy', '{dow}?{mm}{sep}{dd}({sep}{yy})?([\\s]{tm})?'],
+		['ymd', '{dow}?{yy}{sep}{mm}({sep}{dd})?([\\s]{tm})?'],
+		['qtr', '{yy}{sep}{qtr}'],															// yyyyQq (for example, '2024Q2')
 	]),
 	period: [																									// built-in time-periods to be mapped to time-components
 		['mid[ -]?night', '24:00'],
@@ -144,12 +144,12 @@ export class Tempo {
 		const events = shape.config.event
 			.map(([pat, _], idx) => `(?<evt${idx}>${pat})`)				// assign a number to the pattern
 			.join('|')																						// make an 'Or' pattern for the event-keys
-		shape.units["evt"] = new RegExp(events, 'i');						// set the unit's 'event' pattern
+		shape.units["evt"] = new RegExp(events);								// set the unit's 'event' pattern
 
 		const date = !isEmpty(locale)														// we have a {locale} which prefers {mmddyy}
-			? Tempo.regexp('mm', 'sep', 'dd', 'sep', 'yy?', '/|/', 'mod?', '(evt)')
-			: Tempo.regexp('dd', 'sep', 'mm', 'sep', 'yy?', '/|/', 'mod?', '(evt)')
-		shape.units["dt"] = new RegExp(date.source.slice(1, -1), 'i');	// set the units {dt} pattern (without anchors)
+			? Tempo.regexp('{mm}{sep}{dd}({sep}{yy})?|{mod}?({evt})')
+			: Tempo.regexp('{dd}{sep}{mm}({sep}{yy})?|{mod}?({evt})')
+		shape.units["dt"] = new RegExp(date.source.slice(1, -1))// set the units {dt} pattern (without anchors)
 	}
 
 	/**
@@ -160,12 +160,12 @@ export class Tempo {
 		const periods = shape.config.period
 			.map(([pat, _], idx) => `(?<per${idx}>${pat})`)				// {pattern} is the 1st element of the tuple
 			.join('|')																						// make an 'Or' pattern for the period-keys
-		shape.units["per"] = new RegExp(periods, 'i');					// set the units 'period' pattern
+		shape.units["per"] = new RegExp(periods);								// set the units 'period' pattern
 
-		const time = Tempo.regexp('hh', 'mi?', 'ss?', 'ff?', 'mer?', '/|/', '(per)')
+		const time = Tempo.regexp('T?{hh}{mi}?{ss}?{ff}?{mer}?Z?|{per}')
 			.source.slice(1, -1);																	// set the {tm} pattern (without anchors)
-		shape.units["tm"] = new RegExp(`${time}`, 'i');					// set the {tm} unit
-		shape.units["tzd"] = new RegExp(`(?<tzd>[+-]${time}|Z)`, 'i');
+		shape.units["tm"] = new RegExp(time);										// set the {tm} unit
+		shape.units["tzd"] = new RegExp(`(?<tzd>[+-]${time}|Z)`);
 	}
 
 	/**
@@ -176,17 +176,16 @@ export class Tempo {
 		const locale = shape.config.monthDay
 			.find(itm => itm.timeZones?.includes(shape.config.timeZone))?.locale// found an Intl.Locale which prefers {mmddyy} and contains our {timeZone}
 		const swap = [																					// regexs to swap (to change conform priority)
-			['ddmmyy', 'mmddyy'],																	// swap {ddmmyy} for {mmddyy}
-			['ddmmyytm', 'mmddyytm'],															// swap {ddmmyytm} for {mmddyytm}
+			['dmy', 'mdy'],																				// swap {dmy} for {mdy}
 		] as const;
 
 		const layouts = [...shape.config.layout.entries()];			// get entries of each layout mapping 
 		let chg = false;																				// no need to rebuild, if no change
 
 		swap
-			.forEach(([pat1, pat2]) => {													// loop over each swap-tuple
-				const idx1 = layouts.findIndex(([key]) => key === pat1);	// 1st swap element exists in {layouts}
-				const idx2 = layouts.findIndex(([key]) => key === pat2);	// 2nd swap element exists in {layouts}
+			.forEach(([dmy, mdy]) => {														// loop over each swap-tuple
+				const idx1 = layouts.findIndex(([key]) => key === dmy);	// 1st swap element exists in {layouts}
+				const idx2 = layouts.findIndex(([key]) => key === mdy);	// 2nd swap element exists in {layouts}
 
 				if (idx1 === -1 || idx2 === -1)
 					return;																						// no pair to swap
@@ -400,7 +399,7 @@ export class Tempo {
 		shape.patterns.clear();																	// reset {patterns} Map
 
 		for (const [key, units] of shape.config.layout)
-			shape.patterns.set(key, Tempo.regexp(Tempo.#global.units, ...units))
+			shape.patterns.set(key, Tempo.regexp(shape.units, ...units))
 	}
 
 	/**
@@ -508,52 +507,47 @@ export class Tempo {
 		setStore(StorageKey, config);
 	}
 
-	/** combine array of <string | RegExp> to an anchored, case-insensitive RegExp */
+	/**
+	 * combine array of <string | RegExp> to an anchored, case-insensitive RegExp  
+	 * layouts generally have {unit} placeholders, for example  '{yy}{sep}{mm}?'  
+	 */
 	static regexp: {
-		(...regs: Internal.StringPattern[]): RegExp;
-		(units: Tempo.Units, ...regs: Internal.StringPattern[]): RegExp;
+		(...layouts: Internal.StringPattern[]): RegExp;
+		(units: Tempo.Units, ...layouts: Internal.StringPattern[]): RegExp;
 	}
-		= (units: Tempo.Units | Internal.StringPattern, ...regs: Internal.StringPattern[]) => {
+		= (units: Tempo.Units | Internal.StringPattern, ...layouts: Internal.StringPattern[]) => {
 			if (!isObject(units)) {
-				regs.splice(0, 0, units);														// stash 1st argument into {regs} array
+				layouts.splice(0, 0, units);												// stash 1st argument into {regs} array
 				units = Tempo.#global.units;												// set units to static value
 			}
 
-			const names = {} as Record<string, boolean>;					// detect if a named-group is used more than once
+			const names: Record<string, boolean> = {};						// to detect if multiple instances of the same named-group
+			const pattern = layouts
+				.map(layout => {																		// for each {layout} in the arguments
+					if (isRegExp(layout))
+						layout = layout.source;
+					if (layout.match(/^\/.*\/$/))
+						layout = layout.substring(1, -1);
 
-			const regexes = regs.map(pat => {
-				if (isRegExp(pat))																	// already a RegExp
-					return pat;
+					const it = layout.matchAll(/{([^}]+)}/g);					// iterator to match "{.*}" patterns
+					for (const pat of it) {
+						const { ["1"]: unit } = pat;										// {unit} is the code between the {}
 
-				if (/^\/.*\/$/.test(pat))														// a string that looks like a RegExp  ("/.../")
-					return new RegExp(pat.slice(1, -1));
+						let reg = (units as Tempo.Units)[unit];					// check if a defined {unit}
+						if (isNullish(reg))
+							continue;																			// if not, pass back as-is
 
-				const isOpt = pat.endsWith('?') ? '?' : '';					// is name optional
-				let match = isOpt ? pat.slice(0, -1) : pat;					// remove '?' from name
-				const isBrace = pat.startsWith('(') && pat.endsWith(')');
-				if (isBrace)
-					match = match.slice(1, -1);												// remove '(...)' from name
+						if (names[unit])
+							reg = new RegExp(`(\\k<${unit}>)`);						// use \k backreference to previous named-group {unit}
+						names[unit] = true;															// mark this named-group as 'used'
 
-				const reg = names[match]
-					? new RegExp(`(\\k<${match}>)?`)									// back-reference to named-group
-					: (units as Tempo.Units)[match] ?? Tempo.#global.units[match];	// lookup regexp
-				let source = reg.source;
+						layout = layout.replace(`{${unit}}`, reg.source)// rebuild the {layout}
+					}
 
-				names[match] = true;																// named-group is now used
-				if (isUndefined(reg))																// unknown unit, cannot proceed
-					throw new Error(`Cannot find user-pattern "${match}" in Tempo.units`);
+					return layout;
+				})
 
-				if (isBrace)
-					source = `(${source})`;														// restore 'braces'
-				if (isOpt)
-					source += '?';																		// restore 'optional' modifier
-
-				return isOpt || isBrace
-					? new RegExp(source, reg.flags)										// build new RegExp
-					: reg
-			})
-
-			return new RegExp('^(' + regexes.map(regex => regex.source).join('') + ')$', 'i');
+			return new RegExp('^(' + pattern.join('') + ')$', 'i');
 		}
 
 	/**
@@ -609,12 +603,9 @@ export class Tempo {
 
 	/** Tempo global config settings */
 	static get config() {
-		return { ...Tempo.#global.config }
-	}
-
-	/** Tempo global units */
-	static get units() {
-		return { ...Tempo.#global.units }
+		return {
+			...Tempo.#global.config, ...{ units: Tempo.#global.units }
+		}
 	}
 
 	/** Tempo initial default settings */
@@ -935,7 +926,7 @@ export class Tempo {
 				this.#local.config.parse.match = 'Empty';						// matched an empty-String
 				return Object.assign(arg, { type: 'Void', value: void 0 });
 			}
-			if (/^[0-9]+n$/.test(value)) {												// if string representation of BigInt literal
+			if (value.match(/^[0-9]+n$/)) {												// if string representation of BigInt literal
 				this.#local.config.parse.match = 'BigInt';					// matched a bigint-String
 				return Object.assign(arg, { type: 'BigInt', value: asInteger(value) });
 			}
@@ -1025,7 +1016,7 @@ export class Tempo {
 		}
 
 		/**
-		 * default {nbr} if {mod} is presents  
+		 * default {nbr} if {mod} is present  
 		 */
 		if (isDefined(groups["mod"]))
 			groups["nbr"] ??= '1';
@@ -1150,8 +1141,8 @@ export class Tempo {
 		if (event) {
 			const idx = Number(event[3]);
 			const [_, evt] = this.#local.config.event[idx];				// fetch the indexed tuple's value
-			const dmy = this.#local.patterns.get('ddmmyy');
-			const ymd = this.#local.patterns.get('yymmdd');
+			const dmy = this.#local.patterns.get('dmy');
+			const ymd = this.#local.patterns.get('ymd');
 			const grp = {} as Internal.RegExpGroups;							// RegExp.groups on a match
 
 			if (isUndefined(evt)) {
@@ -1173,7 +1164,7 @@ export class Tempo {
 			if (isEmpty(grp) && ymd)															// try a match on 'ymd' if 'dmy' failed
 				Object.assign(grp, pick(this.#match(ymd, evt), 'yy', 'mm', 'dd'));
 
-			Object.assign(date, grp);															// mutate the {date} object with the results of the 'dmy' or 'ymd' match
+			Object.assign(date, this.#num(grp));									// mutate the {date} object with the results of the 'dmy' or 'ymd' match
 		}
 
 		/**
@@ -1181,7 +1172,7 @@ export class Tempo {
 		 * 22			-> 2022
 		 * 34			-> 1934
 		*/
-		if (/^\d{2}$/.test(date.yy.toString())) {								// if {yy} match just-two digits
+		if (date.yy.toString().match(/^\d{2}$/)) {							// if {yy} match just-two digits
 			const [, pivot] = split(today
 				.subtract({ 'years': this.#local.config.pivot })		// arbitrary-years ago is pivot for century
 				.year / 100, '.')																		// split on decimal-point

@@ -104,15 +104,16 @@ const oneKey = (type: Types, value: string) =>
  * serialize Objects for string-safe stashing in WebStorage, Cache, etc  
  * uses JSON.stringify where available, else returns stringified single-key Object "{[type]: value}"  
  */
-export const stringify = (obj: any) =>
-	stringize(obj, false);
+export function stringify(obj: any) {
+	return stringize(obj, false);
+}
 
 /**
  * internal function to process stringify-requests (and hide second parameter)  
  * where first argument is the object to stringify, and  
  * the second argument is a boolean to indicate if function is being called recursively
  */
-function stringize(obj: any, recurse = true): string {			// hide the second parameter for internal use only
+function stringize(obj: any, recurse = true): string {			// hide the second parameter: for internal use only
 	const arg = asType(obj);
 
 	switch (arg.type) {
