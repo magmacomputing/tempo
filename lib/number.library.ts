@@ -38,7 +38,7 @@ export function isNumeric(str?: string | number | bigint) {
 			return true;
 
 		case 'String':
-			return /^[0-9]+n$/.test(arg.value)
+			return arg.value.match(/^[0-9]+n$/)
 				? true																							// is BigInt
 				: !isNaN(asNumber(str)) && isFinite(str as number)	// test if Number
 
