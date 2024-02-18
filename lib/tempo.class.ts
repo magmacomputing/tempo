@@ -1689,7 +1689,7 @@ export class Tempo {
 	// #endregion Instance private methods
 }
 
-// #region Tempo types / interfaces / enums~~~~~~~~~~~~~~~~~
+// #region Tempo types / interfaces / enums ~~~~~~~~~~~~~~~~
 export namespace Tempo {
 	/** the value that Tempo will attempt to interpret as a valid ISO date / time */
 	export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | null
