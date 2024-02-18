@@ -1,5 +1,5 @@
 
-<img src="./img/hourglass-svgrepo-com.svg" width="100px">
+<!-- <img src="./img/hourglass-svgrepo-com.svg" width="100px"> -->
 # Tempo
 A Wrapper around the Javascript Temporal object
 
