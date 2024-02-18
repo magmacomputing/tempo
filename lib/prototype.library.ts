@@ -14,7 +14,7 @@ import { asArray, keyedBy, sortBy, type SortBy } from '@module/shared/array.libr
 const patch = <T>(proto: T, property: string, method: Function) => {
 	if (proto.prototype.hasOwnProperty(property)) {						// if already defined,
 		if (trimAll(method) !== trimAll(proto.prototype[property]))	// show error if different method definition
-			console.error(`${proto.name}.${property} already defined`);
+			console.warn(`${proto.name}.${property} already defined`);
 	} else {
 		Object.defineProperty(proto.prototype, property, {
 			configurable: false,

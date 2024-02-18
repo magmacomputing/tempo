@@ -25,8 +25,8 @@ import { Temporal } from '@js-temporal/polyfill';
  */
 
 // #region Const variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-const Version = '0.0.1';																		// semantic version
-const StorageKey = '_Tempo_';																// for stash in persistent storage
+const VERSION = '0.0.1';																		// semantic version
+const STORAGEKEY = '_Tempo_';																// for stash in persistent storage
 
 /**
  * user will need to know these in order to configure their own patterns  
@@ -54,7 +54,7 @@ const Units = {																							// define some components to help interpre
 
 /** Reasonable defaults for initial Tempo options */
 const Default = {
-	version: Version,
+	version: VERSION,
 	pivot: 75,
 	catch: false,
 	debug: false,
@@ -67,13 +67,13 @@ const Default = {
 		['dow', '{mod}?{dow}{sfx}?'],														// special layout (no {dt}!) used for day-of-week calcs (only one that requires {dow} unit)
 		['dt', '{dt}'],																					// calendar or event
 		['tm', '{tm}'],																					// clock or period
-		['dtm', '({dt}){sfx}?'],																// event and time-period
+		['dtm', '({dt}){sfx}'],																	// event and time-period
 		['dmy', '{dow}?{dd}{sep}{mm}({sep}{yy})?{sfx}?'],
 		['mdy', '{dow}?{mm}{sep}{dd}({sep}{yy})?{sfx}?'],
 		['ymd', '{dow}?{yy}{sep}{mm}({sep}{dd})?{sfx}?'],
 		['qtr', '{yy}{sep}{qtr}{sfx}?'],												// yyyyQq (for example, '2024Q2')
 	]),
-	period: [																									// built-in time-periods to be mapped to time-components
+	period: [																									// built-in periods to be mapped to a time
 		['mid[ -]?night', '24:00'],
 		['morning', '8:00'],
 		['mid[ -]?morning', '10:00'],
@@ -83,7 +83,7 @@ const Default = {
 		['evening', '18:00'],
 		['night', '20:00'],
 	],
-	event: [																									// built-in date-events to be mapped to date-components
+	event: [																									// built-in events to be mapped to a date
 		['new.?years? ?eve', '31 Dec'],
 		['nye', '31 Dec'],
 		['new.?years?( ?day)?', '01 Jan'],
@@ -237,7 +237,7 @@ export class Tempo {
 		}
 	}
 
-	/** properCase week-day/calendar-month */
+	/** properCase week-day / calendar-month */
 	static #prefix = <T extends Tempo.Weekday | Tempo.Calendar>(str: T) =>
 		toProperCase(str.substring(0, 3)) as T;
 
@@ -280,12 +280,12 @@ export class Tempo {
 	 * conform input of Layout / Event / Period options 
 	 * This is needed because we allow the user to flexibly provide detail as an {[key]:val} or an {[key]:val}[] or an [key,val][]
 	 * for example:    
-	 * 	Tempo.init({ layout: {'ddmm': ['dd', 'sep', 'mm']} })
+	 * 	Tempo.init({ layout: {'ddmm': ['{dd}{sep}{mm}']} })
 	 * 	Tempo.init({ layout: {'yy': /20\d{2}/, 'mm': /[0-9|1|2]\d/ } })
-	 *	Tempo.init({ layout: 'dow' })													(can be a single string)
-	 *	Tempo.init({ layout: ['dow?', / /, 'dd'] })						(dont have to provide a 'key' for the {layout})
-	 *	Tempo.init({ layout: new Map([['dow'],['yy']]) })			(unlikely, but can be a single unit-string)
-	 *	Tempo.init({ layout: new Map([['name1', ['dow','yy']], ['name2', ['mm', 'sep?', 'dd']]]) })  
+	 *	Tempo.init({ layout: '{dow}' })												(can be a single string)
+	 *	Tempo.init({ layout: ['{dow}?', / /, '{dd}'] })				(dont have to provide a 'key' for the {layout})
+	 *	Tempo.init({ layout: new Map([['{dow}{yy}']]) })			(unlikely, but can be a single unit-string)
+	 *	Tempo.init({ layout: new Map([['name1', ['{dow}','{yy}']], ['name2', ['{mm}', '{sep}', '{dd}']]]) })  
 
 	 * 	Tempo.init({event: {'canada ?day': '01-Jun', 'aus(tralia)? ?day': '26-Jan'} })  
 	 * 	Tempo.init({period: [{'morning tea': '09:30' }, {'elevenses': '11:00' }]})  
@@ -431,8 +431,11 @@ export class Tempo {
 	// #region Static public methods~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/**
-	 * set a default configuration for a subsequent a 'new Tempo()' instance to inherit.  
-	 * Tempo.#config is set from a) reasonable default values, then b) local storage, then c) 'init' argument values  
+	 * set a default configuration for a subsequent 'new Tempo()' instance to inherit.  
+	 * Tempo.#config is set from  
+	 * a) reasonable default values, then  
+	 * b) local storage, then  
+	 * c) 'init' argument values  
 	 */
 	static init = (options: Tempo.Options = {}) => {
 		return Promise.race([
@@ -485,8 +488,8 @@ export class Tempo {
 					Tempo.#global.config.locale = locale;							// found an override locale based on timeZone
 				Tempo.#global.config.locale = Tempo.#locale(Tempo.#global.config.locale);
 
-				Tempo.#makeEvent(Tempo.#global);										// setup special Date unit (before patterns!)
-				Tempo.#makePeriod(Tempo.#global);										// setup special Time unit (before patterns!)
+				Tempo.#makeEvent(Tempo.#global);										// setup special Date {layout} (before patterns!)
+				Tempo.#makePeriod(Tempo.#global);										// setup special Time {layout} (before patterns!)
 				Tempo.#makePattern(Tempo.#global);									// setup Regex DateTime patterns
 
 				if (getContext().type === CONTEXT.Browser || options.debug === true)
@@ -500,16 +503,16 @@ export class Tempo {
 
 	/** read Options from persistent storage */
 	static read() {
-		return getStore(StorageKey, {}) as Partial<Tempo.Options>;
+		return getStore(STORAGEKEY, {}) as Partial<Tempo.Options>;
 	}
 
 	/** write Options into persistent storage */
 	static write(config?: Partial<Tempo.Options>) {
-		setStore(StorageKey, config);
+		setStore(STORAGEKEY, config);
 	}
 
 	/**
-	 * combine array of <string | RegExp> to an anchored, case-insensitive RegExp  
+	 * combine array of <string | RegExp> to an anchored, case-insensitive RegExp.  
 	 * layouts generally have {unit} placeholders, for example  '{yy}{sep}{mm}?'  
 	 */
 	static regexp: {
@@ -673,12 +676,18 @@ export class Tempo {
 		let idx = -1;
 
 		return {
-			next: () => ({ done: ++idx >= props.length, value: { property: props[idx], value: this[props[idx]] } }),
+			next: () => ({
+				done: ++idx >= props.length,
+				value: {
+					property: props[idx],
+					value: this[props[idx]],
+				}
+			}),
 		}
 	}
 
 	/** dispose Tempo */
-	[Symbol.dispose]() {																			// for future implementation
+	[Symbol.dispose]() {																			// TODO: =for future implementation
 		Tempo.#info(this.config, 'dispose: ', this.#tempo);
 	}
 
@@ -843,7 +852,7 @@ export class Tempo {
 			.toZonedDateTime({ timeZone: this.#local.config.timeZone, calendar: this.#local.config.calendar });
 		const arg = this.#conform(tempo, today);								// if String or Number, conform the input against known patterns
 
-		Tempo.#info(this.#local.config, 'tempo.conform:', arg);
+		Tempo.#info(this.#local.config, 'tempo.parse:', arg);
 
 		switch (arg.type) {
 			case 'Null':																					// TODO: special Tempo for null?
@@ -966,14 +975,16 @@ export class Tempo {
 			// turn a Quarter into a start-of-Month
 			this.#parseQuarter(groups, today);
 
-			// all date-components are set
+			// all date-components are now set
 			const date = Temporal.PlainDate.from({
 				year: Number(groups["yy"] ?? today.year),
 				month: Number(groups["mm"] ?? today.month),
 				day: Number(groups["dd"] ?? today.day)
 			},
 				{ overflow: 'constrain' })													// check for overflow
-			this.#parsePeriod(groups, today.withPlainDate(date));	// if a time-period pattern is detected, translate it into its clock values
+
+			// if a time-period pattern is detected, translate it into its clock value
+			this.#parsePeriod(groups, today.withPlainDate(date));
 
 			/**
 			 * finished analyzing a matched pattern.  
@@ -1274,10 +1285,13 @@ export class Tempo {
 				.findIndex(mon => mon.quarter === key);
 
 			if (qtr <= 2 && idx >= 6)															// if (Q1 or Q2) and (month >= June)
-				groups["yy"] = pad(Number(groups["yy"]) - 1, 4);		// 	then need to adjust {yy}											
+				today = today.subtract({ years: 1 });
+			groups["yy"] = pad(today.year, 4);										// 	then need to adjust {yy}											
 			groups["mm"] = pad(idx);															// set {month} to beginning of {quarter}
 			groups["dd"] = '01';																	// {quarter} begins on {dd}=1
 		}
+
+		return today;
 	}
 
 	/** return a new object, with only numeric values */
@@ -1338,11 +1352,6 @@ export class Tempo {
 						case 'end':
 							return { mutate: key, offset: 0, single: singular(unit) }
 
-						// case 'period':
-						// case 'event':
-						// case 'date':
-						// case 'time':
-						// case 'dow':
 						default:
 							return { mutate: 'set', single: singular(key), offset: unit }
 					}
@@ -1398,7 +1407,7 @@ export class Tempo {
 
 					case 'set.yy':
 					case 'set.mm':
-					// case 'set.week':
+					// case 'set.ww':
 					case 'set.dd':
 					case 'set.hh':
 					case 'set.mi':
