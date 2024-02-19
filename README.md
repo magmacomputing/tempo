@@ -1,5 +1,5 @@
 <img src="./img/hourglass-svgrepo-com.svg" width="100px">
-<h1><span style="font-size:100px;">Tempo</span></h1>
+<h1 font-size:4em;><span style="font-size:100px;">Tempo</span></h1>
 A Wrapper around the Javascript Temporal object
 
 The new proposed Ecmascript Temporal object (currently at Stage 3 as-at July-2023)
