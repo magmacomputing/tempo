@@ -8,9 +8,7 @@
   },
   "scripts": {
     "test": "vitest run",
-    "prebuild": "rm -rf web && mkdir web",
-    "build": "tsc --build && ./node_modules/.bin/import-remap --from dist/lib --to web --recursive",
-    "postbuild": "rm -rf dist"
+    "build": "tsc --build"
   },
   "repository": {
     "type": "git",
@@ -30,7 +28,6 @@
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
-    "import-remap": "^0.6.0",
     "vite-tsconfig-paths": "^4.3.1",
     "vitest": "^1.2.2"
   }
