@@ -37,8 +37,8 @@ const STORAGEKEY = '_Tempo_';																// for stash in persistent storage
  */
 const Units = {																							// define some components to help interpret input-strings
 	yy: new RegExp(/(?<yy>(\d{2})?\d{2})/),
-	mm: new RegExp(/(?<mm>0[1-9]|1[012]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/),
-	dd: new RegExp(/(?<dd>0[1-9]|[12][0-9]|3[01])/),
+	mm: new RegExp(/(?<mm>0?[1-9]|1[012]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/),
+	dd: new RegExp(/(?<dd>0?[1-9]|[12][0-9]|3[01])/),
 	dow: new RegExp(/((?<dow>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)(?:[\/\-\s\,])*)/),
 	qtr: new RegExp(/q(?<qtr>[1|2|3|4])/),										// qtr: Q1 - Q4
 	hh: new RegExp(/(?<hh>2[0-4]|[01]?\d)/),									// hh:  00 - 24
@@ -46,8 +46,8 @@ const Units = {																							// define some components to help interpre
 	ss: new RegExp(/(\:(?<ss>[0-5]\d))/),											// ss:	00 - 59
 	ff: new RegExp(/(\.(?<ff>\d{1,9}))/),											// up-to 9-digits for fractional seconds
 	mer: new RegExp(/(\s*(?<mer>am|pm))/),										// meridian am/pm suffix
-	sep: new RegExp(/(?<sep>[\/\\\-\s,]*)/),									// date-component separator character
-	sfx: new RegExp(/((?:[\/\\\-\s,T])({tm}))/),							// time-component as a suffix to another {layout}
+	sep: new RegExp(/(?<sep>[\/\\\-\.\s,])/),									// date-component separator character
+	sfx: new RegExp(/((?:[\s,T])({tm}))/),										// time-component as a suffix to another {layout}
 	mod: new RegExp(/((?<mod>[\+\-\<\>][\=]?)?(?<nbr>\d*)\s*)/),// modifiers (+,-,<,<=,>,>=)
 } as Tempo.Units
 // computed Units ('tm', 'dt', 'evt', 'per') are added during 'Tempo.init()' and 'new Tempo()'
@@ -68,10 +68,10 @@ const Default = {
 		['dt', '{dt}'],																					// calendar or event
 		['tm', '{tm}'],																					// clock or period
 		['dtm', '({dt}){sfx}'],																	// event and time-period
-		['dmy', '{dow}?{dd}{sep}{mm}({sep}{yy})?{sfx}?'],
-		['mdy', '{dow}?{mm}{sep}{dd}({sep}{yy})?{sfx}?'],
-		['ymd', '{dow}?{yy}{sep}{mm}({sep}{dd})?{sfx}?'],
-		['qtr', '{yy}{sep}{qtr}{sfx}?'],												// yyyyQq (for example, '2024Q2')
+		['dmy', '{dow}?{dd}{sep}?{mm}({sep}?{yy})?{sfx}?'],
+		['mdy', '{dow}?{mm}{sep}?{dd}({sep}?{yy})?{sfx}?'],
+		['ymd', '{dow}?{yy}{sep}?{mm}({sep}?{dd})?{sfx}?'],
+		['qtr', '{yy}{sep}?{qtr}{sfx}?'],												// yyyyQq (for example, '2024Q2')
 	]),
 	period: [																									// built-in periods to be mapped to a time
 		['mid[ -]?night', '24:00'],
@@ -963,6 +963,9 @@ export class Tempo {
 
 			if (isEmpty(groups))
 				continue;																						// no match, so skip this iteration
+			if (Number(groups["yy"] || '0') > 3000)
+				continue;																						// probably a bad match !
+
 			this.#local.config.parse.match = key;									// stash the {key} of the pattern that was matched
 
 			// if the weekday-pattern is detected, translate it into its calendar values

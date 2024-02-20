@@ -82,12 +82,14 @@ function decode(val: string) {
 }
 
 /** check type can be stringify'd */
-const isStringable: (val: unknown) => boolean = (val) =>
-	!isType(val, 'Function', 'AsyncFunction', 'Symbol', 'WeakMap', 'WeakSet', 'WeakRef');
+function isStringable(val: unknown): boolean {
+	return !isType(val, 'Function', 'AsyncFunction', 'Symbol', 'WeakMap', 'WeakSet', 'WeakRef');
+}
 
 /** string representation of a single-key Object */
-const oneKey = (type: Types, value: string) =>
-	`{"${type}": ${value}}`;
+function oneKey(type: Types, value: string) {
+	return `{"${type}": ${value}}`;
+}
 
 /**
  * For items which are not currently serializable via standard JSON.stringify (Undefined, BigInt, Set, Map, etc.)  
