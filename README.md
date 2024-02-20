@@ -1,5 +1,5 @@
 # <img src="./img/hourglass-svgrepo-com.svg" width="100px"> <span style="font-size:4em;">Tempo</span>
-A Wrapper around the Javascript Temporal object
+A Wrapper around the Javascript Temporal object.
 
 The new proposed Ecmascript Temporal object (currently at Stage 3 as-at July-2023)
 will bring many benefits to Developers.
@@ -19,7 +19,7 @@ by instantiating a class that wraps an immutable Temporal.ZonedDateTime
 		A Tempo will set its options from
 		*> internal default settings
 		*> optionally overridden by config-file settings (see :configuration)
-		*> optionally overridden by invocation settings  (see :options)
+		*> optionally overridden by instantiation settings  (see :options)
 
 *~~~
 # options:

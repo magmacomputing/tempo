@@ -55,7 +55,6 @@ export const randomString = (len = 36) => {
 	return str.substring(0, len);
 }
 
-const regexp = /\$\{(\d)\}/g;																// pattern to find "${digit}" parameter markers
 type Sprintf = {
 	(fmt: string, ...msg: any[]): string;											// either a format-string, followed by arguments
 	(...msg: any[]): string;																	// or just an array of arguments
@@ -65,6 +64,7 @@ type Sprintf = {
 export function sprintf(fmt: string, ...msg: any[]): any;
 export function sprintf(...msg: any[]): string;
 export function sprintf(fmt: {}, ...msg: any[]) {
+	const regexp = /\$\{(\d)\}/g;															// pattern to find "${digit}" parameter markers
 	let sfmt = asString(fmt);																	// avoid mutate fmt
 
 	if (!isString(fmt)) {																			// might be an Object
@@ -104,7 +104,7 @@ export const makeTemplate = (templateString: Object) =>
 	(templateData: Object) =>
 		new Function(`{${Object.keys(templateData).join(',')}}`, 'return `' + templateString + '`')(templateData);
 
-export function asString(str?: unknown) { return isNullish(str) ? '' : stringify(str) };
+export function asString(str?: unknown) { return isNullish(str) ? '' : stringify(str); }
 export const toLower = <T>(str: T) => isString(str) ? asString(str).toLowerCase().trim() : str;
 export const toUpper = <T>(str: T) => isString(str) ? asString(str).toUpperCase().trim() : str;
 
