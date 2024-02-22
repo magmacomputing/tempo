@@ -148,7 +148,7 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 			return `${arg.type === 'Record' ? '#' : ''}{`
 				+ Object.entries(arg.value)
 					.filter(([, val]) => isStringable(val))
-					.map(([key, val]) => `"${key}":${stringize(val)}]`)
+					.map(([key, val]) => `"${key}":${stringize(val)}`)
 				+ `}`;
 
 		case 'Array':
@@ -182,14 +182,14 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 				case !isStringable(arg.value):
 					return void 0 as unknown as string;								// Object is not stringify-able
 
-				case isFunction(arg.value.valueOf):									// Object has its own valueOf method
-					return oneKey(arg.type, JSON.stringify(arg.value.valueOf()));
-
 				case isFunction(arg.value.toString):								// Object has its own toString method
 					return oneKey(arg.type, JSON.stringify(arg.value.toString()));
 
 				case isFunction(arg.value.toJSON):									// Object has its own toJSON method
 					return oneKey(arg.type, JSON.stringify(arg.value.toJSON(), replacer));
+
+				case isFunction(arg.value.valueOf):									// Object has its own valueOf method		
+					return oneKey(arg.type, JSON.stringify(arg.value.valueOf()));
 
 				default:																						// else standard stringify
 					return oneKey(arg.type, JSON.stringify(arg.value, replacer));

@@ -4,7 +4,7 @@ import { asArray } from '@module/shared/array.library.js';
 import { enumKeys } from '@module/shared/enum.library.js';
 import { sprintf } from '@module/shared/string.library.js';
 import { clone } from '@module/shared/serialize.library.js';
-import { getAccessors, pick, purge } from '@module/shared/object.library.js';
+import { getAccessors, purge } from '@module/shared/object.library.js';
 import { asNumber, asInteger, isNumeric, split, ifNumeric } from '@module/shared/number.library.js';
 import { getContext, CONTEXT, getStore, setStore, sleep } from '@module/shared/utility.library.js';
 import { asString, pad, singular, toProperCase, trimAll, } from '@module/shared/string.library.js';
@@ -36,9 +36,9 @@ const STORAGEKEY = '_Tempo_';																// for stash in persistent storage
  * the {pattern} will be used to parse a string | number in the constructor {DateTime} argument    
  */
 const Units = {																							// define some components to help interpret input-strings
-	yy: new RegExp(/(?<yy>(\d{2})?\d{2})/),
-	mm: new RegExp(/(?<mm>0?[1-9]|1[012]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/),
-	dd: new RegExp(/(?<dd>0?[1-9]|[12][0-9]|3[01])/),
+	yy: new RegExp(/(?<yy>([0-2]\d)?\d{2})/),									// arbitrary upper-limit of yy=2999
+	mm: new RegExp(/(?<mm>[0\s]?[1-9]|1[012]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/),
+	dd: new RegExp(/(?<dd>[0\s]?[1-9]|[12][0-9]|3[01])/),
 	dow: new RegExp(/((?<dow>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)(?:[\/\-\s\,])*)/),
 	qtr: new RegExp(/q(?<qtr>[1|2|3|4])/),										// qtr: Q1 - Q4
 	hh: new RegExp(/(?<hh>2[0-4]|[01]?\d)/),									// hh:  00 - 24
@@ -55,7 +55,7 @@ const Units = {																							// define some components to help interpre
 /** Reasonable defaults for initial Tempo options */
 const Default = {
 	version: VERSION,
-	pivot: 75,
+	pivot: 75,																								// 
 	catch: false,
 	debug: false,
 	timeStamp: 'ms',
@@ -404,26 +404,27 @@ export class Tempo {
 	}
 
 	/**
-	 * debug-and-catch  
 	 * use debug:boolean to determine if console()  
-	 * use catch:boolean to determine whether to throw or return  
 	 */
 	static #info = Tempo.#debug.bind(this, 'info');
 	static #warn = Tempo.#debug.bind(this, 'warn');
 	static #error = Tempo.#debug.bind(this, 'error');
 	static #debug(method: Logger = 'info', config: Tempo.Config, ...msg: any[]) {
 		if (config.debug)
-			console[method](sprintf(...msg));
+			console[method](sprintf('tempo:', ...msg));
 	}
 
+	/**
+	 * use catch:boolean to determine whether to throw or return  
+	 */
 	static #catch(config: Tempo.Config, ...msg: any[]) {
 		if (config.catch) {
-			Tempo.#warn(config, ...msg);													// warn {error}
+			Tempo.#warn(config, ...msg);													// catch, but warn {error}
 			return;
 		}
 
 		Tempo.#error(config, ...msg);														// assume {error}
-		throw new Error(sprintf(...msg));
+		throw new Error(sprintf('tempo:', ...msg));
 	}
 
 	// #endregion Static private methods
@@ -541,7 +542,7 @@ export class Tempo {
 						if (isNullish(reg))
 							continue;																			// if not, pass back as-is
 
-						const inner = reg.source.matchAll(/{([^}]+)}/g)// {unit} might contain "{.*}" as well
+						const inner = reg.source.matchAll(/{([^}]+)}/g);// {unit} might contain "{.*}" as well
 						for (const sub of inner) {
 							const { ["1"]: word } = sub;
 							const lkp = (units as Tempo.Units)[word];
@@ -852,7 +853,7 @@ export class Tempo {
 			.toZonedDateTime({ timeZone: this.#local.config.timeZone, calendar: this.#local.config.calendar });
 		const arg = this.#conform(tempo, today);								// if String or Number, conform the input against known patterns
 
-		Tempo.#info(this.#local.config, 'tempo.parse:', arg);
+		Tempo.#info(this.#local.config, 'parse', arg);					// show what we're parsing
 
 		switch (arg.type) {
 			case 'Null':																					// TODO: special Tempo for null?
@@ -933,9 +934,9 @@ export class Tempo {
 	}
 
 	/** evaluate 'string | number' input against known patterns */
-	#conform(tempo: Tempo.DateTime | undefined, today: Temporal.ZonedDateTime) {
+	#conform(tempo: Tempo.DateTime | undefined, dateTime: Temporal.ZonedDateTime) {
 		const arg = asType(tempo);
-		this.#local.config.parse = { type: arg.type, value: arg.value };
+		this.#local.config.parse = { ...arg };
 
 		if (!isType<string | number>(arg.value, 'String', 'Number'))
 			return arg;																						// only conform String or Number against known patterns (not BigInt, etc)
@@ -958,55 +959,45 @@ export class Tempo {
 			}
 		}
 
-		for (const [key, reg] of this.#local.patterns) {				// test against regular-expression patterns until a match is found
-			const groups = this.#match(reg, value);								// return any matches
+		dateTime = dateTime.withPlainTime('00:00:00');					// remove all time-components (and use parsePeriod() below)
+
+		for (const key of this.#local.patterns.keys()) {				// test against regular-expression patterns until a match is found
+			const groups = this.#match(value, key);								// return any matches
 
 			if (isEmpty(groups))
 				continue;																						// no match, so skip this iteration
-			if (Number(groups["yy"] || '0') > 3000)
-				continue;																						// probably a bad match !
 
-			this.#local.config.parse.match = key;									// stash the {key} of the pattern that was matched
-
-			// if the weekday-pattern is detected, translate it into its calendar values
-			this.#parseWeekday(groups, today);
+			// if the weekday-pattern is detected, calculate its calendar value
+			// note: the weekday pattern will not contain any date-components (ie. yy, mm, dd, qtr)
+			dateTime = this.#parseWeekday(groups, dateTime);
 
 			// if the date-event pattern is detected, translate it into its calendar values  
 			// we really are just expecting 'Day-Month' with optional 'Year' in the {events} tuple at this release
-			this.#parseEvent(groups, today);
+			dateTime = this.#parseEvent(groups, dateTime);
 
 			// turn a Quarter into a start-of-Month
-			this.#parseQuarter(groups, today);
+			dateTime = this.#parseQuarter(groups, dateTime);
 
 			// all date-components are now set
 			const date = Temporal.PlainDate.from({
-				year: Number(groups["yy"] ?? today.year),
-				month: Number(groups["mm"] ?? today.month),
-				day: Number(groups["dd"] ?? today.day)
+				year: Number(groups["yy"] ?? dateTime.year),
+				month: Number(groups["mm"] ?? dateTime.month),
+				day: Number(groups["dd"] ?? dateTime.day)
 			},
 				{ overflow: 'constrain' })													// check for overflow
 
 			// if a time-period pattern is detected, translate it into its clock value
-			this.#parsePeriod(groups, today.withPlainDate(date));
+			dateTime = this.#parsePeriod(groups, dateTime.withPlainDate(date));
 
 			/**
 			 * finished analyzing a matched pattern.  
-			 * rebuild {arg.value} into a formatted-string that Temporal can recognize
-			 */
-			Object.assign(arg, {
-				type: 'String',
-				value: `
-						${pad(date.year, 4)}-\
-						${pad(date.month)}-\
-						${pad(date.day)}\
-						${groups["utc"] ?? ''}`													// append time-string
-					.trimAll(/\t/g) + 																// remove <tab> and redundant <space>
-					`[${this.#local.config.timeZone}]` +							// append timeZone
-					`[u-ca=${this.#local.config.calendar}]`						// append calendar
-			})
+			 * rebuild {arg.value} into a ZonedDateTime
+			*/
+			Object.assign(arg, { type: 'Temporal.ZonedDateTime', value: dateTime });
+			Object.assign(this.#local.config.parse, { match: key, groups });// stash the {key} of the pattern that was matched								
 
-			Tempo.#info(this.config, 'tempo.pattern:', key);			// show the pattern that was matched
-			Tempo.#info(this.config, 'tempo.groups:', groups);		// show the resolved date-time elements
+			Tempo.#info(this.config, 'pattern', key);							// show the pattern that was matched
+			Tempo.#info(this.config, 'groups', groups);						// show the resolved date-time elements
 
 			break;																								// stop checking patterns
 		}
@@ -1014,12 +1005,26 @@ export class Tempo {
 		return arg;
 	}
 
-	/** match value against pattern and return a 'clean' named-groups object */
-	#match(pattern: RegExp, value: string) {
-		const groups = value.match(pattern)?.groups || {};
+	/** match {value} against a {pattern} and return a 'clean' named {groups} object */
+	#match(value: string, ...keys: string[]) {
+		const groups: NonNullable<RegExpMatchArray["groups"]> = {};
+		const patterns: RegExp[] = [];													// RegExp's to test against {value} until a match
 
-		Object.entries(groups)																	// remove undefined, NaN, null and empty values
-			.forEach(([key, val]) => isEmpty(val) && Reflect.deleteProperty(groups, key));
+		keys.forEach(key => {
+			const pat = this.#local.patterns.get(key);
+
+			if (isNullish(pat))
+				Tempo.#catch(this.#local.config, `Cannot determine pattern: "${key}`);
+			else patterns.push(pat);
+		})
+
+		patterns.find(pattern => {
+			Object.assign(groups, value.match(pattern)?.groups);
+			Object.entries(groups)																// remove undefined, NaN, null and empty values
+				.forEach(([key, val]) => isEmpty(val) && Reflect.deleteProperty(groups, key));
+
+			return (!isEmpty(groups));														// find the first pattern that defines a match-group
+		})
 
 		/**
 		 * resolve a month-name into a month-number.  
@@ -1039,7 +1044,7 @@ export class Tempo {
 		 * default {nbr} if {mod} is present  
 		 */
 		if (isDefined(groups["mod"]))
-			groups["nbr"] ??= '1';
+			groups["nbr"] ||= '1';
 
 		return groups;
 	}
@@ -1086,7 +1091,7 @@ export class Tempo {
 	}
 
 	/**
-	 * if named-group 'dow' detected (with optional 'mod', 'nbr', and time-units), then calc relative weekday offset  
+	 * if named-group 'dow' detected (with optional 'mod', 'nbr', or time-units), then calc relative weekday offset  
 	 *   Wed		-> Wed this week															might be earlier or later or equal to current day  
 	 *  -Wed		-> Wed last week															same as new Tempo('Wed').add({ weeks: -1 })  
 	 *  +Wed		-> Wed next week															same as new Tempo('Wed').add({ weeks:  1 })  
@@ -1094,127 +1099,116 @@ export class Tempo {
 	 *  <Wed		-> Wed prior to today 												might be current or previous week  
 	 * <=Wed		-> Wed prior to tomorrow											might be current or previous week  
 	 *  Wed noon-> Wed this week at 12:00pm										also allow for time-period specifiers (in #parsePeriod)  
-	 * returns an adjusted ZonedDateTime, and mutates {groups} with resolved time-components  
+	 * returns a ZonedDateTime with computed date-components  
 	 */
-	#parseWeekday(groups: Internal.RegExpGroups, today: Temporal.ZonedDateTime, required = false) {
-		const { dow, mod, nbr, ...rest } = groups as { dow: Tempo.Weekday, mod: Tempo.Modifier, nbr: string };
+	#parseWeekday(groups: Internal.RegExpGroups, dateTime: Temporal.ZonedDateTime, required = false) {
+		const { dow, mod, nbr, ...rest } = groups as { dow: Tempo.Weekday, mod: Tempo.Modifier, [key: string]: string };
 
 		if (isUndefined(groups["dow"])) {												// this is not a {dow} pattern match
 			if (required)
 				Tempo.#catch(this.#local.config, `Match-group does not contain a day-of-week`);
-			return today;
+			return dateTime;
 		}
 
 		/**
-		 * the 'dow' pattern is only allowed to also match 'time' keys (and they are parsed elsewhere)  
-		 * for example: {dow: 'Wed', hh: '10', mer: 'pm'} or {'dow: 'Wed', period: 'per5'}  
-		 * we early-exit if we find anything other than {dow} and time-units
+		 * the {dow} pattern will generally only have {mod} and {nbr}.  
+		 * (an exception is time-components but they will be parsed later in "parsePeriod").  
+		 * for example: {dow: 'Wed', mod: '>', hh: '10', mer: 'pm'} or {'dow: 'Wed', period: 'per5'}  
+		 * we early-exit if we find anything other than {dow}, {mod}, {nbr} and time-units  
 		 * note that we only look for the first-three characters  e.g. the 'per5' period will match the requirement for 'per'  
 		 */
 		const timeKeys = ['hh', 'mi', 'ss', 'ms', 'us', 'ns', 'ff', 'mer', 'per'];
-		const hasTime = Object.keys(rest)
-			.every(key => timeKeys.includes(key.substring(0, 3)));// first three-characters of key included in {timeKeys}
-		if (!hasTime) {
+		const onlyTime = Object.keys(rest)
+			.every(key => timeKeys.includes(key.substring(0, 3)));// up-to first three-characters of key included in {timeKeys}
+		if (!onlyTime) {
 			if (required)
 				Tempo.#catch(this.#local.config, `Unexpected match-groups detected: ${groups}`);
-			return today;
+			return dateTime;																			// this is not a true {dow} pattern, so early-exit
 		}
 
 		const weekday = Tempo.#prefix(dow);											// conform weekday-name
 		const offset = enumKeys(Tempo.WEEKDAY).findIndex(el => el === weekday);
-		const adjust = today.daysInWeek * Number(nbr);					// how many weeks to adjust
+		const adjust = dateTime.daysInWeek * Number(nbr);				// how many days to adjust
 
-		const days = offset - today.dayOfWeek										// number of days to offset from today
-			+ this.#parseModifier({ mod, adjust, offset, period: today.dayOfWeek });
+		const days = offset - dateTime.dayOfWeek								// number of days to offset from dateTime
+			+ this.#parseModifier({ mod, adjust, offset, period: dateTime.dayOfWeek });
 
-		today = today.add({ days });														// adjust {today} to new day
-		groups["yy"] = pad(today.year, 4);											// set the now current year
-		groups["mm"] = pad(today.month, 2);											// and month
-		groups["dd"] = pad(today.day, 2);												// and day
-
-		return today;																						// return the computed date-values
+		return dateTime
+			.add({ days });																				// return the computed date-values
 	}
 
 	/**
 	 * match input against 'evt' pattern.  
 	 * {event} is the object that contains the RegExp named key-pairs group  
 	 * for example, 'evt7' refers to the Tempo.Events[7] tuple, e.g. ['xmas', '25-Dec']  
-	 * returns an adjusted ZonedDateTime, and mutates {groups} with resolved time-components  
+	 * returns an adjusted ZonedDateTime with resolved time-components  
 	 */
-	#parseEvent(groups: Internal.RegExpGroups, today: Temporal.ZonedDateTime, required = false) {
-		const { mod, nbr, yy, mm, dd, ...rest } = groups as { mod: Tempo.Modifier, [key: string]: string; };
+	#parseEvent(groups: Internal.RegExpGroups, dateTime: Temporal.ZonedDateTime, required = false) {
+		const { mod, nbr, yy: year, mm: month, dd: day, ...rest } = groups as { mod: Tempo.Modifier, [key: string]: string; };
 		const event = Object.keys(rest)
 			.find(itm => itm.match(/^evt\d+$/));									// for example, the key of {evt4: 'xmas'}
 
-		if (isEmpty(event) && isEmpty(yy) && isEmpty(mm) && isEmpty(dd)) {
+		if (isEmpty(event) && isEmpty(year) && isEmpty(month) && isEmpty(day)) {
 			if (required)
 				Tempo.#catch(this.#local.config, `Match-group does not contain a date or event`);
-			return today;																					// return default
+			return dateTime;																			// return default
 		}
 
-		const date = Object.assign(this.#num({									// set defaults to use when match does not fill all date-components
-			yy: yy ?? today.year,																	// supplied year, else current year
-			mm: mm ?? today.month,																// supplied month, else current month
-			dd: dd ?? today.day,																	// supplied day, else current day
-		})) as { yy: number, mm: number, dd: number };
+		const date = Object.assign(this.#num({									// set defaults to use if match does not fill all date-components
+			year: year ?? dateTime.year,													// supplied year, else current year
+			month: month ?? dateTime.month,												// supplied month, else current month
+			day: day ?? dateTime.day,															// supplied day, else current day
+		})) as { year: number, month: number, day: number };
 
+		/**
+		 * If an event-code is detected in {groups},  
+		 * then lookup the event-value from config.event,  
+		 * and apply a set of patterns to see if any match.  
+		 * then move the resolved {yy}, {mm}, {dd} into {date}
+		 */
 		if (event) {
-			const idx = Number(event[3]);
+			const idx = Number(event[3]);													// number index of the {event}
 			const [_, evt] = this.#local.config.event[idx];				// fetch the indexed tuple's value
-			const dmy = this.#local.patterns.get('dmy');
-			const ymd = this.#local.patterns.get('ymd');
-			const grp = {} as Internal.RegExpGroups;							// RegExp.groups on a match
 
 			if (isUndefined(evt)) {
 				Tempo.#catch(this.config, `No definition for Event key: "${evt}"`);
-				return today;
-			}
-			if (isUndefined(dmy)) {
-				Tempo.#catch(this.config, `No definition for Pattern key: "dmy"`);
-				return today;
-			}
-			if (isUndefined(ymd)) {
-				Tempo.#catch(this.config, `No definition for Pattern key: "ymd"`);
-				return today;
+				return dateTime;
 			}
 
-			if (dmy)																							// try a match on 'dmy' first
-				Object.assign(grp, pick(this.#match(dmy, evt), 'yy', 'mm', 'dd'));
+			// try {dmy} else {mdy} else {ymd}
+			const grp = this.#match(evt, 'dmy', 'mdy', 'ymd');
+			const { yy: year = date.year, mm: month = date.month, dd: day = date.day } = this.#num(grp);
 
-			if (isEmpty(grp) && ymd)															// try a match on 'ymd' if 'dmy' failed
-				Object.assign(grp, pick(this.#match(ymd, evt), 'yy', 'mm', 'dd'));
-
-			Object.assign(date, this.#num(grp));									// mutate the {date} object with the results of the 'dmy' or 'ymd' match
+			Object.assign(date, { year, month, day });						// mutate the {date} object with the results of the match
 		}
 
 		/**
-		 * change two-digit year into four-digits using 'pivot-year' to determine century
-		 * 22			-> 2022
-		 * 34			-> 1934
-		*/
-		if (date.yy.toString().match(/^\d{2}$/)) {							// if {yy} match just-two digits
-			const [, pivot] = split(today
-				.subtract({ 'years': this.#local.config.pivot })		// arbitrary-years ago is pivot for century
-				.year / 100, '.')																		// split on decimal-point
-			const [century] = split(today.year / 100, '.');				// current century
-			date.yy += (century - Number(date.yy > pivot)) * 100;
+		 * change two-digit year into four-digits using 'pivot-year' (defaulted to '75' years) to determine century  
+		 * pivot		= (currYear - Tempo.pivot) % 100						// for example, Rem((2024 - 75) / 100) => 49
+		 * century	= Int(currYear / 100)												// for example, Int(2024 / 100) => 20
+		 * 22				=> 2022																			// 22 is less than pivot, so use {century}
+		 * 57				=> 1957																			// 57 is greater than pivot, so use {century - 1}
+		 */
+		if (date.year.toString().match(/^\d{2}$/)) {						// if {yy} match just-two digits
+			const pivot = dateTime
+				.subtract({ years: this.#local.config.pivot })			// arbitrary-years ago is pivot for century
+				.year % 100																					// remainder 
+			const century = Math.trunc(dateTime.year / 100);			// current century
+			date.year += (century - Number(date.year > pivot)) * 100;
 		}
 
-		// adjust the {yy} if a Modifier is present
+		// adjust the {year} if a Modifier is present
 		const modifier = event ? mod : void 0;									// {mod} only valid if {event}
 		const adjust = Number(nbr);															// how many years to adjust
-		const offset = Number(pad(mm, 2) + '.' + pad(dd, 2));		// the event month.day
-		const period = Number(pad(today.month, 2) + '.' + pad(today.day + 1, 2));
-		date.yy += this.#parseModifier({ mod: modifier, adjust, offset, period });
+		const offset = Number(pad(date.month) + '.' + pad(date.day));		// the event month.day
+		const period = Number(pad(dateTime.month) + '.' + pad(dateTime.day + 1));
+		date.year += this.#parseModifier({ mod: modifier, adjust, offset, period });
 
-		Object.assign(groups, {																	// mutate the original {groups} object
-			yy: pad(date.yy, 4),
-			mm: pad(date.mm, 2),
-			dd: pad(date.dd, 2),
-		});
+		// all date-components are now set; check for overflow in case past end-of-month
+		const overflow = Temporal.PlainDate.from(date, { overflow: 'constrain' });
 
-		return today
-			.withPlainDate({ year: date.yy, month: date.mm, day: date.dd });
+		return dateTime
+			.withPlainDate(overflow);															// return constrained date
 	}
 
 	/**
@@ -1222,45 +1216,47 @@ export class Tempo {
 	 * {groups} contains a {period} (like {per5:'afternoon'}) or {time}-components (like {hh:'15', mi: '00', mer:'pm'})  
 	 * return an adjusted ZonedDateTime, and mutate {groups} with resolved time-components  
 	 */
-	#parsePeriod(groups: Internal.RegExpGroups = {}, today: Temporal.ZonedDateTime, required = false) {
+	#parsePeriod(groups: Internal.RegExpGroups = {}, dateTime: Temporal.ZonedDateTime, required = false) {
 		const period = Object.keys(groups)
 			.find(itm => itm.match(/^per\d+$/));									// for example, the key of {per5: 'afternoon'}
 
 		if (isEmpty(groups["hh"]) && !period) {									// must contain either 'time' (with at least {hh}) or {period}
 			if (required)
 				Tempo.#catch(this.#local.config, `Match-group does not contain a time or period`);
-			return today;
+			return dateTime;
 		}
 
+		/**
+		 * If a period-code is detected in {groups}  
+		 * then lookup the period-value from config.event,  
+		 * and apply the 'tm' pattern to see if any match,
+		 * then move the resolved {hh},{mi},{ss},{ms},{us},{ns} into {groups}
+		 */
 		if (period) {
-			const tm = this.#local.patterns.get('tm');						// needed to re-interpret a {period}'s value
 			const idx = Number(period[3]);												// get the {period} index (for example 'per5')
 			const [, per] = this.#local.config.period[idx];				// fetch the indexed tuple's value (for example the value of {'per5', 'afternoon'})
 
-			if (isUndefined(tm)) {
-				Tempo.#catch(this.#local.config, `Cannot find {tm} pattern`);
-				return today;
-			}
-
 			// the 'match' result against the 'tm' pattern should return named-group strings for 'hh', 'mi', 'ss' and 'mer'
-			Object.assign(groups, this.#match(tm, per));					// test {per} against {tm} pattern, and update {groups}
+			Object.assign(groups, this.#match(per, 'tm'));				// test {per} against {tm} pattern, and update {groups}
 			if (isEmpty(groups["hh"])) {													// couldn't determine a {time}
 				Tempo.#catch(this.#local.config, `Cannot determine a {time} from period: ${period}`);
-				return today;
+				return dateTime;
 			}
 		}
 
-		let { hh = 0, mi = 0, ss = 0, ms = 0, us = 0, ns = 0 } = this.#num(groups);
+		let { hh = 0, mi = 0, ss = 0, ms = 0, us = 0, ns = 0, ff = 0 } = this.#num(groups);
 
 		if (hh >= 24) {
 			const days = Math.trunc(hh / 24);											// number of days to offset
 
 			hh = hh % 24;																					// midnight is '00:00' on the next-day
-			today = today.add({ days });													// move the date forward
+			dateTime = dateTime.add({ days });										// move the date forward
+		}
 
-			groups["yy"] = pad(today.year, 4);										// year might have changed
-			groups["mm"] = pad(today.month, 2);										// month might have changed
-			groups["dd"] = pad(today.day, 2);											// day has changed
+		if (ff) {																								// {ff} is fractional seconds
+			ms = +ff.toString().substring(0, 3).padEnd(3, '0');
+			us = +ff.toString().substring(3, 5).padEnd(3, '0');
+			ns = +ff.toString().substring(6, 8).padEnd(3, '0');
 		}
 
 		if (groups["mer"]?.toLowerCase() === 'pm' && hh < 12 && (hh + mi + ss + ms + us + ns) > 0)
@@ -1268,13 +1264,7 @@ export class Tempo {
 		if (groups["mer"]?.toLowerCase() === 'am' && hh >= 12)
 			hh -= 12;																							// anything after midday
 
-		groups["hh"] = pad(hh, 2);															// in case {hh} changed due to midday-check / 24-hour-check
-		groups["ff"] ??= pad(ms, 3) + pad(us, 3) + pad(ns, 3);	// fractional seconds
-		groups["utc"] = `T${pad(hh)}:${pad(groups["mi"])}:${pad(groups["ss"])}`;
-		if (Number(groups["ff"]))
-			groups["utc"] += '.' + groups["ff"];									// append fractional seconds
-
-		return today																						// return the computed time-values
+		return dateTime																						// return the computed time-values
 			.withPlainTime({ hour: hh, minute: mi, second: ss, millisecond: ms, microsecond: us, nanosecond: ns });
 	}
 
@@ -1287,18 +1277,14 @@ export class Tempo {
 			const idx = this.#local.months												// lookup the quarter's start-of-month
 				.findIndex(mon => mon.quarter === key);
 
-			if (qtr <= 2 && idx >= 6)															// if (Q1 or Q2) and (month >= June)
-				today = today.subtract({ years: 1 });
-			groups["yy"] = pad(today.year, 4);										// 	then need to adjust {yy}											
-			groups["mm"] = pad(idx);															// set {month} to beginning of {quarter}
-			groups["dd"] = '01';																	// {quarter} begins on {dd}=1
+			today = today.with({ year: today.year - Number(qtr <= 2 && idx >= 6), month: idx, day: 1 });
 		}
 
 		return today;
 	}
 
 	/** return a new object, with only numeric values */
-	#num = (groups: Internal.RegExpGroups) => {
+	#num = (groups: Partial<Internal.RegExpGroups>) => {
 		return Object.entries(groups)
 			.reduce((acc, [key, val]) => {
 				if (isNumeric(val))
@@ -1365,24 +1351,11 @@ export class Tempo {
 				switch (`${mutate}.${single}`) {
 					case 'set.period':
 					case 'set.time':
-						const tm = this.#local.patterns.get('tm');
-						if (isNullish(tm)) {
-							Tempo.#catch(this.#local.config, `Cannot find "tm" pattern`);
-							return zdt;
-						}
-
-						groups = this.#match(tm, offset);								// for example, {per5: "afternoon"} or {hh: "10", mer: "pm"}
-						return this.#parsePeriod(this.#match(tm, offset), zdt, true);		// mutate to the period 'time'
+						return this.#parsePeriod(this.#match(offset, 'tm'), zdt, true);		// mutate to the period 'time'
 
 					case 'set.event':
 					case 'set.date':
-						const dt = this.#local.patterns.get('dt');
-						if (isNullish(dt)) {														// cannot find the 'dt' pattern
-							Tempo.#catch(this.#local.config, 'Cannot find "dt" pattern');
-							return zdt;
-						}
-
-						groups = this.#match(dt, offset);								// for example, {evt7: "xmas"} or {dd: "20", mm: "05"}
+						groups = this.#match(offset, 'dt');								// for example, {evt7: "xmas"} or {dd: "20", mm: "05"}
 						return this.#parseEvent(groups, zdt, true);			// mutate to the event 'date'
 
 					case 'set.dow':
@@ -1392,7 +1365,7 @@ export class Tempo {
 							return zdt;
 						}
 
-						groups = this.#match(dow, offset);							// for example, {dow: "Wed", mod: ">"}
+						groups = this.#match(offset, 'dow');							// for example, {dow: "Wed", mod: ">"}
 						return this.#parseWeekday(groups, zdt, true);		// mutate to the offset 'weekday'
 
 					case 'set.year':
