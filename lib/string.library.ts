@@ -55,20 +55,15 @@ export const randomString = (len = 36) => {
 	return str.substring(0, len);
 }
 
-type Sprintf = {
-	(fmt: string, ...msg: any[]): string;											// either a format-string, followed by arguments
-	(...msg: any[]): string;																	// or just an array of arguments
-}
-
 /** use sprintf-style formatting on a string */
-export function sprintf(fmt: string, ...msg: any[]): any;
-export function sprintf(...msg: any[]): string;
+export function sprintf(fmt: string, ...msg: any[]): string;// either a format-string, followed by arguments
+export function sprintf(...msg: any[]): string;							// or just an array of arguments
 export function sprintf(fmt: {}, ...msg: any[]) {
 	const regexp = /\$\{(\d)\}/g;															// pattern to find "${digit}" parameter markers
 	let sfmt = asString(fmt);																	// avoid mutate fmt
 
 	if (!isString(fmt)) {																			// might be an Object
-		msg.unshift(stringify(fmt));														// push to start of msg[]
+		msg.unshift(JSON.stringify(fmt));												// push to start of msg[]
 		sfmt = '';																							// reset the string-format
 	}
 
@@ -82,7 +77,8 @@ export function sprintf(fmt: {}, ...msg: any[]) {
 			sfmt += `${sfmt.length === 0 ? '' : sfmt.endsWith(':') ? ' ' : ', '}\${${idx}}`	//  append a dummy params to fmt
 	})
 
-	return sfmt.replace(regexp, (_, idx) => isObject(msg[idx]) ? stringify(msg[idx]) : msg[idx]);
+	// 2024-02-21  do not stringify() just to sprintf
+	return sfmt.replace(regexp, (_, idx) => isObject(msg[idx]) ? JSON.stringify(msg[idx]) : msg[idx]);
 }
 
 /** apply a plural suffix, if greater than '1' */
