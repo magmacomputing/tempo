@@ -12,7 +12,7 @@ export function clone<T>(obj: T) {
 	try {
 		if (!globalThis.structuredClone)
 			throw new Error('clone: structuredClone');						// skip, if not supported
-		copy = structuredClone?.(obj);
+		copy = globalThis.structuredClone(obj);
 	} catch (error) {
 		copy = cleanify(obj);
 	}
