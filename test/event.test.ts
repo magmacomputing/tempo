@@ -25,7 +25,7 @@ describe(`${label}`, () => {
   })
 
   test(`${label} test Period and set Event`, () => {
-    expect(new Tempo().set({ year: 2020, time: '10:30:45pm', date: 'xmas' }).toDate().toLocaleString())
+    expect(new Tempo().set({ year: 2020, time: '10:30:45pm', event: 'xmas' }).toDate().toLocaleString())
       .toEqual(date.toLocaleString())
   })
 
