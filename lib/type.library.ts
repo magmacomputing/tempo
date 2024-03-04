@@ -170,6 +170,7 @@ export type TypeValue<T> =
 	{ type: 'Undefined', value: undefined } |
 	{ type: 'Null', value: null } |
 	{ type: 'Void', value: void } |
+	{ type: 'Empty', value: unknown } |
 	{ type: 'Date', value: Date } |
 	{ type: 'Function', value: Function } |
 	{ type: 'Class', value: T } |

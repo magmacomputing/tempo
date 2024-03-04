@@ -6,7 +6,7 @@ import { isDefined, isString } from '@module/shared/type.library.js';
 
 /** memoize repeated lookups */
 export const memoize = <F extends (...args: any) => any>(fn: F) => {
-	const cache = new Map<string, ReturnType<F>>();
+	const cache = new Map<string | symbol, ReturnType<F>>();
 
 	return (...args: unknown[]) => {
 		const key = JSON.stringify(args);
@@ -41,12 +41,12 @@ export const padString = (str: string | number | bigint, pad = 6) =>
 
 /**
  * introduce a wait-timer that will Error() on timeOut.  
- * best used with Promise.race([xxx, sleep()]  
+ * best used with Promise.race([xxx(), sleep()]  
  * @param msg			string to display on a timeout 
- * @param timeOut	how many milliseconds to sleep  
+ * @param timeOut	how many milliseconds to sleep (default 2-seconds)  
  * @returns Promise  
  */
-export const sleep = (msg = 'sleep: timed out', timeOut = 2000) =>						// default 2-second timeout
+export const sleep = (msg = 'sleep: timed out', timeOut = 2000) =>
 	new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), timeOut));
 
 export enum CONTEXT {
