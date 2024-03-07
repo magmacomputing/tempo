@@ -2,7 +2,7 @@
 // no typescript checking to get around the 'this' binding warnings
 
 import { trimAll, toProperCase } from '@module/shared/string.library.js';
-import { asArray, keyedBy, sortBy, type SortBy } from '@module/shared/array.library.js';
+import { asArray, sortBy, type SortBy, keyedBy } from '@module/shared/array.library.js';
 
 // Prototype extensions
 // Remember to define any imports as a Function declaration (not a Function expression)
@@ -59,13 +59,7 @@ declare global {
 
 		/** return sorted Array-of-objects */										orderBy(keys: (string | SortBy)[]): T[];
 		/** return sorted Array-of-objects */										orderBy(...keys: (string | SortBy)[]): T[];
-		/** return sorted Array-of-objects */										sortBy(keys: (string | SortBy)[]): T[];
-		/** return sorted Array-of-objects */										sortBy(...keys: (string | SortBy)[]): T[];
-
-		/** return new Array with no repeated elements */				distinct(): T[];
-		/** return mapped Array with no repeated elements */		distinct<S>(mapfn: (value: T, index: number, array: T[]) => S, thisArg?: any): S[];
-
-		/** clear down an Array */															truncate(): T[];
+		/** return sorted Array-of-objekey												truncate(): T[];
 
 		/** return cartesian-product of Array of Arrays */			cartesian(): T;
 		/** return cartesian-product of Array of Arrays */			cartesian(...args: T[][]): T[];
@@ -78,9 +72,9 @@ function fn(...keys: (string | SortBy)[]) { return this.sort(sortBy(...keys)); }
 patch(Array, 'orderBy', fn);																// order array by named keys
 patch(Array, 'sortBy', fn);																	// sort array by named keys
 
-patch(Array, 'keyedBy', function (...keys: string[]) {
-	return keyedBy(this, ...keys);														// group an array in an object with named keys
-});
+patch(Array, 'keyedBy', function (key: string) {
+	return keyedBy(this, key);																// group an array into an object with named keys
+})
 
 patch(Array, 'tap', function (fn: Function) {
 	fn(this);																									// run an arbitrary function

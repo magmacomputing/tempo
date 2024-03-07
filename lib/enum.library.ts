@@ -53,18 +53,17 @@ export const enumEntries = <T extends {}>(enumType: T) =>		// Enum entries
 // type Enum<E> = Record<keyof E, E[keyof E]>
 // type Enum<E> = Record<keyof  E, unknown>
 type Enum<T> = {
-	[id: string]: T | string;
-	[nbr: number]: string;
-}
+	[id in keyof T]: T[keyof T];
+};
 
 export const objCount = <T>(enumType: Enum<T>) =>
 	Object.keys(enumType).length;
 
 export const objKeys = <T>(enumType: Enum<T>) =>
-	Object.keys(enumType);
+	Object.keys(enumType) as unknown as keyof T;
 
 export const objValues = <T>(enumType: Enum<T>) =>
-	Object.values(enumType);
+	Object.values(enumType) as T[keyof T];
 
 export const objEntries = <T>(enumType: Enum<T>) =>
-	Object.entries(enumType);
+	Object.entries(enumType) as [keyof T, T[keyof T]];

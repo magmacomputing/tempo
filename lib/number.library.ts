@@ -3,7 +3,7 @@ import { asString } from '@module/shared/string.library.js';
 import { asType, isInteger, isString, type TValues } from '@module/shared/type.library.js';
 
 /** RegExp string representation of a BigInt */
-export const patInteger = /^[0-9]+n$/;
+export const patInteger = /^\d+n$/;
 
 /** convert String to Number */
 export function asNumber(str?: string | number | bigint) {
