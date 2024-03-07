@@ -78,26 +78,46 @@ export function sortBy<T>(...keys: (string | SortBy)[]) {
 	}
 }
 
-/** Group documents by key-fields */
-export function keyedBy<T, K extends string>(table: T[], ...keys: string[]): Record<K, T[]>;
-export function keyedBy<T, K extends string>(table: T[], flatten: true, ...keys: string[]): Record<K, T>;
-export function keyedBy<T, K extends string>(table: T[], flatten: false, ...keys: string[]): Record<K, T[]>;
-export function keyedBy<T, K extends string>(table: T[], ...keys: [...string[]] | [boolean, ...string[]]) {
-	let flatten = false;
-	if (isBoolean(keys[0])) {
-		flatten = keys[0];
-		keys.splice(0, 1);
+// node_modules/typescript/lib/lib.esnext.object.d.ts
+// This is temporary until Typescript sorts out the signature for Object.groupBy
+declare global {
+	interface ObjectConstructor {
+		/**
+		 * Groups members of an iterable according to the return value of the passed callback.
+		 * @param items An iterable.
+		 * @param keySelector A callback which will be invoked for each item in items.
+		 */
+		groupBy<K extends PropertyKey, T>(
+			items: Iterable<T>,
+			keySelector: (item: T, index: number) => K,
+		): Partial<Record<K, T[]>>;
 	}
-
-	return table.reduce((acc, row) => {
-		const group = (keys as K[])
-			.map(key => getPath(row, key)).join(':') as K;
-
-		if (flatten)
-			acc[group] = row;																			// only return last match
-		else
-			((acc[group] as T[]) ??= []).push(row);								// return all matches in Array
-
-		return acc;
-	}, {} as Record<K, T | T[]>);
 }
+
+/** Group documents by key-fields */
+export function keyedBy<T extends Record<PropertyKey, string>>(array: T[], key: string) {
+	return Object.groupBy(array, (itm) => itm[key]);
+}
+/** 2024-Mar-07:  this has been deprecated in favour of the new, inbuilt Object.groupBy() method */
+// export function keyedBy<T, K extends string>(table: T[], ...keys: string[]): Record<K, T[]>;
+// export function keyedBy<T, K extends string>(table: T[], flatten: true, ...keys: string[]): Record<K, T>;
+// export function keyedBy<T, K extends string>(table: T[], flatten: false, ...keys: string[]): Record<K, T[]>;
+// export function keyedBy<T, K extends string>(table: T[], ...keys: [...string[]] | [boolean, ...string[]]) {
+// 	let flatten = false;
+// 	if (isBoolean(keys[0])) {
+// 		flatten = keys[0];
+// 		keys.splice(0, 1);
+// 	}
+
+// 	return table.reduce((acc, row) => {
+// 		const group = (keys as K[])
+// 			.map(key => getPath(row, key)).join(':') as K;
+
+// 		if (flatten)
+// 			acc[group] = row;																			// only return last match
+// 		else
+// 			((acc[group] as T[]) ??= []).push(row);								// return all matches in Array
+
+// 		return acc;
+// 	}, {} as Record<K, T | T[]>);
+// }

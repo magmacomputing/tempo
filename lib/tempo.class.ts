@@ -685,7 +685,7 @@ export class Tempo {
 	}
 
 	/** dispose Tempo */
-	[Symbol.dispose]() {																			// TODO: =for future implementation
+	[Symbol.dispose]() {																			// TODO: for future implementation
 		Tempo.#info(this.config, 'dispose: ', this.#tempo);
 	}
 
@@ -1235,7 +1235,7 @@ export class Tempo {
 			if (isUndefined(reg)) {
 				Tempo.#catch(this.#local.config, `Cannot pattern for "${pat}"`);
 			} else {
-				Object.assign(groups, this.#parseMatch(evt, reg));//evt.match(reg)?.groups);
+				Object.assign(groups, this.#parseMatch(evt, reg));
 			}
 
 			return !isEmpty(groups);															// return on the first matched pattern
@@ -1254,7 +1254,7 @@ export class Tempo {
 			return;
 		}
 
-		Object.assign(groups, this.#parseMatch(per, tm));//per.match(tm)?.groups);
+		Object.assign(groups, this.#parseMatch(per, tm));
 
 		return groups;
 	}
@@ -1886,7 +1886,6 @@ namespace Internal {
  */
 await Tempo.init();
 
-// shortcut functions to common Tempo properties / methods
 type Params<T> = {																					// Type for consistency in expected arguments
 	(tempo?: Tempo.DateTime, options?: Tempo.Options): T;			// parse Tempo.DateTime, default to Temporal.Instant.now()
 	(options: Tempo.Options): T;															// provide just Tempo.Options (use {value:'XXX'} for specific Tempo.DateTime)
@@ -1896,6 +1895,7 @@ type Fmt = {																								// used for the fmtTempo() shortcut
 	<F extends Tempo.Formats>(fmt: F, options: Tempo.Options): Tempo.Format[F];
 }
 
+// shortcut functions to common Tempo properties / methods
 /** check valid Tempo */			export const isTempo = (tempo?: unknown) => isType<Tempo>(tempo, 'Tempo');
 /** current timestamp (ts) */	export const getStamp = ((tempo, options) => new Tempo(tempo, options).ts) as Params<number | bigint>;
 /** create new Tempo */				export const getTempo = ((tempo, options) => new Tempo(tempo, options)) as Params<Tempo>;
