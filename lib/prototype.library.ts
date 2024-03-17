@@ -42,11 +42,23 @@ patch(String, 'toProperCase', function () { return toProperCase(this) });
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // extend Object prototype
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// declare global {
-// 	interface ObjectConstructor {
-// 		entries<T extends {}>(object: T): ReadonlyArray<Entry<T>>
-// 	}
-// }
+declare global {
+	interface ObjectConstructor {
+		// 		entries<T extends {}>(object: T): ReadonlyArray<Entry<T>>
+
+		// node_modules/typescript/lib/lib.esnext.object.d.ts
+		// This is temporary until Typescript sorts out the signature for Object.groupBy
+		/**
+		 * Groups members of an iterable according to the return value of the passed callback.
+		 * @param items An iterable.
+		 * @param keySelector A callback which will be invoked for each item in items.
+		 */
+		groupBy<K extends PropertyKey, T>(
+			items: Iterable<T>,
+			keySelector: (item: T, index: number) => K,
+		): Partial<Record<K, T[]>>;
+	}
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // extend Array prototype
@@ -59,7 +71,12 @@ declare global {
 
 		/** return sorted Array-of-objects */										orderBy(keys: (string | SortBy)[]): T[];
 		/** return sorted Array-of-objects */										orderBy(...keys: (string | SortBy)[]): T[];
-		/** return sorted Array-of-objekey												truncate(): T[];
+		/** return sorted Array-of-objects */										sortBy(keys: (string | SortBy)[]): T[];
+		/** return sorted Array-of-objects */										sortBy(...keys: (string | SortBy)[]): T[];
+
+		/** return new Array with no repeated elements */				distinct(): T[];
+		/** return mapped Array with no repeated elements */		distinct<S>(mapfn: (value: T, index: number, array: T[]) => S, thisArg?: any): S[];
+		/** Clear down an Array */															truncate(): T[];
 
 		/** return cartesian-product of Array of Arrays */			cartesian(): T;
 		/** return cartesian-product of Array of Arrays */			cartesian(...args: T[][]): T[];

@@ -55,14 +55,18 @@ const Units = {																							// define some components to help interpre
 /** Reasonable defaults for initial Tempo options */
 const Default = {
 	version: VERSION,
-	pivot: 75,																								// 
+	pivot: 75,																								// to assist in translating two-digit years into four-digit: https://en.wikipedia.org/wiki/Date_windowing
 	catch: false,
 	debug: false,
 	timeStamp: 'ms',
 	calendar: 'iso8601',
 	sphere: 'north',
-	// fiscal: 'Jan',
+	fiscal: 'Jan',
 	monthDay: ['en-US', 'en-AS'],															// array of Locales that prefer 'mm-dd-yy' date order: https://en.wikipedia.org/wiki/Date_format_by_country
+	terms: {																									// system supported {terms} that define a set of dates within a year
+		[Symbol.for('quarter')]: new Map(),											// will be filled in init() after we determine the fiscal start-month
+		[Symbol.for('season')]: new Map(),											// will be filled in init() after we determine the hemisphere
+	},
 	layout: new Map([																					// built-in layouts to be checked, and in this order
 		[Symbol.for('dow'), '{mod}?{dow}{sfx}?'],								// special layout (no {dt}!) used for day-of-week calcs (only one that requires {dow} unit)
 		[Symbol.for('dt'), '{dt}'],															// calendar or event
@@ -216,13 +220,18 @@ export class Tempo {
 		return isMonthDay;
 	}
 
-	/** setup meteorological seasons based on hemisphere */
+	/** setup seasons based on hemisphere */
 	static #season(shape: Internal.Shape) {
-		(shape.config.sphere !== Tempo.COMPASS.South
-			? [void 0, 'Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer', 'Summer', 'Summer', 'Autumn', 'Autumn', 'Autumn', 'Winter']
-			: [void 0, 'Summer', 'Summer', 'Autumn', 'Autumn', 'Autumn', 'Winter', 'Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer']
-		)																												// 1=first, 2=mid, 3=last month of season
-			.forEach((season, idx) => { if (idx !== 0) shape.months[idx].season = `${season}.${idx % 3 + 1}` as Tempo.Month["season"] });
+		const range = shape.config.sphere !== Tempo.COMPASS.South
+			? new Map([['Spring', { day: 20, month: 3 }], ['Summer', { day: 21, month: 6 }], ['Autumn', { day: 22, month: 9 }], ['Winter', { day: 21, month: 12 }]])
+			: new Map([['Autumn', { month: 3 }], ['Winter', { month: 6 }], ['Spring', { month: 9 }], ['Summer', { month: 12 }]])
+
+		Tempo.#setTerm(shape, Symbol.for('season'), range);
+		// (shape.config.sphere !== Tempo.COMPASS.South
+		// 	? [void 0, 'Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer', 'Summer', 'Summer', 'Autumn', 'Autumn', 'Autumn', 'Winter']
+		// 		: [void 0, 'Summer', 'Summer', 'Autumn', 'Autumn', 'Autumn', 'Winter', 'Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer']
+		// )																												// 1=first, 2=mid, 3=last month of season
+		// 	.forEach((season, idx) => { if (idx !== 0) shape.months[idx].season = `${season}.${idx % 3 + 1}` as Tempo.Month["season"] });
 	}
 
 	/** setup fiscal quarters, from a given start month */
@@ -231,22 +240,27 @@ export class Tempo {
 			&& Tempo.#prefix(shape.config.fiscal)									// conform the fiscal month name
 			|| (shape.config.sphere === Tempo.COMPASS.North ? Tempo.MONTH.Oct : Tempo.MONTH.Jul));
 
-
-
 		const start = enumKeys(Tempo.MONTH)
 			.findIndex(mon => mon === Tempo.#prefix(shape.config.fiscal));
 		if (start === -1)
 			return;																								// cannot determine start-Month
 
-		for (let i = start, mon = 1; i <= (start + 12); i++, mon++) {
-			const idx = i % 13;																		// index into the Month
-			if (idx !== 0) {
-				const qtr = Math.floor((mon - 1) / 3) + 1;					// quarter increments every third iteration
-				const offset = (mon - 1) % 3 + 1;										// 1=first, 2=mid, 3=last month of quarter
-				shape.months[idx].quarter = qtr + (offset / 10) as Tempo.Month["quarter"];
-			}
-			else mon--
-		}
+		const range = new Map([																	// Map of start months for each quarter
+			[1, { month: start }],
+			[2, { month: start + 3 - (Number(start >= 10) * 12) }],
+			[3, { month: start + 6 - (Number(start >= 7) * 12) }],
+			[4, { month: start + 9 - (Number(start >= 4) * 12) }]
+		]);
+		Tempo.#setTerm(shape, Symbol.for('quarter'), range);
+		// for (let i = start, mon = 1; i <= (start + 12); i++, mon++) {
+		// 	const idx = i % 13;																		// index into the Month
+		// 	if (idx !== 0) {
+		// 		const qtr = Math.floor((mon - 1) / 3) + 1;					// quarter increments every third iteration
+		// 		const offset = (mon - 1) % 3 + 1;										// 1=first, 2=mid, 3=last month of quarter
+		// 		shape.months[idx].quarter = qtr + (offset / 10) as Tempo.Month["quarter"];
+		// 	}
+		// 	else mon--
+		// }
 	}
 
 	/** properCase week-day / calendar-month */
@@ -286,6 +300,17 @@ export class Tempo {
 
 		Reflect.deleteProperty(shape.config, 'sphere');					// timeZone does not observe DST
 		return void 0;
+	}
+
+	/** set a Term's date-range */
+	static #setTerm(shape: Internal.Shape, term: string | symbol, ranges: Tempo.Term) {
+		shape.terms ??= {};																			// ensure parent object exists
+		shape.terms[term] = new Map();													// remove prior {term}
+
+		[...ranges.entries()]																		// default day:1, sort by month, by day
+			.map(([key, range]) => [key, Object.assign({ day: 1 }, range)] as [string | number, Required<Tempo.Range>])
+			.sort(([, rangeA], [, rangeB]) => rangeA.month - rangeB.month || rangeA.day - rangeB.day)
+			.forEach(([key, range]) => shape.terms[term].set(key, range))
 	}
 
 	/**
@@ -613,6 +638,14 @@ export class Tempo {
 			.filter(key => enumKeys(Tempo.TIMES).includes(key));
 	}
 
+	/** static Tempo.Terms getter */
+	static get terms() {
+		return Reflect.ownKeys(Tempo.#global.terms)
+			.reduce((acc, key) =>
+				Object.assign(acc, { [key]: { ...Tempo.#global.terms[key] } })
+				, {} as Tempo.Terms)
+	}
+
 	/** static Tempo property getter */
 	static get properties() {
 		return getAccessors<Tempo>(Tempo)
@@ -818,9 +851,9 @@ export class Tempo {
 	/** long month name */																		get mon() { return Tempo.MONTHS[this.#zdt.month] }
 	/** short weekday name */																	get ddd() { return Tempo.WEEKDAY[this.#zdt.dayOfWeek] }
 	/** long weekday name */																	get day() { return Tempo.WEEKDAYS[this.#zdt.dayOfWeek] }
-	/** quarter: Q1-Q4 */																			get qtr() { return this.#getTerm<1 | 2 | 3 | 4>('quarter') }
+	/** quarter: Q1-Q4 */																			get qtr() { return this.#getTerm<1 | 2 | 3 | 4>(this.#local, 'quarter')[0] }
 	/** quarter: Q1-Q4 */																			get quarter() { return this.qtr }
-	/** meteorological season: Spring/Summer/Autumn/Winter */	get season() { return this.#getTerm<keyof typeof Tempo.SEASON>('season') }
+	/** meteorological season: Spring/Summer/Autumn/Winter */	get season() { return this.#getTerm<keyof typeof Tempo.SEASON>(this.#local, 'season')[0] }
 	/** nanoseconds (BigInt) since Unix epoch */							get nano() { return this.#zdt.epochNanoseconds }
 	/** Instance configuration */															get config() { return { ...this.#local.config } }
 	/** units since epoch */																	get epoch() {
@@ -1286,35 +1319,24 @@ export class Tempo {
 			.with({ year, month: idx, day: 1 });
 	}
 
-	/** set a Term's date-range */
-	#setTerm(term: string | symbol, ranges: Tempo.Term) {
-		this.#local.terms ??= {};																// ensure parent object exists
-		this.#local.terms[term] = new Map();										// remove prior {term}
-
-		[...ranges.entries()]
-			.sort(([, rangeA], [, rangeB]) => rangeA.month - rangeB.month || rangeA.day - rangeB.day)
-			.forEach(([key, range]) => this.#local.terms[term].set(key, range))
-	}
-
-	/** get a Term's range-name */
-	#getTerm<T extends string>(term: string | symbol) {
-		const range = this.#local.terms[term] ?? this.#local.terms[Symbol.for(term as string)];
-		let result: T | undefined = void 0;
+	/** get a Term's value and start-date */
+	#getTerm<T extends string | number>(shape: Internal.Shape, term: string | symbol, dateTime: Temporal.ZonedDateTime = this.#zdt) {
+		const range = isSymbol(term) ? shape.terms[term] : shape.terms[Symbol.for(term)] || shape.terms[term];
+		let tuple = [void 0, void 0] as [T | undefined, Tempo.Range | undefined];
 
 		if (range) {
 			const keys = [...range.keys()] as T[];
-			const ranges = [...range.values()];										// {ranges} is the 1st day of the new {term}
+			const ranges = [...range.values()] as Required<Tempo.Range>[];	// {ranges} is the start of the new {term}
 
-			const indx = ranges																		// find where #zdt fits within the {term} date-range
-				.findIndex(date => date.month > this.#zdt.month || (date.month == this.#zdt.month && date.day > this.#zdt.day));
+			const indx = ranges																		// find where dateTime fits within the {term} date-range
+				.findIndex(date => date.month > dateTime.month || (date.month == dateTime.month && date.day > dateTime.day));
+			const start = indx === -1 ? -1 : indx - 1;						// if no-match, then assume last {term}
 
-			result = indx === -1																	// if no-match
-				? keys.at(-1)																				// then assume last {term}
-				: keys.at(indx - 1);																// else {term} before the match				
+			tuple = [keys.at(start), ranges.at(start)];
 		}
-		else Tempo.#catch(this.#local.config, `Not a valid {term}: "${String(term)}"`);
+		else Tempo.#catch(shape.config, `Not a valid {term}: "${String(term)}"`);
 
-		return result;
+		return tuple;
 	}
 
 	/** return a new object, with only numeric values */
@@ -1380,6 +1402,7 @@ export class Tempo {
 							return { mutate: 'set', single: singular(key), offset: unit }
 					}
 				})(key);																						// IIFE to analyze arguments
+				let range: Tempo.Range | undefined;									// useful for 'season' | 'quarter' offsets
 
 				switch (`${mutate}.${single}`) {
 					case 'set.period':
@@ -1424,17 +1447,23 @@ export class Tempo {
 							.startOfDay();
 
 					case 'start.season':
-						const season1 = this.#local.months.findIndex(mon => mon.season === (this.season + .1));
+						[, range] = this.#getTerm(this.#local, Symbol.for('season'), zdt);
+						if (isUndefined(range))
+							return zdt;
+
 						return zdt
-							.with({ day: 1, month: season1 })
+							.with(range)
 							.startOfDay();
 
 					case 'start.quarter':
 					case 'start.qtr':
-						const qtr1 = this.#local.months.findIndex(mon => mon.quarter === (this.qtr + .1));
-						return zdt
-							.with({ day: 1, month: qtr1 })
-							.startOfDay();
+						[, range] = this.#getTerm(this.#local, Symbol.for('quarter'), zdt);
+
+						return isUndefined(range)
+							? zdt
+							: zdt
+								.with(range)
+								.startOfDay();
 
 					case 'start.month':
 						return zdt
@@ -1463,17 +1492,25 @@ export class Tempo {
 							.startOfDay();
 
 					case 'mid.season':
-						const season2 = this.#local.months.findIndex(mon => mon.season === (this.season + .2));
-						return zdt
-							.with({ day: Math.trunc(zdt.daysInMonth / 2), month: season2 })
-							.startOfDay();
+						[, range] = this.#getTerm(this.#local, Symbol.for('season'), zdt);
+
+						return isUndefined(range)
+							? zdt
+							: zdt
+								.with(range)																// set to start of range
+								.add({ months: 3 })													// offset three months
+								.startOfDay();
 
 					case 'mid.quarter':
 					case 'mid.qtr':
-						const qtr2 = this.#local.months.findIndex(mon => mon.quarter === (this.qtr + .2));
-						return zdt
-							.with({ day: Math.trunc(zdt.daysInMonth / 2), month: qtr2 })
-							.startOfDay();
+						[, range] = this.#getTerm(this.#local, Symbol.for('quarter'), zdt);
+
+						return isUndefined(range)
+							? zdt
+							: zdt
+								.with(range)
+								.add({ months: 3 })
+								.startOfDay();
 
 					case 'mid.month':
 						return zdt
@@ -1514,23 +1551,25 @@ export class Tempo {
 							.subtract({ nanoseconds: 1 });
 
 					case 'end.season':
-						const season3 = this.#local.months.findIndex(mon => mon.season === (this.season + .3));
-						return zdt
-							.with({ month: season3 })
-							.add({ months: 1 })
-							.with({ day: 1 })
-							.startOfDay()
-							.subtract({ nanoseconds: 1 });
+						[, range] = this.#getTerm(this.#local, Symbol.for('season'), zdt);
+
+						return isUndefined(range)
+							? zdt
+							: zdt
+								.with(range)
+								.add({ months: 6 })
+								.startOfDay();
 
 					case 'end.quarter':
 					case 'end.qtr':
-						const qtr3 = this.#local.months.findIndex(mon => mon.quarter === (this.qtr + .3));
-						return zdt
-							.with({ month: qtr3 })
-							.add({ months: 1 })
-							.with({ day: 1 })
-							.startOfDay()
-							.subtract({ nanoseconds: 1 });
+						[, range] = this.#getTerm(this.#local, Symbol.for('quarter'), zdt);
+
+						return isUndefined(range)
+							? zdt
+							: zdt
+								.with(range)
+								.add({ months: 6 })
+								.startOfDay();
 
 					case 'end.month':
 						return zdt
@@ -1581,11 +1620,10 @@ export class Tempo {
 				return asNumber(`${this.yy}${pad(this.mm)}${pad(this.dd)}`);
 
 			case Tempo.FORMAT.yearQuarter:
-				if (isUndefined(this.#local.months[this.mm]?.quarter)) {
+				if (isUndefined(this.qtr)) {
 					Tempo.#catch(this.#local.config, 'Cannot determine "yearQuarter"');
 					return bailOut;
 				}
-
 
 				[full, part] = split(this.#local.months[this.mm].quarter);
 				mon = (full - 1) * 3 + part - 1;
@@ -1593,17 +1631,17 @@ export class Tempo {
 
 				return `${yy}Q${this.qtr}`;
 
-			case Tempo.FORMAT.yearSeason:
-				if (isUndefined(this.#local.months[this.mm]?.season)) {
-					Tempo.#catch(this.#local.config, 'Cannot determine "yearSeason"');
-					return bailOut;
-				}
+			// case Tempo.FORMAT.yearSeason:											// removed 17-Mar-24: not a valid concept
+			// 	if (isUndefined(this.season)) {
+			// 		Tempo.#catch(this.#local.config, 'Cannot determine "yearSeason"');
+			// 		return bailOut;
+			// 	}
 
-				[full, part] = split(this.#local.months[this.mm].season);
-				mon = (full - 1) * 3 + part - 1;
-				yy = this.#zdt.with({ day: 1 }).add({ months: -mon }).add({ months: 11 }).year;
+			// 	[full, part] = split(this.#local.months[this.mm].season);
+			// 	mon = (full - 1) * 3 + part - 1;
+			// 	yy = this.#zdt.with({ day: 1 }).add({ months: -mon }).add({ months: 11 }).year;
 
-				return `${yy}-${this.season}`;
+			// 	return `${yy}-${this.season}`;
 
 			default:
 				const mer = asString(fmt).includes('HH')						// if 'twelve-hour' (uppercase 'HH') is present in fmtString,
@@ -1635,8 +1673,8 @@ export class Tempo {
 					.replace(/w{2}/g, pad(this.ww))
 					.replace(/dow/g, this.dow.toString())
 					.replace(/day/g, this.day)
-					.replace(/qtr/g, this.qtr.toString())
-					.replace(/q{1,3}/g, this.qtr.toString())					// special to interpret up-to-3 'q' as {qtr}
+					.replace(/qtr/g, this.qtr?.toString())
+					.replace(/q{1,3}/g, this.qtr?.toString())					// special to interpret up-to-3 'q' as {qtr}
 					.replace(/season/g, this.season)
 		}
 	}
@@ -1773,8 +1811,11 @@ export namespace Tempo {
 	}
 	/** tuple of 13 months */
 	export type Months = [Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month, Tempo.Month]
-	export type Range = Record<"day" | "month", number>
-	export type Term = Map<string, Tempo.Range>
+	export interface Range {
+		day?: number;
+		month: number;
+	}
+	export type Term = Map<string | number, Tempo.Range>
 	export type Terms = Record<string | symbol, Tempo.Term>
 
 	/** pre-configured format strings */

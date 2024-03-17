@@ -78,22 +78,6 @@ export function sortBy<T>(...keys: (string | SortBy)[]) {
 	}
 }
 
-// node_modules/typescript/lib/lib.esnext.object.d.ts
-// This is temporary until Typescript sorts out the signature for Object.groupBy
-declare global {
-	interface ObjectConstructor {
-		/**
-		 * Groups members of an iterable according to the return value of the passed callback.
-		 * @param items An iterable.
-		 * @param keySelector A callback which will be invoked for each item in items.
-		 */
-		groupBy<K extends PropertyKey, T>(
-			items: Iterable<T>,
-			keySelector: (item: T, index: number) => K,
-		): Partial<Record<K, T[]>>;
-	}
-}
-
 /** Group documents by key-fields */
 export function keyedBy<T extends Record<PropertyKey, string>>(array: T[], key: string) {
 	return Object.groupBy(array, (itm) => itm[key]);
