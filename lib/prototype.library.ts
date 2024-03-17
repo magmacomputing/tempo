@@ -69,13 +69,14 @@ declare global {
 		/** reduce Array to a keyed-Object */										keyedBy<K extends string>(flatten: true, ...keys: string[]): Record<K, T>;
 		/** reduce Array to a keyed-Object */										keyedBy<K extends string>(flatten: false, ...keys: string[]): Record<K, T[]>;
 
-		/** return sorted Array-of-objects */										orderBy(keys: (string | SortBy)[]): T[];
-		/** return sorted Array-of-objects */										orderBy(...keys: (string | SortBy)[]): T[];
+		/** return ordered Array-of-objects */									orderBy(keys: (string | SortBy)[]): T[];
+		/** return ordered Array-of-objects */									orderBy(...keys: (string | SortBy)[]): T[];
 		/** return sorted Array-of-objects */										sortBy(keys: (string | SortBy)[]): T[];
 		/** return sorted Array-of-objects */										sortBy(...keys: (string | SortBy)[]): T[];
 
 		/** return new Array with no repeated elements */				distinct(): T[];
 		/** return mapped Array with no repeated elements */		distinct<S>(mapfn: (value: T, index: number, array: T[]) => S, thisArg?: any): S[];
+
 		/** Clear down an Array */															truncate(): T[];
 
 		/** return cartesian-product of Array of Arrays */			cartesian(): T;
