@@ -3,7 +3,7 @@ import { Pledge } from '@module/shared/pledge.class.js';
 import { asArray } from '@module/shared/array.library.js';
 import { enumKeys } from '@module/shared/enum.library.js';
 import { sprintf } from '@module/shared/string.library.js';
-import { clone } from '@module/shared/serialize.library.js';
+import { cloneify } from '@module/shared/serialize.library.js';
 import { getAccessors, purge } from '@module/shared/object.library.js';
 import { asNumber, asInteger, isNumeric, split, ifNumeric } from '@module/shared/number.library.js';
 import { getContext, CONTEXT, getStore, setStore, sleep } from '@module/shared/utility.library.js';
@@ -52,6 +52,21 @@ const Units = {																							// define some components to help interpre
 } as Tempo.Units
 // computed Units ('tm', 'dt', 'evt', 'per') are added during 'Tempo.init()' and 'new Tempo()'
 
+/** Tempo Symbol registry */
+const Sym = {
+	quarter: Symbol('quarter'),
+	season: Symbol('season'),
+	dow: Symbol('dow'),
+	dt: Symbol('dt'),
+	tm: Symbol('tm'),
+	dtm: Symbol('dtm'),
+	dmy: Symbol('dmy'),
+	mdy: Symbol('mdy'),
+	ymd: Symbol('ymd'),
+	evt: Symbol('evt'),
+	qtr: Symbol('qtr'),
+} as Record<string, symbol>;
+
 /** Reasonable defaults for initial Tempo options */
 const Default = {
 	version: VERSION,
@@ -64,19 +79,19 @@ const Default = {
 	fiscal: 'Jan',
 	monthDay: ['en-US', 'en-AS'],															// array of Locales that prefer 'mm-dd-yy' date order: https://en.wikipedia.org/wiki/Date_format_by_country
 	terms: {																									// system supported {terms} that define a set of dates within a year
-		[Symbol.for('quarter')]: new Map(),											// will be filled in init() after we determine the fiscal start-month
-		[Symbol.for('season')]: new Map(),											// will be filled in init() after we determine the hemisphere
+		[Sym.quarter]: new Map(),																// will be filled in init() after we determine the fiscal start-month
+		[Sym.season]: new Map(),																// will be filled in init() after we determine the hemisphere
 	},
 	layout: new Map([																					// built-in layouts to be checked, and in this order
-		[Symbol.for('dow'), '{mod}?{dow}{sfx}?'],								// special layout (no {dt}!) used for day-of-week calcs (only one that requires {dow} unit)
-		[Symbol.for('dt'), '{dt}'],															// calendar or event
-		[Symbol.for('tm'), '{tm}'],															// clock or period
-		[Symbol.for('dtm'), '({dt}){sfx}?'],										// calendar/event and clock/period
-		[Symbol.for('dmy'), '{dow}?{dd}{sep}?{mm}({sep}{yy})?{sfx}?'],
-		[Symbol.for('mdy'), '{dow}?{mm}{sep}?{dd}({sep}{yy})?{sfx}?'],
-		[Symbol.for('ymd'), '{dow}?{yy}{sep}?{mm}({sep}{dd})?{sfx}?'],
-		[Symbol.for('evt'), `{evt}`],														// event only
-		[Symbol.for('qtr'), '{yy}{sep}?{qtr}{sfx}?'],						// yyyyQq (for example, '2024Q2')
+		[Sym.dow, '{mod}?{dow}{sfx}?'],													// special layout (no {dt}!) used for day-of-week calcs (only one that requires {dow} unit)
+		[Sym.dt, '{dt}'],																				// calendar or event
+		[Sym.tm, '{tm}'],																				// clock or period
+		[Sym.dtm, '({dt}){sfx}?'],															// calendar/event and clock/period
+		[Sym.dmy, '{dow}?{dd}{sep}?{mm}({sep}{yy})?{sfx}?'],
+		[Sym.mdy, '{dow}?{mm}{sep}?{dd}({sep}{yy})?{sfx}?'],
+		[Sym.ymd, '{dow}?{yy}{sep}?{mm}({sep}{dd})?{sfx}?'],
+		[Sym.evt, `{evt}`],																			// event only
+		[Sym.qtr, '{yy}{sep}?{qtr}{sfx}?'],											// yyyyQq (for example, '2024Q2')
 	]),
 	period: [																									// built-in periods to be mapped to a time
 		['mid[ -]?night', '24:00'],
@@ -199,8 +214,8 @@ export class Tempo {
 
 		swap
 			.forEach(([dmy, mdy]) => {														// loop over each swap-tuple
-				const idx1 = layouts.findIndex(([key]) => Symbol.keyFor(key) === dmy);	// 1st swap element exists in {layouts}
-				const idx2 = layouts.findIndex(([key]) => Symbol.keyFor(key) === mdy);	// 2nd swap element exists in {layouts}
+				const idx1 = layouts.findIndex(([key]) => key.description === dmy);	// 1st swap element exists in {layouts}
+				const idx2 = layouts.findIndex(([key]) => key.description === mdy);	// 2nd swap element exists in {layouts}
 
 				if (idx1 === -1 || idx2 === -1)
 					return;																						// no pair to swap
@@ -226,12 +241,7 @@ export class Tempo {
 			? new Map([['Spring', { day: 20, month: 3 }], ['Summer', { day: 21, month: 6 }], ['Autumn', { day: 22, month: 9 }], ['Winter', { day: 21, month: 12 }]])
 			: new Map([['Autumn', { month: 3 }], ['Winter', { month: 6 }], ['Spring', { month: 9 }], ['Summer', { month: 12 }]])
 
-		Tempo.#setTerm(shape, Symbol.for('season'), range);
-		// (shape.config.sphere !== Tempo.COMPASS.South
-		// 	? [void 0, 'Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer', 'Summer', 'Summer', 'Autumn', 'Autumn', 'Autumn', 'Winter']
-		// 		: [void 0, 'Summer', 'Summer', 'Autumn', 'Autumn', 'Autumn', 'Winter', 'Winter', 'Winter', 'Spring', 'Spring', 'Spring', 'Summer']
-		// )																												// 1=first, 2=mid, 3=last month of season
-		// 	.forEach((season, idx) => { if (idx !== 0) shape.months[idx].season = `${season}.${idx % 3 + 1}` as Tempo.Month["season"] });
+		Tempo.#setTerm(shape, Sym.season, range);
 	}
 
 	/** setup fiscal quarters, from a given start month */
@@ -251,16 +261,8 @@ export class Tempo {
 			[3, { month: start + 6 - (Number(start >= 7) * 12) }],
 			[4, { month: start + 9 - (Number(start >= 4) * 12) }]
 		]);
-		Tempo.#setTerm(shape, Symbol.for('quarter'), range);
-		// for (let i = start, mon = 1; i <= (start + 12); i++, mon++) {
-		// 	const idx = i % 13;																		// index into the Month
-		// 	if (idx !== 0) {
-		// 		const qtr = Math.floor((mon - 1) / 3) + 1;					// quarter increments every third iteration
-		// 		const offset = (mon - 1) % 3 + 1;										// 1=first, 2=mid, 3=last month of quarter
-		// 		shape.months[idx].quarter = qtr + (offset / 10) as Tempo.Month["quarter"];
-		// 	}
-		// 	else mon--
-		// }
+
+		Tempo.#setTerm(shape, Sym.quarter, range);
 	}
 
 	/** properCase week-day / calendar-month */
@@ -333,12 +335,13 @@ export class Tempo {
 		config["event"] ??= [];
 		config["period"] ??= [];
 		config["terms"] ??= {};
+		let idx = -1;
 
 		options.forEach(option => {
 			(Object.entries(option) as Entries<Tempo.Options>)
 				.forEach(([optKey, optVal]) => {
 					const arg = asType(optVal);
-					let idx = -1;
+					const user = `usr${++idx}`;
 
 					switch (optKey) {
 						case 'layout':
@@ -347,7 +350,7 @@ export class Tempo {
 							switch (arg.type) {
 								case 'Object':															// add key-value pairs to Map()
 									Object.entries(arg.value)
-										.forEach(([key, val]) => map.set(Symbol.for(key), asArray(val)));
+										.forEach(([key, val]) => map.set(Symbol.for(`usr${++idx}`), asArray(val)));
 									break;
 
 								case 'String':															// add string with unique key to Map()
@@ -452,9 +455,7 @@ export class Tempo {
 			console[method](sprintf('tempo:', ...msg));
 	}
 
-	/**
-	 * use catch:boolean to determine whether to throw or return  
-	 */
+	/** use catch:boolean to determine whether to throw or return  */
 	static #catch(config: Tempo.Config, ...msg: any[]) {
 		if (config.catch) {
 			Tempo.#warn(config, ...msg);													// catch, but warn {error}
@@ -767,9 +768,11 @@ export class Tempo {
 		Object.assign(this.#local.config, Tempo.#global.config, { level: Internal.LEVEL.Local })
 		Tempo.#setConfig(this.#local.config, this.#options);		// start with {#global} config, overloaded with {options}
 
-		this.#local.months = clone(Tempo.#global.months);				// start with static {months} object
-		this.#local.units = clone(Tempo.#global.units);					// start with static {units} object
-		for (const [sym, reg] of Tempo.#global.patterns)				// start with statis {patterns} Map
+		// this.#local.months = cloneify(Tempo.#global.months);	// start with static {months} object
+		this.#local.units = cloneify(Tempo.#global.units);			// start with static {units} object
+		for (const key of Reflect.ownKeys(Tempo.#global.terms))	// note: we cannot clone Symbols
+			this.#local.terms[key] = Tempo.#global.terms[key];		// start with static {terms} object
+		for (const [sym, reg] of Tempo.#global.patterns)				// start with static {patterns} Map
 			this.#local.patterns.set(sym, reg);										// note: we cannot clone Symbols
 
 		/** first task is to parse the 'Tempo.Options' looking for overrides to Tempo.#global.config */
@@ -781,8 +784,8 @@ export class Tempo {
 
 		// change of hemisphere, setup new Seasons / Fiscal start-month
 		if (this.#local.config.sphere !== Tempo.#global.config.sphere) {
-			Tempo.#season(this.#local);
 			Tempo.#fiscal(this.#local);
+			Tempo.#season(this.#local);
 		}
 
 		// change of Fiscal month, setup new Quarters
@@ -852,10 +855,10 @@ export class Tempo {
 	/** short weekday name */																	get ddd() { return Tempo.WEEKDAY[this.#zdt.dayOfWeek] }
 	/** long weekday name */																	get day() { return Tempo.WEEKDAYS[this.#zdt.dayOfWeek] }
 	/** quarter: Q1-Q4 */																			get qtr() { return this.#getTerm<1 | 2 | 3 | 4>(this.#local, 'quarter')[0] }
-	/** quarter: Q1-Q4 */																			get quarter() { return this.qtr }
-	/** meteorological season: Spring/Summer/Autumn/Winter */	get season() { return this.#getTerm<keyof typeof Tempo.SEASON>(this.#local, 'season')[0] }
-	/** nanoseconds (BigInt) since Unix epoch */							get nano() { return this.#zdt.epochNanoseconds }
+	/** meteorological season: Spring/Summer/Autumn/Winter */	get szn() { return this.#getTerm<keyof typeof Tempo.SEASON>(this.#local, 'season')[0] }
+	/** configured terms over a year */												get terms() { return { ...this.#local.terms } }
 	/** Instance configuration */															get config() { return { ...this.#local.config } }
+	/** nanoseconds (BigInt) since Unix epoch */							get nano() { return this.#zdt.epochNanoseconds }
 	/** units since epoch */																	get epoch() {
 		return {
 			/** seconds since epoch */														ss: this.#zdt.epochSeconds,
@@ -873,7 +876,6 @@ export class Tempo {
 
 	/** add to date/time property */													add(mutate: Tempo.Add) { return this.#add(mutate) }
 	/** set to start/mid/end/period of property */						set(offset: Tempo.Set | Tempo.Add) { return this.#set(offset) }
-	// /** parse an input-value */																parse(tempo?: Tempo.DateTime, options?: Tempo.Options) { return new Tempo(tempo, options) }
 
 	/** is valid Tempo */																			isValid() { return !isEmpty(this) }
 	/** as Temporal.ZonedDateTime */													toDateTime() { return this.#zdt }
@@ -970,7 +972,7 @@ export class Tempo {
 				return new Temporal.ZonedDateTime(epoch, this.#local.config.timeZone, this.#local.config.calendar);
 
 			default:
-				Tempo.#catch(this.#local.config, `Unexpected Tempo parameter type: ${arg.type}, ${arg.value}`);
+				Tempo.#catch(this.#local.config, `Unexpected Tempo parameter type: ${arg.type}, ${String(arg.value)}`);
 				return today;
 		}
 	}
@@ -1321,7 +1323,7 @@ export class Tempo {
 
 	/** get a Term's value and start-date */
 	#getTerm<T extends string | number>(shape: Internal.Shape, term: string | symbol, dateTime: Temporal.ZonedDateTime = this.#zdt) {
-		const range = isSymbol(term) ? shape.terms[term] : shape.terms[Symbol.for(term)] || shape.terms[term];
+		const range = isSymbol(term) ? shape.terms[term] : shape.terms[term] || shape.terms[Symbol.for(term)];
 		let tuple = [void 0, void 0] as [T | undefined, Tempo.Range | undefined];
 
 		if (range) {
@@ -1620,7 +1622,8 @@ export class Tempo {
 				return asNumber(`${this.yy}${pad(this.mm)}${pad(this.dd)}`);
 
 			case Tempo.FORMAT.yearQuarter:
-				if (isUndefined(this.qtr)) {
+				const [qtr, start] = this.#getTerm(this.#local, 'quarter');
+				if (isUndefined(qtr)) {
 					Tempo.#catch(this.#local.config, 'Cannot determine "yearQuarter"');
 					return bailOut;
 				}
@@ -1630,18 +1633,6 @@ export class Tempo {
 				yy = this.#zdt.with({ day: 1 }).add({ months: -mon }).add({ months: 11 }).year;
 
 				return `${yy}Q${this.qtr}`;
-
-			// case Tempo.FORMAT.yearSeason:											// removed 17-Mar-24: not a valid concept
-			// 	if (isUndefined(this.season)) {
-			// 		Tempo.#catch(this.#local.config, 'Cannot determine "yearSeason"');
-			// 		return bailOut;
-			// 	}
-
-			// 	[full, part] = split(this.#local.months[this.mm].season);
-			// 	mon = (full - 1) * 3 + part - 1;
-			// 	yy = this.#zdt.with({ day: 1 }).add({ months: -mon }).add({ months: 11 }).year;
-
-			// 	return `${yy}-${this.season}`;
 
 			default:
 				const mer = asString(fmt).includes('HH')						// if 'twelve-hour' (uppercase 'HH') is present in fmtString,
@@ -1661,10 +1652,10 @@ export class Tempo {
 					.replace(/h{2}/g, pad(this.hh))
 					.replace(/H{2}$/g, pad(this.hh >= 13 ? this.hh % 12 : this.hh) + mer)
 					.replace(/H{2}/g, pad(this.hh >= 13 ? this.hh % 12 : this.hh))
-					.replace(/mi$/gi, pad(this.mi) + mer)							// append 'am' if 'mi' at end of fmtString, and it follows 'HH'
-					.replace(/mi/gi, pad(this.mi))
-					.replace(/s{2}$/gi, pad(this.ss) + mer)						// append 'am' if 'ss' at end of fmtString, and it follows 'HH'
-					.replace(/s{2}/gi, pad(this.ss))
+					.replace(/:mi$/gi, ':' + pad(this.mi) + mer)			// append 'am' if 'mi' at end of fmtString, and it follows 'HH'
+					.replace(/:mi/gi, ':' + pad(this.mi))
+					.replace(/:s{2}$/gi, ':' + pad(this.ss) + mer)		// append 'am' if 'ss' at end of fmtString, and it follows 'HH'
+					.replace(/:s{2}/gi, ':' + pad(this.ss))
 					.replace(/ts/g, this.ts.toString())
 					.replace(/ms/g, pad(this.ms, 3))
 					.replace(/us/g, pad(this.us, 3))
@@ -1673,9 +1664,9 @@ export class Tempo {
 					.replace(/w{2}/g, pad(this.ww))
 					.replace(/dow/g, this.dow.toString())
 					.replace(/day/g, this.day)
-					.replace(/qtr/g, this.qtr?.toString())
-					.replace(/q{1,3}/g, this.qtr?.toString())					// special to interpret up-to-3 'q' as {qtr}
-					.replace(/season/g, this.season)
+					.replace(/qtr/g, this.qtr?.toString() ?? '')
+					.replace(/q{1,3}/g, this.qtr?.toString() ?? '')		// special to interpret up-to-3 'q' as {qtr}
+					.replace(/szn/g, this.szn ?? '')
 		}
 	}
 

@@ -57,7 +57,8 @@ export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => protoType(obj) 
 export const isObject = <T>(obj?: T): obj is Extract<T, Record<any, any>> => isType(obj, 'Object');
 export const isDate = <T>(obj?: T): obj is Extract<T, Date> => isType(obj, 'Date');
 export const isRegExp = <T>(obj?: T): obj is Extract<T, RegExp> => isType(obj, 'RegExp');
-export const isSymbol = <T>(obj?: T): obj is Extract<T, Symbol> => isType(obj, 'Symbol');
+export const isSymbol = <T>(obj?: T): obj is Extract<T, symbol> => isType(obj, 'Symbol');
+export const isSymbolFor = <T>(obj?: T): obj is Extract<T, symbol> => isType<symbol>(obj, 'Symbol') && Symbol.keyFor(obj) !== void 0;
 
 // TODO
 export const isRecord = <T>(obj?: T): obj is Readonly<Extract<T, Record<any, any>>> => isType(obj, 'Record');
@@ -182,7 +183,7 @@ export type TypeValue<T> =
 	{ type: 'WeakMap', value: WeakMap<Record<string, any>, T> } |
 	{ type: 'WeakSet', value: WeakSet<Record<string, any>> } |
 	// { type: 'WeakRef', value: WeakRef<Record<string, any>, T> }
-	{ type: 'Symbol', value: Symbol } |
+	{ type: 'Symbol', value: symbol } |
 	{ type: 'Error', value: Error } |
 
 	{ type: 'Record', value: Record<string, T> } |						// TODO
