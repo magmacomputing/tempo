@@ -8,8 +8,8 @@ const label = 'static:';
 describe(`${label}`, () => {
 
   test(`${label} get the accessors`, () => {
-    expect(Tempo.properties)
-      .toEqual(['yy', 'mm', 'dd', 'hh', 'mi', 'ss', 'ms', 'us', 'ns', 'ff', 'ww', 'tz', 'ts', 'dow', 'mmm', 'mon', 'ddd', 'day', 'qtr', 'season', 'nano', 'config', 'epoch'])
+    expect(Tempo.properties.sort())
+      .toEqual(['yy', 'mm', 'dd', 'hh', 'mi', 'ss', 'ms', 'us', 'ns', 'ff', 'ww', 'tz', 'ts', 'dow', 'mmm', 'mon', 'ddd', 'day', 'qtr', 'szn', 'nano', 'terms', 'config', 'epoch'].sort())
   })
 
   test(`${label} get the durations`, () => {

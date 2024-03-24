@@ -1,9 +1,10 @@
+import { isTempo } from '@module/shared/tempo.class.js';
 import { asString } from '@module/shared/string.library.js';
 import { getPath } from '@module/shared/object.library.js';
 import { cloneify } from '@module/shared/serialize.library.js';
-import { asType, isNumber, isDate, isIterable, isString, isBoolean, isArrayLike, nullToValue, isUndefined } from '@module/shared/type.library.js';
+import { asType, isNumber, isDate, isIterable, isString, isArrayLike, nullToValue } from '@module/shared/type.library.js';
 
-/** Coerce {value} into {value[]}, if not already {value[}], with optional {fill} Object */
+/** Coerce {value} into {Array\<value>} ( if not already Array<> ), with optional {fill} Object */
 export function asArray<T>(arr: Exclude<ArrayLike<T>, string> | undefined): T[];
 export function asArray<T>(arr: T | Exclude<Iterable<T> | undefined, string>): NonNullable<T>[];
 export function asArray<T, K>(arr: Iterable<T> | ArrayLike<T>, fill: K): K[];
@@ -64,6 +65,7 @@ export function sortBy<T>(...keys: (string | SortBy)[]) {
 				switch (true) {
 					case isNumber(valueA) && isNumber(valueB):
 					case isDate(valueA) && isDate(valueB):
+					case isTempo(valueA) && isTempo(valueB):
 						result = dir * (valueA - valueB);
 						break;
 
@@ -82,26 +84,3 @@ export function sortBy<T>(...keys: (string | SortBy)[]) {
 export function keyedBy<T extends Record<PropertyKey, string>>(array: T[], key: string) {
 	return Object.groupBy(array, (itm) => itm[key]);
 }
-/** 2024-Mar-07:  this has been deprecated in favour of the new, inbuilt Object.groupBy() method */
-// export function keyedBy<T, K extends string>(table: T[], ...keys: string[]): Record<K, T[]>;
-// export function keyedBy<T, K extends string>(table: T[], flatten: true, ...keys: string[]): Record<K, T>;
-// export function keyedBy<T, K extends string>(table: T[], flatten: false, ...keys: string[]): Record<K, T[]>;
-// export function keyedBy<T, K extends string>(table: T[], ...keys: [...string[]] | [boolean, ...string[]]) {
-// 	let flatten = false;
-// 	if (isBoolean(keys[0])) {
-// 		flatten = keys[0];
-// 		keys.splice(0, 1);
-// 	}
-
-// 	return table.reduce((acc, row) => {
-// 		const group = (keys as K[])
-// 			.map(key => getPath(row, key)).join(':') as K;
-
-// 		if (flatten)
-// 			acc[group] = row;																			// only return last match
-// 		else
-// 			((acc[group] as T[]) ??= []).push(row);								// return all matches in Array
-
-// 		return acc;
-// 	}, {} as Record<K, T | T[]>);
-// }

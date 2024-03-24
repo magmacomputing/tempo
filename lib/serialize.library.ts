@@ -1,6 +1,6 @@
 import { Tempo } from '@module/shared/tempo.class.js';
 import { isNumeric } from '@module/shared/number.library.js';
-import { isType, asType, isEmpty, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types } from '@module/shared/type.library.js';
+import { isType, asType, isNull, isEmpty, isDefined, isUndefined, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types, isSymbolFor, isSymbol } from '@module/shared/type.library.js';
 
 // be aware that 'structuredClone' preserves \<undefined> values...  
 // but JSON.stringify() does not
@@ -83,7 +83,7 @@ function decode(val: string) {
 
 /** check type can be stringify'd */
 function isStringable(val: unknown): boolean {
-	return !isType(val, 'Function', 'AsyncFunction', 'Symbol', 'WeakMap', 'WeakSet', 'WeakRef');
+	return !isType(val, 'Function', 'AsyncFunction', 'WeakMap', 'WeakSet', 'WeakRef');
 }
 
 /** string representation of a single-key Object */
@@ -98,7 +98,7 @@ function oneKey(type: Types, value: string) {
  * as this single-key Object is open to abuse.  But the risk is acceptable within the scope of small projects.  
  * 
  * Drawbacks:  
- * no support Function / Symbol / WeakMap / WeakSet / WeakRef  
+ * no support Function / WeakMap / WeakSet / WeakRef  
  * limited support for user-defined Classes (must be specifically coded)
  */
 
@@ -146,9 +146,10 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 		case 'Object':
 		case 'Record':
 			return `${arg.type === 'Record' ? '#' : ''}{`
-				+ Object.entries(arg.value)
+				+ Reflect.ownKeys(arg.value)
+					.map(key => [key, arg.value[key]])								// like Object.entries(), key of string | number | symbol
 					.filter(([, val]) => isStringable(val))
-					.map(([key, val]) => `"${key}":${stringize(val)}`)
+					.map(([key, val]) => `${stringize(key)}:${stringize(val)}`)
 				+ `}`;
 
 		case 'Array':
@@ -162,7 +163,7 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 		case 'Map':
 			const map = Array.from(arg.value.entries())
 				.filter(([, val]) => isStringable(val))
-				.map(([key, val]) => `[${stringize(key)},${stringize(val)}]`)
+				.map(([key, val]) => `[${isSymbol(key) ? '@' : ''}${stringize(key)},${stringize(val)}]`)
 				.join(',')
 			return oneKey(arg.type, `[${map}]`);
 
@@ -172,6 +173,9 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 				.map(val => stringize(val))
 				.join(',')
 			return oneKey(arg.type, `[${set}]`);
+
+		case 'Symbol':
+			return oneKey(arg.type, stringize(`${isSymbolFor(arg.value) ? 'for' : ''}(${arg.value.description})`));
 
 		case 'RegExp':
 			const { source, flags } = arg.value;
@@ -208,6 +212,7 @@ export function objectify<T extends any>(str: any, sentinel?: Function): T {
 		switch (true) {
 			case str.startsWith('{') && str.endsWith('}'):				// looks like Object
 			case str.startsWith('[') && str.endsWith(']'):				// looks like Array
+			case str.startsWith('@{') && str.endsWith('}'):				// looks like Symbol
 			case str.startsWith('#{') && str.endsWith('}'):				// looks like Record
 			case str.startsWith('#[') && str.endsWith(']'):				// looks like Tuple
 				return traverse(parse, sentinel);										// recurse into object
@@ -216,14 +221,12 @@ export function objectify<T extends any>(str: any, sentinel?: Function): T {
 				return parse;
 		}
 	} catch (error) {
-		// console.warn(`objectify.parse: not a JSON string -> ${str}`);
+		console.warn(`objectify.parse: not a JSON string -> ${str}`);
 		return str as T;
 	}
 }
 
-/**
- * Recurse into Object / Array, looking for special single-key Objects
- */
+/** Recurse into Object / Array, looking for special single-key Objects */
 function traverse(obj: any, sentinel?: Function): any {
 	if (isObject(obj)) {
 		return typeify(Object.entries(obj)
@@ -251,6 +254,7 @@ function traverse(obj: any, sentinel?: Function): any {
 }
 
 /** Rebuild an Object from its single-key representation */
+const sym = /^(for)?\(([^\)]*)\)$/;													// pattern to match a stringify'd Symbol
 function typeify(json: object, sentinel?: Function) {
 	if (!isObject(json))
 		return json;																						// only JSON Objects
@@ -280,6 +284,17 @@ function typeify(json: object, sentinel?: Function) {
 			return new Date(value);
 		case 'RegExp':
 			return new RegExp(value.source, value.flags);
+		case 'Symbol':
+			const [match, keyFor, desc] = (value as string).match(sym) ?? [null, void 0, void 0];
+			switch (true) {
+				case isNull(match):
+				case isDefined(keyFor) && isUndefined(desc):
+					return json;																			// unexpected Symbol description
+				case isDefined(keyFor) && isDefined(desc):
+					return Symbol.for(desc);													// global Symbol registry
+				default:
+					return Symbol(desc);															// new Symbol
+			}
 		case 'Map':
 			return new Map(value);
 		case 'Set':
