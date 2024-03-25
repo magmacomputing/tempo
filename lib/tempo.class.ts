@@ -2,12 +2,12 @@
 import { Pledge } from '@module/shared/pledge.class.js';
 import { asArray } from '@module/shared/array.library.js';
 import { enumKeys } from '@module/shared/enum.library.js';
-import { sprintf } from '@module/shared/string.library.js';
+import { allEntries, omit, purge } from '@module/shared/reflect.library.js';
 import { cloneify } from '@module/shared/serialize.library.js';
-import { getAccessors, purge } from '@module/shared/object.library.js';
+import { getAccessors } from '@module/shared/object.library.js';
 import { asNumber, asInteger, isNumeric, split, ifNumeric } from '@module/shared/number.library.js';
 import { getContext, CONTEXT, getStore, setStore, sleep } from '@module/shared/utility.library.js';
-import { asString, pad, singular, toProperCase, trimAll, } from '@module/shared/string.library.js';
+import { asString, pad, singular, toProperCase, trimAll, sprintf } from '@module/shared/string.library.js';
 import { asType, getType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isSymbol } from '@module/shared/type.library.js';
 
 import type { Logger } from '@module/shared/logger.library.js';
@@ -300,7 +300,7 @@ export class Tempo {
 		if (dst > 0)
 			return shape.config.sphere = Tempo.COMPASS.South;
 
-		Reflect.deleteProperty(shape.config, 'sphere');					// timeZone does not observe DST
+		omit(shape.config, 'sphere');														// timeZone does not observe DST
 		return void 0;
 	}
 
@@ -641,9 +641,9 @@ export class Tempo {
 
 	/** static Tempo.Terms getter */
 	static get terms() {
-		return Reflect.ownKeys(Tempo.#global.terms)
-			.reduce((acc, key) =>
-				Object.assign(acc, { [key]: { ...Tempo.#global.terms[key] } })
+		return allEntries(Tempo.#global.terms)
+			.reduce((acc, [key, val]) =>
+				Object.assign(acc, { [key]: { ...val } })
 				, {} as Tempo.Terms)
 	}
 
@@ -770,10 +770,8 @@ export class Tempo {
 
 		// this.#local.months = cloneify(Tempo.#global.months);	// start with static {months} object
 		this.#local.units = cloneify(Tempo.#global.units);			// start with static {units} object
-		for (const key of Reflect.ownKeys(Tempo.#global.terms))	// note: we cannot clone Symbols
-			this.#local.terms[key] = Tempo.#global.terms[key];		// start with static {terms} object
-		for (const [sym, reg] of Tempo.#global.patterns)				// start with static {patterns} Map
-			this.#local.patterns.set(sym, reg);										// note: we cannot clone Symbols
+		this.#local.terms = cloneify(Tempo.#global.terms);			// start with static {terms} object
+		this.#local.patterns = cloneify(Tempo.#global.patterns);// start with static {patterns} Map
 
 		/** first task is to parse the 'Tempo.Options' looking for overrides to Tempo.#global.config */
 		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -1039,14 +1037,12 @@ export class Tempo {
 		return arg;
 	}
 
-	/**
-	 * apply a regex-match against a value, and clean the result  
-	 */
+	/** apply a regex-match against a value, and clean the result */
 	#parseMatch(value: string | number, pat: RegExp) {
 		const groups = value.toString().match(pat)?.groups || {};
 
 		Object.entries(groups)																	// remove undefined, NaN, null and empty values
-			.forEach(([key, val]) => isEmpty(val) && Reflect.deleteProperty(groups, key));
+			.forEach(([key, val]) => isEmpty(val) && omit(groups, key));
 
 		return groups;
 	}
@@ -1439,7 +1435,7 @@ export class Tempo {
 					case 'set.ms':
 					case 'set.us':
 					case 'set.ns':
-						const value = Reflect.get(Tempo.map, single);
+						const value = Tempo.map[single as keyof typeof Tempo.map];
 						return zdt
 							.with({ [value]: offset });
 

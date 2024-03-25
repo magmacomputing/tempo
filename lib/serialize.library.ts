@@ -1,6 +1,7 @@
 import { Tempo } from '@module/shared/tempo.class.js';
 import { isNumeric } from '@module/shared/number.library.js';
-import { isType, asType, isNull, isEmpty, isDefined, isUndefined, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types, isSymbolFor, isSymbol } from '@module/shared/type.library.js';
+import { allEntries } from '@module/shared/reflect.library.js';
+import { isType, asType, isEmpty, isDefined, isUndefined, isNullish, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types, isSymbolFor, isSymbol } from '@module/shared/type.library.js';
 
 // be aware that 'structuredClone' preserves \<undefined> values...  
 // but JSON.stringify() does not
@@ -91,6 +92,34 @@ function oneKey(type: Types, value: string) {
 	return `{"${type}": ${value}}`;
 }
 
+/** Symbols in an Object-key will need special treatment */
+function fromSymbol(key: string | number | symbol) {
+	if (isSymbol(key))																				// @@(name) for global, @(name) for local
+		return `${isSymbolFor(key) ? '@' : ''}@(${key.description || ''})`;
+
+	return key.toString();
+}
+
+const symKey = /^@(@)?\(([^\)]*)\)$/;												// pattern to match a stringify'd Symbol
+/** reconstruct a Symbol */
+function toSymbol(key: string | symbol) {
+	const [pat, keyFor, desc] = key.toString().match(symKey) || [null, void 0, void 0];
+
+	switch (true) {
+		case isSymbol(key):																			// already a Symbol
+		case isNullish(pat):																		// incorrect encoded Symbol
+		case isDefined(keyFor) && isUndefined(desc):						// incorrect encoded global Symbol
+			return key;
+
+		case isDefined(keyFor) && isDefined(desc):							// global Symbol
+			return Symbol.for(desc);
+
+		case isUndefined(keyFor):																// local Symbol
+		default:
+			return Symbol(desc);
+	}
+}
+
 /**
  * For items which are not currently serializable via standard JSON.stringify (Undefined, BigInt, Set, Map, etc.)  
  * this creates a stringified, single-key Object to represent the value; for example  "{ 'BigInt': '123' }"  
@@ -145,25 +174,24 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 
 		case 'Object':
 		case 'Record':
-			return `${arg.type === 'Record' ? '#' : ''}{`
-				+ Reflect.ownKeys(arg.value)
-					.map(key => [key, arg.value[key]])								// like Object.entries(), key of string | number | symbol
-					.filter(([, val]) => isStringable(val))
-					.map(([key, val]) => `${stringize(key)}:${stringize(val)}`)
-				+ `}`;
+			const obj = allEntries(arg.value)
+				.filter(([, val]) => isStringable(val))
+				.map(([key, val]) => `${stringize(fromSymbol(key))}:${stringize(val)}`)
+				.join(',')
+			return `${arg.type === 'Record' ? '#' : ''}{${obj}}`;
 
 		case 'Array':
 		case 'Tuple':
-			return `${arg.type === 'Tuple' ? '#' : ''}[`
-				+ arg.value
-					.filter(val => isStringable(val))
-					.map(val => stringize(val))
-				+ `]`;
+			const arr = arg.value
+				.filter(val => isStringable(val))
+				.map(val => stringize(val))
+				.join(',')
+			return `${arg.type === 'Tuple' ? '#' : ''}[${arr}]`;
 
 		case 'Map':
 			const map = Array.from(arg.value.entries())
 				.filter(([, val]) => isStringable(val))
-				.map(([key, val]) => `[${isSymbol(key) ? '@' : ''}${stringize(key)},${stringize(val)}]`)
+				.map(([key, val]) => `[${stringize(fromSymbol(key))},${stringize(val)}]`)
 				.join(',')
 			return oneKey(arg.type, `[${map}]`);
 
@@ -175,7 +203,7 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 			return oneKey(arg.type, `[${set}]`);
 
 		case 'Symbol':
-			return oneKey(arg.type, stringize(`${isSymbolFor(arg.value) ? 'for' : ''}(${arg.value.description})`));
+			return oneKey(arg.type, stringize(fromSymbol(arg.value)));
 
 		case 'RegExp':
 			const { source, flags } = arg.value;
@@ -212,7 +240,6 @@ export function objectify<T extends any>(str: any, sentinel?: Function): T {
 		switch (true) {
 			case str.startsWith('{') && str.endsWith('}'):				// looks like Object
 			case str.startsWith('[') && str.endsWith(']'):				// looks like Array
-			case str.startsWith('@{') && str.endsWith('}'):				// looks like Symbol
 			case str.startsWith('#{') && str.endsWith('}'):				// looks like Record
 			case str.startsWith('#[') && str.endsWith(']'):				// looks like Tuple
 				return traverse(parse, sentinel);										// recurse into object
@@ -229,9 +256,9 @@ export function objectify<T extends any>(str: any, sentinel?: Function): T {
 /** Recurse into Object / Array, looking for special single-key Objects */
 function traverse(obj: any, sentinel?: Function): any {
 	if (isObject(obj)) {
-		return typeify(Object.entries(obj)
+		return typeify(allEntries(obj)
 			.reduce((acc, [key, val]) =>
-				Object.assign(acc, { [key]: typeify(traverse(val, sentinel)) }),
+				Object.assign(acc, { [toSymbol(key)]: typeify(traverse(val, sentinel)) }),
 				{}),
 			sentinel
 		)
@@ -254,13 +281,13 @@ function traverse(obj: any, sentinel?: Function): any {
 }
 
 /** Rebuild an Object from its single-key representation */
-const sym = /^(for)?\(([^\)]*)\)$/;													// pattern to match a stringify'd Symbol
-function typeify(json: object, sentinel?: Function) {
+function typeify(json: Record<string | symbol, string>, sentinel?: Function) {
 	if (!isObject(json))
 		return json;																						// only JSON Objects
 
-	const entries = Object.entries(json) as [Types, any][];
-	if (entries.length !== 1)																	// only single-key Objects
+	// const entries = Object.entries(json) as [Types, any][];
+	const entries = allEntries(json) as [Types, any][];
+	if (entries.length !== 1)																	// only single-key Objects accepted
 		return json;
 
 	const [type, value] = entries[0];
@@ -285,16 +312,7 @@ function typeify(json: object, sentinel?: Function) {
 		case 'RegExp':
 			return new RegExp(value.source, value.flags);
 		case 'Symbol':
-			const [match, keyFor, desc] = (value as string).match(sym) ?? [null, void 0, void 0];
-			switch (true) {
-				case isNull(match):
-				case isDefined(keyFor) && isUndefined(desc):
-					return json;																			// unexpected Symbol description
-				case isDefined(keyFor) && isDefined(desc):
-					return Symbol.for(desc);													// global Symbol registry
-				default:
-					return Symbol(desc);															// new Symbol
-			}
+			return toSymbol(value) ?? json;												// reconstruct Symbol
 		case 'Map':
 			return new Map(value);
 		case 'Set':

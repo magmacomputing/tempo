@@ -117,25 +117,6 @@ export const isEqual = (obj1: any = {}, obj2: any = {}): boolean => {
 	})
 }
 
-/** omit top-level keys from an Object */
-export function omit<T extends {}>(obj: T, ...keys: (keyof T)[]) {
-	let res = clone<T>(obj);																	// create a safe copy
-
-	keys.forEach(key => Reflect.deleteProperty(res, key));
-	return res;
-}
-
-/** mutate Object | Array reference with all ownKeys removed */
-export function purge<T extends {}>(obj: T) {
-	Reflect.ownKeys(obj)
-		.forEach(key => Reflect.deleteProperty(obj, key));
-
-	if (isArray(obj))
-		Reflect.set(obj, 'length', 0);													// explicit set length
-
-	return obj;																								// return Object reference, even though Object has been mutated
-}
-
 /** extract a subset of keys from an object */
 export const pick = <T extends Record<string, any>, K extends string>(obj: T, ...keys: K[]): Partial<T> => {
 	const ownKeys = Object.getOwnPropertyNames(obj);
