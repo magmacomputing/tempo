@@ -77,8 +77,8 @@ export function sprintf(fmt: {}, ...msg: any[]) {
 			sfmt += `${sfmt.length === 0 ? '' : sfmt.endsWith(':') ? ' ' : ', '}\${${idx}}`	//  append a dummy params to fmt
 	})
 
-	// 2024-02-21  do not stringify() just to sprintf
-	return sfmt.replace(regexp, (_, idx) => isObject(msg[idx]) ? JSON.stringify(msg[idx]) : msg[idx]);
+	// 2024-02-21  some Objects do not have a .toString method
+	return sfmt.replace(regexp, (_, idx) => msg[idx]?.toString?.() || JSON.stringify(msg[idx]));
 }
 
 /** apply a plural suffix, if greater than '1' */
