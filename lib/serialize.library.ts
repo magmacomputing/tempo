@@ -1,6 +1,8 @@
 import { Tempo } from '@module/shared/tempo.class.js';
+import { curry } from '@module/shared/function.library.js';
 import { isNumeric } from '@module/shared/number.library.js';
 import { allEntries } from '@module/shared/reflect.library.js';
+
 import { isType, asType, isEmpty, isDefined, isUndefined, isNullish, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types, isSymbolFor, isSymbol } from '@module/shared/type.library.js';
 
 // be aware that 'structuredClone' preserves \<undefined> values...  
@@ -89,7 +91,7 @@ function isStringable(val: unknown): boolean {
 
 /** string representation of a single-key Object */
 function oneKey(type: Types, value: string) {
-	return `{"${type}": ${value}}`;
+	return `{"${type}":${value}}`;
 }
 
 /** Symbols in an Object-key will need special treatment */
@@ -122,7 +124,7 @@ function toSymbol(key: string | symbol) {
 
 /**
  * For items which are not currently serializable via standard JSON.stringify (Undefined, BigInt, Set, Map, etc.)  
- * this creates a stringified, single-key Object to represent the value; for example  "{ 'BigInt': '123' }"  
+ * this creates a stringified, single-key Object to represent the value; for example  '{ "BigInt": 123 }'  
  * I would have preferred to use something more robust than strings for the keys  (perhaps a Symbol? but that doesn't fit in well with serializing to a String),  
  * as this single-key Object is open to abuse.  But the risk is acceptable within the scope of small projects.  
  * 
@@ -133,7 +135,7 @@ function toSymbol(key: string | symbol) {
 
 /**
  * serialize Objects for string-safe stashing in WebStorage, Cache, etc  
- * uses JSON.stringify where available, else returns stringified single-key Object "{[type]: value}"  
+ * uses JSON.stringify where available, else returns stringified single-key Object '{"[type]": value}'  
  */
 export function stringify(obj: any) {
 	return stringize(obj, false);
@@ -146,6 +148,7 @@ export function stringify(obj: any) {
  */
 function stringize(obj: any, recurse = true): string {			// hide the second parameter: for internal use only
 	const arg = asType(obj);
+	const str = curry(oneKey)(arg.type);											// seed the oneKey() function
 
 	switch (arg.type) {
 		case 'String':
@@ -167,10 +170,10 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 
 		case 'Void':
 		case 'Undefined':
-			return oneKey(arg.type, JSON.stringify('void'));			// preserve 'undefined' values
+			return str(JSON.stringify('void'));										// preserve 'undefined' values		
 
 		case 'BigInt':
-			return oneKey(arg.type, arg.value.toString());				// even though BigInt has a toString method, it is not supported in JSON.stringify
+			return str(arg.value.toString());											// even though BigInt has a toString method, it is not supported in JSON.stringify
 
 		case 'Object':
 		case 'Record':
@@ -193,21 +196,21 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 				.filter(([, val]) => isStringable(val))
 				.map(([key, val]) => `[${stringize(fromSymbol(key))},${stringize(val)}]`)
 				.join(',')
-			return oneKey(arg.type, `[${map}]`);
+			return str(`[${map}]`);
 
 		case 'Set':
 			const set = Array.from(arg.value.values())
 				.filter(val => isStringable(val))
 				.map(val => stringize(val))
 				.join(',')
-			return oneKey(arg.type, `[${set}]`);
+			return str(`[${set}]`);
 
 		case 'Symbol':
-			return oneKey(arg.type, stringize(fromSymbol(arg.value)));
+			return str(stringize(fromSymbol(arg.value)));
 
 		case 'RegExp':
 			const { source, flags } = arg.value;
-			return oneKey(arg.type, stringize({ source: encode(source), flags }));
+			return str(stringize({ source: encode(source), flags }));
 
 		default:
 			switch (true) {
@@ -215,16 +218,16 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 					return void 0 as unknown as string;								// Object is not stringify-able
 
 				case isFunction(arg.value.toString):								// Object has its own toString method
-					return oneKey(arg.type, JSON.stringify(arg.value.toString()));
+					return str(JSON.stringify(arg.value.toString()));
 
 				case isFunction(arg.value.toJSON):									// Object has its own toJSON method
-					return oneKey(arg.type, JSON.stringify(arg.value.toJSON(), replacer));
+					return str(JSON.stringify(arg.value.toJSON(), replacer));
 
 				case isFunction(arg.value.valueOf):									// Object has its own valueOf method		
-					return oneKey(arg.type, JSON.stringify(arg.value.valueOf()));
+					return str(JSON.stringify(arg.value.valueOf()));
 
 				default:																						// else standard stringify
-					return oneKey(arg.type, JSON.stringify(arg.value, replacer));
+					return str(JSON.stringify(arg.value, replacer));
 			}
 	}
 }
