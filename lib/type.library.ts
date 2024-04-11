@@ -86,7 +86,7 @@ export const isEmpty = <T>(obj?: T) => false
 	|| isNullish(obj)
 	|| (isObject(obj) && Object.keys(obj as Record<any, any>).length === 0)
 	|| (isString(obj) && obj.trim().length === 0)
-	|| (isNumber(obj) && isNaN(obj))
+	|| (isNumber(obj) && isNaN(obj) === false)
 	|| (isArray(obj) && obj.length === 0)
 	|| (isSet(obj) && obj.size === 0)
 	|| (isMap(obj) && obj.size === 0)

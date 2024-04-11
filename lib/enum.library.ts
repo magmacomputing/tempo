@@ -24,7 +24,7 @@ export const enumKeys = <T extends {}>(enumType: T) => {
 	return (enumEntries.length !== enumKeys.length)						// if not-Numeric Enum
 		? enumKeys																							// 	String/Heterogeneous Enum
 		: enumEntries																						// else
-			.sort(([, val1], [, val2]) => val1 = val2)						// 	sort by the number-values, and
+			// .sort(([, val1], [, val2]) => val1 = val2)						// 	sort by the number-values, and
 			.map(([key,]) => key)																	// 	return the keys
 }
 

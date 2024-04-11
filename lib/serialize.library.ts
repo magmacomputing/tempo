@@ -102,9 +102,9 @@ function fromSymbol(key: string | number | symbol) {
 	return key.toString();
 }
 
-const symKey = /^@(@)?\(([^\)]*)\)$/;												// pattern to match a stringify'd Symbol
 /** reconstruct a Symbol */
 function toSymbol(key: string | symbol) {
+	const symKey = /^@(@)?\(([^\)]*)\)$/;											// pattern to match a stringify'd Symbol
 	const [pat, keyFor, desc] = key.toString().match(symKey) || [null, void 0, void 0];
 
 	switch (true) {
@@ -148,7 +148,7 @@ export function stringify(obj: any) {
  */
 function stringize(obj: any, recurse = true): string {			// hide the second parameter: for internal use only
 	const arg = asType(obj);
-	const str = curry(oneKey)(arg.type);											// seed the oneKey() function
+	const one = curry(oneKey)(arg.type);											// seed the oneKey() function
 
 	switch (arg.type) {
 		case 'String':
@@ -170,10 +170,10 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 
 		case 'Void':
 		case 'Undefined':
-			return str(JSON.stringify('void'));										// preserve 'undefined' values		
+			return one(JSON.stringify('void'));										// preserve 'undefined' values		
 
 		case 'BigInt':
-			return str(arg.value.toString());											// even though BigInt has a toString method, it is not supported in JSON.stringify
+			return one(arg.value.toString());											// even though BigInt has a toString method, it is not supported in JSON.stringify
 
 		case 'Object':
 		case 'Record':
@@ -196,21 +196,20 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 				.filter(([, val]) => isStringable(val))
 				.map(([key, val]) => `[${stringize(fromSymbol(key))},${stringize(val)}]`)
 				.join(',')
-			return str(`[${map}]`);
+			return one(`[${map}]`);
 
 		case 'Set':
 			const set = Array.from(arg.value.values())
 				.filter(val => isStringable(val))
 				.map(val => stringize(val))
 				.join(',')
-			return str(`[${set}]`);
+			return one(`[${set}]`);
 
 		case 'Symbol':
-			return str(stringize(fromSymbol(arg.value)));
+			return one(stringize(fromSymbol(arg.value)));
 
 		case 'RegExp':
-			const { source, flags } = arg.value;
-			return str(stringize({ source: encode(source), flags }));
+			return one(stringize(arg.value.toString()));
 
 		default:
 			switch (true) {
@@ -218,16 +217,16 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 					return void 0 as unknown as string;								// Object is not stringify-able
 
 				case isFunction(arg.value.toString):								// Object has its own toString method
-					return str(JSON.stringify(arg.value.toString()));
+					return one(JSON.stringify(arg.value.toString()));
 
 				case isFunction(arg.value.toJSON):									// Object has its own toJSON method
-					return str(JSON.stringify(arg.value.toJSON(), replacer));
+					return one(JSON.stringify(arg.value.toJSON(), replacer));
 
 				case isFunction(arg.value.valueOf):									// Object has its own valueOf method		
-					return str(JSON.stringify(arg.value.valueOf()));
+					return one(JSON.stringify(arg.value.valueOf()));
 
 				default:																						// else standard stringify
-					return str(JSON.stringify(arg.value, replacer));
+					return one(JSON.stringify(arg.value, replacer));
 			}
 	}
 }
@@ -251,7 +250,7 @@ export function objectify<T extends any>(str: any, sentinel?: Function): T {
 				return parse;
 		}
 	} catch (error) {
-		console.warn(`objectify.parse: not a JSON string -> ${str}`);
+		console.warn(`objectify.parse: -> ${str}, ${(error as Error).message}`);
 		return str as T;
 	}
 }
@@ -313,7 +312,7 @@ function typeify(json: Record<string | symbol, string>, sentinel?: Function) {
 		case 'Date':
 			return new Date(value);
 		case 'RegExp':
-			return new RegExp(value.source, value.flags);
+			return new RegExp(value);
 		case 'Symbol':
 			return toSymbol(value) ?? json;												// reconstruct Symbol
 		case 'Map':

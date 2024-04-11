@@ -19,8 +19,18 @@ export function omit<T extends {}>(obj: T, ...keys: (keyof T)[]) {
   return obj;																								// return Object reference, even though Object has been mutated
 }
 
+/** remove all ownKeys from an Object | Array */
+export function purge<T extends {}>(obj: T) {
+  return omit(obj);
+}
+
 /** collect string | number | symbol key'd objects */
 export function allEntries<T>(json: Record<string | number | symbol, T>) {
-  return Reflect.ownKeys(json)															// Object.entries() would discard symbol-keys
+  return allKeys(json)                                      // Object.entries() would discard symbol-keys
     .map(key => [key, json[key]] as [string | symbol, T])
+}
+
+/** collect string | number | symbol object keys */
+export function allKeys(json: Record<string | number | symbol, unknown>) {
+  return Reflect.ownKeys(json)                              // Object.keys()
 }
