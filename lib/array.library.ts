@@ -2,7 +2,7 @@ import { isTempo } from '@module/shared/tempo.class.js';
 import { asString } from '@module/shared/string.library.js';
 import { getPath } from '@module/shared/object.library.js';
 import { cloneify } from '@module/shared/serialize.library.js';
-import { asType, isNumber, isDate, isIterable, isString, isArrayLike, nullToValue } from '@module/shared/type.library.js';
+import { asType, isNumber, isDate, isIterable, isString, isObject, isDefined, isArrayLike, nullToValue } from '@module/shared/type.library.js';
 
 /** Coerce {value} into {Array\<value>} ( if not already Array<> ), with optional {fill} Object */
 export function asArray<T>(arr: Exclude<ArrayLike<T>, string> | undefined): T[];
@@ -25,19 +25,27 @@ export function asArray<T, K>(arr: T | Iterable<T> | ArrayLike<T> = [], fill?: K
 	}
 }
 
-// insert a value into an Array by its sorted position
-export const sortInsert = <T>(arr: T[] = [], val: T) => {
+/** insert a value into an Array by its sorted position */
+export const sortInsert = <T, K extends string>(arr: T[] = [], val: T, key?: K) => {
+	const obj = isObject(val) && isDefined(key);							// array of Objects
 	let low = 0, high = arr.length;
-	let clone = asArray(arr);
 
 	while (low < high) {
 		const mid = (low + high) >>> 1;													// divide by 2
-		if (clone[mid] < val)
+		const source = obj
+			? (arr[mid] as Record<string, typeof val>)[key]				// array of Object values
+			: arr[mid]																						// assume Primitive values
+		const target = obj
+			? val[key]
+			: val
+
+		if (source < target)
 			low = mid + 1
 		else high = mid
 	}
 
-	return clone.splice(low, 0, val);
+	arr.splice(low, 0, val);																	// mutate original Array
+	return arr;
 }
 
 /** sort Array-of-Objects by multiple keys */

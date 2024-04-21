@@ -25,12 +25,12 @@ export function purge<T extends {}>(obj: T) {
 }
 
 /** collect string | number | symbol key'd objects */
-export function allEntries<T>(json: Record<string | number | symbol, T>) {
-  return allKeys(json)                                      // Object.entries() would discard symbol-keys
-    .map(key => [key, json[key]] as [string | symbol, T])
+export function allEntries<T extends {}>(json: T) {
+  return allKeys<T>(json)                                   // Object.entries() would discard symbol-keys
+    .map(key => [key, json[key]] as [keyof T, T[keyof T]])  // cast as tuple
 }
 
 /** collect string | number | symbol object keys */
-export function allKeys(json: Record<string | number | symbol, unknown>) {
-  return Reflect.ownKeys(json)                              // Object.keys()
+export function allKeys<T extends {}>(json: T) {
+  return Reflect.ownKeys(json) as (keyof T)[]               // Object.keys()
 }
