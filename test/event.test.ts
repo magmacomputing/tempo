@@ -1,4 +1,4 @@
-import { Tempo } from '../lib/tempo.class';
+import { Tempo } from '../lib/tempo.class.js';
 
 const label = 'event:';
 const date = new Date('25-Dec-2020 22:30:45');

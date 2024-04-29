@@ -1,4 +1,4 @@
-import { Tempo } from '../lib/tempo.class';
+import { Tempo } from '../lib/tempo.class.js';
 
 const label = 'accessors:';
 const date = new Date();
