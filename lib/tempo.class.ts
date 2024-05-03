@@ -1,7 +1,7 @@
 // #region library modules~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 import { Pledge } from '@module/shared/pledge.class.js';
 import { asArray, sortInsert } from '@module/shared/array.library.js';
-import { enumKeys } from '@module/shared/enum.library.js';
+import { enumKeys, constKeys, constEntries } from '@module/shared/enum.library.js';
 import { allEntries, omit, purge } from '@module/shared/reflect.library.js';
 import { cloneify } from '@module/shared/serialize.library.js';
 import { getAccessors } from '@module/shared/object.library.js';
@@ -687,12 +687,12 @@ export class Tempo {
 	/** static Tempo.Duration getter, where matched in Tempo.TIMES */
 	static get durations() {
 		return getAccessors<Temporal.DurationLike>(Temporal.Duration)
-			.filter(key => enumKeys(Tempo.TIMES).includes(key));
+			.filter(key => constKeys(Tempo.TIMES).includes(key));
 	}
 
 	/** static Temporal.DateTimeUnit, where matched in Tempo.TIME */
 	static get elements() {
-		return enumKeys(Tempo.TIME) as Temporal.DateTimeUnit[];
+		return constKeys(Tempo.TIME) as Temporal.DateTimeUnit[];
 	}
 
 	/** static Tempo.Terms getter */
@@ -796,7 +796,7 @@ export class Tempo {
 	/** constructor options */																#options = {} as Tempo.Options;
 	/** instantiation Temporal Instant */											#instant: Temporal.Instant;
 	/** underlying Temporal ZonedDateTime */									#zdt!: Temporal.ZonedDateTime;
-	/** prebuilt formats, for convenience */									fmt = {} as Tempo.FormatType;
+	/** prebuilt formats, for convenience */									#fmt = {} as Tempo.FormatType;
 	/** instance values to complement static values */				#local = {
 		/** instance configuration */															config: {} as Tempo.Config,
 		/** instance term values */																term: {} as Record<string, string | number>,
@@ -871,9 +871,9 @@ export class Tempo {
 			this.#zdt = this.#parse(this.#tempo);									// attempt to interpret the DateTime arg
 
 			if (['iso8601', 'gregory'].includes(this.config.calendar)) {
-				enumKeys(Tempo.FORMAT)															// add all the pre-defined FORMATs to the instance (eg  Tempo().fmt.yearMonthDay)
-					.forEach(key =>
-						Object.assign(this.fmt, { [key]: this.format(Tempo.FORMAT[key]) }));	// add-on short-cut format
+				constEntries(Tempo.FORMAT)													// add all the pre-defined FORMATs to the instance (eg  Tempo().fmt.yearMonthDay)
+					.forEach(([key, val]) =>
+						Object.assign(this.#fmt, { [key]: this.format(val) }))// add-on short-cut format
 			}
 		} catch (err) {
 			Tempo.#catch(this.config, `Cannot create Tempo: ${(err as Error).message}`);
@@ -905,6 +905,7 @@ export class Tempo {
 	/** Instance configuration */															get config() { return { ...this.#local.config } }
 	/** nanoseconds (BigInt) since Unix epoch */							get nano() { return this.#zdt.epochNanoseconds }
 	/** calculated instance terms */													get term() { return { ...this.#local.term } }
+	/** in-built format-codes and formatted-results */				get fmt() { return { ...this.#fmt } }
 	/** units since epoch */																	get epoch() {
 		return {
 			/** seconds since epoch */														ss: this.#zdt.epochSeconds,
@@ -1116,7 +1117,7 @@ export class Tempo {
 		if (isDefined(groups["mm"]) && !isNumeric(groups["mm"])) {
 			const mm = Tempo.#prefix(groups["mm"] as Tempo.Calendar);
 
-			groups["mm"] = enumKeys(Tempo.MONTH)
+			groups["mm"] = constKeys(Tempo.MONTH)
 				.findIndex(el => el === mm)													// resolve month-name into a month-number
 				.toString()																					// (some browsers do not allow month-names when parsing a Date)
 				.padStart(2, '0')
@@ -1195,7 +1196,7 @@ export class Tempo {
 
 		const weekday = Tempo.#prefix(dow);											// conform weekday-name
 		const adjust = dateTime.daysInWeek * +cnt;							// how many weeks to adjust
-		const offset = enumKeys(Tempo.WEEKDAY)									// how far weekday is from today
+		const offset = constKeys(Tempo.WEEKDAY)									// how far weekday is from today
 			.findIndex(el => el === weekday);
 
 		const days = offset - dateTime.dayOfWeek								// number of days to offset from dateTime
@@ -1330,7 +1331,7 @@ export class Tempo {
 
 					/**
 					 * the first thing to do is build an {order}[] which projects a DateTime range to cover the {dateTime} value.  
-					 * for example: the 'quarter' {term} could yield (with {nano} equal to the actual ZonedDateTime)
+					 * for example: the 'quarter' {term} could yield (with {nano} equal to the actual Instant)
 					 * [ {nano: 9999, range: {month: 7}}, {nano: 9999, range: {month: 10}}, {nano: 9999, range: {month: 1}}, {nano: 9999, range: {month: 4}} ]
 					 */
 					allEntries(range as Pick<Tempo.Range, Temporal.DateTimeUnit>)
@@ -1348,17 +1349,11 @@ export class Tempo {
 					if (isUndefined(firstRange) || isUndefined(lastRange))
 						continue;
 
-					/**
-					 * now we have the defined {term} cutoff dates defined,  
-					 * add the low/high values
-					 */
+					// now we have the defined {term} cutoff dates defined,  add the low/high values
 					order.splice(0, 0, { nano: Tempo.DATE.minTempo, range: lastRange });
 					order.splice(-1, 0, { nano: Tempo.DATE.maxTempo, range: firstRange });
 
-					/**
-					 * now we have the full {term} cutoff dates defined, 
-					 * try to find where the {dateTime} fits within that {range}
-					 */
+					// now we have the full {term} cutoff dates defined, try to find where the {dateTime} fits within that {range}
 				}
 			})
 	}
@@ -1636,33 +1631,31 @@ export class Tempo {
 	/** calculate the difference between two Tempos  (past is positive, future is negative) */
 	#until<U extends Tempo.DateTime | Tempo.Until>(arg?: U): U extends Tempo.Until ? U["unit"] extends Tempo.PluralUnit ? number : Tempo.Duration : Tempo.Duration
 	#until<U extends Tempo.DateTime | Tempo.Until>(arg?: U): number | Tempo.Duration {
-		const { tempo, opts, unit } = isObject(arg)
+		const { tempo, opts = {}, unit } = isObject(arg)
 			? arg as Tempo.Until																	// if a Record detected, then assume Tempo.Until
 			: { tempo: arg } as Tempo.Until;											// else build a Record and assume Tempo.Parameter["tempo"]
 		const offset = new Tempo(tempo, opts);
 		const duration = this.#zdt.until(offset.#zdt, { largestUnit: unit ?? 'years' });
 
-		switch (unit) {
-			case void 0:																					// return Duration as object
-				const dur = {} as Tempo.Duration;
+		if (isUndefined(unit)) {																// return Duration as object
+			const dur = { iso: duration.toString() } as Tempo.Duration;
 
-				for (const getter of Tempo.durations)
-					dur[getter] = duration[getter] ?? 0;							// init all duration-values to '0'
+			for (const getter of Tempo.durations)
+				dur[getter] = duration[getter] ?? 0;								// init all duration-values to '0'
 
-				return Object.assign(dur, { iso: duration.toString(), });
-
-			default:																							// sum-up the duration components
-				return duration.total({ relativeTo: this.#zdt, unit });
+			return dur;
+		} else {																								// sum-up the duration components
+			return duration.total({ relativeTo: this.#zdt, unit });
 		}
 	}
 
-	/** format the elapsed time between two Tempos (to milliseconds) */
+	/** format the elapsed time between two Tempos (to nanosecond) */
 	#since(arg?: Tempo.DateTime | Tempo.Until) {
-		const { tempo, opts, unit } = isObject(arg)
+		const { tempo, opts = {}, unit } = isObject(arg)
 			? arg as Tempo.Until																	// if a Record passed, then assume Tempo.Until
 			: { tempo: arg } as Tempo.Until;											// else build a Record and assume Tempo.Parameter["tempo"]
 		const { days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds } = this.#until({ tempo, opts });
-		const since = `${pad(seconds)}.${pad(milliseconds, 3)}`;// default since
+		const since = `${pad(seconds)}.${pad(milliseconds, 3)}${pad(microseconds, 3)}${pad(nanoseconds, 3)}`;// default since
 
 		switch (unit) {
 			case 'days':
@@ -1690,33 +1683,38 @@ export class Tempo {
 // #region Tempo types / interfaces / enums ~~~~~~~~~~~~~~~~
 export namespace Tempo {
 	/** the value that Tempo will attempt to interpret as a valid ISO date / time */
-	export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | null
+	export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | undefined | null
 
-	/** the Options Object found in a json-file, or passed to a call to Tempo.Init({}) or 'new Tempo({}) */
-	export interface Options {																// allowable settings to override configuration
-		debug?: boolean;																				// debug-points into the console.log
-		catch?: boolean;																				// Tempo will catch errors (else caller is responsible)
-		timeZone?: string;																			// the timeZone on which to base the Tempo
-		calendar?: string;																			// the Temporal.Calendar
-		locale?: string;																				// the locale (e.g. en-AU)
-		pivot?: number;																					// the pivot-year that determines current-or-previous century when year is only two-digits
-		sphere?: Tempo.Sphere;																	// the hemisphere (useful for determining 'season')
-		timeStamp?: Tempo.TimeStamp;														// granularity of new Tempo().ts
-		monthDay?: string | string[];														// Array of locale names that prefer 'mm-dd-yy' date order
-		layout?: Internal.InputFormat<Internal.StringPattern>;	// provide additional layouts to define patterns to help parse input
-		event?: Internal.StringTuple[];													// provide additional date-maps (e.g. xmas => '25 Dec')
-		period?: Internal.StringTuple[];												// provide additional time-maps (e.g. arvo => '3pm')
-		terms?: Internal.InputFormat<Tempo.Term>;								// provide additional term ranges (e.g. star => {Taurus, {day:21, month:5}, ...})
-		value?: Tempo.DateTime;																	// the {value} to interpret can be supplied in the Options argument
+	interface Mam {
+		debug?: boolean;
 	}
+	/** the Options Object found in a json-file, or passed to a call to Tempo.Init({}) or 'new Tempo({}) */
+	export type Options = Partial<{														// allowable settings to override configuration
+		debug: boolean;																					// debug-points into the console.log
+		catch: boolean;																					// Tempo will catch errors (else caller is responsible)
+		timeZone: string;																				// the timeZone on which to base the Tempo
+		calendar: string;																				// the Temporal.Calendar
+		locale: string;																					// the locale (e.g. en-AU)
+		pivot: number;																					// the pivot-year that determines current-or-previous century when year is only two-digits
+		sphere: Tempo.Sphere;																		// the hemisphere (useful for determining 'season')
+		timeStamp: Tempo.TimeStamp;															// granularity of new Tempo().ts
+		monthDay: string | string[];														// Array of locale names that prefer 'mm-dd-yy' date order
+		layout: Internal.InputFormat<Internal.StringPattern>;		// provide additional layouts to define patterns to help parse input
+		event: Internal.StringTuple[];													// provide additional date-maps (e.g. xmas => '25 Dec')
+		period: Internal.StringTuple[];													// provide additional time-maps (e.g. arvo => '3pm')
+		terms: Internal.InputFormat<Tempo.Term>;								// provide additional term ranges (e.g. star => {Taurus, {day:21, month:5}, ...})
+		value: Tempo.DateTime;																	// the {value} to interpret can be supplied in the Options argument
+	}>
 
+	/** drop the setup-only Options */
+	type OptionsKeep = Omit<Options, "value" | "monthDay" | "layout">
 	/**
 	 * the Config that Tempo will use to interpret a Tempo.DateTime  
 	 * derived from user-supplied options, else json-stored options, else reasonable-default options
 	 */
-	export interface Config extends Required<Omit<Options, "value" | "monthDay" | "layout">> {
+	export interface Config extends Required<OptionsKeep> {
 		version: string;																				// semantic version
-		level: Internal.LEVEL,																	// separate configurations 
+		level: typeof Internal.LEVEL,														// separate configurations 
 		parse: Internal.Parse,																	// detail about how the Tempo constructor parsed the supplied value
 		monthDay: { locale: string; timeZones: string[]; }[];		// Array of locales/timeZones that prefer 'mm-dd-yy' date order
 		layout: Map<symbol, Internal.StringPattern[]>;					// coerce {layout} to Map<Symbol, (string | RegExp)[]>
@@ -1751,7 +1749,6 @@ export namespace Tempo {
 
 	/** pre-configured format strings */
 	export interface Format {
-		[Tempo.FORMAT.display]: string;
 		[Tempo.FORMAT.dayDate]: string;
 		[Tempo.FORMAT.dayTime]: string;
 		[Tempo.FORMAT.dayFull]: string;
@@ -1766,7 +1763,7 @@ export namespace Tempo {
 		[Tempo.FORMAT.yearMonthDay]: number;
 		[Tempo.FORMAT.date]: string;
 		[Tempo.FORMAT.time]: string;
-		[str: string]: string | number;													// allow for dynamic format-codes
+		[str: string]: string | number;													// allow for user-supplied format-codes
 	}
 	export type Formats = keyof Tempo.Format
 
@@ -1802,61 +1799,62 @@ export namespace Tempo {
 	export type Calendar = Exclude<keyof typeof Tempo.MONTH, 'All'>
 
 	/** Compass points */
-	export enum COMPASS {
-		North = 'north',
-		East = 'east',
-		South = 'south',
-		West = 'west'
-	}
+	export const COMPASS = {
+		North: 'north',
+		East: 'east',
+		South: 'south',
+		West: 'west'
+	} as const
 	/** Hemisphere */
-	export type Sphere = Tempo.COMPASS.North | Tempo.COMPASS.South | null
+	export type Sphere = typeof Tempo.COMPASS.North | typeof Tempo.COMPASS.South | null
 
 	/** pre-configured format names */
-	export enum FORMAT {
-		display = 'ddd, dd mmm yyyy',
-		dayDate = 'ddd, yyyy-mmm-dd',
-		dayTime = 'ddd, yyyy-mmm-dd hh:mi',
-		dayFull = 'ddd, yyyy-mmm-dd hh:mi:ss',									// useful for Sheets cell-format
-		dayStamp = 'ddd, yyyy-mmm-dd hh:mi:ss.ff',							// day, date and time to nanosecond
-		logStamp = 'hhmiss.ff',																	// useful for stamping logs 
-		sortTime = 'yyyy-mm-dd hh:mi:ss',												// useful for sorting display-strings
-		monthDay = 'dd-mmm',																		// useful for readable month and day
-		monthTime = 'yyyy-mmm-dd hh:mi',												// useful for dates where dow is not needed
-		hourMinute = 'hh:mi',																		// 24-hour format
-		yearWeek = 'yyyyww',
-		yearMonth = 'yyyymm',
-		yearMonthDay = 'yyyymmdd',
-		date = 'yyyy-mmm-dd',																		// just Date portion
-		time = 'hh:mi:ss',																			// just Time portion
-	}
+	type FORMAT = keyof typeof FORMAT
+	export const FORMAT = {
+		display: 'ddd, dd mmm yyyy',
+		dayDate: 'ddd, yyyy-mmm-dd',
+		dayTime: 'ddd, yyyy-mmm-dd hh:mi',
+		dayFull: 'ddd, yyyy-mmm-dd hh:mi:ss',										// useful for Sheets cell-format
+		dayStamp: 'ddd, yyyy-mmm-dd hh:mi:ss.ff',								// day, date and time to nanosecond
+		logStamp: 'hhmiss.ff',																	// useful for stamping logs 
+		sortTime: 'yyyy-mm-dd hh:mi:ss',												// useful for sorting display-strings
+		monthDay: 'dd-mmm',																			// useful for readable month and day
+		monthTime: 'yyyy-mmm-dd hh:mi',													// useful for dates where dow is not needed
+		hourMinute: 'hh:mi',																		// 24-hour format
+		yearWeek: 'yyyyww',
+		yearMonth: 'yyyymm',
+		yearMonthDay: 'yyyymmdd',
+		date: 'yyyy-mmm-dd',																		// just Date portion
+		time: 'hh:mi:ss',																				// just Time portion
+	} as const
 
 	/** approx number of seconds per unit-of-time */
-	export enum TIME {
-		year = 31_536_000,
-		month = 2_628_000,
-		week = 604_800,
-		day = 86_400,
-		hour = 3_600,
-		minute = 60,
-		second = 1,
-		millisecond = .001,
-		microsecond = .000_001,
-		nanosecond = .000_000_001,
-	}
+	export const TIME = {
+		year: 31_536_000,
+		month: 2_628_000,
+		week: 604_800,
+		day: 86_400,
+		hour: 3_600,
+		minute: 60,
+		second: 1,
+		millisecond: .001,
+		microsecond: .000_001,
+		nanosecond: .000_000_001,
+	} as const
 
 	/** approxnumber of milliseconds per unit-of-time */
-	export enum TIMES {
-		years = TIME.year * 1_000,
-		months = TIME.month * 1_000,
-		weeks = TIME.week * 1_000,
-		days = TIME.day * 1_000,
-		hours = TIME.hour * 1_000,
-		minutes = TIME.minute * 1_000,
-		seconds = TIME.second * 1_000,
-		milliseconds = TIME.millisecond * 1_000,
-		microseconds = TIME.microsecond * 1_000,
-		nanoseconds = Number((TIME.nanosecond * 1_000).toPrecision(6)),
-	}
+	export const TIMES = {
+		years: TIME.year * 1_000,
+		months: TIME.month * 1_000,
+		weeks: TIME.week * 1_000,
+		days: TIME.day * 1_000,
+		hours: TIME.hour * 1_000,
+		minutes: TIME.minute * 1_000,
+		seconds: TIME.second * 1_000,
+		milliseconds: TIME.millisecond * 1_000,
+		microseconds: TIME.microsecond * 1_000,
+		nanoseconds: Number((TIME.nanosecond * 1_000).toPrecision(6)),
+	} as const
 
 	/** some useful Dates */
 	export const DATE = {
@@ -1866,22 +1864,12 @@ export namespace Tempo {
 		maxTempo: Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds,
 		minTempo: Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds,
 	} as const
-
-	/** Seasons */
-	export enum SEASON {
-		Spring, Summer, Autumn, Winter,
-	}
-
-	/** Zodiac signs */
-	export enum ZODIAC {
-		Aries, Taurus, Gemini, Cancer, Leo, Virgo, Libra, Scorpio, Sagittarius, Capricorn, Aquarius, Pisces,
-	}
 }
 // #endregion Tempo types / interfaces / enums
 
 // #region Namespace that doesn't need to be shared externally
 namespace Internal {
-	export enum LEVEL { Global = 'global', Local = 'local' }
+	export const LEVEL = { Global: 'global', Local: 'local', } as const;
 
 	export type StringPattern = (string | RegExp)
 	export type StringTuple = [string, string];
