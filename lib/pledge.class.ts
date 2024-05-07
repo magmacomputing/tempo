@@ -31,8 +31,8 @@ export class Pledge<T> {
 			onReject = Pledge.#options.onReject,
 			onSettle = Pledge.#options.onSettle,
 			...flags } = isString(arg)
-				? { tag: arg }																			// if String, assume 'tag'
-				: { ...arg }																				// else 'options'
+				? { tag: arg } as Pledge.Constructor								// if String, assume 'tag'
+				: { ...arg }									// else 'options'
 
 		this.#status = JSON.parse(JSON.stringify({							// remove undefined values
 			tag,
@@ -137,11 +137,12 @@ export namespace Pledge {
 	export type Settle = () => void;													// function to call after Pledge settles
 
 	export type Constructor = {
-		tag?: string,
-		onResolve?: TValues<Pledge.Resolve>,
-		onReject?: TValues<Pledge.Reject>,
-		onSettle?: TValues<Pledge.Settle>,
-		catch?: boolean, debug?: boolean,
+		tag?: string;
+		onResolve?: TValues<Pledge.Resolve>;
+		onReject?: TValues<Pledge.Reject>;
+		onSettle?: TValues<Pledge.Settle>;
+		catch?: boolean;
+		debug?: boolean;
 	}
 
 	export enum STATE {
