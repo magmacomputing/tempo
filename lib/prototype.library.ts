@@ -2,7 +2,7 @@
 // no typescript checking to get around the 'this' binding warnings
 
 import { trimAll, toProperCase } from '@module/shared/string.library.js';
-import { asArray, sortBy, type SortBy, keyedBy } from '@module/shared/array.library.js';
+import { asArray, keyedBy, sortBy, type SortBy } from '@module/shared/array.library.js';
 
 // Prototype extensions
 // Remember to define any imports as a Function declaration (not a Function expression)
@@ -13,7 +13,7 @@ import { asArray, sortBy, type SortBy, keyedBy } from '@module/shared/array.libr
  */
 const patch = <T>(proto: T, property: string, method: Function) => {
 	if (proto.prototype.hasOwnProperty(property)) {						// if already defined,
-		if (trimAll(method) !== trimAll(proto.prototype[property]))	// show error if different method definition
+		if (trimAll(method.toString()) !== trimAll(proto.prototype[property].toString()))	// show error if different method definition
 			console.warn(`${proto.name}.${property} already defined`);
 	} else {
 		Object.defineProperty(proto.prototype, property, {

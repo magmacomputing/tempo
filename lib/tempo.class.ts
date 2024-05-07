@@ -1,7 +1,8 @@
 // #region library modules~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 import { Pledge } from '@module/shared/pledge.class.js';
 import { asArray, sortInsert } from '@module/shared/array.library.js';
-import { enumKeys, constKeys, constEntries } from '@module/shared/enum.library.js';
+import { enumKeys } from '@module/shared/enum.library.js';
+import { enumify } from '@module/shared/enum.class.js';
 import { allEntries, omit, purge } from '@module/shared/reflect.library.js';
 import { cloneify } from '@module/shared/serialize.library.js';
 import { getAccessors } from '@module/shared/object.library.js';
@@ -687,12 +688,12 @@ export class Tempo {
 	/** static Tempo.Duration getter, where matched in Tempo.TIMES */
 	static get durations() {
 		return getAccessors<Temporal.DurationLike>(Temporal.Duration)
-			.filter(key => constKeys(Tempo.TIMES).includes(key));
+			.filter(key => Tempo.TIMES.keys().includes(key));
 	}
 
 	/** static Temporal.DateTimeUnit, where matched in Tempo.TIME */
 	static get elements() {
-		return constKeys(Tempo.TIME) as Temporal.DateTimeUnit[];
+		return Tempo.TIME.keys() as Temporal.DateTimeUnit[];
 	}
 
 	/** static Tempo.Terms getter */
@@ -871,9 +872,9 @@ export class Tempo {
 			this.#zdt = this.#parse(this.#tempo);									// attempt to interpret the DateTime arg
 
 			if (['iso8601', 'gregory'].includes(this.config.calendar)) {
-				constEntries(Tempo.FORMAT)													// add all the pre-defined FORMATs to the instance (eg  Tempo().fmt.yearMonthDay)
+				Tempo.FORMAT.entries()															// add all the pre-defined FORMATs to the instance (eg. Tempo().fmt.yearMonthDay)
 					.forEach(([key, val]) =>
-						Object.assign(this.#fmt, { [key]: this.format(val) }))// add-on short-cut format
+						Object.assign(this.#fmt, { [key]: this.format(val) }))	// add-on short-cut format
 			}
 		} catch (err) {
 			Tempo.#catch(this.config, `Cannot create Tempo: ${(err as Error).message}`);
@@ -902,8 +903,8 @@ export class Tempo {
 	/** long month name */																		get mon() { return Tempo.MONTHS[this.#zdt.month] }
 	/** short weekday name */																	get ddd() { return Tempo.WEEKDAY[this.#zdt.dayOfWeek] }
 	/** long weekday name */																	get day() { return Tempo.WEEKDAYS[this.#zdt.dayOfWeek] }
-	/** Instance configuration */															get config() { return { ...this.#local.config } }
 	/** nanoseconds (BigInt) since Unix epoch */							get nano() { return this.#zdt.epochNanoseconds }
+	/** Instance configuration */															get config() { return { ...this.#local.config } }
 	/** calculated instance terms */													get term() { return { ...this.#local.term } }
 	/** in-built format-codes and formatted-results */				get fmt() { return { ...this.#fmt } }
 	/** units since epoch */																	get epoch() {
@@ -926,7 +927,7 @@ export class Tempo {
 
 	/** is valid Tempo */																			isValid() { return !isEmpty(this) }
 	/** as Temporal.ZonedDateTime */													toDateTime() { return this.#zdt }
-	/** as Temporal.Instant */																toInstant() { return this.#zdt.toInstant() }
+	/** as Temporal.Instant */																toInstant() { return this.#instant }
 	/** as Date object */																			toDate() { return new Date(this.#zdt.round({ smallestUnit: 'millisecond' }).epochMilliseconds) }
 	/** as String */																					toString() { return this.#zdt.toString() }
 	/** as Object */																					toJSON() { return { ...this.#local.config, value: this.toString() } }
@@ -1117,7 +1118,7 @@ export class Tempo {
 		if (isDefined(groups["mm"]) && !isNumeric(groups["mm"])) {
 			const mm = Tempo.#prefix(groups["mm"] as Tempo.Calendar);
 
-			groups["mm"] = constKeys(Tempo.MONTH)
+			groups["mm"] = enumKeys(Tempo.MONTH)
 				.findIndex(el => el === mm)													// resolve month-name into a month-number
 				.toString()																					// (some browsers do not allow month-names when parsing a Date)
 				.padStart(2, '0')
@@ -1196,7 +1197,7 @@ export class Tempo {
 
 		const weekday = Tempo.#prefix(dow);											// conform weekday-name
 		const adjust = dateTime.daysInWeek * +cnt;							// how many weeks to adjust
-		const offset = constKeys(Tempo.WEEKDAY)									// how far weekday is from today
+		const offset = enumKeys(Tempo.WEEKDAY)									// how far weekday is from today
 			.findIndex(el => el === weekday);
 
 		const days = offset - dateTime.dayOfWeek								// number of days to offset from dateTime
@@ -1799,18 +1800,18 @@ export namespace Tempo {
 	export type Calendar = Exclude<keyof typeof Tempo.MONTH, 'All'>
 
 	/** Compass points */
-	export const COMPASS = {
+	export const COMPASS = enumify({
 		North: 'north',
 		East: 'east',
 		South: 'south',
 		West: 'west'
-	} as const
+	} as const)
 	/** Hemisphere */
 	export type Sphere = typeof Tempo.COMPASS.North | typeof Tempo.COMPASS.South | null
 
 	/** pre-configured format names */
 	type FORMAT = keyof typeof FORMAT
-	export const FORMAT = {
+	export const FORMAT = enumify({
 		display: 'ddd, dd mmm yyyy',
 		dayDate: 'ddd, yyyy-mmm-dd',
 		dayTime: 'ddd, yyyy-mmm-dd hh:mi',
@@ -1826,10 +1827,10 @@ export namespace Tempo {
 		yearMonthDay: 'yyyymmdd',
 		date: 'yyyy-mmm-dd',																		// just Date portion
 		time: 'hh:mi:ss',																				// just Time portion
-	} as const
+	} as const)
 
 	/** approx number of seconds per unit-of-time */
-	export const TIME = {
+	export const TIME = enumify({
 		year: 31_536_000,
 		month: 2_628_000,
 		week: 604_800,
@@ -1840,10 +1841,10 @@ export namespace Tempo {
 		millisecond: .001,
 		microsecond: .000_001,
 		nanosecond: .000_000_001,
-	} as const
+	} as const)
 
 	/** approxnumber of milliseconds per unit-of-time */
-	export const TIMES = {
+	export const TIMES = enumify({
 		years: TIME.year * 1_000,
 		months: TIME.month * 1_000,
 		weeks: TIME.week * 1_000,
@@ -1854,16 +1855,16 @@ export namespace Tempo {
 		milliseconds: TIME.millisecond * 1_000,
 		microseconds: TIME.microsecond * 1_000,
 		nanoseconds: Number((TIME.nanosecond * 1_000).toPrecision(6)),
-	} as const
+	} as const)
 
 	/** some useful Dates */
-	export const DATE = {
+	export const DATE = enumify({
 		epoch: 0,																								// TODO: is this needed / useful ?
 		maxDate: new Date('9999-12-31T23:59:59'),
 		minDate: new Date('1000-01-01T00:00:00'),
 		maxTempo: Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds,
 		minTempo: Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds,
-	} as const
+	} as const)
 }
 // #endregion Tempo types / interfaces / enums
 

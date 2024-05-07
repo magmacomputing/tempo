@@ -9,7 +9,7 @@ describe(`${label}`, () => {
 
   test(`${label} get the properties`, () => {
     expect(Tempo.properties.sort())
-      .toEqual(['yy', 'mm', 'dd', 'hh', 'mi', 'ss', 'ms', 'us', 'ns', 'ff', 'ww', 'tz', 'ts', 'dow', 'mmm', 'mon', 'ddd', 'day', 'nano', 'term', 'config', 'epoch'].sort())
+      .toEqual(['yy', 'mm', 'dd', 'hh', 'mi', 'ss', 'ms', 'us', 'ns', 'ff', 'fmt', 'ww', 'tz', 'ts', 'dow', 'mmm', 'mon', 'ddd', 'day', 'nano', 'term', 'config', 'epoch'].sort())
   })
 
   test(`${label} get the elements`, () => {
