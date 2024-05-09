@@ -12,8 +12,9 @@ import type { ValueOf } from '@module/shared/type.library.js';
  * 
  * The drawback to this approach is that we lose some of the Typescript benefits,  
  * like namespace-ing allowable values.  
- * Instead we need to declare arguments; for example
+ * Instead we need to declare arguments of a Function without the 'helper' methods; for example
  * 		const SEASON = enumify({ Spring: 'spring', Summer: 'summer', Autumn: 'autumn', Winter: 'winter' });
+ * 		console.log('keys: ', SEASON.keys());
  * 		function getSeason(szn: Enum<typeof SEASON>) {}
  */
 
