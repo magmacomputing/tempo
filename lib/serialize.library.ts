@@ -1,4 +1,5 @@
 import { Tempo } from '@module/shared/tempo.class.js';
+import { enumify } from '@module/shared/enum.class.js';
 import { curry } from '@module/shared/function.library.js';
 import { isNumeric } from '@module/shared/number.library.js';
 import { allEntries } from '@module/shared/reflect.library.js';
@@ -148,7 +149,7 @@ export function stringify(obj: any) {
  */
 function stringize(obj: any, recurse = true): string {			// hide the second parameter: for internal use only
 	const arg = asType(obj);
-	const one = curry(oneKey)(arg.type);											// seed the oneKey() function
+	const one = curry(oneKey)(arg.type);											// curry the oneKey() function
 
 	switch (arg.type) {
 		case 'String':
@@ -324,6 +325,8 @@ function typeify(json: Record<string | symbol, string>, sentinel?: Function) {
 		case 'Tuple':
 		// return Tuple.from(value) ;														// TODO
 
+		case 'Enum':
+			return enumify(value);
 		case 'Tempo':
 			return new Tempo(value);
 

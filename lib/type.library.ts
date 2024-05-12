@@ -5,7 +5,7 @@ import type { Pledge } from '@module/shared/pledge.class.js';
 import { Temporal } from '@js-temporal/polyfill';
 
 /** the primitive type reported by toStringTag() */
-const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
+	const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
 
 /** 
  * return an object's type as a ProperCase string.  
@@ -157,6 +157,7 @@ export type Types =
 	'Temporal.PlainYearMonth' |
 	'Temporal.PlainMonthDay' |
 
+	'Enum' |
 	'Tempo' |
 	'Pledge'
 
@@ -165,7 +166,7 @@ export type TypeValue<T> =
 	{ type: 'Number', value: number } |
 	{ type: 'BigInt', value: bigint } |
 	{ type: 'Boolean', value: boolean } |
-	{ type: 'Object', value: Extract<T, Record<any, any>> } |
+	{ type: 'Object', value: Extract<T, Record<PropertyKey, unknown>> } |
 	{ type: 'Array', value: Array<T> } |
 	{ type: 'ArrayLike', value: ArrayLike<T> } |
 	{ type: 'Undefined', value: undefined } |
@@ -180,13 +181,13 @@ export type TypeValue<T> =
 	{ type: 'Blob', value: Blob } |
 	{ type: 'Map', value: Map<any, T> } |
 	{ type: 'Set', value: Set<T> } |
-	{ type: 'WeakMap', value: WeakMap<Record<string, any>, T> } |
-	{ type: 'WeakSet', value: WeakSet<Record<string, any>> } |
-	// { type: 'WeakRef', value: WeakRef<Record<string, any>, T> }
+	{ type: 'WeakMap', value: WeakMap<Record<PropertyKey, unknown>, T> } |
+	{ type: 'WeakSet', value: WeakSet<Record<PropertyKey, unknown>> } |
+	// { type: 'WeakRef', value: WeakRef<Record<PropertyKey, any>, T> }
 	{ type: 'Symbol', value: symbol } |
 	{ type: 'Error', value: Error } |
 
-	{ type: 'Record', value: Record<string, T> } |						// TODO
+	{ type: 'Record', value: Record<PropertyKey, T> } |				// TODO
 	{ type: 'Tuple', value: Array<T> } |											// TODO
 
 	{ type: 'Temporal', value: Temporals } |
@@ -198,6 +199,7 @@ export type TypeValue<T> =
 	{ type: 'Temporal.PlainYearMonth', value: Temporal.PlainYearMonth } |
 	{ type: 'Temporal.PlainMonthDay', value: Temporal.PlainMonthDay } |
 
+	{ type: 'Enum', value: Record<PropertyKey, unknown> } |
 	{ type: 'Tempo', value: Tempo } |
 	{ type: 'Pledge', value: Pledge<T> }
 
