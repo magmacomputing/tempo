@@ -766,17 +766,10 @@ export class Tempo {
 
 	/** iterate over Tempo properties */
 	[Symbol.iterator]() {
-		const props = Tempo.properties;													// array of 'getters'
-		let idx = -1;
+		const props = Tempo.properties[Symbol.iterator]();			// Iterator over array of 'getters'
 
 		return {
-			next: () => ({
-				done: ++idx >= props.length,
-				value: {
-					property: props[idx],
-					value: this[props[idx]],
-				}
-			}),
+			next: () => props.next(),
 		}
 	}
 

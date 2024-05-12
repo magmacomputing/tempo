@@ -19,16 +19,16 @@ import type { ValueOf } from '@module/shared/type.library.js';
  */
 
 type helper<T> = {																					// types for standard Enum methods
-	/** array of Enum keys */								keys: () => (keyof T)[];
-	/** count of Enum keys */								count: () => number;
-	/** array of Enum values */							values: () => T[keyof T][];
-	/** tuple of Enum entries */						entries: () => [keyof T, T[keyof T]][];
+	/** array of Enum keys */																	keys: () => (keyof T)[];
+	/** count of Enum keys */																	count: () => number;
+	/** array of Enum values */																values: () => T[keyof T][];
+	/** tuple of Enum entries */															entries: () => [keyof T, T[keyof T]][];
 	/** default Iterator for Enum */[Symbol.iterator](): Iterator<T>,
 }
 
 export type Enum<T> = ValueOf<Omit<T, keyof helper<T>>>
 
-/** Class with Enum entries as well as useful methods */
+/** Enum as static-Class as well as useful methods */
 export function enumify<const T extends {}>(obj: T) {
 	return class {
 		static [key: string | number | symbol]: any;						// index signature for Enum key-value pair
@@ -44,13 +44,21 @@ export function enumify<const T extends {}>(obj: T) {
 		static entries() { return Object.entries(obj) as [keyof T, T[keyof T]][] };
 
 		static [Symbol.iterator]() {														// iterate over Enum properties
-			const props = this.entries()[Symbol.iterator]();			// array of 'getters'
+			const props = this.entries()[Symbol.iterator]();			// tuple of Enum [key, value][]
 
-			return { next: () => props.next() }										// iterate through entries()
+			return {
+				next: () => props.next(),														// iterate through entries()
+				return: (value: any) => ({ done: true, value }),
+			}
 		}
 
-		static get [Symbol.toStringTag]() {
-			return 'Enum';																				// hard-coded to avoid minification mangling
+		static get [Symbol.toStringTag]() {											// hard-coded to avoid minification mangling
+			return 'Enum';
+		}
+
+		static toString() {																			// method for JSON.stringify()
+			return this.entries()
+				.reduce((acc, [key, val]) => Object.assign(acc, { [key]: val }), {})
 		}
 	} as unknown as T & helper<T>
 }
