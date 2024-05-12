@@ -3,9 +3,10 @@ import type { Pledge } from '@module/shared/pledge.class.js';
 
 // TODO:  remove this after Temporal reaches Stage-4
 import { Temporal } from '@js-temporal/polyfill';
+import { Enum } from './enum.class';
 
 /** the primitive type reported by toStringTag() */
-	const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
+const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
 
 /** 
  * return an object's type as a ProperCase string.  
@@ -75,6 +76,9 @@ export const isPromise = <T>(obj?: T): obj is Extract<T, Promise<any>> => isType
 export const isMap = <K, V>(obj?: unknown): obj is Map<K, V> => isType(obj, 'Map');
 export const isSet = <K>(obj?: unknown): obj is Set<K> => isType(obj, 'Set');
 export const isError = (err: unknown): err is Error => isType(err, 'Error');
+
+// non-standard Object
+export const isEnum = <E>(obj: unknown): obj is Enum<E> => isType(obj, 'Enum');
 export const isTemporal = <T>(obj: T): obj is Extract<T, Temporals> => protoType(obj).startsWith('Temporal.');
 
 export const nullToZero = <T>(obj: T) => obj ?? 0;

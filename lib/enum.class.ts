@@ -1,7 +1,7 @@
 import type { ValueOf } from '@module/shared/type.library.js';
 
 /**
- * This section is for 'Objects as Enums'  
+ * This Class is for 'Objects as Enums'  
  * https://www.typescriptlang.org/docs/handbook/enums.html#objects-vs-enums  
  *  
  * It is an attempt to make Enum declarations centralized,  
@@ -9,6 +9,11 @@ import type { ValueOf } from '@module/shared/type.library.js';
  * 
  * The benefits to this approach over Typescript's enums is that it adds support for methods  
  * (toStringTag, Iterator, keys, count, values, entries)   
+ * as well as string-arguments in functions that match the Enum values  
+ * For example:  
+ * 	function getSeason(szn: Enum<typeof SEASON>) { console.log('season: ', szn) }
+ * 		getSeason('spring');				where we can use a string from the Enum values
+ * 		getSeason(SEASON.Spring);		or a member of the Enum
  * 
  * The drawback to this approach is that we lose some of the Typescript benefits,  
  * like namespace-ing allowable values.  
@@ -58,7 +63,7 @@ export function enumify<const T extends {}>(obj: T) {
 
 		static toString() {																			// method for JSON.stringify()
 			return this.entries()
-				.reduce((acc, [key, val]) => Object.assign(acc, { [key]: val }), {})
+				.reduce((acc, [key, val]) => Object.assign(acc, { [key]: val }), {} as T)
 		}
 	} as unknown as T & helper<T>
 }
