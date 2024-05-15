@@ -76,10 +76,12 @@ export const isPromise = <T>(obj?: T): obj is Extract<T, Promise<any>> => isType
 export const isMap = <K, V>(obj?: unknown): obj is Map<K, V> => isType(obj, 'Map');
 export const isSet = <K>(obj?: unknown): obj is Set<K> => isType(obj, 'Set');
 export const isError = (err: unknown): err is Error => isType(err, 'Error');
-
-// non-standard Object
-export const isEnum = <E>(obj: unknown): obj is Enum<E> => isType(obj, 'Enum');
 export const isTemporal = <T>(obj: T): obj is Extract<T, Temporals> => protoType(obj).startsWith('Temporal.');
+
+// non-standard Objects
+export const isEnum = <E>(obj: unknown): obj is Enum<E> => isType(obj, 'Enum');
+export const isTempo = (obj: unknown): obj is Tempo => isType(obj, 'Tempo');
+export const isPledge = <P>(obj:unknown):obj is Pledge<P> => isType(obj, 'Pledge');
 
 export const nullToZero = <T>(obj: T) => obj ?? 0;
 export const nullToEmpty = <T>(obj: T) => obj ?? '';

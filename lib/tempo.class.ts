@@ -2,7 +2,7 @@
 import { Pledge } from '@module/shared/pledge.class.js';
 import { asArray, sortInsert } from '@module/shared/array.library.js';
 import { enumKeys } from '@module/shared/enum.library.js';
-import { enumify } from '@module/shared/enum.class.js';
+import { Enum, enumify } from '@module/shared/enum.class.js';
 import { allEntries, omit, purge } from '@module/shared/reflect.library.js';
 import { cloneify } from '@module/shared/serialize.library.js';
 import { getAccessors } from '@module/shared/object.library.js';
@@ -10,7 +10,7 @@ import { getStore, setStore } from '@module/shared/storage.library.js';
 import { getContext, CONTEXT, sleep } from '@module/shared/utility.library.js';
 import { asNumber, asInteger, isNumeric, ifNumeric } from '@module/shared/number.library.js';
 import { asString, pad, singular, toProperCase, trimAll, sprintf } from '@module/shared/string.library.js';
-import { asType, getType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isNumber } from '@module/shared/type.library.js';
+import { asType, getType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isNumber, isObject, isRegExp } from '@module/shared/type.library.js';
 
 import type { Logger } from '@module/shared/logger.library.js';
 import type { Entries, Types } from '@module/shared/type.library.js';
@@ -144,10 +144,6 @@ const Zodiac: Tempo.TermTuple[] = [												// https://www.calendar.best/zodi
 
 // #endregion Const variables
 
-function shape(method: any, _context: any) {
-	return
-}
-
 /**
  * Wrapper class around Temporal.ZonedDateTime 
  * ````
@@ -278,7 +274,7 @@ export class Tempo {
 
 	/** setup quarters, inferred from current hemisphere */
 	static #quarter(shape: Internal.Shape) {
-		const month = shape.config.sphere === Tempo.COMPASS.North
+		const month = shape.config.sphere !== Tempo.COMPASS.North
 			? Tempo.MONTH.Oct
 			: Tempo.MONTH.Jul
 
@@ -584,23 +580,23 @@ export class Tempo {
 
 	/** read Options from persistent storage */
 	static read() {
-		return getStore(STORAGEKEY, {}) as Partial<Tempo.Options>;
+		return getStore(STORAGEKEY, {}) as Tempo.Options;
 	}
 
 	/** write Options into persistent storage */
-	static write(config?: Partial<Tempo.Options>) {
+	static write(config?: Tempo.Options) {
 		setStore(STORAGEKEY, config);
 	}
 
 	/** lookup local Symbol registry */
 	static getSymbol(shape: Internal.Shape, key: string) {
 		const [sym, description = key] = key.split('.');				// for example, 'zdc.zodiac'
-		const idx = Object.entries(shape.symbols)
+		const idx = allEntries(shape.symbols)
 			.find(([symKey, symVal]) => symKey === sym || symVal.description === description);
 
 		return idx
-			? Sym[idx[0]]																					// identified Symbol
-			: Sym[sym] = Symbol(description)											// else allocate and assign a new Symbol
+			? shape.symbols[idx[0]]																// identified Symbol
+			: shape.symbols[sym] = Symbol(description)						// else allocate and assign a new Symbol
 	}
 
 	/**
@@ -743,6 +739,15 @@ export class Tempo {
 		} as const
 	}
 
+	/** iterate over Tempo properties */
+	static [Symbol.iterator]() {
+		const props = Tempo.properties[Symbol.iterator]();			// static Iterator over array of 'getters'
+
+		return {
+			next: () => props.next(),
+		}
+	}
+
 	/** indicate when Tempo.init() is complete */
 	static get ready() {
 		return Tempo.#ready["static"].promise
@@ -764,12 +769,12 @@ export class Tempo {
 		return this.nano;
 	}
 
-	/** iterate over Tempo properties */
+	/** iterate over instance formats */
 	[Symbol.iterator]() {
-		const props = Tempo.properties[Symbol.iterator]();			// Iterator over array of 'getters'
+		const props = allEntries(this.#fmt)[Symbol.iterator]();	// instance Iterator over tuple of FormatType[]
 
 		return {
-			next: () => props.next(),
+			next: () => props.next(),															// tuple of [fmtCode, value]
 		}
 	}
 
@@ -778,7 +783,7 @@ export class Tempo {
 		Tempo.#info(this.config, 'dispose: ', this.#tempo);
 	}
 
-	get [Symbol.toStringTag]() {															// default string description
+	[Symbol.toStringTag]() {																	// default string description
 		return 'Tempo';																					// hard-coded to avoid minification mangling
 	}
 
@@ -1623,7 +1628,7 @@ export class Tempo {
 	}
 
 	/** calculate the difference between two Tempos  (past is positive, future is negative) */
-	#until<U extends Tempo.DateTime | Tempo.Until>(arg?: U): U extends Tempo.Until ? U["unit"] extends Tempo.PluralUnit ? number : Tempo.Duration : Tempo.Duration
+	#until<U extends Tempo.DateTime | Tempo.Until>(arg?: U): U extends Tempo.Until ? U["unit"] extends Internal.PluralUnit ? number : Tempo.Duration : Tempo.Duration
 	#until<U extends Tempo.DateTime | Tempo.Until>(arg?: U): number | Tempo.Duration {
 		const { tempo, opts = {}, unit } = isObject(arg)
 			? arg as Tempo.Until																	// if a Record detected, then assume Tempo.Until
@@ -1708,7 +1713,7 @@ export namespace Tempo {
 	 */
 	export interface Config extends Required<OptionsKeep> {
 		version: string;																				// semantic version
-		level: typeof Internal.LEVEL,														// separate configurations 
+		level: Enum<typeof Internal.LEVEL>,											// separate configurations 
 		parse: Internal.Parse,																	// detail about how the Tempo constructor parsed the supplied value
 		monthDay: { locale: string; timeZones: string[]; }[];		// Array of locales/timeZones that prefer 'mm-dd-yy' date order
 		layout: Map<symbol, Internal.StringPattern[]>;					// coerce {layout} to Map<Symbol, (string | RegExp)[]>
@@ -1716,8 +1721,6 @@ export namespace Tempo {
 
 	/** Timestamp precision */
 	export type TimeStamp = 'ss' | 'ms' | 'us' | 'ns'
-
-	export type PluralUnit = Temporal.PluralUnit<Temporal.DateTimeUnit>;
 
 	/** constructor parameter object */
 	export interface Arguments {
@@ -1727,12 +1730,12 @@ export namespace Tempo {
 
 	/** Configuration to use for #until() and #since() argument */
 	export interface Until extends Tempo.Arguments {
-		unit?: Tempo.PluralUnit;
+		unit?: Internal.PluralUnit;
 	}
 	export type Mutate = 'start' | 'mid' | 'end'
-	export type Set = Partial<Record<Tempo.Mutate, Temporal.DateTimeUnit | Tempo.PluralUnit> &
+	export type Set = Partial<Record<Tempo.Mutate, Temporal.DateTimeUnit | Internal.PluralUnit> &
 		Record<'time' | 'period' | 'date' | 'event' | 'dow', string>>
-	export type Add = Partial<Record<Temporal.DateTimeUnit | Tempo.PluralUnit, number>>
+	export type Add = Partial<Record<Temporal.DateTimeUnit | Internal.PluralUnit, number>>
 
 	export type Range = Record<Temporal.DateTimeUnit | "order", number>
 	type RangeExtend = Partial<Tempo.Range & Record<string | number, unknown>>				// allow for additional Range fields
@@ -1798,7 +1801,7 @@ export namespace Tempo {
 		East: 'east',
 		South: 'south',
 		West: 'west'
-	} as const)
+	})
 	/** Hemisphere */
 	export type Sphere = typeof Tempo.COMPASS.North | typeof Tempo.COMPASS.South | null
 
@@ -1820,7 +1823,7 @@ export namespace Tempo {
 		yearMonthDay: 'yyyymmdd',
 		date: 'yyyy-mmm-dd',																		// just Date portion
 		time: 'hh:mi:ss',																				// just Time portion
-	} as const)
+	})
 
 	/** approx number of seconds per unit-of-time */
 	export const TIME = enumify({
@@ -1834,7 +1837,7 @@ export namespace Tempo {
 		millisecond: .001,
 		microsecond: .000_001,
 		nanosecond: .000_000_001,
-	} as const)
+	})
 
 	/** approxnumber of milliseconds per unit-of-time */
 	export const TIMES = enumify({
@@ -1848,7 +1851,7 @@ export namespace Tempo {
 		milliseconds: TIME.millisecond * 1_000,
 		microseconds: TIME.microsecond * 1_000,
 		nanoseconds: Number((TIME.nanosecond * 1_000).toPrecision(6)),
-	} as const)
+	})
 
 	/** some useful Dates */
 	export const DATE = enumify({
@@ -1857,13 +1860,13 @@ export namespace Tempo {
 		minDate: new Date('1000-01-01T00:00:00'),
 		maxTempo: Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds,
 		minTempo: Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds,
-	} as const)
+	})
 }
 // #endregion Tempo types / interfaces / enums
 
 // #region Namespace that doesn't need to be shared externally
 namespace Internal {
-	export const LEVEL = { Global: 'global', Local: 'local', } as const;
+	export const LEVEL = enumify({ Global: 'global', Local: 'local', });
 
 	export type StringPattern = (string | RegExp)
 	export type StringTuple = [string, string];
@@ -1872,6 +1875,8 @@ namespace Internal {
 
 	export type Symbol = Record<string, symbol>
 	export type Regexp = Record<string, RegExp>
+
+	export type PluralUnit = Temporal.PluralUnit<Temporal.DateTimeUnit>
 
 	export interface Shape {																	// 'global' and 'local' variables
 		/** current defaults for all Tempo instances */					config: Tempo.Config,

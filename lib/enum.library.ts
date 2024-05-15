@@ -15,17 +15,17 @@ import { isNumber } from '@module/shared/type.library.js';
 
 /** array of Enum keys */
 export const enumKeys = <T extends {}>(enumType: T) => {
-	const enumEntries = Object.entries(enumType as T)					// only numeric Enum values
+	const entries = Object.entries(enumType as T)							// only numeric Enum values
 		.filter(([, val]) => isNumber(val)) as [keyof T, number][];
 
-	const enumKeys = Object.keys(enumType as T)								// only non-numeric Enum keys
+	const keys = Object.keys(enumType as T)										// only non-numeric Enum keys
 		.filter(key => !isNumeric(key)) as (keyof T)[];
 
-	return (enumEntries.length !== enumKeys.length)						// if not-Numeric Enum
-		? enumKeys																							// 	String/Heterogeneous Enum
-		: enumEntries																						// else
+	return (entries.length !== keys.length)										// if not-Numeric Enum
+		? keys																									// 	String/Heterogeneous Enum
+		: entries																								// else just the numeric Enum values
 			// .sort(([, val1], [, val2]) => val1 = val2)						// 	sort by the number-values, and
-			.map(([key,]) => key)																	// 	return the keys
+			.map(([key,]) => key);																// 	return the keys
 }
 
 /** count of Enum keys */
