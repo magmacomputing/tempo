@@ -11,16 +11,16 @@ import type { ValueOf } from '@module/shared/type.library.js';
  * (toStringTag, Iterator, keys, count, values, entries)   
  * as well as string-arguments in functions that match the Enum values  
  * For example:  
- * 	function getSeason(szn: Enum<typeof SEASON>) { console.log('season: ', szn) }
- * 		getSeason('spring');				where we can use a string from the Enum values
- * 		getSeason(SEASON.Spring);		or a member of the Enum
+ * * const SEASON = enumify({ Spring: 'spring', Summer: 'summer', Autumn: 'autumn', Winter: 'winter' });  
+ * * console.log('keys: ', SEASON.keys());  # 'helper' functions added to Enum  
+ * * getSeason('spring');				 # where we can use a string from the Enum values  
+ * * getSeason(SEASON.Spring);	 # or a member of the Enum  
  * 
  * The drawback to this approach is that we lose some of the Typescript benefits,  
  * like namespace-ing allowable values.  
- * Instead we need to declare arguments of a Function without the 'helper' methods; for example
- * 		const SEASON = enumify({ Spring: 'spring', Summer: 'summer', Autumn: 'autumn', Winter: 'winter' });
- * 		console.log('keys: ', SEASON.keys());
- * 		function getSeason(szn: Enum<typeof SEASON>) {}
+ * Instead we need to declare arguments of a Function without the 'helper' methods.  
+ * For example:  
+ * * function getSeason(szn: Enum\<typeof SEASON>) { console.log('season: ', szn) }  
  */
 
 type helper<T> = {																					// types for standard Enum methods
@@ -31,13 +31,19 @@ type helper<T> = {																					// types for standard Enum methods
 	/** default Iterator for Enum */[Symbol.iterator](): Iterator<T>,
 }
 
+/**
+ * expose only the Static members of a Class enum  
+ * For example:  
+ * * const SEASON = enumify({ Spring: 'spring', Summer: 'summer', Autumn: 'autumn', Winter: 'winter' });  
+ * * const szn: Enum\<typeof SEASON>;  
+ */
 export type Enum<T> = ValueOf<Omit<T, keyof helper<T>>>
 
 /** Enum as static-Class as well as useful methods */
 export function enumify<const T extends {}>(obj: T) {
 	return class {
 		static [key: string | number | symbol]: any;						// index signature for Enum key-value pair
-		static {
+		static {																								// static block to load properties
 			Object
 				.entries(obj)
 				.forEach(([key, val]) => this[key] = val as T)
@@ -48,12 +54,11 @@ export function enumify<const T extends {}>(obj: T) {
 		static values() { return Object.values(obj) as T[keyof T][] };
 		static entries() { return Object.entries(obj) as [keyof T, T[keyof T]][] };
 
-		static [Symbol.iterator]() {														// iterate over Enum properties
+		static [Symbol.iterator]() {														// iterator for Enum properties
 			const props = this.entries()[Symbol.iterator]();			// tuple of Enum [key, value][]
 
 			return {
 				next: () => props.next(),														// iterate through entries()
-				return: (value: any) => ({ done: true, value }),
 			}
 		}
 
