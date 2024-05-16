@@ -39,7 +39,7 @@ const STORAGEKEY = '_Tempo_';																// for stash in persistent storage
  */
 const Units = {																							// define some components to help interpret input-strings
 	yy: /(?<yy>(\d{2})?\d{2})/,																// arbitrary upper-limit of yy=9999
-	mm: /(?<mm>[0\s]?[1-9]|1[0{evt}2]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/,
+	mm: /(?<mm>[0\s]?[1-9]|1[0-2]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/,
 	dd: /(?<dd>[0\s]?[1-9]|[12][0-9]|3[01])/,
 	dow: /((?<dow>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)(?:[\/\-\s\,])*)/,
 	hh: /(?<hh>2[0-4]|[01]?\d)/,															// hh:  00 - 24
