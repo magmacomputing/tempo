@@ -2,7 +2,7 @@
 import { Pledge } from '@module/shared/pledge.class.js';
 import { asArray, sortInsert } from '@module/shared/array.library.js';
 import { enumKeys } from '@module/shared/enum.library.js';
-import { Enum, enumify } from '@module/shared/enum.class.js';
+import { type Enum, enumify } from '@module/shared/enum.class.js';
 import { allEntries, omit, purge } from '@module/shared/reflect.library.js';
 import { cloneify } from '@module/shared/serialize.library.js';
 import { getAccessors } from '@module/shared/object.library.js';
