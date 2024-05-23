@@ -22,7 +22,7 @@ export class Pledge<T> {
 	#resolve!: (value: T | PromiseLike<T>) => void;
 	#reject!: (reason?: string) => void;
 
-	[Symbol.toStringTag]() { return 'Pledge' }
+	get [Symbol.toStringTag]() { return 'Pledge' }
 
 	constructor(arg?: Pledge.Constructor | string) {
 		const {
