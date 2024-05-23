@@ -3,7 +3,8 @@ import type { Pledge } from '@module/shared/pledge.class.js';
 import type { Enum } from '@module/shared/enum.class.js';
 
 // TODO:  remove this after Temporal reaches Stage-4
-import { Temporal } from '@js-temporal/polyfill';
+// import { Temporal } from '@js-temporal/polyfill';
+import 'temporal-polyfill/global';
 
 /** the primitive type reported by toStringTag() */
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
@@ -81,7 +82,7 @@ export const isTemporal = <T>(obj: T): obj is Extract<T, Temporals> => protoType
 // non-standard Objects
 export const isEnum = <E>(obj: unknown): obj is Enum<E> => isType(obj, 'Enum');
 export const isTempo = (obj: unknown): obj is Tempo => isType(obj, 'Tempo');
-export const isPledge = <P>(obj:unknown):obj is Pledge<P> => isType(obj, 'Pledge');
+export const isPledge = <P>(obj: unknown): obj is Pledge<P> => isType(obj, 'Pledge');
 
 export const nullToZero = <T>(obj: T) => obj ?? 0;
 export const nullToEmpty = <T>(obj: T) => obj ?? '';

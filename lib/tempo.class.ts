@@ -2,23 +2,25 @@
 import { Pledge } from '@module/shared/pledge.class.js';
 import { asArray, sortInsert } from '@module/shared/array.library.js';
 import { enumKeys } from '@module/shared/enum.library.js';
-import { type Enum, enumify } from '@module/shared/enum.class.js';
-import { allEntries, omit, purge } from '@module/shared/reflect.library.js';
+import { enumify } from '@module/shared/enum.class.js';
 import { cloneify } from '@module/shared/serialize.library.js';
 import { getAccessors } from '@module/shared/object.library.js';
 import { getStore, setStore } from '@module/shared/storage.library.js';
+import { allEntries, omit, purge } from '@module/shared/reflect.library.js';
 import { getContext, CONTEXT, sleep } from '@module/shared/utility.library.js';
 import { asNumber, asInteger, isNumeric, ifNumeric } from '@module/shared/number.library.js';
 import { asString, pad, singular, toProperCase, trimAll, sprintf } from '@module/shared/string.library.js';
 import { asType, getType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isNumber, isObject, isRegExp } from '@module/shared/type.library.js';
 
+import type { Enum } from '@module/shared/enum.class.js';
 import type { Logger } from '@module/shared/logger.library.js';
 import type { Entries, Types } from '@module/shared/type.library.js';
 
 import '@module/shared/prototype.library.js';								// patch prototype
 
 /** TODO: THIS IMPORT NEEDS TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
-import { Temporal } from '@js-temporal/polyfill';
+import 'temporal-polyfill/global';
+// import { Temporal } from '@js-temporal/polyfill';
 // #endregion
 
 /**
@@ -32,9 +34,9 @@ const STORAGEKEY = '_Tempo_';																// for stash in persistent storage
 
 /**
  * user will need to know these in order to configure their own patterns  
- * a {unit} is a simple regex	object												e.g. { yy: /(\d{2})?\d{2})/ }  
- * {unit} keys are combined to build a {layout}							e.g. Map([[ Symbol('ymd'): '{yy}{mm}{dd}?' ]]    
- * {layout}s are translated into a regex {pattern}					e.g. Map([[ Symbol('ymd'), /^ ... $/ ]])    
+ * a {unit} is a simple regex	Object												e.g. { yy: /(\d{2})?\d{2})/ }  
+ * {unit} keys are combined to build a {layout} Map					e.g. Map([[ Symbol('ymd'): '{yy}{mm}{dd}?' ]]    
+ * {layout}s are translated into a regex {pattern} Map			e.g. Map([[ Symbol('ymd'), /^ ... $/ ]])    
  * the {pattern} will be used to parse a string | number in the constructor {DateTime} argument    
  */
 const Units = {																							// define some components to help interpret input-strings
@@ -64,9 +66,9 @@ const Sym = {
 	dow: Symbol('dayOfWeek'),
 	evt: Symbol('event'),
 	per: Symbol('period'),
-	// zdc: Symbol('zodiac'),
-	// szn: Symbol('season'),
-	// qtr: Symbol('quarter'),
+	zdc: Symbol('zodiac'),
+	szn: Symbol('season'),
+	qtr: Symbol('quarter'),
 } as Internal.Symbol;
 
 /** Reasonable defaults for initial Tempo options */
@@ -77,13 +79,13 @@ const Default = {
 	debug: false,																							// console.log
 	timeStamp: 'ms',																					// precision to measure timestamps
 	calendar: 'iso8601',
-	sphere: 'north',																					// hemisphere (used to infer {term[@qtr]}, {term[@szn]} )
+	sphere: 'north',																					// hemisphere (used to infer {term[@@qtr]}, {term[@@szn]} )
 	monthDay: ['en-US', 'en-AS'],															// array of Locales that prefer 'mm-dd-yy' date order: https://en.wikipedia.org/wiki/Date_format_by_country
-	// terms: {																									// built-in terms ( are setup in init() )
-	// 	[Sym.zdc]: new Map(),																		// 12 Zodiac star-signs
-	// 	[Sym.szn]: new Map(),																		// 4 Seasons
-	// 	[Sym.qtr]: new Map(),																		// 4 Fiscal Quarters
-	// },
+	terms: {																									// built-in terms ( are setup in init() )
+		[Sym.zdc]: new Map(),																		// 12 Zodiac star-signs
+		[Sym.szn]: new Map(),																		// 4 Seasons
+		[Sym.qtr]: new Map(),																		// 4 Fiscal Quarters
+	},
 	layout: new Map([																					// built-in layouts to be checked, and in this order
 		[Sym.dow, '{mod}?{dow}{sfx}?'],													// special layout (no {dt}!) used for day-of-week calcs (only one that requires {dow} unit)
 		[Sym.dt, '{dt}'],																				// calendar or event
@@ -168,7 +170,7 @@ export class Tempo {
 	static #global = {
 		/** current defaults for all Tempo instances */					config: {},
 		/** Tempo terms to allow date-range blocks */						terms: {},
-		/** Tempo Symbol registry */														symbols: Sym,
+		/** Tempo Symbol registry */														symbols: { ...Sym },
 		/** Tempo units to aid in parsing */										units: { ...Units },
 		/** Map of regex-patterns to match input-string */			patterns: new Map(),
 	} as Internal.Shape
@@ -783,7 +785,7 @@ export class Tempo {
 		Tempo.#info(this.config, 'dispose: ', this.#tempo);
 	}
 
-	[Symbol.toStringTag]() {																	// default string description
+	get [Symbol.toStringTag]() {															// default string description
 		return 'Tempo';																					// hard-coded to avoid minification mangling
 	}
 
@@ -839,8 +841,8 @@ export class Tempo {
 
 		// change of hemisphere, setup new Seasons / Fiscal start-month
 		if (this.#local.config.sphere !== Tempo.#global.config.sphere) {
-			Tempo.#quarter(this.#local);													// reset the {term[@qtr]}
-			Tempo.#season(this.#local);														// reset the {term[@szn]}
+			Tempo.#quarter(this.#local);													// reset the {term[@@qtr]}
+			Tempo.#season(this.#local);														// reset the {term[@@szn]}
 		}
 
 		// change of Locale, swap 'dmy' pattern with 'mdy' parse-order?
