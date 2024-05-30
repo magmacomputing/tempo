@@ -28,7 +28,7 @@ type helper<T> = {																					// types for standard Enum methods
 	/** count of Enum keys */																	count: () => number;
 	/** array of Enum values */																values: () => T[keyof T][];
 	/** tuple of Enum entries */															entries: () => [keyof T, T[keyof T]][];
-	/** default Iterator for Enum */[Symbol.iterator](): Iterator<T>,
+	/** default Iterator for Enum */													[Symbol.iterator](): Iterator<T>,
 }
 
 /**

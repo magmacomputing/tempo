@@ -689,7 +689,7 @@ export class Tempo {
 			.filter(key => Tempo.TIMES.keys().includes(key));
 	}
 
-	/** static Temporal.DateTimeUnit, where matched in Tempo.TIME */
+	/** static Temporal.DateTimeUnit, where exists in Tempo.TIME */
 	static get elements() {
 		return Tempo.TIME.keys() as Temporal.DateTimeUnit[];
 	}
