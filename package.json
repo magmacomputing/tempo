@@ -25,7 +25,7 @@
   "devDependencies": {
     "@types/jest": "^29.5.12",
     "@vitest/ui": "^1.6.0",
-    "temporal-polyfill": "^0.2.4",
+    "temporal-polyfill": "^0.2.5",
     "vite-tsconfig-paths": "^4.3.2",
     "vitest": "^1.6.0"
   }
