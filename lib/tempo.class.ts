@@ -1118,7 +1118,7 @@ export class Tempo {
 		if (isDefined(groups["mm"]) && !isNumeric(groups["mm"])) {
 			const mm = Tempo.#prefix(groups["mm"] as Tempo.Calendar);
 
-			groups["mm"] = enumKeys(Tempo.MONTH)
+			groups["mm"] = Tempo.MONTH.keys()
 				.findIndex(el => el === mm)													// resolve month-name into a month-number
 				.toString()																					// (some browsers do not allow month-names when parsing a Date)
 				.padStart(2, '0')
@@ -1197,7 +1197,7 @@ export class Tempo {
 
 		const weekday = Tempo.#prefix(dow);											// conform weekday-name
 		const adjust = dateTime.daysInWeek * +cnt;							// how many weeks to adjust
-		const offset = enumKeys(Tempo.WEEKDAY)									// how far weekday is from today
+		const offset = Tempo.WEEKDAY.keys()											// how far weekday is from today
 			.findIndex(el => el === weekday);
 
 		const days = offset - dateTime.dayOfWeek								// number of days to offset from dateTime
@@ -1788,16 +1788,16 @@ export namespace Tempo {
 
 	export type Duration = Temporal.DurationLike & Record<"iso", string>
 
-	export enum WEEKDAY { All, Mon, Tue, Wed, Thu, Fri, Sat, Sun }
-	export enum WEEKDAYS { Everyday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday }
-	export enum MONTH { All, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec }
-	export enum MONTHS { Every, January, February, March, April, May, June, July, August, September, October, November, December }
-	export enum DURATION { year, month, week, day, hour, minute, second, millisecond, microsecond, nanosecond }
-	export enum DURATIONS { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds }
-	export type Weekday = Exclude<keyof typeof Tempo.WEEKDAY, 'All'>
-	export type Calendar = Exclude<keyof typeof Tempo.MONTH, 'All'>
+	export const WEEKDAY = enumify( 'All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun');
+	export const WEEKDAYS = enumify({ Everyday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6, Sunday: 7 });
+	export const MONTH = enumify({ All: 0, Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6, Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12 });
+	export const MONTHS = enumify({ Every: 0, January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 });
+	export const DURATION = enumify({ year: 0, month: 1, week: 2, day: 3, hour: 4, minute: 5, second: 6, millisecond: 7, microsecond: 8, nanosecond: 9 });
+	export const DURATIONS = enumify({ years: 0, months: 1, weeks: 2, days: 3, hours: 4, minutes: 5, seconds: 6, milliseconds: 7, microseconds: 8, nanoseconds: 9 });
+	export type Weekday = Exclude<Enum<typeof Tempo.WEEKDAY>, 'All'>
+	export type Calendar = Exclude<Enum<typeof Tempo.MONTH>, 'All'>
 
-	/** Compass points */
+	/** Compass Cardinal Points */
 	export const COMPASS = enumify({
 		North: 'north',
 		East: 'east',
