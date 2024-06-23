@@ -1,18 +1,17 @@
 // #region library modules~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 import { Pledge } from '@module/shared/pledge.class.js';
-import { asArray, sortInsert } from '@module/shared/array.library.js';
-import { enumKeys } from '@module/shared/enum.library.js';
-import { enumify } from '@module/shared/enum.class.js';
+import { enumKeys } from '@module/shared/enumerate.library.js';
 import { cloneify } from '@module/shared/serialize.library.js';
 import { getAccessors } from '@module/shared/object.library.js';
+import { asArray, sortInsert } from '@module/shared/array.library.js';
 import { getStore, setStore } from '@module/shared/storage.library.js';
 import { allEntries, omit, purge } from '@module/shared/reflect.library.js';
-import { getContext, CONTEXT, sleep } from '@module/shared/utility.library.js';
+import { getContext, sleep, CONTEXT } from '@module/shared/utility.library.js';
 import { asNumber, asInteger, isNumeric, ifNumeric } from '@module/shared/number.library.js';
 import { asString, pad, singular, toProperCase, trimAll, sprintf } from '@module/shared/string.library.js';
 import { asType, getType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isNumber, isObject, isRegExp } from '@module/shared/type.library.js';
 
-import type { Enum } from '@module/shared/enum.class.js';
+// import type { Enum } from '@module/shared/enumerate.class.js';
 import type { Logger } from '@module/shared/logger.library.js';
 import type { Entries, Types } from '@module/shared/type.library.js';
 
@@ -686,12 +685,12 @@ export class Tempo {
 	/** static Tempo.Duration getter, where matched in Tempo.TIMES */
 	static get durations() {
 		return getAccessors<Temporal.DurationLike>(Temporal.Duration)
-			.filter(key => Tempo.TIMES.keys().includes(key));
+			.filter(key => enumKeys(Tempo.TIMES).includes(key));
 	}
 
 	/** static Temporal.DateTimeUnit, where exists in Tempo.TIME */
 	static get elements() {
-		return Tempo.TIME.keys() as Temporal.DateTimeUnit[];
+		return enumKeys(Tempo.TIME) as Temporal.DateTimeUnit[];
 	}
 
 	/** static Tempo.Terms getter */
@@ -872,7 +871,7 @@ export class Tempo {
 			this.#zdt = this.#parse(this.#tempo);									// attempt to interpret the DateTime arg
 
 			if (['iso8601', 'gregory'].includes(this.config.calendar)) {
-				Tempo.FORMAT.entries()															// add all the pre-defined FORMATs to the instance (eg. Tempo().fmt.yearMonthDay)
+				allEntries(Tempo.FORMAT)														// add all the pre-defined FORMATs to the instance (eg. Tempo().fmt.yearMonthDay)
 					.forEach(([key, val]) =>
 						Object.assign(this.#fmt, { [key]: this.format(val) }))	// add-on short-cut format
 			}
@@ -1118,7 +1117,7 @@ export class Tempo {
 		if (isDefined(groups["mm"]) && !isNumeric(groups["mm"])) {
 			const mm = Tempo.#prefix(groups["mm"] as Tempo.Calendar);
 
-			groups["mm"] = Tempo.MONTH.keys()
+			groups["mm"] = enumKeys(Tempo.MONTH)
 				.findIndex(el => el === mm)													// resolve month-name into a month-number
 				.toString()																					// (some browsers do not allow month-names when parsing a Date)
 				.padStart(2, '0')
@@ -1197,7 +1196,7 @@ export class Tempo {
 
 		const weekday = Tempo.#prefix(dow);											// conform weekday-name
 		const adjust = dateTime.daysInWeek * +cnt;							// how many weeks to adjust
-		const offset = Tempo.WEEKDAY.keys()											// how far weekday is from today
+		const offset = enumKeys(Tempo.WEEKDAY)									// how far weekday is from today
 			.findIndex(el => el === weekday);
 
 		const days = offset - dateTime.dayOfWeek								// number of days to offset from dateTime
@@ -1715,7 +1714,7 @@ export namespace Tempo {
 	 */
 	export interface Config extends Required<OptionsKeep> {
 		version: string;																				// semantic version
-		level: Enum<typeof Internal.LEVEL>,											// separate configurations 
+		level: Internal.LEVEL,																	// separate configurations 
 		parse: Internal.Parse,																	// detail about how the Tempo constructor parsed the supplied value
 		monthDay: { locale: string; timeZones: string[]; }[];		// Array of locales/timeZones that prefer 'mm-dd-yy' date order
 		layout: Map<symbol, Internal.StringPattern[]>;					// coerce {layout} to Map<Symbol, (string | RegExp)[]>
@@ -1788,28 +1787,28 @@ export namespace Tempo {
 
 	export type Duration = Temporal.DurationLike & Record<"iso", string>
 
-	export const WEEKDAY = enumify( 'All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun');
-	export const WEEKDAYS = enumify({ Everyday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6, Sunday: 7 });
-	export const MONTH = enumify({ All: 0, Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6, Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12 });
-	export const MONTHS = enumify({ Every: 0, January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 });
-	export const DURATION = enumify({ year: 0, month: 1, week: 2, day: 3, hour: 4, minute: 5, second: 6, millisecond: 7, microsecond: 8, nanosecond: 9 });
-	export const DURATIONS = enumify({ years: 0, months: 1, weeks: 2, days: 3, hours: 4, minutes: 5, seconds: 6, milliseconds: 7, microseconds: 8, nanoseconds: 9 });
-	export type Weekday = Exclude<Enum<typeof Tempo.WEEKDAY>, 'All'>
-	export type Calendar = Exclude<Enum<typeof Tempo.MONTH>, 'All'>
+	export enum WEEKDAY { All, Mon, Tue, Wed, Thu, Fri, Sat, Sun };
+	export enum WEEKDAYS { Everyday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday };
+	export enum MONTH { All, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec };
+	export enum MONTHS { Every, January, February, March, April, May, June, July, August, September, October, November, December };
+	export enum DURATION { year, month, week, day, hour, minute, second, millisecond, microsecond, nanosecond };
+	export enum DURATIONS { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds };
+
+	export type Weekday = Exclude<keyof typeof Tempo.WEEKDAY, 'All'>
+	export type Calendar = Exclude<keyof typeof Tempo.MONTH, 'All'>
 
 	/** Compass Cardinal Points */
-	export const COMPASS = enumify({
-		North: 'north',
-		East: 'east',
-		South: 'south',
-		West: 'west'
-	})
-	/** Hemisphere */
-	export type Sphere = typeof Tempo.COMPASS.North | typeof Tempo.COMPASS.South | null
+	export type Sphere = Tempo.COMPASS.North | Tempo.COMPASS.South | null
+	export enum COMPASS {
+		North = 'north',
+		East = 'east',
+		South = 'south',
+		West = 'west',
+	}
 
 	/** pre-configured format names */
 	type FORMAT = keyof typeof FORMAT
-	export const FORMAT = enumify({
+	export const FORMAT = {
 		display: 'ddd, dd mmm yyyy',
 		dayDate: 'ddd, yyyy-mmm-dd',
 		dayTime: 'ddd, yyyy-mmm-dd hh:mi',
@@ -1825,10 +1824,10 @@ export namespace Tempo {
 		yearMonthDay: 'yyyymmdd',
 		date: 'yyyy-mmm-dd',																		// just Date portion
 		time: 'hh:mi:ss',																				// just Time portion
-	})
+	} as const
 
 	/** approx number of seconds per unit-of-time */
-	export const TIME = enumify({
+	export const TIME = {
 		year: 31_536_000,
 		month: 2_628_000,
 		week: 604_800,
@@ -1839,10 +1838,10 @@ export namespace Tempo {
 		millisecond: .001,
 		microsecond: .000_001,
 		nanosecond: .000_000_001,
-	})
+	} as const
 
 	/** approxnumber of milliseconds per unit-of-time */
-	export const TIMES = enumify({
+	export const TIMES = {
 		years: TIME.year * 1_000,
 		months: TIME.month * 1_000,
 		weeks: TIME.week * 1_000,
@@ -1853,22 +1852,23 @@ export namespace Tempo {
 		milliseconds: TIME.millisecond * 1_000,
 		microseconds: TIME.microsecond * 1_000,
 		nanoseconds: Number((TIME.nanosecond * 1_000).toPrecision(6)),
-	})
+	} as const
 
 	/** some useful Dates */
-	export const DATE = enumify({
+	export const DATE = {
 		epoch: 0,																								// TODO: is this needed / useful ?
 		maxDate: new Date('9999-12-31T23:59:59'),
 		minDate: new Date('1000-01-01T00:00:00'),
 		maxTempo: Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds,
 		minTempo: Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds,
-	})
+	} as const
 }
 // #endregion Tempo types / interfaces / enums
 
 // #region Namespace that doesn't need to be shared externally
 namespace Internal {
-	export const LEVEL = enumify({ Global: 'global', Local: 'local', });
+	// export const LEVEL = enumify({ Global: 'global', Local: 'local', });
+	export enum LEVEL { Global = 'global', Local = 'local', }
 
 	export type StringPattern = (string | RegExp)
 	export type StringTuple = [string, string];

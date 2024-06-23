@@ -1,6 +1,6 @@
 import type { Tempo } from '@module/shared/tempo.class.js';
 import type { Pledge } from '@module/shared/pledge.class.js';
-import type { Enum } from '@module/shared/enum.class.js';
+import type { Enum } from '@module/shared/enumerate.class.js';
 
 // TODO:  remove this after Temporal reaches Stage-4
 // import { Temporal } from '@js-temporal/polyfill';
@@ -119,12 +119,15 @@ export type Nullish = null | undefined | void;
 export type TPlural<T extends string> = `${T}s`;
 export type ValueOf<T> = T[keyof T];
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+
 /** Record with only one-key */
 export type OneKey<K extends keyof any, V, KK extends keyof any = K> =
 	{ [P in K]: { [Q in P]: V } &
 		{ [Q in Exclude<KK, P>]?: undefined } extends infer O ?
 		{ [Q in keyof O]: O[Q] } : never
 	}[K]
+
+export type ParseInt<T> = T extends `${infer N extends number}` ? N : never
 
 type Primitive = string | number | bigint | boolean | symbol | void | undefined | null // TODO: add  record | tuple
 type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling)
@@ -225,6 +228,7 @@ type ObjectEntry<T extends {}> =
 	: never
 	: never
 
+/** if T extends readonly[] => [number, T],   if T extends {} => [key:string, T] */
 export type Entry<T extends {}> =
 	T extends readonly [unknown, ...unknown[]]
 	? TupleEntry<T>
@@ -232,5 +236,6 @@ export type Entry<T extends {}> =
 	? [`${number}`, U]
 	: ObjectEntry<T>
 
-/** [keyof T, K[T]][] */
+/** Object.entries<T> as [number,T][] */
 export type Entries<T extends {}> = ReadonlyArray<Entry<T>>
+export type Index<T extends readonly any[]> = { [K in Entry<T> as `${K[1]}`]: ParseInt<K[0]> } & { [K in Entry<T> as K[0]]: K[1] }
