@@ -1,4 +1,5 @@
-import { isNumber, isObject, type ValueOf } from '@module/shared/type.library.js';
+import { isNumber, isObject } from '@module/shared/type.library.js';
+import type { Entry, Index } from '@module/shared/type.library.js';
 
 /**
  * This Class is for 'Objects as Enums'  
@@ -8,7 +9,7 @@ import { isNumber, isObject, type ValueOf } from '@module/shared/type.library.js
  * so that if Javascript supports this in the future, it will be easy to retro-fit. 
  * 
  * The benefits to this approach over Typescript's Enums is that it adds support for methods  
- * (toStringTag, Iterator, keys, count, values, entries)   
+ * (toStringTag, Symbol.iterator, keys, count, values, entries)   
  * as well as string-arguments in functions that match the Enum values  
  * For example:  
  * * const SEASON = enumify({ Spring: 'spring', Summer: 'summer', Autumn: 'autumn', Winter: 'winter' });  
@@ -18,12 +19,12 @@ import { isNumber, isObject, type ValueOf } from '@module/shared/type.library.js
  * 
  * The drawback to this approach is that we lose some of the Typescript benefits,  
  * like namespace-ing allowable values.  
- * Instead we need to declare arguments of a Function without the 'helper' methods.  
+ * Instead we can declare arguments of a Function without the 'helper' methods.  
  * For example:  
  * * function getSeason(szn: Enum\<typeof SEASON>) { console.log('season: ', szn) }  
  */
 
-export type helper<T> = {																					// types for standard Enum methods
+type helper<T> = {																					// types for standard Enum methods
 	/** array of Enum keys */																	keys(): (keyof T)[];
 	/** count of Enum keys */																	count(): number;
 	/** array of Enum values */																values(): T[keyof T][];
@@ -32,8 +33,10 @@ export type helper<T> = {																					// types for standard Enum methods
 	// /** string tag */[Symbol.toStringTag](): string;
 }
 
+export type Enum<T> = Omit<T, keyof helper<T>>
+
 /**
- * expose only the Static members of a Class enum  
+ * add values as Static properties of a Class-based Enum  
  * For example:  
  * * const SEASON = enumify({ Spring: 'spring', Summer: 'summer', Autumn: 'autumn', Winter: 'winter' });  
  * * type szn = Enum\<typeof SEASON>  
@@ -42,28 +45,26 @@ export type helper<T> = {																					// types for standard Enum methods
  * *	const WEEKDAY = enumify('All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun');  
  * *	type dow = Enum\<typeof WEEKDAY>  
  */
-// export type Enum<T> = Exclude<ValueOf<Omit<T, keyof helper<T>>>, number>
-export type Enum<T> = Omit<T, keyof helper<T>>
 
 /** Enum as static-Class as well as useful methods */
-export function enumify<const T extends {} >(...obj: T[]) {
+export function enumify<const T extends {}>(...obj: T[]): T & helper<T>;
+export function enumify<const T extends readonly string[]>(...obj: T[]): Index<T>;
+export function enumify<T extends {}>(...obj: T[]) {
 	return class {
-		static [key: string | number | symbol]: any;						// index signature for Enum key-value pair, plus (if applicable) numeric reverse-lookups
-		static #entries = [] as [keyof T, T[keyof T]][];				// just original key-value pairs
+		static [key: PropertyKey]: any;													// index signature for Enum key-value pair, plus (if applicable) numeric reverse-lookups
+		static #entries = [] as Entry<T>[];											// just original key-value pairs
 
 		static {																								// static block to load properties
-			if (isObject(obj[0])) {
-				this.#entries = Object.entries(obj[0]) as [keyof T, T[keyof T]][];
-			} else {
-				this.#entries = obj.reduce((acc, key, idx) => Object.assign(acc, [key, idx]), []);
-			}
+			this.#entries = isObject(obj[0])
+				? Object.entries(obj[0]) as Entry<T>[]
+				: obj.reduce((acc, key, idx) => Object.assign(acc, [key, idx]), [] as Entry<T>[]);
 
 			this.#entries
-				.forEach(([key, val]) => this[key] = val as T)
+				.forEach(([key, val]) => this[key.toString()] = val)// add each key:value as static property
 
-			if (this.#entries.every(([_, val]) => isNumber(val)))	// if numeric-values provided, 
-				this.#entries
-					.forEach(([key, val]) => this[val as number] = key);// create reverse-lookup
+			// if (this.#entries.every(([_, value]) => isNumber(value)))																						// if numeric-only values provided, 
+			// 	this.#entries																				// create reverse-lookup
+			// 		.forEach(([key, val]) => this[val.toString()] = key);
 		}
 
 		static count() { return this.#entries.length };
@@ -87,6 +88,25 @@ export function enumify<const T extends {} >(...obj: T[]) {
 			return this.#entries
 				.reduce((acc, [key, val]) => Object.assign(acc, { [key]: val }), {} as T)
 		}
-
-	} as unknown as T /** & Record<number, keyof T> */ & helper<T>
+	} as unknown as T extends  string[] ? never : T & helper<T>
 }
+
+// const mam = ['a', 'b', 'z'] as const;
+// const dab = mam as unknown as Index<typeof mam>
+
+// dab[0]
+
+// const szn = enumify('Spring', 'Summer', 'Autumn', 'Winter') ;
+
+// szn.keys()
+
+// const tm = enumify({ Year: 'year', Month: 'month' });
+// tm.keys()
+
+// function blah<const T extends readonly string[]>(...arg: T) {
+// 	return arg as unknown as Index<T>
+// }
+
+// const gfp = blah('x', 'y', 'z');
+// gfp.0
+

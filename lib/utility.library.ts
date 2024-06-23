@@ -29,18 +29,18 @@ export const padString = (str: string | number | bigint, pad = 6) =>
  * best used with Promise.race([xxx(), sleep()]  
  * @param msg			string to display on a timeout 
  * @param timeOut	how many milliseconds to sleep (default 2-seconds)  
- * @returns Promise  
+ * @returns Promise\<void>  
  */
 export const sleep = (msg = 'sleep: timed out', timeOut = 2000) =>
 	new Promise((_, reject) => setTimeout(() => reject(new Error(msg)), timeOut));
 
-export enum CONTEXT {
-	'Unknown' = 'unknown',
-	'Browser' = 'browser',
-	'NodeJS' = 'nodejs',
-	'Deno' = 'deno',
-	'GoogleAppsScript' = 'google-apps-script',
-}
+export const CONTEXT = {
+	'Unknown': 'unknown',
+	'Browser': 'browser',
+	'NodeJS': 'nodejs',
+	'Deno': 'deno',
+	'GoogleAppsScript': 'google-apps-script',
+} as const
 /** determine JavaScript environment context */
 export const getContext = () => {
 	const global = globalThis as any;
