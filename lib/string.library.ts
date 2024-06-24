@@ -1,4 +1,4 @@
-import { isNumeric } from '@module/shared/number.library.js';
+import { asNumber, isNumeric } from '@module/shared/number.library.js';
 import { stringify } from '@module/shared/serialize.library.js';
 import { isString, isObject, isNullish, assertCondition, assertString, nullToValue } from '@module/shared/type.library.js';
 
@@ -122,3 +122,8 @@ export const strlen = <Min extends number, Max extends number>(str: unknown, min
  */
 export const pad = (nbr: string | number | bigint = 0, len = 2, fill?: string | number) =>
 	nbr.toString().padStart(len, nullToValue(fill, isNumeric(nbr) ? '0' : ' ').toString());
+
+/** pad a string with non-blocking spaces, to help right-align a display */
+export const padString = (str: string | number | bigint, pad = 6) =>
+	(isNumeric(str) ? asNumber(str).toFixed(2).toString() : str.toString() ?? '').padStart(pad, '\u007F');
+

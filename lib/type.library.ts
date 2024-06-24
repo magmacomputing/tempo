@@ -1,6 +1,6 @@
 import type { Tempo } from '@module/shared/tempo.class.js';
 import type { Pledge } from '@module/shared/pledge.class.js';
-import type { Enum } from '@module/shared/enumerate.class.js';
+import type { Enum } from '@module/shared/enumerate.library.js';
 
 // TODO:  remove this after Temporal reaches Stage-4
 // import { Temporal } from '@js-temporal/polyfill';
@@ -40,7 +40,14 @@ export const getType = (obj?: any, ...instances: Instance[]) => {
 }
 
 /** convert value to TypeValue<T> object */
-export const asType = <T>(obj?: T, ...instances: Instance[]) => ({ type: getType(obj, ...instances), value: obj } as TypeValue<T>);
+export const asType = <T>(obj?: T, ...instances: Instance[]) => {
+	const type = getType(obj, ...instances);
+	return ({
+		type,
+		value: type === 'Enum' ? (obj as any).enum?.() : obj,		// kludge to return enum-type
+	}) as TypeValue<T>
+}
+
 /** assert value is one of a list of Types */
 export const isType = <T>(obj: unknown, ...types: Types[]): obj is T => types.includes(getType(obj));
 
@@ -209,7 +216,7 @@ export type TypeValue<T> =
 	{ type: 'Temporal.PlainYearMonth', value: Temporal.PlainYearMonth } |
 	{ type: 'Temporal.PlainMonthDay', value: Temporal.PlainMonthDay } |
 
-	{ type: 'Enum', value: Record<PropertyKey, unknown> } |
+	{ type: 'Enum', value: Record<PropertyKey, T> } |
 	{ type: 'Tempo', value: Tempo } |
 	{ type: 'Pledge', value: Pledge<T> }
 

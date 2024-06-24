@@ -1,6 +1,6 @@
 // #region library modules~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 import { Pledge } from '@module/shared/pledge.class.js';
-import { enumKeys } from '@module/shared/enumerate.library.js';
+import { enumify } from '@module/shared/enumerate.library.js';
 import { cloneify } from '@module/shared/serialize.library.js';
 import { getAccessors } from '@module/shared/object.library.js';
 import { asArray, sortInsert } from '@module/shared/array.library.js';
@@ -685,12 +685,12 @@ export class Tempo {
 	/** static Tempo.Duration getter, where matched in Tempo.TIMES */
 	static get durations() {
 		return getAccessors<Temporal.DurationLike>(Temporal.Duration)
-			.filter(key => enumKeys(Tempo.TIMES).includes(key));
+			.filter(key => Tempo.eTIMES.keys().includes(key));
 	}
 
 	/** static Temporal.DateTimeUnit, where exists in Tempo.TIME */
 	static get elements() {
-		return enumKeys(Tempo.TIME) as Temporal.DateTimeUnit[];
+		return Tempo.eTIME.keys() as Temporal.DateTimeUnit[];
 	}
 
 	/** static Tempo.Terms getter */
@@ -1117,7 +1117,7 @@ export class Tempo {
 		if (isDefined(groups["mm"]) && !isNumeric(groups["mm"])) {
 			const mm = Tempo.#prefix(groups["mm"] as Tempo.Calendar);
 
-			groups["mm"] = enumKeys(Tempo.MONTH)
+			groups["mm"] = Tempo.eMONTH.keys()
 				.findIndex(el => el === mm)													// resolve month-name into a month-number
 				.toString()																					// (some browsers do not allow month-names when parsing a Date)
 				.padStart(2, '0')
@@ -1196,7 +1196,7 @@ export class Tempo {
 
 		const weekday = Tempo.#prefix(dow);											// conform weekday-name
 		const adjust = dateTime.daysInWeek * +cnt;							// how many weeks to adjust
-		const offset = enumKeys(Tempo.WEEKDAY)									// how far weekday is from today
+		const offset = Tempo.eWEEKDAY.keys()										// how far weekday is from today
 			.findIndex(el => el === weekday);
 
 		const days = offset - dateTime.dayOfWeek								// number of days to offset from dateTime
@@ -1797,6 +1797,9 @@ export namespace Tempo {
 	export type Weekday = Exclude<keyof typeof Tempo.WEEKDAY, 'All'>
 	export type Calendar = Exclude<keyof typeof Tempo.MONTH, 'All'>
 
+	export const eMONTH = enumify(MONTH);
+	export const eWEEKDAY = enumify(WEEKDAY);
+
 	/** Compass Cardinal Points */
 	export type Sphere = Tempo.COMPASS.North | Tempo.COMPASS.South | null
 	export enum COMPASS {
@@ -1853,6 +1856,8 @@ export namespace Tempo {
 		microseconds: TIME.microsecond * 1_000,
 		nanoseconds: Number((TIME.nanosecond * 1_000).toPrecision(6)),
 	} as const
+	export const eTIME = enumify(Tempo.TIME);
+	export const eTIMES = enumify(Tempo.TIMES);
 
 	/** some useful Dates */
 	export const DATE = {
