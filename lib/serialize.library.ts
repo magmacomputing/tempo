@@ -1,7 +1,7 @@
 import { Tempo } from '@module/shared/tempo.class.js';
-import { enumify } from '@module/shared/enum.class.js';
 import { curry } from '@module/shared/function.library.js';
 import { isNumeric } from '@module/shared/number.library.js';
+import { enumify } from '@module/shared/enumerate.library.js';
 import { allEntries } from '@module/shared/reflect.library.js';
 
 import { isType, asType, isEmpty, isDefined, isUndefined, isNullish, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types, isSymbolFor, isSymbol } from '@module/shared/type.library.js';
@@ -326,7 +326,7 @@ function typeify(json: Record<string | symbol, string>, sentinel?: Function) {
 		// return Tuple.from(value) ;														// TODO
 
 		case 'Enum':
-			return enumify(value);
+			return enumify(value);																// TODO
 		case 'Tempo':
 			return new Tempo(value);
 
