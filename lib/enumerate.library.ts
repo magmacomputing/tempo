@@ -1,5 +1,5 @@
 import { isNumeric } from '@module/shared/number.library.js';
-import { isNumber } from '@module/shared/type.library.js';
+import { Entry, isNumber } from '@module/shared/type.library.js';
 
 /**
  * Typescript Enums have three types:  
@@ -24,7 +24,6 @@ export const enumKeys = <T extends {}>(enumType: T) => {
 	return (entries.length !== keys.length)										// if not-Numeric Enum
 		? keys																									// 	String/Heterogeneous Enum
 		: entries																								// else just the numeric Enum values
-			// .sort(([, val1], [, val2]) => val1 = val2)						// 	sort by the number-values, and
 			.map(([key,]) => key);																// 	return the keys
 }
 
@@ -44,30 +43,34 @@ export const enumEntries = <T extends {}>(enumType: T) =>		// Enum entries
 
 /** extend the Enum type with 'helper' methods */
 type helper<T> = {
+	/** original Enum */																			enum(): T;
 	/** array of Enum keys */																	keys(): (keyof T)[];
 	/** count of Enum keys */																	count(): number;
 	/** array of Enum values */																values(): T[keyof T][];
 	/** tuple of Enum entries */															entries(): [keyof T, T[keyof T]][];
-	// /** default Iterator for Enum */[Symbol.iterator](): Iterator<T>;
-	// /** string tag */[Symbol.toStringTag](): string;
+	/** reverse lookup of Enum key by value */								lookup(val: T[keyof T]): keyof T | undefined;
+	/** default Iterator for Enum */[Symbol.iterator](): Iterator<Entry<T extends {} ? T : never>>;
+	/** string tag */[Symbol.toStringTag](): string;
 }
 export type Enum<T> = Omit<T, keyof helper<T>>
 
-export function enumify<const T extends {}>(factor: T) {
-	const entries = enumEntries(factor);											// define once, use in entries(), enum(), iterator()
+export function enumify<const T extends Record<keyof T, keyof any>>(list: T) {
+	const stash = { ...list };																// clone original Enum
+	const entries = enumEntries(stash);												// define once: use in entries(), iterator()
 
-	return Object.assign({}, factor, {
-		keys: () => enumKeys(factor),
-		count: () => enumCount(factor),
-		values: () => enumValues(factor),
-		entries: () => entries,
-		enum: () => entries.reduce((acc, [key, val]) => Object.assign(acc, { [key]: val }), {} as T),
-		get [Symbol.toStringTag]() { return 'Enum' },
-		get [Symbol.iterator]() {
-			const list = entries[Symbol.iterator]();
-			return {
-				next: () => list.next(),														// iterate through entries()
+	return Object.defineProperties(stash, {																					// helper methods
+		keys: { value: () => enumKeys(list) },
+		count: { value: () => enumCount(list) },
+		values: { value: () => enumValues(list) },
+		entries: { value: () => entries },
+		enum: { value: () => stash as T },
+		lookup: { value: (val: K in keyof T as T[K]) => entries.find(entry => entry[1] === val) },
+		[Symbol.toStringTag]: ({ get: () => 'Enum' }),
+		[Symbol.iterator]: {
+			value: () => {
+				const iterator = entries[Symbol.iterator]();
+				return { next: () => iterator.next(), }							// iterate through entries()
 			}
-		},
-	})
+		}
+	}) as T & helper<T>
 }
