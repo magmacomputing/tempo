@@ -3,7 +3,8 @@ import { stringify } from '@module/shared/serialize.library.js';
 import { isString, type TValues } from '@module/shared/type.library.js'
 
 /**
- * Wrap a Promise's resolve/reject/finally methods for later fulfilment   
+ * Wrap a Promise's resolve/reject/finally methods for later fulfilment.  
+ * with useful methods for tracking the state of the Promise, chaining fulfilment, etc.  
  ```
 	 new Pledge<T>({tag: string, onResolve?: () => void, onReject?: () => void, onSettle?: () => void, catch: boolean, debug: boolean})
 	 new Pledge<T>(tag?: string) 
@@ -18,9 +19,7 @@ export class Pledge<T> {
 	}
 
 	#status: Pledge.Status<T>;
-	#promise: Promise<T>;
-	#resolve!: (value: T | PromiseLike<T>) => void;
-	#reject!: (reason?: string) => void;
+	#pledge: PromiseWithResolvers<T>;
 
 	get [Symbol.toStringTag]() { return 'Pledge' }
 
@@ -32,7 +31,7 @@ export class Pledge<T> {
 			onSettle = Pledge.#options.onSettle,
 			...flags } = isString(arg)
 				? { tag: arg } as Pledge.Constructor								// if String, assume 'tag'
-				: { ...arg }									// else 'options'
+				: { ...arg }																				// else 'options'
 
 		this.#status = JSON.parse(JSON.stringify({							// remove undefined values
 			tag,
@@ -41,26 +40,23 @@ export class Pledge<T> {
 			state: Pledge.STATE.Pending,
 		}));
 
-		this.#promise = new Promise<T>((resolve, reject) => {
-			this.#resolve = resolve;															// stash resolve()
-			this.#reject = reject;																// stash reject()
-		})
+		this.#pledge = Promise.withResolvers<T>();
 
 		if (onResolve) {
 			(this.#status.fulfil ??= {}).onResolve = asArray(onResolve);
 			this.#status.fulfil.onResolve													// stack any then() callbacks
-				.forEach(resolve => this.#promise.then(resolve));
+				.forEach(resolve => this.#pledge.promise.then(resolve));
 		}
 		if (onReject) {
 			(this.#status.fulfil ??= {}).onReject = asArray(onReject);
 			this.#status.fulfil.onReject													// stack any catch() callbacks
-				.forEach(reject => this.#promise.catch(reject));
+				.forEach(reject => this.#pledge.promise.catch(reject));
 		}
 
 		if (onSettle) {
 			(this.#status.fulfil ??= {}).onSettle = asArray(onSettle);
 			this.#status.fulfil.onSettle													// stack any finally() callbacks
-				.forEach(settle => this.#promise.finally(settle));
+				.forEach(settle => this.#pledge.promise.finally(settle));
 		}
 	}
 
@@ -70,18 +66,18 @@ export class Pledge<T> {
 		switch (this.#status.state) {
 			case Pledge.STATE.Pending:
 				Object.assign(this.#status, { state: Pledge.STATE.Resolved, value });
-				this.#resolve(value);																// resolve, then trigger any Pledge.onResolve, then Pledge.onSettle
+				this.#pledge.resolve(value);												// resolve, then trigger any Pledge.onResolve, then Pledge.onSettle
 				return value;
 
 			case Pledge.STATE.Resolved:														// warn: already resolved
-				const resolve = (this.#status as Pledge.StatusValue<T>).value;
-				if (value && stringify(value) !== stringify(resolve) && this.#status.debug)
-					console.warn(`Pledge ${tag}already resolved: "${resolve}"`);
-				return resolve;
+				const resolved = (this.#status as Pledge.StatusValue<T>).value;
+				if (value && stringify(value) !== stringify(resolved) && this.#status.debug)
+					console.warn(`Pledge ${tag} already resolved: "${resolved}"`);
+				return resolved;
 
 			case Pledge.STATE.Rejected:														// error: already rejected
 				const err = (this.#status as Pledge.StatusError<Error>).error.message;
-				const msg = `Pledge ${tag}already rejected: "${err}"`;
+				const msg = `Pledge ${tag} already rejected: "${err}"`;
 				if (this.#status.catch) {
 					if (this.#status.debug)
 						console.warn(msg);
@@ -97,18 +93,18 @@ export class Pledge<T> {
 		switch (this.#status.state) {
 			case Pledge.STATE.Pending:
 				Object.assign(this.#status, { state: Pledge.STATE.Rejected, error: new Error(error) });
-				this.#reject(error);																// reject, then trigger any Pledge.onReject, then Pledge.onSettle
+				this.#pledge.reject(error);													// reject, then trigger any Pledge.onReject, then Pledge.onSettle
 				return error;
 
 			case Pledge.STATE.Rejected:														// warn: already rejected
-				const reject = (this.#status as Pledge.StatusError<Error>).error.message;
-				if (error && stringify(error) !== stringify(reject) && this.#status.debug)
-					console.warn(`Pledge ${tag}already rejected: "${reject}"`);
-				return reject;
+				const rejected = (this.#status as Pledge.StatusError<Error>).error.message;
+				if (error && stringify(error) !== stringify(rejected) && this.#status.debug)
+					console.warn(`Pledge ${tag} already rejected: "${rejected}"`);
+				return rejected;
 
 			case Pledge.STATE.Resolved:														// error: already resolved
 				const err = (this.#status as Pledge.StatusValue<T>).value;
-				const msg = `Pledge ${tag}already resolved: "${err}"`;
+				const msg = `Pledge ${tag} already resolved: "${err}"`;
 				if (this.#status.catch) {
 					if (this.#status.debug)
 						console.warn(msg);
@@ -119,7 +115,7 @@ export class Pledge<T> {
 	}
 
 	get promise() {
-		return this.#promise;
+		return this.#pledge.promise;
 	}
 
 	get status() {

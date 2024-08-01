@@ -1,7 +1,7 @@
 # <img src="./img/hourglass-svgrepo-com.svg" width="100px"> <span style="font-size:4em;">Tempo</span>
 A Wrapper around the Javascript Temporal object.
 
-The new proposed Ecmascript Temporal object (currently at Stage 3 as-at July-2023)
+The new proposed ECMAScript Temporal object (currently at Stage 3 as-at July-2023)
 will bring many benefits to Developers.
 
 The trade-off for this is additional syntax to learn and multiple APIs.
