@@ -1,10 +1,10 @@
 import { isNumeric } from '@module/shared/number.library.js';
-import { Entry, isNumber } from '@module/shared/type.library.js';
+import { Entry, Index, isArray, isNumber } from '@module/shared/type.library.js';
 
 /**
  * Typescript Enums have three types:  
  * a. Numeric (with reverse-mapping),
- * b. String and 
+ * b. String, and 
  * c. Heterogeneous (mixed Number and String) keys.  
  * 
  * https://www.typescriptlang.org/docs/handbook/enums.html  
@@ -43,28 +43,39 @@ export const enumEntries = <T extends {}>(enumType: T) =>		// Enum entries
 
 /** extend the Enum type with 'helper' methods */
 type helper<T> = {
-	/** original Enum */																			enum(): T;
+	/** original Enum as Readonly Record */										enum(): T;
 	/** array of Enum keys */																	keys(): (keyof T)[];
 	/** count of Enum keys */																	count(): number;
 	/** array of Enum values */																values(): T[keyof T][];
 	/** tuple of Enum entries */															entries(): [keyof T, T[keyof T]][];
-	/** reverse lookup of Enum key by value */								lookup(val: T[keyof T]): keyof T | undefined;
-	/** default Iterator for Enum */[Symbol.iterator](): Iterator<Entry<T extends {} ? T : never>>;
+	/** reverse lookup of Enum key by value */								keyOf(val: T[keyof T]): keyof T;
+	/** Iterator for Enum */[Symbol.iterator](): Iterator<Entry<T extends {} ? T : never>>;
 	/** string tag */[Symbol.toStringTag](): string;
 }
-export type Enum<T> = Omit<T, keyof helper<T>>
+export type Enum<T> = Readonly<Omit<T, keyof helper<T>>>
+type Wrap<T> = Readonly<T & helper<T>>
 
+/**
+ * an 'enum-like' object that we can use to extend Typescript's implementation
+ */
+export function enumify<const T extends (string | number)[]>(...list: T[]): Wrap<Index<T>>;
+export function enumify<const T extends ReadonlyArray<string | number>>(...list: T[]): Wrap<Index<T>>;
+export function enumify<const T extends Record<keyof T, keyof any>>(list: T): Wrap<T>;
 export function enumify<const T extends Record<keyof T, keyof any>>(list: T) {
-	const stash = { ...list };																// clone original Enum
-	const entries = enumEntries(stash);												// define once: use in entries(), iterator()
+	const stash = isArray(list)																// clone original Enum as an Object
+		? (list as (string | number)[]).reduce((acc, itm, idx) => Object.assign(acc, { [itm]: idx }), {})
+		: { ...list }
+	const entries = enumEntries(stash);												// define once; use in entries(), keyOf, iterator()
+	const reverse = entries																		// build a reverse-keyof object
+		.reduce((acc, [key, val]) => Object.assign(acc, { [val]: key }), {} as Record<string | number, T>);
 
-	return Object.defineProperties(stash, {																					// helper methods
-		keys: { value: () => enumKeys(list) },
-		count: { value: () => enumCount(list) },
-		values: { value: () => enumValues(list) },
+	return Object.defineProperties(stash, {										// helper methods
+		keys: { value: () => enumKeys(stash) },
+		count: { value: () => enumCount(stash) },
+		values: { value: () => enumValues(stash) },
 		entries: { value: () => entries },
-		enum: { value: () => stash as T },
-		lookup: { value: (val: K in keyof T as T[K]) => entries.find(entry => entry[1] === val) },
+		enum: { value: () => stash },
+		keyOf: { value: (val: string | number) => reverse[val] },
 		[Symbol.toStringTag]: ({ get: () => 'Enum' }),
 		[Symbol.iterator]: {
 			value: () => {
@@ -72,5 +83,5 @@ export function enumify<const T extends Record<keyof T, keyof any>>(list: T) {
 				return { next: () => iterator.next(), }							// iterate through entries()
 			}
 		}
-	}) as T & helper<T>
+	})
 }

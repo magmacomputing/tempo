@@ -246,4 +246,11 @@ export type Entry<T extends {}> =
 /** Object.entries<T> as [number,T][] */
 export type Entries<T extends {}> = ReadonlyArray<Entry<T>>
 export type Inverse<T> = {[K in keyof T as (T[K] & (string | number))]: K};
-export type Index<T extends readonly any[]> = { [K in Entry<T> as `${K[1]}`]: ParseInt<K[0]> } & { [K in Entry<T> as K[0]]: K[1] }
+export type Index<T extends readonly any[]> = { [K in Entry<T> as `${K[1]}`]: ParseInt<K[0]> } //& { [K in Entry<T> as K[0]]: K[1] }
+
+// https://stackoverflow.com/questions/39494689/is-it-possible-to-restrict-number-to-a-certain-range/70307091#70307091
+type Enumerate<N extends number, Acc extends number[] = []> = Acc['length'] extends N
+  ? Acc[number]
+  : Enumerate<N, [...Acc, Acc['length']]>
+
+export type IntRange<F extends number, T extends number> = Exclude<Enumerate<T>, Enumerate<F>>
