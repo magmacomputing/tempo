@@ -55,21 +55,20 @@ export function cloneify<T>(obj: T, sentinel?: Function): T {
 function replacer(key: string, obj: any): any { return isEmpty(key) ? obj : stringize(obj) }
 function reviver() { return (_key: string, val: any) => decode(val) }
 
+// safe-characters [sp, ", ;, <, >, ^, {, |, }]
 /** encode control characters, then replace a safe-subset back to text-string */
 function encode(val: string) {
-	return encodeURI(val)
-		.replace(/%20/g, ' ')
-		.replace(/%22/g, '"')
-		.replace(/%3B/g, ';')
-		.replace(/%3C/g, '<')
-		.replace(/%3D/g, '=')
-		.replace(/%3E/g, '>')
-		.replace(/%5B/g, '[')
-		.replace(/%5D/g, ']')
-		.replace(/%5E/g, '^')
-		.replace(/%60/g, '`')
-		.replace(/%7B/g, '{')
-		.replace(/%7D/g, '}')
+	const safeList = ['20', '22', '3B', '3C', '3E', '5E', '7B', '7C', '7D'];
+	let enc = encodeURI(val);
+
+	safeList.forEach(code => {
+		const uri = '%' + code;
+		const reg = new RegExp(uri, 'g');
+
+		enc = enc.replace(reg, decodeURI(uri));
+	})
+
+	return enc;
 }
 
 /** decode control characters */
@@ -210,12 +209,13 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 			return one(stringize(fromSymbol(arg.value)));
 
 		case 'RegExp':
-			return one(stringize(arg.value.toString()));
+			return one(stringize({ source: arg.value.source, flags: arg.value.flags }));
+		// return one(stringize(arg.value.toString()));
 
 		default:
 			switch (true) {
-				case !isStringable(arg.value):
-					return void 0 as unknown as string;								// Object is not stringify-able
+				case !isStringable(arg.value):											// Object is not stringify-able
+					return void 0 as unknown as string;
 
 				case isFunction(arg.value.toString):								// Object has its own toString method
 					return one(JSON.stringify(arg.value.toString()));
@@ -313,7 +313,8 @@ function typeify(json: Record<string | symbol, string>, sentinel?: Function) {
 		case 'Date':
 			return new Date(value);
 		case 'RegExp':
-			return new RegExp(value);
+			return new RegExp(value.source, value.flags);
+		// return new RegExp(value);
 		case 'Symbol':
 			return toSymbol(value) ?? json;												// reconstruct Symbol
 		case 'Map':
