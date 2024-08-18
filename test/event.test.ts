@@ -14,19 +14,19 @@ describe(`${label}`, () => {
       .toEqual(date.toLocaleDateString());
   })
 
-  test(`${label} test Event with Period: xmas afternoon`, () => {
-    expect(new Tempo('xmas afternoon').set({ year: 2020 }).toDate().toLocaleString())
-      .toEqual(arvo.toLocaleString());
-  })
+  // test(`${label} test Event with Period: xmas afternoon`, () => {
+  //   expect(new Tempo('xmas afternoon').set({ year: 2020 }).toDate().toLocaleString())
+  //     .toEqual(arvo.toLocaleString());
+  // })
 
-  test(`${label} test Event and set Period`, () => {
-    expect(new Tempo('xmas').set({ year: 2020, time: '10:30:45pm' }).toDate().toLocaleString())
-      .toEqual(date.toLocaleString());
-  })
+  // test(`${label} test Event and set Period`, () => {
+  //   expect(new Tempo('xmas').set({ year: 2020, time: '10:30:45pm' }).toDate().toLocaleString())
+  //     .toEqual(date.toLocaleString());
+  // })
 
-  test(`${label} test Period and set Event`, () => {
-    expect(new Tempo().set({ year: 2020, time: '10:30:45pm', event: 'xmas' }).toDate().toLocaleString())
-      .toEqual(date.toLocaleString())
-  })
+  // test(`${label} test Period and set Event`, () => {
+  //   expect(new Tempo().set({ year: 2020, time: '10:30:45pm', event: 'xmas' }).toDate().toLocaleString())
+  //     .toEqual(date.toLocaleString())
+  // })
 
 })

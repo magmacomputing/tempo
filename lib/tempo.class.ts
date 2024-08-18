@@ -1295,7 +1295,7 @@ export class Tempo {
 			const reg = this.#local.patterns.get(Tempo.getSymbol(this.#local, pat));// get the RegExp for the date-pattern
 
 			if (isUndefined(reg)) {
-				Tempo.#catch(this.#local.config, `Cannot pattern for "${pat}"`);
+				Tempo.#catch(this.#local.config, `Cannot find pattern: "${pat}"`);
 			} else {
 				Object.assign(groups, this.#parseMatch(evt, reg));
 			}
