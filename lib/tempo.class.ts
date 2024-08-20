@@ -1787,17 +1787,18 @@ export namespace Tempo {
 	export type Duration = Temporal.DurationLike & Record<"iso", string>
 
 	// export enum WEEKDAY { All, Mon, Tue, Wed, Thu, Fri, Sat, Sun };
-	// export const WEEKDAY = enumify({ All: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7, });
-	export const WEEKDAY = enumify(['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',]);
+	// export const WEEKDAY = enumify({ All: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7, })
+	export const WEEKDAY = enumify(['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',])
 	// export enum WEEKDAYS { Everyday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday };
 	export const WEEKDAYS = enumify({ Everyday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6, Sunday: 7, })
-	export enum MONTH { All, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec };
-	export enum MONTHS { Every, January, February, March, April, May, June, July, August, September, October, November, December };
-	export enum DURATION { year, month, week, day, hour, minute, second, millisecond, microsecond, nanosecond };
-	export enum DURATIONS { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds };
+	export enum MONTH { All, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec }
+	export enum MONTHS { Every, January, February, March, April, May, June, July, August, September, October, November, December }
+	export enum DURATION { year, month, week, day, hour, minute, second, millisecond, microsecond, nanosecond }
+	export enum DURATIONS { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds }
 
 	// export type Weekday = Exclude<keyof typeof Tempo.WEEKDAY, 'All'>
-	export type Weekday = keyof Enum<typeof Tempo.WEEKDAY>;
+	export type Weekday = keyof Enum<typeof Tempo.WEEKDAY>
+	export type Weekdays = keyof Enum<typeof Tempo.WEEKDAYS>
 	export type Calendar = Exclude<keyof typeof Tempo.MONTH, 'All'>
 
 	export const eMONTH = enumify(MONTH);
