@@ -24,7 +24,7 @@ describe(`${label}`, () => {
     date.setDate(date.getDate() - (date.getDay() || Sun) + Wed);
 
     expect(tempo.config.parse.match)
-      .toBe('dow');
+      .toBe('dayOfWeek');
     expect(tempo.fmt.yearMonthDay)
       .toBe(formatDate(date));
   })
@@ -36,7 +36,7 @@ describe(`${label}`, () => {
     date.setDate(date.getDate() - (date.getDay() || Sun) + 7 + Wed);
 
     expect(tempo.config.parse.match)
-      .toBe('dow');
+      .toBe('dayOfWeek');
     expect(tempo.fmt.yearMonthDay)
       .toBe(formatDate(date));
   })

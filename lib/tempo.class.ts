@@ -1,6 +1,6 @@
 // #region library modules~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 import { Pledge } from '@module/shared/pledge.class.js';
-import { Enum, enumify } from '@module/shared/enumerate.library.js';
+import {  enumify } from '@module/shared/enumerate.library.js';
 import { cloneify } from '@module/shared/serialize.library.js';
 import { getAccessors } from '@module/shared/object.library.js';
 import { asArray, sortInsert } from '@module/shared/array.library.js';
@@ -11,7 +11,7 @@ import { asNumber, asInteger, isNumeric, ifNumeric } from '@module/shared/number
 import { asString, pad, singular, toProperCase, trimAll, sprintf } from '@module/shared/string.library.js';
 import { asType, getType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isNumber, isObject, isRegExp } from '@module/shared/type.library.js';
 
-// import type { Enum } from '@module/shared/enumerate.class.js';
+import type { Enum } from '@module/shared/enumerate.library.js';
 import type { Logger } from '@module/shared/logger.library.js';
 import type { Entries, IntRange, Types } from '@module/shared/type.library.js';
 
@@ -19,7 +19,6 @@ import '@module/shared/prototype.library.js';								// patch prototype
 
 /** TODO: THIS IMPORT NEEDS TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
 import 'temporal-polyfill/global';
-// import { Temporal } from '@js-temporal/polyfill';
 // #endregion
 
 /**
@@ -783,6 +782,16 @@ export class Tempo {
 	[Symbol.dispose]() {																			// TODO: for future implementation
 		Tempo.#info(this.config, 'dispose: ', this.#tempo);
 	}
+
+	/** safe-assignment Tempo */															// TODO: for future implementation (check for recursion?)
+	// [Symbol.result] = ((tempo, options) => {
+	// 	try {
+	// 		return [null, new Tempo(tempo, { ...options, catch: false })];
+	// 	} catch (err: unknown) {
+	// 		return [err, null];
+	// 	}
+	// }) as Safe<Tempo>
+
 
 	get [Symbol.toStringTag]() {															// default string description
 		return 'Tempo';																					// hard-coded to avoid minification mangling
@@ -1918,6 +1927,10 @@ await Tempo.init();
 type Params<T> = {																					// Type for consistency in expected arguments
 	(tempo?: Tempo.DateTime, options?: Tempo.Options): T;			// parse Tempo.DateTime, default to Temporal.Instant.now()
 	(options: Tempo.Options): T;															// provide just Tempo.Options (use {value:'XXX'} for specific Tempo.DateTime)
+}
+type Safe<T> = {																						// Type for safe-assignment operator
+	(tempo?: Tempo.DateTime, options?: Tempo.Options): [Error, null] | [null, T];
+	(options: Tempo.Options): [Error, null] | [null | T];
 }
 type Fmt = {																								// used for the fmtTempo() shortcut
 	<F extends Tempo.Formats>(fmt: F, tempo?: Tempo.DateTime, options?: Tempo.Options): Tempo.Format[F];
