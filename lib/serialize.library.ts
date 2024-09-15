@@ -4,7 +4,7 @@ import { isNumeric } from '@module/shared/number.library.js';
 import { enumify } from '@module/shared/enumerate.library.js';
 import { allEntries } from '@module/shared/reflect.library.js';
 
-import { isType, asType, isEmpty, isDefined, isUndefined, isNullish, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types, isSymbolFor, isSymbol } from '@module/shared/type.library.js';
+import { isType, asType, isEmpty, isDefined, isUndefined, isNullish, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types, isSymbolFor, isSymbol, TypeValue } from '@module/shared/type.library.js';
 
 // be aware that 'structuredClone' preserves \<undefined> values...  
 // but JSON.stringify() does not
@@ -55,10 +55,11 @@ export function cloneify<T>(obj: T, sentinel?: Function): T {
 function replacer(key: string, obj: any): any { return isEmpty(key) ? obj : stringize(obj) }
 function reviver() { return (_key: string, val: any) => decode(val) }
 
-// safe-characters [sp, ", ;, <, >, ^, {, |, }]
+// safe-characters [sp, ", ;, <, >, [, ], ^, {, |, }]
+const safeList = ['20', '22', '3B', '3C', '3E', '5B', '5D', '5E', '7B', '7C', '7D'];
+
 /** encode control characters, then replace a safe-subset back to text-string */
 function encode(val: string) {
-	const safeList = ['20', '22', '3B', '3C', '3E', '5E', '7B', '7C', '7D'];
 	let enc = encodeURI(val);
 
 	safeList.forEach(code => {
@@ -91,27 +92,26 @@ function isStringable(val: unknown): boolean {
 
 /** string representation of a single-key Object */
 function oneKey(type: Types, value: string) {
-	return `{"${type}":${value}}`;
+	return `{"${type}": ${value}}`;
 }
 
 /** Symbols in an Object-key will need special treatment */
-function fromSymbol(key: string | number | symbol) {
-	if (isSymbol(key))																				// @@(name) for global, @(name) for local
-		return `${isSymbolFor(key) ? '@' : ''}@(${key.description || ''})`;
-
-	return key.toString();
+function fromSymbol(key: PropertyKey) {
+	return stringize(isSymbol(key)														// @@(name) for global, @(name) for local
+		? `${isSymbolFor(key) ? '@' : ''}@(${key.description ?? ''})`
+		: key)
 }
 
 /** reconstruct a Symbol */
-function toSymbol(key: string | number | symbol) {
+function toSymbol(value: PropertyKey) {
 	const symKey = /^@(@)?\(([^\)]*)\)$/;											// pattern to match a stringify'd Symbol
-	const [pat, keyFor, desc] = key.toString().match(symKey) || [null, void 0, void 0];
+	const [pat, keyFor, desc] = value.toString().match(symKey) || [null, void 0, void 0];
 
 	switch (true) {
-		case isSymbol(key):																			// already a Symbol
+		case isSymbol(value):																		// already a Symbol
 		case isNullish(pat):																		// incorrect encoded Symbol
 		case isDefined(keyFor) && isUndefined(desc):						// incorrect encoded global Symbol
-			return key;
+			return value;
 
 		case isDefined(keyFor) && isDefined(desc):							// global Symbol
 			return Symbol.for(desc);
@@ -123,7 +123,7 @@ function toSymbol(key: string | number | symbol) {
 }
 
 /**
- * For items which are not currently serializable via standard JSON.stringify (Undefined, BigInt, Set, Map, etc.)  
+ * For items which are not currently serializable via standard JSON.stringify (Undefined, BigInt, Set, Map, Symbol, etc.)  
  * this creates a stringified, single-key Object to represent the value; for example  '{ "BigInt": 123 }'  
  * I would have preferred to use something more robust than strings for the keys  (considered a Symbol? but that doesn't fit in well with serializing to a String),  
  * as this single-key Object is open to abuse.  But the risk is acceptable within the scope of small projects.  
@@ -135,7 +135,7 @@ function toSymbol(key: string | number | symbol) {
 
 /**
  * serialize Objects for string-safe stashing in WebStorage, Cache, etc  
- * uses JSON.stringify where available, else returns stringified single-key Object '{"[type]": value}'  
+ * uses JSON.stringify where available, else returns stringified single-key Object '{[type]: value}'  
  */
 export function stringify(obj: any) {
 	return stringize(obj, false);
@@ -163,9 +163,9 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 				? JSON.stringify(encode(arg.value))									// encode string for safe-storage
 				: encode(arg.value);																// dont JSON.stringify a top-level string
 
+		case 'Boolean':
 		case 'Null':
 		case 'Number':
-		case 'Boolean':
 			return JSON.stringify(arg.value);											// JSON.stringify will correctly handle these
 
 		case 'Void':
@@ -179,7 +179,7 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 		case 'Record':
 			const obj = allEntries(arg.value)
 				.filter(([, val]) => isStringable(val))
-				.map(([key, val]) => `${stringize(fromSymbol(key))}:${stringize(val)}`)
+				.map(([key, val]) => `${fromSymbol(key)}: ${stringize(val)}`)
 				.join(',')
 			return `${arg.type === 'Record' ? '#' : ''}{${obj}}`;
 
@@ -194,7 +194,7 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 		case 'Map':
 			const map = Array.from(arg.value.entries())
 				.filter(([, val]) => isStringable(val))
-				.map(([key, val]) => `[${stringize(fromSymbol(key))},${stringize(val)}]`)
+				.map(([key, val]) => `[${stringize(key)}, ${stringize(val)}]`)
 				.join(',')
 			return one(`[${map}]`);
 
@@ -206,11 +206,10 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 			return one(`[${set}]`);
 
 		case 'Symbol':
-			return one(stringize(fromSymbol(arg.value)));
+			return one(fromSymbol(arg.value));
 
 		case 'RegExp':
 			return one(stringize({ source: arg.value.source, flags: arg.value.flags }));
-		// return one(stringize(arg.value.toString()));
 
 		default:
 			switch (true) {
@@ -233,9 +232,9 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 }
 
 /** rebuild an Object from its stringified representation */
-export function objectify<T extends any>(str: any, sentinel?: Function): T {
+export function objectify<T>(str: string, sentinel?: Function): T {
 	if (!isString(str))
-		return str as T;																				// skip parsing
+		return str;																							// skip parsing
 
 	try {
 		const parse = JSON.parse(str, reviver()) as T;					// catch if cannot parse
@@ -284,16 +283,16 @@ function traverse(obj: any, sentinel?: Function): any {
 }
 
 /** Rebuild an Object from its single-key representation */
-function typeify(json: Record<string | symbol, string>, sentinel?: Function) {
+function typeify(json: Record<string, unknown>, sentinel?: Function) {
 	if (!isObject(json))
 		return json;																						// only JSON Objects
 
-	// const entries = Object.entries(json) as [Types, any][];
-	const entries = allEntries(json) as [Types, any][];
-	if (entries.length !== 1)																	// only single-key Objects accepted
+	if (Object.keys(json).length !== 1)												// only single-key Objects accepted
 		return json;
 
-	const [type, value] = entries[0];
+	const { type, value } = allEntries(json)
+		.reduce((acc, [type, value]) => Object.assign(acc, { type, value }), {} as { type: Types, value: any })
+
 	switch (type) {
 		case 'String':
 		case 'Boolean':
@@ -314,22 +313,22 @@ function typeify(json: Record<string | symbol, string>, sentinel?: Function) {
 			return new Date(value);
 		case 'RegExp':
 			return new RegExp(value.source, value.flags);
-		// return new RegExp(value);
 		case 'Symbol':
-			return toSymbol(value) ?? json;												// reconstruct Symbol
+			return toSymbol(value);
 		case 'Map':
 			return new Map(value);
 		case 'Set':
 			return new Set(value);
-		case 'Record':
-		// return Record(value) ;																// TODO
-		case 'Tuple':
-		// return Tuple.from(value) ;														// TODO
 
-		case 'Enum':
-			return enumify(value);																// TODO
 		case 'Tempo':
-			return new Tempo(value);
+			return new Tempo(value);															// TODO
+
+		case 'Record':
+		// return Record(obj.value) ;														// TODO
+		case 'Tuple':
+		// return Tuple.from(obj.value) ;												// TODO
+		case 'Enum':
+		// return enumify(obj.value);														// TODO
 
 		default:
 			return json;																					// return JSON Object

@@ -52,7 +52,7 @@ export const asType = <T>(obj?: T, ...instances: Instance[]) => {
 export const isType = <T>(obj: unknown, ...types: Types[]): obj is T => types.includes(getType(obj));
 
 /** Type-Guards: assert \<obj> is of \<type> */
-export const isPrimitive = (obj?: unknown): obj is Primitive => isType(obj, 'String', 'Number', 'BigInt', 'Boolean', 'Symbol', 'Undefined', 'Void', 'Null', 'Record', 'Tuple');
+export const isPrimitive = (obj?: unknown): obj is Primitive => isType(obj, 'String', 'Number', 'BigInt', 'Boolean', 'Symbol', 'Undefined', 'Void', 'Null', 'Empty', 'Record', 'Tuple');
 export const isReference = (obj?: unknown): obj is Object => !isPrimitive(obj);
 export const isIterable = <T>(obj: unknown): obj is Iterable<T> => Symbol.iterator in Object(obj) && !isString(obj);
 
@@ -130,7 +130,7 @@ export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 /** Record with only one-key */
 export type OneKey<K extends keyof any, V, KK extends keyof any = K> =
 	{ [P in K]: { [Q in P]: V } &
-		{ [Q in Exclude<KK, P>]?: undefined } extends infer O ?
+	{ [Q in Exclude<KK, P>]?: undefined } extends infer O ?
 		{ [Q in keyof O]: O[Q] } : never
 	}[K]
 
@@ -245,12 +245,12 @@ export type Entry<T extends {}> =
 
 /** Object.entries<T> as [number,T][] */
 export type Entries<T extends {}> = ReadonlyArray<Entry<T>>
-export type Inverse<T> = {[K in keyof T as (T[K] & (string | number))]: K};
+export type Inverse<T> = { [K in keyof T as (T[K] & (string | number))]: K };
 export type Index<T extends readonly any[]> = { [K in Entry<T> as `${K[1]}`]: ParseInt<K[0]> } //& { [K in Entry<T> as K[0]]: K[1] }
 
 // https://stackoverflow.com/questions/39494689/is-it-possible-to-restrict-number-to-a-certain-range/70307091#70307091
 type Enumerate<N extends number, Acc extends number[] = []> = Acc['length'] extends N
-  ? Acc[number]
-  : Enumerate<N, [...Acc, Acc['length']]>
+	? Acc[number]
+	: Enumerate<N, [...Acc, Acc['length']]>
 
 export type IntRange<F extends number, T extends number> = Exclude<Enumerate<T>, Enumerate<F>>
