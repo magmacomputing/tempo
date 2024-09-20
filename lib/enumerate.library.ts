@@ -27,8 +27,8 @@ export const enumKeys = <T extends {}>(enumType: T) => {
 			.map(([key,]) => key);																// 	return the keys
 }
 
-/** count of Enum keys */
-export const enumCount = <T extends {}>(enumType: T) =>			// Enum length
+/** count of Enum entries */
+export const enumCount = <T extends {}>(enumType: T) =>
 	enumKeys(enumType).length;
 
 /** array of Enum values */

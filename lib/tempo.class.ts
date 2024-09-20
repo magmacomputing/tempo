@@ -1,6 +1,6 @@
 // #region library modules~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 import { Pledge } from '@module/shared/pledge.class.js';
-import {  enumify } from '@module/shared/enumerate.library.js';
+import { enumify } from '@module/shared/enumerate.library.js';
 import { cloneify } from '@module/shared/serialize.library.js';
 import { getAccessors } from '@module/shared/object.library.js';
 import { asArray, sortInsert } from '@module/shared/array.library.js';
@@ -904,7 +904,7 @@ export class Tempo {
 	/** fractional seconds since last second */								get ff() { return +(`0.${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`) }
 	/** number of weeks */																		get ww() { return this.#zdt.weekOfYear }
 	/** timezone */																						get tz() { return this.#zdt.timeZoneId }
-	/** default as milliseconds since Unix epoch */						get ts() { return this.#zdt[Tempo.#timeStamp[this.#local.config.timeStamp]] as number | bigint }
+	/** Unix epoch ms / ns (default to milliseconds) */				get ts() { return this.#zdt[Tempo.#timeStamp[this.#local.config.timeStamp]] as number | bigint }
 	/** weekday: Mon=1, Sun=7 */															get dow() { return this.#zdt.dayOfWeek }
 	/** short month name */																		get mmm() { return Tempo.MONTH[this.#zdt.month] }
 	/** long month name */																		get mon() { return Tempo.MONTHS[this.#zdt.month] }
@@ -1767,6 +1767,7 @@ export namespace Tempo {
 		[Tempo.FORMAT.yearWeek]: number;
 		[Tempo.FORMAT.yearMonth]: number;
 		[Tempo.FORMAT.yearMonthDay]: number;
+		// [Tempo.FORMAT.weekDay]: number;
 		[Tempo.FORMAT.date]: string;
 		[Tempo.FORMAT.time]: string;
 		[str: string]: string | number;													// allow for user-supplied format-codes
@@ -1789,16 +1790,14 @@ export namespace Tempo {
 		/** yyyyww */																						yearWeek: number;
 		/** yyyymm */																						yearMonth: number;
 		/** yyyymmdd */																					yearMonthDay: number;
+		// /** dd */																								weekDay: number;
 		/** yyyy-mm-dd */																				date: string;
 		/** hh:mi:ss */																					time: string;
 	}
 
 	export type Duration = Temporal.DurationLike & Record<"iso", string>
 
-	// export enum WEEKDAY { All, Mon, Tue, Wed, Thu, Fri, Sat, Sun };
-	// export const WEEKDAY = enumify({ All: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7, })
-	export const WEEKDAY = enumify(['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',])
-	// export enum WEEKDAYS { Everyday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday };
+	export const WEEKDAY = enumify(['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',]);
 	export const WEEKDAYS = enumify({ Everyday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6, Sunday: 7, })
 	export enum MONTH { All, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec }
 	export enum MONTHS { Every, January, February, March, April, May, June, July, August, September, October, November, December }
@@ -1808,6 +1807,7 @@ export namespace Tempo {
 	// export type Weekday = Exclude<keyof typeof Tempo.WEEKDAY, 'All'>
 	export type Weekday = keyof Enum<typeof Tempo.WEEKDAY>
 	export type Weekdays = keyof Enum<typeof Tempo.WEEKDAYS>
+	export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6					//Enum<typeof Tempo.WEEKDAY>
 	export type Calendar = Exclude<keyof typeof Tempo.MONTH, 'All'>
 
 	export const eMONTH = enumify(MONTH);
@@ -1837,6 +1837,7 @@ export namespace Tempo {
 		yearWeek: 'yyyyww',
 		yearMonth: 'yyyymm',
 		yearMonthDay: 'yyyymmdd',
+		// weekDay: 'dd',																					// day of week
 		date: 'yyyy-mmm-dd',																		// just Date portion
 		time: 'hh:mi:ss',																				// just Time portion
 	} as const
