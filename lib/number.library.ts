@@ -2,9 +2,6 @@ import { asArray } from '@module/shared/array.library.js';
 import { asString } from '@module/shared/string.library.js';
 import { asType, isInteger, isString, type TValues } from '@module/shared/type.library.js';
 
-/** RegExp string representation of a BigInt */
-export const patInteger = /^\d+n$/;
-
 /** convert String to Number */
 export function asNumber(str?: string | number | bigint) {
 	return parseFloat(str?.toString() ?? 'NaN');

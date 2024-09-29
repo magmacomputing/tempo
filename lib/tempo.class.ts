@@ -1795,7 +1795,7 @@ export namespace Tempo {
 		/** hh:mi:ss */																					time: string;
 	}
 
-	export type Duration = Temporal.DurationLike & Record<"iso", string>
+	export type Duration = Temporal.DurationLike & Partial<Record<"iso", string>>
 
 	export const WEEKDAY = enumify(['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',]);
 	export const WEEKDAYS = enumify({ Everyday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6, Sunday: 7, })

@@ -31,7 +31,7 @@ export type Logger = Extract<keyof Console, 'log' | 'info' | 'debug' | 'warn' | 
 const fprintf = (fmt?: any, ...msg: any[]) => {
 	let type = 'log';
 
-	if (isString(fmt)) {
+	if (isString<string>(fmt)) {
 		const keys = ['log', 'info', 'debug', 'warn', 'error'] as Logger[];
 		const match = fmt.match(/(\w*;)/i) ?? [];
 		const part = match[1];

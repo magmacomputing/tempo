@@ -31,6 +31,6 @@ export function allEntries<T extends {}>(json: T) {
 }
 
 /** collect string | number | symbol object keys */
-export function allKeys<T extends {}>(json: T) {
+export function allKeys<T extends object>(json: T) {
   return Reflect.ownKeys(json) as (keyof T)[]               // Object.keys()
 }
