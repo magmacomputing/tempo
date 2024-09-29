@@ -32,7 +32,7 @@ export function getStore<T>(key: string, dflt?: T) {
 /** set / delete local storage */
 export function setStore<T>(key: string, val?: T) {
 	const context = getContext();
-	const stash = val && stringify(val);
+	const stash = isDefined(val) ? stringify(val) : void 0;
 	const set = isDefined(stash);
 
 	switch (context.type) {

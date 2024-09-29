@@ -137,88 +137,88 @@ export type OneKey<K extends keyof any, V, KK extends keyof any = K> =
 export type ParseInt<T> = T extends `${infer N extends number}` ? N : never
 
 type Primitive = string | number | bigint | boolean | symbol | void | undefined | null // TODO: add  record | tuple
-type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling)
+type Instance = | { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling)
 export type Temporals = Exclude<keyof typeof Temporal, 'Now'>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 export type Types =
-	'String' |
-	'Number' |
-	'BigInt' |
-	'Boolean' |
-	'Object' |
-	'Array' | 'ArrayLike' |
-	'Null' |
-	'Undefined' | 'Void' | 'Empty' |
-	'Date' |
-	'Function' | 'AsyncFunction' |
-	'Class' |
-	'Promise' |
-	'RegExp' |
-	'Blob' |
-	'Map' |
-	'Set' |
-	'WeakMap' | 'WeakSet' | 'WeakRef' |
-	'Symbol' |
-	'Error' |
-	'Record' |
-	'Tuple' |
+	| 'String'
+	| 'Number'
+	| 'BigInt'
+	| 'Boolean'
+	| 'Object'
+	| 'Array' | 'ArrayLike'
+	| 'Null'
+	| 'Undefined' | 'Void' | 'Empty'
+	| 'Date'
+	| 'Function' | 'AsyncFunction'
+	| 'Class'
+	| 'Promise'
+	| 'RegExp'
+	| 'Blob'
+	| 'Map'
+	| 'Set'
+	| 'WeakMap' | 'WeakSet' | 'WeakRef'
+	| 'Symbol'
+	| 'Error'
+	| 'Record'
+	| 'Tuple'
 
-	'Temporal' |
-	'Temporal.Instant' |
-	'Temporal.ZonedDateTime' |
-	'Temporal.PlainDateTime' |
-	'Temporal.PlainDate' |
-	'Temporal.PlainTime' |
-	'Temporal.PlainYearMonth' |
-	'Temporal.PlainMonthDay' |
+	| 'Temporal'
+	| 'Temporal.Instant'
+	| 'Temporal.ZonedDateTime'
+	| 'Temporal.PlainDateTime'
+	| 'Temporal.PlainDate'
+	| 'Temporal.PlainTime'
+	| 'Temporal.PlainYearMonth'
+	| 'Temporal.PlainMonthDay'
 
-	'Enum' |
-	'Tempo' |
-	'Pledge'
+	| 'Enum'
+	| 'Tempo'
+	| 'Pledge'
 
 export type TypeValue<T> =
-	{ type: 'String', value: string } |
-	{ type: 'Number', value: number } |
-	{ type: 'BigInt', value: bigint } |
-	{ type: 'Boolean', value: boolean } |
-	{ type: 'Object', value: Extract<T, Record<PropertyKey, unknown>> } |
-	{ type: 'Array', value: Array<T> } |
-	{ type: 'ArrayLike', value: ArrayLike<T> } |
-	{ type: 'Undefined', value: undefined } |
-	{ type: 'Null', value: null } |
-	{ type: 'Void', value: void } |
-	{ type: 'Empty', value: unknown } |
-	{ type: 'Date', value: Date } |
-	{ type: 'Function', value: Function } |
-	{ type: 'Class', value: T } |
-	{ type: 'Promise', value: Promise<T> } |
-	{ type: 'RegExp', value: RegExp } |
-	{ type: 'Blob', value: Blob } |
-	{ type: 'Map', value: Map<any, T> } |
-	{ type: 'Set', value: Set<T> } |
-	{ type: 'WeakMap', value: WeakMap<Record<PropertyKey, unknown>, T> } |
-	{ type: 'WeakSet', value: WeakSet<Record<PropertyKey, unknown>> } |
-	// { type: 'WeakRef', value: WeakRef<Record<PropertyKey, any>, T> }
-	{ type: 'Symbol', value: symbol } |
-	{ type: 'Error', value: Error } |
+	| { type: 'String', value: string }
+	| { type: 'Number', value: number }
+	| { type: 'BigInt', value: bigint }
+	| { type: 'Boolean', value: boolean }
+	| { type: 'Object', value: Extract<T, Record<PropertyKey, unknown>> }
+	| { type: 'Array', value: Array<T> }
+	| { type: 'ArrayLike', value: ArrayLike<T> }
+	| { type: 'Undefined', value: undefined }
+	| { type: 'Null', value: null }
+	| { type: 'Void', value: void }
+	| { type: 'Empty', value: unknown }
+	| { type: 'Date', value: Date }
+	| { type: 'Function', value: Function }
+	| { type: 'Class', value: T }
+	| { type: 'Promise', value: Promise<T> }
+	| { type: 'RegExp', value: RegExp }
+	| { type: 'Blob', value: Blob }
+	| { type: 'Map', value: Map<any, T> }
+	| { type: 'Set', value: Set<T> }
+	| { type: 'WeakMap', value: WeakMap<Record<PropertyKey, unknown>, T> }
+	| { type: 'WeakSet', value: WeakSet<Record<PropertyKey, unknown>> }
+	// | { type: 'WeakRef', value: WeakRef<Record<PropertyKey, any>, T> }
+	| { type: 'Symbol', value: symbol }
+	| { type: 'Error', value: Error }
 
-	{ type: 'Record', value: Record<PropertyKey, T> } |				// TODO
-	{ type: 'Tuple', value: Array<T> } |											// TODO
+	| { type: 'Record', value: Record<PropertyKey, T> }				// TODO
+	| { type: 'Tuple', value: Array<T> }											// TODO
 
-	{ type: 'Temporal', value: Temporals } |
-	{ type: 'Temporal.Instant', value: Temporal.Instant } |
-	{ type: 'Temporal.ZonedDateTime', value: Temporal.ZonedDateTime } |
-	{ type: 'Temporal.PlainDateTime', value: Temporal.PlainDateTime } |
-	{ type: 'Temporal.PlainDate', value: Temporal.PlainDate } |
-	{ type: 'Temporal.PlainTime', value: Temporal.PlainTime } |
-	{ type: 'Temporal.PlainYearMonth', value: Temporal.PlainYearMonth } |
-	{ type: 'Temporal.PlainMonthDay', value: Temporal.PlainMonthDay } |
+	| { type: 'Temporal', value: Temporals }
+	| { type: 'Temporal.Instant', value: Temporal.Instant }
+	| { type: 'Temporal.ZonedDateTime', value: Temporal.ZonedDateTime }
+	| { type: 'Temporal.PlainDateTime', value: Temporal.PlainDateTime }
+	| { type: 'Temporal.PlainDate', value: Temporal.PlainDate }
+	| { type: 'Temporal.PlainTime', value: Temporal.PlainTime }
+	| { type: 'Temporal.PlainYearMonth', value: Temporal.PlainYearMonth }
+	| { type: 'Temporal.PlainMonthDay', value: Temporal.PlainMonthDay }
 
-	{ type: 'Enum', value: Record<PropertyKey, T> } |
-	{ type: 'Tempo', value: Tempo } |
-	{ type: 'Pledge', value: Pledge<T> }
+	| { type: 'Enum', value: Record<PropertyKey, T> }
+	| { type: 'Tempo', value: Tempo }
+	| { type: 'Pledge', value: Pledge<T> }
 
 // https://dev.to/harry0000/a-bit-convenient-typescript-type-definitions-for-objectentries-d6g
 type TupleEntry<T extends readonly unknown[], I extends unknown[] = [], R = never> =

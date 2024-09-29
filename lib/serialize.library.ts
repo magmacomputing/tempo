@@ -92,7 +92,7 @@ function isStringable(val: unknown): boolean {
 
 /** string representation of a single-key Object */
 function oneKey(type: Types, value: string) {
-	return `{"${type}": ${value}}`;
+	return `{"${type}":${value}}`;
 }
 
 /** Symbols in an Object-key will need special treatment */
@@ -102,9 +102,9 @@ function fromSymbol(key: PropertyKey) {
 		: key)
 }
 
+const symKey = /^@(@)?\(([^\)]*)\)$/;												// pattern to match a stringify'd Symbol
 /** reconstruct a Symbol */
 function toSymbol(value: PropertyKey) {
-	const symKey = /^@(@)?\(([^\)]*)\)$/;											// pattern to match a stringify'd Symbol
 	const [pat, keyFor, desc] = value.toString().match(symKey) || [null, void 0, void 0];
 
 	switch (true) {
@@ -250,8 +250,11 @@ export function objectify<T>(str: string, sentinel?: Function): T {
 				return parse;
 		}
 	} catch (error) {
-		console.warn(`objectify.parse: -> ${str}, ${(error as Error).message}`);
-		return str as T;
+		if (str.startsWith('"') && str.endsWith('"')) {
+			console.warn(`objectify.parse: -> ${str}, ${(error as Error).message}`);
+			return str as T;
+		}
+		else return objectify('"' + str + '"', sentinel);				// have another try
 	}
 }
 
