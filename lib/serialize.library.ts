@@ -102,9 +102,9 @@ function fromSymbol(key: PropertyKey) {
 		: key)
 }
 
-const symKey = /^@(@)?\(([^\)]*)\)$/;												// pattern to match a stringify'd Symbol
 /** reconstruct a Symbol */
 function toSymbol(value: PropertyKey) {
+	const symKey = /^@(@)?\(([^\)]*)\)$/;											// pattern to match a stringify'd Symbol
 	const [pat, keyFor, desc] = value.toString().match(symKey) || [null, void 0, void 0];
 
 	switch (true) {

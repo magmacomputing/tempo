@@ -24,13 +24,13 @@ export function purge<T extends {}>(obj: T) {
   return omit(obj);
 }
 
+/** collect string | number | symbol object keys */
+export function allKeys<T extends object>(json: T) {
+  return Reflect.ownKeys(json) as (keyof T)[]               // Object.keys()
+}
+
 /** collect string | number | symbol key'd objects */
 export function allEntries<T extends {}>(json: T) {
   return allKeys<T>(json)                                   // Object.entries() would discard symbol-keys
     .map(key => [key, json[key]] as [keyof T, T[keyof T]])  // cast as tuple
-}
-
-/** collect string | number | symbol object keys */
-export function allKeys<T extends object>(json: T) {
-  return Reflect.ownKeys(json) as (keyof T)[]               // Object.keys()
 }

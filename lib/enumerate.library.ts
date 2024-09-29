@@ -1,4 +1,5 @@
 import { isNumeric } from '@module/shared/number.library.js';
+import { allEntries } from '@module/shared/reflect.library.js';
 import { Entry, Index, isArray, isNumber } from '@module/shared/type.library.js';
 
 /**
@@ -13,50 +14,50 @@ import { Entry, Index, isArray, isNumber } from '@module/shared/type.library.js'
  * we presume type a.   otherwise, type b. or type c.
  */
 
-/** array of Enum keys */
-export const enumKeys = <T extends {}>(enumType: T) => {
-	const entries = Object.entries(enumType as T)							// only numeric Enum values
-		.filter(([, val]) => isNumber(val)) as [keyof T, number][];
-
-	const keys = Object.keys(enumType as T)										// only non-numeric Enum keys
-		.filter(key => !isNumeric(key)) as (keyof T)[];
-
-	return (entries.length !== keys.length)										// if not-Numeric Enum
-		? keys																									// 	String/Heterogeneous Enum
-		: entries																								// else just the numeric Enum values
-			.map(([key,]) => key);																// 	return the keys
-}
-
 /** count of Enum entries */
 export const enumCount = <T extends {}>(enumType: T) =>
-	enumKeys(enumType).length;
+	enumEntries(enumType)
+		.length;
+
+/** array of Enum keys */
+export const enumKeys = <T extends {}>(enumType: T) =>			// Enum keys
+	enumEntries(enumType)
+		.map(([key, _]) => key);
 
 /** array of Enum values */
 export const enumValues = <T extends {}>(enumType: T) =>		// Enum values
-	enumKeys(enumType)
-		.map(key => enumType[key]);
+	enumEntries(enumType)
+		.map(([_, val]) => val);
 
-/** array of Enum tuples [key, value] */
-export const enumEntries = <T extends {}>(enumType: T) =>		// Enum entries
-	enumKeys(enumType)
-		.map(key => [key, enumType[key]] as [keyof T, T[keyof T]]);
+/** array of Enum [key, value] tuple */
+export const enumEntries = <T extends {}>(enumType: T) => {
+	const entries = allEntries<T>({...enumType});							// Enum entries
+	const type1 = entries																			// only numeric Enum values
+		.filter(([_, val]) => isNumber(val));
+	const type2 = entries																			// only non-numeric Enum keys
+		.filter(([key, _]) => !isNumeric(key.toString()))
+
+	return (type1.length == type2.length)											// if Numeric Enum
+		? type1																									// just the numeric Enum values
+		: type2																									// else String/Heterogeneous Enum
+}
 
 /** extend the Enum type with 'helper' methods */
 type helper<T> = {
 	/** original Enum as Readonly Record */										enum(): T;
-	/** array of Enum keys */																	keys(): (keyof T)[];
 	/** count of Enum keys */																	count(): number;
+	/** array of Enum keys */																	keys(): (keyof T)[];
 	/** array of Enum values */																values(): T[keyof T][];
 	/** tuple of Enum entries */															entries(): [keyof T, T[keyof T]][];
 	/** reverse lookup of Enum key by value */								keyOf(val: T[keyof T]): keyof T;
-	/** Iterator for Enum */[Symbol.iterator](): Iterator<Entry<T extends {} ? T : never>>;
-	/** string tag */[Symbol.toStringTag](): string;
+	/** Iterator for Enum */																	[Symbol.iterator](): Iterator<Entry<T extends {} ? T : never>>;
+	/** string tag */																					[Symbol.toStringTag](): string;
 }
 export type Enum<T> = Readonly<Omit<T, keyof helper<T>>>
 type Wrap<T> = Readonly<T & helper<T>>
 
 /**
- * an 'enum-like' object that we can use to extend Typescript's implementation
+ * an 'enum-like' object that we can use (until Javascript implements one)
  */
 export function enumify<const T extends (string | number)[]>(...list: T[]): Wrap<Index<T>>;
 export function enumify<const T extends ReadonlyArray<string | number>>(...list: T[]): Wrap<Index<T>>;
@@ -69,12 +70,12 @@ export function enumify<const T extends Record<keyof T, keyof any>>(list: T) {
 	const reverse = entries																		// build a reverse-keyof object
 		.reduce((acc, [key, val]) => Object.assign(acc, { [val]: key }), {} as Record<string | number, T>);
 
-	return Object.defineProperties(stash, {										// helper methods
-		keys: { value: () => enumKeys(stash) },
+	const enumType = Object.defineProperties(stash, {					// helper methods
+		enum: { value: () => ({ ...stash }) },									// without helper methods
 		count: { value: () => enumCount(stash) },
+		keys: { value: () => enumKeys(stash) },
 		values: { value: () => enumValues(stash) },
 		entries: { value: () => entries },
-		enum: { value: () => stash },
 		keyOf: { value: (val: string | number) => reverse[val] },
 		[Symbol.toStringTag]: ({ get: () => 'Enum' }),
 		[Symbol.iterator]: {
@@ -84,4 +85,6 @@ export function enumify<const T extends Record<keyof T, keyof any>>(list: T) {
 			}
 		}
 	})
+
+	return Object.freeze(enumType);														// block mutations
 }
