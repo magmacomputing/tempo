@@ -12,7 +12,7 @@ export class Cipher {
 		TypeKey: 'AES-GCM',
 	}
 
-	private constructor() { }																						// prevent instantiation
+	private constructor() { }																	// prevent instantiation
 
 	static #cryptoKey = globalThis.crypto.subtle.generateKey({ name: Cipher.#KEYS.TypeKey, length: 128 }, false, ['encrypt', 'decrypt']);
 	static #vector = globalThis.crypto.getRandomValues(new Uint8Array(16));

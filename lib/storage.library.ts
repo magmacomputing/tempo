@@ -2,14 +2,25 @@ import { objectify, stringify } from '@module/shared/serialize.library.js';
 import { CONTEXT, getContext } from '@module/shared/utility.library.js';
 import { isDefined, isString } from '@module/shared/type.library.js';
 
-/** get local storage */
+const context = getContext();
+let storage = context.global?.localStorage as globalThis.Storage;	// select context storage
+
+/** select local | session storage */
+export function selStore(store: 'local' | 'session' = 'local') {
+	storage = store === 'local'
+		? window.localStorage
+		: window.sessionStorage
+
+	return storage;																						// return whichever was selected.
+}
+
+/** get storage */
 export function getStore<T>(key: string, dflt?: T) {
-	const context = getContext();
 	let store: string | undefined | null;
 
 	switch (context.type) {
 		case CONTEXT.Browser:
-			store = context.global.localStorage.getItem(key);
+			store = storage.getItem(key);
 			break;
 
 		case CONTEXT.NodeJS:
@@ -29,17 +40,16 @@ export function getStore<T>(key: string, dflt?: T) {
 		: dflt
 }
 
-/** set / delete local storage */
+/** set / delete storage */
 export function setStore<T>(key: string, val?: T) {
-	const context = getContext();
 	const stash = isDefined(val) ? stringify(val) : void 0;
 	const set = isDefined(stash);
 
 	switch (context.type) {
 		case CONTEXT.Browser:
 			set
-				? context.global.localStorage.setItem(key, stash)
-				: context.global.localStorage.removeItem(key);
+				? storage.setItem(key, stash)
+				: storage.removeItem(key);
 			break;
 
 		case CONTEXT.NodeJS:
