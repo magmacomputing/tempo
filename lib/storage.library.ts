@@ -7,9 +7,8 @@ let storage = context.global?.localStorage as globalThis.Storage;	// select cont
 
 /** select local | session storage */
 export function selStore(store: 'local' | 'session' = 'local') {
-	storage = store === 'local'
-		? window.localStorage
-		: window.sessionStorage
+	const name = (store + 'Storage') as `${typeof store}Storage`;
+	storage = globalThis[name];
 
 	return storage;																						// return whichever was selected.
 }
