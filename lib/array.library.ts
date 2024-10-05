@@ -90,5 +90,5 @@ export function sortBy<T>(...keys: (string | SortBy)[]) {
 
 /** Group documents by key-fields */
 export function keyedBy<T extends Record<PropertyKey, string>>(array: T[], key: string) {
-	return Object.groupBy(array, (itm) => itm[key]);
+	return Object.groupBy(array, itm => itm[key]);
 }

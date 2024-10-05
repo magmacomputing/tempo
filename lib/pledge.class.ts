@@ -21,6 +21,8 @@ export class Pledge<T> {
 	#status: Pledge.Status<T>;
 	#pledge: PromiseWithResolvers<T>;
 
+	get() { return this.promise }															// default getter returns Promise
+
 	get [Symbol.toStringTag]() { return 'Pledge' }
 
 	constructor(arg?: Pledge.Constructor | string) {
