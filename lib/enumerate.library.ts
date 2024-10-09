@@ -31,7 +31,7 @@ export const enumValues = <T extends {}>(enumType: T) =>		// Enum values
 
 /** array of Enum [key, value] tuple */
 export const enumEntries = <T extends {}>(enumType: T) => {
-	const entries = allEntries<T>({...enumType});							// Enum entries
+	const entries = allEntries<T>({ ...enumType });							// Enum entries
 	const type1 = entries																			// only numeric Enum values
 		.filter(([_, val]) => isNumber(val));
 	const type2 = entries																			// only non-numeric Enum keys

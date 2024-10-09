@@ -1,15 +1,15 @@
 import { Tempo } from '../lib/tempo.class.js';
 
 const label = 'pattern.dow:';
-const Wed = 3, Sun = 7;
+const Wed = Tempo.WEEKDAY.Wed, Sun = Tempo.WEEKDAY.Sun;
 
 function formatDate(date: Date) {
   const
-    month = '0' + (date.getMonth() + 1),
-    day = '0' + date.getDate(),
+    month = ('0' + (date.getMonth() + 1)).slice(-2),
+    day = ('0' + date.getDate()).slice(-2),
     year = date.getFullYear();
 
-  return Number(`${year}${month.slice(-2)}${day.slice(-2)}`);
+  return Number(`${year}${month}${day}`);
 }
 
 /**

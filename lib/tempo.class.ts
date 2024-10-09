@@ -1,7 +1,7 @@
 // #region library modules~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 import { Pledge } from '@module/shared/pledge.class.js';
 import { enumify } from '@module/shared/enumerate.library.js';
-import { cloneify } from '@module/shared/serialize.library.js';
 import { getAccessors } from '@module/shared/object.library.js';
 import { asArray, sortInsert } from '@module/shared/array.library.js';
 import { getStore, setStore } from '@module/shared/storage.library.js';
@@ -19,6 +19,7 @@ import '@module/shared/prototype.library.js';								// patch prototype
 
 /** TODO: THIS IMPORT NEEDS TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
 import 'temporal-polyfill/global';
+
 // #endregion
 
 /**
@@ -27,31 +28,20 @@ import 'temporal-polyfill/global';
  */
 
 // #region Const variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 const VERSION = '0.1.0';																		// semantic version
 const STORAGEKEY = '_Tempo_';																// for stash in persistent storage
 
-/**
- * user will need to know these in order to configure their own patterns  
- * a {unit} is a simple regex	Object												e.g. { yy: /(\d{2})?\d{2})/ }  
- * {unit} keys are combined to build a {layout} Map					e.g. Map([[ Symbol('ymd'): '{yy}{mm}{dd}?' ]]    
- * {layout}s are translated into a regex {pattern} Map			e.g. Map([[ Symbol('ymd'), /^ ... $/ ]])    
- * the {pattern} will be used to parse a string | number in the constructor {DateTime} argument    
- */
-const Units = {																							// define some components to help interpret input-strings
-	yy: /(?<yy>(\d{2})?\d{2})/,																// arbitrary upper-limit of yy=9999
-	mm: /(?<mm>[0\s]?[1-9]|1[0-2]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/,
-	dd: /(?<dd>[0\s]?[1-9]|[12][0-9]|3[01])/,
-	dow: /((?<dow>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)(?:[\/\-\s\,])*)/,
-	hh: /(?<hh>2[0-4]|[01]?\d)/,															// hh:  00 - 24
-	mi: /(\:(?<mi>[0-5]\d))/,																	// mi:  00 - 59
-	ss: /(\:(?<ss>[0-5]\d))/,																	// ss:	00 - 59
-	ff: /(\.(?<ff>\d{1,9}))/,																	// up-to 9-digits for fractional seconds
-	mer: /(\s*(?<mer>am|pm))/,																// meridian am/pm suffix
-	sep: /(?<sep>[\/\\\-\.\s,])/,															// date-component separator character
-	sfx: /((?:[\s,T])({tm}))/,																// time-component as a suffix to another {layout}
-	mod: /((?<mod>[\+\-\<\>][\=]?)?(?<cnt>\d*)\s*)/,					// modifiers (+,-,<,<=,>,>=) plus optional offset-count
-} as Internal.Regexp
-// Note: computed Units ('tm', 'dt', 'evt', 'per') are added during 'Tempo.init()' and 'new Tempo()'
+const Match = {																							// some common RegExp patterns
+	/** string that looks like a BigInt */										bigint: /^\d+n$/,
+	/** string that looks like a RegExp */										regexp: /^\/.*\/$/,
+	/** match all {} pairs */																	braces: /{([^}]+)}/g,
+	/** event */																							event: /^evt\d+$/,
+	/** period */																							period: /^per\d+$/,
+	/** two digit year */																			twoDigit: /^\d{2}$/,
+	/** year-term */																					yearTerm: /(?<yy>yy).?#(?<term>\w+)/,
+	/** hour-minute-second with no separator */								hhmiss: /(hh)?(m[i|m])(ss)?/i,
+} as const
 
 /** Tempo Symbol registry */
 const Sym = {
@@ -69,6 +59,66 @@ const Sym = {
 	qtr: Symbol('quarter'),
 } as Internal.Symbol;
 
+/**
+ * user will need to know these in order to configure their own patterns  
+ * a {unit} is a simple regex	snippet												e.g. { yy: /(\d{2})?\d{2})/ }  
+ * {unit} keys are combined to build a {layout} Map					e.g. Map([[ Symbol('ymd'): '{yy}{mm}{dd}?' ]]    
+ * {layout}s are translated into a regex {pattern} Map			e.g. Map([[ Symbol('ymd'), /^ ... $/ ]])    
+ * the {pattern} will be used to parse a string | number in the constructor {DateTime} argument    
+ */
+const Unit = {																							// define some components to help interpret input-strings
+	/** arbitrary upper-limit of yy=9999 */										yy: /(?<yy>(\d{2})?\d{2})/,
+	/** month-name (abbrev or full) or month-number 01-12 */	mm: /(?<mm>[0\s]?[1-9]|1[0-2]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/,
+	/** day-number 00-31 */																		dd: /(?<dd>[0\s]?[1-9]|[12][0-9]|3[01])/,
+	/** day-name (abbrev or full) */													dow: /((?<dow>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)(?:[\/\-\s\,])*)/,
+	/** hour-number 00-24 */																	hh: /(?<hh>2[0-4]|[01]?\d)/,
+	/** minute-number 00-59 */																mi: /(\:(?<mi>[0-5]\d))/,
+	/** seconds-number 00-59 */																ss: /(\:(?<ss>[0-5]\d))/,
+	/** fractional-seconds up-to 9-digits */									ff: /(\.(?<ff>\d{1,9}))/,
+	/** meridiem suffix (am,pm) */														mer: /(\s*(?<mer>am|pm))/,
+	/** date-component separator character "/\\-., " */				sep: /(?<sep>[\/\\\-\.\s,])/,
+	/** time-component suffix "T {tm}*/												sfx: /((?:[\s,T])({tm}))/,
+	/** modifier (+,-,<,<=,>,>=) plus optional offset-count */mod: /((?<mod>[\+\-\<\>][\=]?)?(?<cnt>\d*)\s*)/,
+} as Internal.Regexp
+// Note: computed Units ('tm', 'dt', 'evt', 'per') are added during 'Tempo.init()' and 'new Tempo()'
+
+/** a {layout} is a combination of {units} describing an expected DateTime format */
+const Layout = [
+	[Sym.dow, '{mod}?{dow}{sfx}?'],														// special layout (no {dt}!) used for day-of-week calcs (only one that requires {dow} unit)
+	[Sym.dt, '{dt}'],																					// calendar or event
+	[Sym.tm, '{tm}'],																					// clock or period
+	[Sym.dtm, '({dt}){sfx}?'],																// calendar/event and clock/period
+	[Sym.dmy, '{dow}?{dd}{sep}?{mm}({sep}{yy})?{sfx}?'],			// day-month-year
+	[Sym.mdy, '{dow}?{mm}{sep}?{dd}({sep}{yy})?{sfx}?'],			// month-day-year
+	[Sym.ymd, '{dow}?{yy}{sep}?{mm}({sep}{dd})?{sfx}?'],			// year-monthg-day
+	[Sym.evt, '{evt}'],																				// event only
+	[Sym.per, '{per}'],																				// period only
+] as Internal.SymbolTuple[];
+
+/* an {event} is a combination of regex-patterns that describe an expected Date */
+const Event = [
+	['new.?years? ?eve', '31 Dec'],
+	['nye', '31 Dec'],
+	['new.?years?( ?day)?', '01 Jan'],
+	['ny', '01 Jan'],
+	['christmas ?eve', '24 Dec'],
+	['christmas', '25 Dec'],
+	['xmas ?eve', '24 Dec'],
+	['xmas', '25 Dec'],
+] as Internal.StringTuple[]
+
+/** a {period} is a combination of regex-patterns that describe an exepcted Time */
+const Period = [
+	['mid[ -]?night', '24:00'],
+	['morning', '8:00'],
+	['mid[ -]?morning', '10:00'],
+	['mid[ -]?day', '12:00'],
+	['noon', '12:00'],
+	['after[ -]?noon', '3:00pm'],
+	['evening', '18:00'],
+	['night', '20:00'],
+] as Internal.StringTuple[]
+
 /** Reasonable defaults for initial Tempo options */
 const Default = {
 	version: VERSION,
@@ -79,55 +129,17 @@ const Default = {
 	calendar: 'iso8601',
 	sphere: 'north',																					// hemisphere (used to infer {term[@@qtr]}, {term[@@szn]} )
 	monthDay: ['en-US', 'en-AS'],															// array of Locales that prefer 'mm-dd-yy' date order: https://en.wikipedia.org/wiki/Date_format_by_country
-	terms: {																									// built-in terms ( are setup in init() )
+	term: {																										// built-in terms ( are setup in init() )
 		[Sym.zdc]: new Map(),																		// 12 Zodiac star-signs
 		[Sym.szn]: new Map(),																		// 4 Seasons
 		[Sym.qtr]: new Map(),																		// 4 Fiscal Quarters
 	},
-	layout: new Map([																					// built-in layouts to be checked, and in this order
-		[Sym.dow, '{mod}?{dow}{sfx}?'],													// special layout (no {dt}!) used for day-of-week calcs (only one that requires {dow} unit)
-		[Sym.dt, '{dt}'],																				// calendar or event
-		[Sym.tm, '{tm}'],																				// clock or period
-		[Sym.dtm, '({dt}){sfx}?'],															// calendar/event and clock/period
-		[Sym.dmy, '{dow}?{dd}{sep}?{mm}({sep}{yy})?{sfx}?'],
-		[Sym.mdy, '{dow}?{mm}{sep}?{dd}({sep}{yy})?{sfx}?'],
-		[Sym.ymd, '{dow}?{yy}{sep}?{mm}({sep}{dd})?{sfx}?'],
-		[Sym.evt, '{evt}'],																			// event only
-		[Sym.per, '{per}'],																			// period only
-	]),
-	event: [																									// built-in events to be mapped to a date
-		['new.?years? ?eve', '31 Dec'],
-		['nye', '31 Dec'],
-		['new.?years?( ?day)?', '01 Jan'],
-		['ny', '01 Jan'],
-		['christmas ?eve', '24 Dec'],
-		['christmas', '25 Dec'],
-		['xmas ?eve', '24 Dec'],
-		['xmas', '25 Dec'],
-	],
-	period: [																									// built-in periods to be mapped to a time
-		['mid[ -]?night', '24:00'],
-		['morning', '8:00'],
-		['mid[ -]?morning', '10:00'],
-		['mid[ -]?day', '12:00'],
-		['noon', '12:00'],
-		['after[ -]?noon', '3:00pm'],
-		['evening', '18:00'],
-		['night', '20:00'],
-	],
+	layout: new Map(Layout),// [															// built-in layouts to be checked, and in this order
+	event: [...Event],																				// built-in events to be mapped to a date, in this order
+	period: [...Period],																			// built-in periods to be mapped to a time, in this order
 } as Tempo.Options
 
-const Match = {																							// some common RegExp patterns
-	/** string that looks like a BigInt */										bigint: /^\d+n$/,
-	/** string that looks like a RegExp */										regexp: /^\/.*\/$/,
-	/** match all {} pairs */																	braces: /{([^}]+)}/g,
-	/** event */																							event: /^evt\d+$/,
-	/** period */																							period: /^per\d+$/,
-	/** two digit year */																			twoDigit: /^\d{2}$/,
-	/** year-term */																					yearTerm: /(?<yy>yy).?#(?<term>\w+)/,
-} as const
-
-const Zodiac: Tempo.TermTuple[] = [												// https://www.calendar.best/zodiac-signs.html
+const Zodiac: Tempo.TermTuple[] = [													// https://www.calendar.best/zodiac-signs.html
 	['Aries', { order: 1, day: 21, month: 3, symbol: 'Ram', longitude: 0, planet: 'Mars' }],
 	['Taurus', { order: 2, day: 20, month: 4, symbol: 'Bull', longitude: 30, planet: 'Venus' }],
 	['Gemini', { order: 3, day: 21, month: 5, symbol: 'Twins', longitude: 60, planet: 'Mercury' }],
@@ -140,6 +152,18 @@ const Zodiac: Tempo.TermTuple[] = [												// https://www.calendar.best/zodi
 	['Capricorn', { order: 10, day: 22, month: 12, symbol: 'Goat', longitude: 270, planet: 'Saturn' }],
 	['Aquarius', { order: 11, day: 20, month: 1, symbol: 'Ram', longitude: 300, planet: 'Uranus' }],
 	['Pisces', { order: 12, day: 19, month: 2, symbol: 'Fish', longitude: 330, planet: 'Neptune' }],
+]
+const Season: Tempo.TermTuple[] = [													// meteorological https://www.timeanddate.com/calendar/aboutseasons.html
+	['Spring', { order: 1, day: 1, month: 3 }],
+	['Summer', { order: 2, day: 1, month: 6 }],
+	['Autumn', { order: 3, day: 1, month: 9 }],
+	['Winter', { order: 4, day: 1, month: 12 }],
+]
+const Quarter: Tempo.TermTuple[] = [												// trimesters https://en.wikipedia.org/wiki/Calendar_year#:~:text=First%20quarter%2C%20Q1%3A%20January%20%E2%80%93,October%20%E2%80%93%20December%20(92%20days)
+	['Q1', { order: 1, day: 1, month: 1 }],
+	['Q2', { order: 2, day: 1, month: 4 }],
+	['Q3', { order: 3, day: 1, month: 7 }],
+	['Q4', { order: 4, day: 1, month: 10 }],
 ]
 
 // #endregion Const variables
@@ -160,16 +184,17 @@ const Zodiac: Tempo.TermTuple[] = [												// https://www.calendar.best/zodi
  */
 export class Tempo {
 	// #region Static private properties~~~~~~~~~~~~~~~~~~~~~~
+
 	static #ready = {
-		static: new Pledge<boolean>('static'),									// wait for static-blocks to settle
-		init: new Pledge<boolean>('Init'),											// wait for Tempo.init() to settle
+		static: new Pledge<boolean>('static'),									// ready when static-blocks settled
+		init: new Pledge<boolean>('init'),											// ready when Tempo.init() settled
 	}
 
 	static #global = {
-		/** current defaults for all Tempo instances */					config: {},
-		/** Tempo terms to allow date-range blocks */						terms: {},
+		/** current defaults for all Tempo instantiation */			config: {},
+		/** Tempo terms to define date-range blocks */					terms: {},
 		/** Tempo Symbol registry */														symbols: { ...Sym },
-		/** Tempo units to aid in parsing */										units: { ...Units },
+		/** Tempo units to aid in parsing */										units: { ...Unit },
 		/** Map of regex-patterns to match input-string */			patterns: new Map(),
 	} as Internal.Shape
 
@@ -185,8 +210,26 @@ export class Tempo {
 	// #region Static private methods~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/**
+	 * reference a 'shape' to lookup the requested key.  
+	 * fallback to #global 'shape', if a #local shape is Nullish
+	 */
+	static #shape<T>(shape: Internal.Shape, type: keyof Internal.Shape, key: unknown): T {
+		let res = null;
+
+		switch (type) {
+			case 'config':
+				res = shape[type][key as keyof Internal.Shape["config"]];
+				break;
+		}
+
+		return (isNullish(res) && shape.config.level === Internal.SHAPE.Local)
+			? Tempo.#shape(Tempo.#global, type, key)
+			: res as T
+	}
+
+	/**
 	 * {dt} is a special regex that combines date-related {units} (dd, mm -or- evt) into a pattern against which a string can be tested.  
-	 * because it will also include a list of events (e.g. 'new_years' | 'xmas'), we need to rebuild {dt|} if the user adds a new event
+	 * because it will also include a list of events (e.g. 'new_years' | 'xmas'), we need to rebuild {dt} if the user adds a new event
 	 */
 	static #makeEvent(shape: Internal.Shape) {
 		const events = shape.config.event
@@ -368,7 +411,7 @@ export class Tempo {
 		shape.config["layout"] ??= new Map();
 		shape.config["event"] ??= [];
 		shape.config["period"] ??= [];
-		shape.config["terms"] ??= {};
+		shape.config["term"] ??= {};
 		let idx = -1;
 
 		options.forEach(option => {
@@ -456,7 +499,7 @@ export class Tempo {
 								.map(locale => ({ locale: locale.baseName, timeZones: locale.timeZones }))
 							break;
 
-						case 'terms':																		// TODO: allow for different format of {terms}
+						case 'term':																		// TODO: allow for different format of {terms}
 							Object.entries(arg.value as Record<string, Tempo.TermTuple[]>)
 								.forEach(([term, range]) => Tempo.#makeTerm(shape, term, range))
 							break;
@@ -528,7 +571,7 @@ export class Tempo {
 					Tempo.#setConfig(Tempo.#global, Default);
 
 					Object.assign(Tempo.#global.config, {							// some global locale-specific defaults
-						level: Internal.LEVEL.Global,
+						level: Internal.SHAPE.Global,
 						calendar: dateTime.calendar,
 						timeZone: dateTime.timeZone,
 						locale: dateTime.locale,
@@ -625,7 +668,7 @@ export class Tempo {
 					for (const pat of it) {
 						const { ["1"]: unit } = pat;										// {unit} is the code between the {}
 
-						let reg = (units as Internal.Regexp)[unit];		// check if a defined {unit}
+						let reg = (units as Internal.Regexp)[unit];			// check if a defined {unit}
 						if (isNullish(reg))
 							continue;																			// if not a {unit}, pass back as-is
 
@@ -683,8 +726,7 @@ export class Tempo {
 
 	/** static Tempo.Duration getter, where matched in Tempo.TIMES */
 	static get durations() {
-		return getAccessors<Temporal.DurationLike>(Temporal.Duration)
-			.filter(key => Tempo.TIMES.keys().includes(key));
+		return Tempo.TIMES.keys() as Temporal.PluralUnit<Temporal.DateTimeUnit>[];
 	}
 
 	/** static Temporal.DateTimeUnit, where exists in Tempo.TIME */
@@ -792,7 +834,6 @@ export class Tempo {
 	// 	}
 	// }) as Safe<Tempo>
 
-
 	get [Symbol.toStringTag]() {															// default string description
 		return 'Tempo';																					// hard-coded to avoid minification mangling
 	}
@@ -813,7 +854,7 @@ export class Tempo {
 		/** instance units */																			units: {} as Internal.Regexp,
 		/** instance Symbols */																		symbols: {} as Internal.Symbol,
 		/** instance patterns */																	patterns: new Map() as Internal.RegexpMap,
-	}
+	} as Internal.Shape
 
 	// #endregion Instance properties
 
@@ -829,50 +870,54 @@ export class Tempo {
 
 		this.#instant = Temporal.Now.instant();									// stash current Instant
 		[this.#tempo, this.#options] = isObject(tempo)					// swap arguments, if Options is 1st
-			? [({ ...tempo as Tempo.Options }).value, tempo as Tempo.Options]
+			? [(tempo as Tempo.Options).value, tempo as Tempo.Options]
 			: [tempo, { ...options }]															// stash original values
 
-		Object.assign(this.#local.config, Tempo.#global.config, { level: Internal.LEVEL.Local })
-		Tempo.#setConfig(this.#local, this.#options);						// start with {#global} config, overloaded with {options}
+		Object.assign(this.#local.config, Tempo.#global.config, { level: Internal.SHAPE.Local })
+		Tempo.#setConfig(this.#local, this.#options);						// set #local config
 
-		this.#local.units = cloneify(Tempo.#global.units);			// start with static {units} object
-		this.#local.terms = cloneify(Tempo.#global.terms);			// start with static {terms} object
+		// this.#local.units = cloneify(Tempo.#global.units);			// start with static {units} object
+		// this.#local.terms = cloneify(Tempo.#global.terms);			// start with static {terms} object
 		// this.#local.symbols = cloneify(Tempo.#global.symbols);	// start with static {symbol} registry
-		this.#local.patterns = cloneify(Tempo.#global.patterns);// start with static {patterns} Map
+		// this.#local.patterns = cloneify(Tempo.#global.patterns);// start with static {patterns} Map
+		this.#local.units = {};																	// local {units} object
+		this.#local.terms = {};																	// local {terms} object
+		this.#local.symbols = {};																// local {symbols} registry
+		this.#local.patterns = new Map();												// local {patterns} Map
 
 		/** first task is to parse the 'Tempo.Options' looking for overrides to Tempo.#global.config */
 		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 		// if a timeZone provided but no hemisphere, try to infer hemisphere based on daylight-savings  
-		if (this.#local.config.timeZone !== Tempo.#global.config.timeZone && isUndefined(this.#options.sphere))
-			Tempo.#dst(this.#local);
+		// if (this.#local.config.timeZone !== Tempo.#global.config.timeZone && isUndefined(this.#options.sphere))
+		// 	Tempo.#dst(this.#local);
 
-		// change of hemisphere, setup new Seasons / Fiscal start-month
-		if (this.#local.config.sphere !== Tempo.#global.config.sphere) {
-			Tempo.#quarter(this.#local);													// reset the {term[@@qtr]}
-			Tempo.#season(this.#local);														// reset the {term[@@szn]}
-		}
+		// // change of hemisphere, setup new Seasons / Fiscal start-month
+		// if (this.#local.config.sphere !== Tempo.#global.config.sphere) {
+		// 	Tempo.#quarter(this.#local);													// reset the {term[@@qtr]}
+		// 	Tempo.#season(this.#local);														// reset the {term[@@szn]}
+		// }
 
-		// change of Locale, swap 'dmy' pattern with 'mdy' parse-order?
-		if (this.#local.config.locale !== Tempo.#global.config.locale) {
-			const locale = Tempo.#swap(this.#local);
+		// // change of Locale, swap 'dmy' pattern with 'mdy' parse-order?
+		// if (this.#local.config.locale !== Tempo.#global.config.locale) {
+		// 	const locale = Tempo.#swap(this.#local);
 
-			if (isEmpty(this.#local.config.locale))
-				this.#local.config.locale = locale || Tempo.#global.config.locale;
-			this.#local.config.locale = Tempo.#locale(this.#local.config.locale);
-		}
+		// 	if (isEmpty(this.#local.config.locale))
+		// 		this.#local.config.locale = locale || Tempo.#global.config.locale;
+		// 	this.#local.config.locale = Tempo.#locale(this.#local.config.locale);
+		// }
 
-		// user-specified time-periods to use when parsing this instance
-		if (isDefined(this.#options.period))
-			Tempo.#makePeriod(this.#local);												// set instance 'per' and 'tm' {units}
+		// // user-specified time-periods to use when parsing this instance
+		// if (isDefined(this.#options.period))
+		// 	Tempo.#makePeriod(this.#local);												// set instance 'per' and 'tm' {units}
 
-		// user-specified date-events to use when parsing this instance
-		if (isDefined(this.#options.event))
-			Tempo.#makeEvent(this.#local);												// set instance 'evt' and 'dt' {units}
+		// // user-specified date-events to use when parsing this instance
+		// if (isDefined(this.#options.event))
+		// 	Tempo.#makeEvent(this.#local);												// set instance 'evt' and 'dt' {units}
 
-		// user-specified patterns to use when parsing this instance
-		if (isDefined(this.#options.layout))
-			Tempo.#makePattern(this.#local);											// set instance {patterns}
+		// // user-specified patterns to use when parsing this instance
+		// if (isDefined(this.#options.layout))
+		// 	Tempo.#makePattern(this.#local);											// set instance {patterns}
 
 		/** we now have all the info we need to instantiate a new Tempo                          */
 		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -947,7 +992,6 @@ export class Tempo {
 		const today = dateTime ?? this.#instant									// cast instantiation to current timeZone, calendar
 			.toZonedDateTime({ timeZone: this.#local.config.timeZone, calendar: this.#local.config.calendar });
 		const arg = this.#conform(tempo, today);								// if String or Number, conform the input against known patterns
-
 		Tempo.#info(this.#local.config, 'parse', `{type: ${arg.type}, value: ${arg.value}}`);					// show what we're parsing
 
 		switch (arg.type) {
@@ -1021,7 +1065,6 @@ export class Tempo {
 			return arg;																						// only conform String or Number against known patterns (not BigInt, etc)
 
 		const value = trimAll(arg.value, /\(|\)/g);							// cast as String, remove \( \) and control-characters
-
 		if (isString(arg.value)) {															// if original value is String
 			if (isEmpty(value)) {																	// don't conform empty string
 				this.#local.config.parse.match = 'Empty';						// matched an empty-String
@@ -1041,14 +1084,14 @@ export class Tempo {
 		if (isUndefined(this.#zdt))															// if first pass
 			dateTime = dateTime.withPlainTime('00:00:00');				// strip out all time-components
 
-		for (const [sym, pat] of this.#local.patterns.entries()) {
+		const map = new Map([...this.#local.patterns, ...Tempo.#global.patterns]);
+		for (const [sym, pat] of map) {
 			const groups = this.#parseMatch(value, pat);					// determine pattern-match groups
 
 			if (isEmpty(groups))
 				continue;																						// no match, so skip this iteration
 
 			this.#parseGroups(groups, dateTime);									// mutate the {groups} object
-
 			dateTime = this.#parseWeekday(groups, dateTime);			// if {weekday}-pattern, calculate a calendar value
 			dateTime = this.#parseDate(groups, dateTime);					// if {calendar}|{event} pattern, translate to date value
 			dateTime = this.#parseTime(groups, dateTime);					// if {clock}|{period} pattern, translate to a time value
@@ -1093,8 +1136,8 @@ export class Tempo {
 		// fix {event}
 		const event = Object.keys(groups).find(key => key.match(Match.event));
 		if (event) {
-			const idx = +event[3];																// number index of the {event}
-			const [_, evt] = this.#local.config.event[idx];				// fetch the indexed tuple's value
+			const idx = +event[3];																// number index of the {event}	
+			const [_, evt] = this.#local.config.event[idx] ?? Tempo.#global.config.event[idx];				// fetch the indexed tuple's value
 
 			Object.assign(groups, this.#parseEvent(evt));					// determine the date-values for the {event}
 
@@ -1301,7 +1344,8 @@ export class Tempo {
 			: ['dmy', 'mdy', 'ymd']																// else try {dmy} before {mdy}
 
 		pats.find(pat => {
-			const reg = this.#local.patterns.get(Tempo.getSymbol(this.#local, pat));// get the RegExp for the date-pattern
+			const reg = this.#local.patterns.get(Tempo.getSymbol(this.#local, pat))
+				?? Tempo.#global.patterns.get(Tempo.getSymbol(Tempo.#global, pat));// get the RegExp for the date-pattern
 
 			if (isUndefined(reg)) {
 				Tempo.#catch(this.#local.config, `Cannot find pattern: "${pat}"`);
@@ -1318,7 +1362,8 @@ export class Tempo {
 	/** look for a match with standard {clock} or {period} patterns */
 	#parsePeriod(per: string) {
 		const groups: Internal.RegExpGroups = {};
-		const tm = this.#local.patterns.get(Tempo.getSymbol(this.#local, 'tm'));	// get the RegExp for the time-pattern
+		const tm = this.#local.patterns.get(Tempo.getSymbol(this.#local, 'tm'))
+			?? Tempo.#global.patterns.get(Tempo.getSymbol(Tempo.#global, 'tm'));	// get the RegExp for the time-pattern
 
 		if (isUndefined(tm)) {
 			Tempo.#catch(this.#local.config, `Cannot find pattern "tm"`);
@@ -1590,19 +1635,19 @@ export class Tempo {
 			case fmt === Tempo.FORMAT.logStamp:
 				return asNumber(`${this.hh}${this.mi}${this.ss}.${this.ff}`);
 
-			case isDefined(groups["yy"]) && isDefined(groups["term"]):
-				const term = this.term[groups["term"]] ?? '{undefined term}';
-				return term;																				// TODO: work out highest dateTime field
+			// case isDefined(groups["yy"]) && isDefined(groups["term"]):
+			// 	const term = this.term[groups["term"]] ?? '{undefined term}';
+			// 	return term;																				// TODO: work out highest dateTime field
 
 			default:
 				const mer = asString(fmt).includes('HH')						// if 'twelve-hour' (uppercase 'HH') is present in fmtString,
 					? this.hh >= 12 ? 'pm' : 'am'											// 	then noon or later is considered 'pm'
-					: ''																							//	else no meridian am/pm suffix needed
+					: ''																							//	else no meridiem am/pm suffix needed
 
 				return asString(fmt)
 					.replace(/:m{2}/gi, ':mi')												// special: intercept ':mm' which should properly be ':mi'
 					.replace(/m{2}:/gi, 'mi:')
-					.replace(/(hh)?(m[i|m])(ss)?/i, (_, hh, mi, ss) => {	// if 'hhmiss' without separators
+					.replace(Match.hhmiss, (_, hh, mi, ss) => {				// if 'hhmiss' without separators
 						let res = '';
 						res += isUndefined(hh) ? '' : pad(this.hh);
 						res += isUndefined(hh) && isUndefined(ss) ? mi : pad(this.mi);
@@ -1632,7 +1677,7 @@ export class Tempo {
 					.replace(/w{2}/g, pad(this.ww))
 					.replace(/dow/g, this.dow.toString())
 					.replace(/day/g, this.day)
-					.replace(/#(\w+)/g, ($1) => this.#local.term[$1].toString())
+			// .replace(/#(\w+)/g, ($1) => this.#local.term[$1].toString())
 		}
 	}
 
@@ -1690,12 +1735,10 @@ export class Tempo {
 
 // #region Tempo types / interfaces / enums ~~~~~~~~~~~~~~~~
 export namespace Tempo {
+	/** the object that Tempo will use to interpret date-time components */
+	// export type XX = Partial<Record<[keyof Tempo.Add], unknown>>
 	/** the value that Tempo will attempt to interpret as a valid ISO date / time */
 	export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | undefined | null
-
-	interface Mam {
-		debug?: boolean;
-	}
 	/** the Options Object found in a json-file, or passed to a call to Tempo.Init({}) or 'new Tempo({}) */
 	export type Options = Partial<{														// allowable settings to override configuration
 		debug: boolean;																					// debug-points into the console.log
@@ -1710,7 +1753,7 @@ export namespace Tempo {
 		layout: Internal.InputFormat<Internal.StringPattern>;		// provide additional layouts to define patterns to help parse input
 		event: Internal.StringTuple[];													// provide additional date-maps (e.g. xmas => '25 Dec')
 		period: Internal.StringTuple[];													// provide additional time-maps (e.g. arvo => '3pm')
-		terms: Internal.InputFormat<Tempo.Term>;								// provide additional term ranges (e.g. star => {Taurus, {day:21, month:5}, ...})
+		term: Internal.InputFormat<Tempo.Term>;									// provide additional term ranges (e.g. star => {Taurus, {day:21, month:5}, ...})
 		value: Tempo.DateTime;																	// the {value} to interpret can be supplied in the Options argument
 	}>
 
@@ -1722,7 +1765,7 @@ export namespace Tempo {
 	 */
 	export interface Config extends Required<OptionsKeep> {
 		version: string;																				// semantic version
-		level: Enum<typeof Internal.LEVEL>,											// separate configurations 
+		level: Internal.Level,																	// separate configurations 
 		parse: Internal.Parse,																	// detail about how the Tempo constructor parsed the supplied value
 		monthDay: { locale: string; timeZones: string[]; }[];		// Array of locales/timeZones that prefer 'mm-dd-yy' date order
 		layout: Map<symbol, Internal.StringPattern[]>;					// coerce {layout} to Map<Symbol, (string | RegExp)[]>
@@ -1743,7 +1786,7 @@ export namespace Tempo {
 	}
 	export type Mutate = 'start' | 'mid' | 'end'
 	export type Set = Partial<Record<Tempo.Mutate, Temporal.DateTimeUnit | Internal.PluralUnit> &
-		Record<'time' | 'period' | 'date' | 'event' | 'dow', string>>
+		Record<'date' | 'time' | 'dow' | 'event' | 'period', string>>
 	export type Add = Partial<Record<Temporal.DateTimeUnit | Internal.PluralUnit, number>>
 
 	export type Range = Record<Temporal.DateTimeUnit | "order", number>
@@ -1790,7 +1833,7 @@ export namespace Tempo {
 		/** yyyyww */																						yearWeek: number;
 		/** yyyymm */																						yearMonth: number;
 		/** yyyymmdd */																					yearMonthDay: number;
-		// /** dd */																								weekDay: number;
+		// /** dd */																						weekDay: number;
 		/** yyyy-mm-dd */																				date: string;
 		/** hh:mi:ss */																					time: string;
 	}
@@ -1807,7 +1850,7 @@ export namespace Tempo {
 	// export type Weekday = Exclude<keyof typeof Tempo.WEEKDAY, 'All'>
 	export type Weekday = keyof Enum<typeof Tempo.WEEKDAY>
 	export type Weekdays = keyof Enum<typeof Tempo.WEEKDAYS>
-	export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6	| 7
+	export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
 	export type Calendar = Exclude<keyof typeof Tempo.MONTH, 'All'>
 
 	export const eMONTH = enumify(MONTH);
@@ -1883,11 +1926,12 @@ export namespace Tempo {
 
 // #region Namespace that doesn't need to be shared externally
 namespace Internal {
-	// export const LEVEL = enumify({ Global: 'global', Local: 'local', });
-	export const LEVEL = enumify({ Global: 'global', Local: 'local', });
+	export type Level = 'global' | 'local'
+	export const SHAPE = enumify({ Global: 'global', Local: 'local', });
 
 	export type StringPattern = (string | RegExp)
 	export type StringTuple = [string, string];
+	export type SymbolTuple = [symbol, string];
 
 	export type InputFormat<T> = Record<string, T | T[]> | Record<string, T | T[]>[] | Map<string | symbol, T | T[]>
 
@@ -1899,6 +1943,7 @@ namespace Internal {
 	export interface Shape {																	// 'global' and 'local' variables
 		/** current defaults for all Tempo instances */					config: Tempo.Config,
 		/** Object of settings related to Terms */							terms: Tempo.Terms,
+		/** instance Term */																		term: Tempo.Terms,
 		/** Symbol registry */																	symbols: Internal.Symbol,
 		/** Tempo units to aid in parsing */										units: Internal.Regexp,
 		/** Map of regex-patterns to match input-string */			patterns: Internal.RegexpMap,
