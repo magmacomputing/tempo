@@ -23,7 +23,7 @@ export const getType = (obj?: any, ...instances: Instance[]) => {
 			switch (true) {
 				case name !== 'Object':
 					break;
-				case isArrayLike(obj):															// special case Object
+				case isArrayLike(obj):															// special case Object: ArrayLike
 					name = 'ArrayLike';
 					break;
 			}

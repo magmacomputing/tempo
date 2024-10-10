@@ -18,7 +18,8 @@ import type { Entries, IntRange, Types } from '@module/shared/type.library.js';
 import '@module/shared/prototype.library.js';								// patch prototype
 
 /** TODO: THIS IMPORT NEEDS TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
-import 'temporal-polyfill/global';
+import '@js-temporal/polyfill'
+// import 'temporal-polyfill/global';
 
 // #endregion
 
@@ -869,55 +870,12 @@ export class Tempo {
 	constructor(tempo?: Tempo.DateTime | Tempo.Options, options: Tempo.Options = {}) {
 
 		this.#instant = Temporal.Now.instant();									// stash current Instant
-		[this.#tempo, this.#options] = isObject(tempo)					// swap arguments, if Options is 1st
-			? [(tempo as Tempo.Options).value, tempo as Tempo.Options]
+		[this.#tempo, this.#options] = isObject(tempo) && !this.#zonedDateTimeLike(tempo)
+			? [(tempo as Tempo.Options)?.value, tempo as Tempo.Options]	// swap arguments, if arg1=Options
 			: [tempo, { ...options }]															// stash original values
 
-		Object.assign(this.#local.config, Tempo.#global.config, { level: Internal.SHAPE.Local })
-		Tempo.#setConfig(this.#local, this.#options);						// set #local config
-
-		// this.#local.units = cloneify(Tempo.#global.units);			// start with static {units} object
-		// this.#local.terms = cloneify(Tempo.#global.terms);			// start with static {terms} object
-		// this.#local.symbols = cloneify(Tempo.#global.symbols);	// start with static {symbol} registry
-		// this.#local.patterns = cloneify(Tempo.#global.patterns);// start with static {patterns} Map
-		this.#local.units = {};																	// local {units} object
-		this.#local.terms = {};																	// local {terms} object
-		this.#local.symbols = {};																// local {symbols} registry
-		this.#local.patterns = new Map();												// local {patterns} Map
-
-		/** first task is to parse the 'Tempo.Options' looking for overrides to Tempo.#global.config */
-		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-		// if a timeZone provided but no hemisphere, try to infer hemisphere based on daylight-savings  
-		// if (this.#local.config.timeZone !== Tempo.#global.config.timeZone && isUndefined(this.#options.sphere))
-		// 	Tempo.#dst(this.#local);
-
-		// // change of hemisphere, setup new Seasons / Fiscal start-month
-		// if (this.#local.config.sphere !== Tempo.#global.config.sphere) {
-		// 	Tempo.#quarter(this.#local);													// reset the {term[@@qtr]}
-		// 	Tempo.#season(this.#local);														// reset the {term[@@szn]}
-		// }
-
-		// // change of Locale, swap 'dmy' pattern with 'mdy' parse-order?
-		// if (this.#local.config.locale !== Tempo.#global.config.locale) {
-		// 	const locale = Tempo.#swap(this.#local);
-
-		// 	if (isEmpty(this.#local.config.locale))
-		// 		this.#local.config.locale = locale || Tempo.#global.config.locale;
-		// 	this.#local.config.locale = Tempo.#locale(this.#local.config.locale);
-		// }
-
-		// // user-specified time-periods to use when parsing this instance
-		// if (isDefined(this.#options.period))
-		// 	Tempo.#makePeriod(this.#local);												// set instance 'per' and 'tm' {units}
-
-		// // user-specified date-events to use when parsing this instance
-		// if (isDefined(this.#options.event))
-		// 	Tempo.#makeEvent(this.#local);												// set instance 'evt' and 'dt' {units}
-
-		// // user-specified patterns to use when parsing this instance
-		// if (isDefined(this.#options.layout))
-		// 	Tempo.#makePattern(this.#local);											// set instance {patterns}
+		/** parse the 'Tempo.Options' looking for overrides to Tempo.#global.config */
+		this.#setLocal(options);
 
 		/** we now have all the info we need to instantiate a new Tempo                          */
 		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -931,7 +889,7 @@ export class Tempo {
 			}
 		} catch (err) {
 			Tempo.#catch(this.config, `Cannot create Tempo: ${(err as Error).message}`);
-			return {} as unknown as Tempo;												// TODO: need to return empty object?
+			return {} as unknown as Tempo;												// return empty Object
 		}
 	}
 	// #endregion Constructor
@@ -987,10 +945,55 @@ export class Tempo {
 	// #endregion Instance public methods
 
 	// #region Instance private methods~~~~~~~~~~~~~~~~~~~~~~~
+	/** setup local Shape */
+	#setLocal(options: Tempo.Options) {
+		Object.assign(this.#local.config, Tempo.#global.config, { level: Internal.SHAPE.Local })
+
+		this.#local.units = {};																	// local {units} object
+		this.#local.terms = {};																	// local {terms} object
+		this.#local.symbols = {};																// local {symbols} registry
+		this.#local.patterns = new Map();												// local {patterns} Map
+
+		Tempo.#setConfig(this.#local, this.#options);						// set #local config
+
+		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+		// if a timeZone provided but no hemisphere, try to infer hemisphere based on daylight-savings  
+		// if (this.#local.config.timeZone !== Tempo.#global.config.timeZone && isUndefined(this.#options.sphere))
+		// 	Tempo.#dst(this.#local);
+
+		// // change of hemisphere, setup new Seasons / Fiscal start-month
+		// if (this.#local.config.sphere !== Tempo.#global.config.sphere) {
+		// 	Tempo.#quarter(this.#local);													// reset the {term[@@qtr]}
+		// 	Tempo.#season(this.#local);														// reset the {term[@@szn]}
+		// }
+
+		// // change of Locale, swap 'dmy' pattern with 'mdy' parse-order?
+		// if (this.#local.config.locale !== Tempo.#global.config.locale) {
+		// 	const locale = Tempo.#swap(this.#local);
+
+		// 	if (isEmpty(this.#local.config.locale))
+		// 		this.#local.config.locale = locale || Tempo.#global.config.locale;
+		// 	this.#local.config.locale = Tempo.#locale(this.#local.config.locale);
+		// }
+
+		// // user-specified time-periods to use when parsing this instance
+		// if (isDefined(this.#options.period))
+		// 	Tempo.#makePeriod(this.#local);												// set instance 'per' and 'tm' {units}
+
+		// // user-specified date-events to use when parsing this instance
+		// if (isDefined(this.#options.event))
+		// 	Tempo.#makeEvent(this.#local);												// set instance 'evt' and 'dt' {units}
+
+		// // user-specified patterns to use when parsing this instance
+		// if (isDefined(this.#options.layout))
+		// 	Tempo.#makePattern(this.#local);											// set instance {patterns}
+	}
+
 	/** parse DateTime input */
 	#parse(tempo?: Tempo.DateTime, dateTime?: Temporal.ZonedDateTime) {
 		const today = dateTime ?? this.#instant									// cast instantiation to current timeZone, calendar
-			.toZonedDateTime({ timeZone: this.#local.config.timeZone, calendar: this.#local.config.calendar });
+			.toZonedDateTime({ timeZone: this.#getConfig('timeZone'), calendar: this.#getConfig('calendar') });
 		const arg = this.#conform(tempo, today);								// if String or Number, conform the input against known patterns
 		Tempo.#info(this.#local.config, 'parse', `{type: ${arg.type}, value: ${arg.value}}`);					// show what we're parsing
 
@@ -1056,10 +1059,31 @@ export class Tempo {
 		}
 	}
 
+	/** check if we've been given a ZonedDateTimeLike object */
+	#zonedDateTimeLike(tempo: Tempo.DateTime | undefined) {
+		const ZonedDateTimeLike = ['year', 'month', 'monthCode', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond', 'offset', 'timeZone', 'calendar'];
+
+		return isObject(tempo) && Object.keys(tempo).every(key => ZonedDateTimeLike.includes(key));
+	}
+
+	/** lookup local config, else fallback to global config */
+	#getConfig<K extends keyof Tempo.Config>(value: K) {
+		return this.#local.config[value] ?? Tempo.#global.config[value];
+	}
+
 	/** evaluate 'string | number' input against known patterns */
 	#conform(tempo: Tempo.DateTime | undefined, dateTime: Temporal.ZonedDateTime) {
 		const arg = asType(tempo);
 		this.#local.config.parse = { ...arg };
+
+		if (this.#zonedDateTimeLike(tempo)) {										// override {type}, if Object is ZonedDateTimeLike
+			this.#local.config.parse.match = 'Temporal.ZonedDateTimeLike';
+
+			return Object.assign(arg, {
+				type: 'Temporal.ZonedDateTime',
+				value: dateTime.with({ ...tempo as Temporal.ZonedDateTimeLike }),
+			})
+		}
 
 		if (!isType<string | number>(arg.value, 'String', 'Number'))
 			return arg;																						// only conform String or Number against known patterns (not BigInt, etc)
@@ -1738,7 +1762,7 @@ export namespace Tempo {
 	/** the object that Tempo will use to interpret date-time components */
 	// export type XX = Partial<Record<[keyof Tempo.Add], unknown>>
 	/** the value that Tempo will attempt to interpret as a valid ISO date / time */
-	export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | undefined | null
+	export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | Temporal.ZonedDateTimeLike | undefined | null
 	/** the Options Object found in a json-file, or passed to a call to Tempo.Init({}) or 'new Tempo({}) */
 	export type Options = Partial<{														// allowable settings to override configuration
 		debug: boolean;																					// debug-points into the console.log
