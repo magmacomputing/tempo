@@ -3,8 +3,8 @@ import type { Pledge } from '@module/shared/pledge.class.js';
 import type { Enum } from '@module/shared/enumerate.library.js';
 
 // TODO:  remove this after Temporal reaches Stage-4
-// import { Temporal } from '@js-temporal/polyfill';
-import 'temporal-polyfill/global';
+import { Temporal } from '@js-temporal/polyfill';
+// import 'temporal-polyfill/global';
 
 /** the primitive type reported by toStringTag() */
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
