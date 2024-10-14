@@ -18,7 +18,7 @@ import type { Entries, IntRange, Types } from '@module/shared/type.library.js';
 import '@module/shared/prototype.library.js';								// patch prototype
 
 /** TODO: THIS IMPORT NEEDS TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
-import '@js-temporal/polyfill'
+import { Temporal } from '@js-temporal/polyfill'
 // import 'temporal-polyfill/global';
 
 // #endregion
