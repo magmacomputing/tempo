@@ -17,7 +17,7 @@ import type { Entries, IntRange, Types } from '@module/shared/type.library.js';
 
 import '@module/shared/prototype.library.js';								// patch prototype
 
-/** TODO: THIS IMPORT NEEDS TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
+/** TODO: THIS IMPORT CAN TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
 import { Temporal } from '@js-temporal/polyfill'
 // import 'temporal-polyfill/global';
 
@@ -33,7 +33,8 @@ import { Temporal } from '@js-temporal/polyfill'
 const VERSION = '0.1.0';																		// semantic version
 const STORAGEKEY = '_Tempo_';																// for stash in persistent storage
 
-const Match = {																							// some common RegExp patterns
+/** common RegExp patterns */
+const Match = {
 	/** string that looks like a BigInt */										bigint: /^\d+n$/,
 	/** string that looks like a RegExp */										regexp: /^\/.*\/$/,
 	/** match all {} pairs */																	braces: /{([^}]+)}/g,
@@ -46,25 +47,25 @@ const Match = {																							// some common RegExp patterns
 
 /** Tempo Symbol registry */
 const Sym = {
-	dt: Symbol('date'),
-	tm: Symbol('time'),
-	dtm: Symbol('dateTime'),
-	dmy: Symbol('dayMonthYear'),
-	mdy: Symbol('monthDayYear'),
-	ymd: Symbol('yearMonthDay'),
-	dow: Symbol('dayOfWeek'),
-	evt: Symbol('event'),
-	per: Symbol('period'),
-	zdc: Symbol('zodiac'),
-	szn: Symbol('season'),
-	qtr: Symbol('quarter'),
+	/** date pattern */																				dt: Symbol('date'),
+	/** time pattern */																				tm: Symbol('time'),
+	/** date and time pattern */															dtm: Symbol('dateTime'),
+	/** day-month-year pattern */															dmy: Symbol('dayMonthYear'),
+	/** month-day-year pattern */															mdy: Symbol('monthDayYear'),
+	/** year-month-day pattern */															ymd: Symbol('yearMonthDay'),
+	/** day-of-week pattern */																dow: Symbol('dayOfWeek'),
+	/** Tempo event pattern */																evt: Symbol('event'),
+	/** Tempo period pattern */																per: Symbol('period'),
+	/** Tempo term (zodiac) */																zdc: Symbol('zodiac'),
+	/** Tempo term (season) */																szn: Symbol('season'),
+	/** Tempo term (quarter) */																qtr: Symbol('quarter'),
 } as Internal.Symbol;
 
 /**
  * user will need to know these in order to configure their own patterns  
- * a {unit} is a simple regex	snippet												e.g. { yy: /(\d{2})?\d{2})/ }  
- * {unit} keys are combined to build a {layout} Map					e.g. Map([[ Symbol('ymd'): '{yy}{mm}{dd}?' ]]    
- * {layout}s are translated into a regex {pattern} Map			e.g. Map([[ Symbol('ymd'), /^ ... $/ ]])    
+ * a {unit} is a simple regex	snippet												, e.g. { yy: /(\d{2})?\d{2})/ }  
+ * {unit} keys are combined to build a {layout} Map					, e.g. Map([[ Symbol('ymd'): '{yy}{mm}{dd}?' ]]    
+ * {layout}s are translated into a regex {pattern} Map			, e.g. Map([[ Symbol('ymd'), /^ ... $/ ]])    
  * the {pattern} will be used to parse a string | number in the constructor {DateTime} argument    
  */
 const Unit = {																							// define some components to help interpret input-strings
@@ -120,27 +121,27 @@ const Period = [
 	['night', '20:00'],
 ] as Internal.StringTuple[]
 
-/** Reasonable defaults for initial Tempo options */
+/** Reasonable default options for initial Tempo config */
 const Default = {
-	version: VERSION,
-	pivot: 75,																								// to assist in translating two-digit years into four-digit: https://en.wikipedia.org/wiki/Date_windowing
-	catch: false,																							// catch Errors
-	debug: false,																							// console.log
-	timeStamp: 'ms',																					// precision to measure timestamps
+	/** current Tempo version */															version: VERSION,
+	pivot: 75,	/** @link https://en.wikipedia.org/wiki/Date_windowing */
+	catch: false,
+	debug: false,
+	timeStamp: 'ms',
 	calendar: 'iso8601',
-	sphere: 'north',																					// hemisphere (used to infer {term[@@qtr]}, {term[@@szn]} )
-	monthDay: ['en-US', 'en-AS'],															// array of Locales that prefer 'mm-dd-yy' date order: https://en.wikipedia.org/wiki/Date_format_by_country
-	term: {																										// built-in terms ( are setup in init() )
-		[Sym.zdc]: new Map(),																		// 12 Zodiac star-signs
-		[Sym.szn]: new Map(),																		// 4 Seasons
-		[Sym.qtr]: new Map(),																		// 4 Fiscal Quarters
+	sphere: 'north',
+	monthDay: ['en-US', 'en-AS'], /** @link https://en.wikipedia.org/wiki/Date_format_by_country */
+	term: {
+		[Sym.zdc]: new Map(),
+		[Sym.szn]: new Map(),
+		[Sym.qtr]: new Map(),
 	},
-	layout: new Map(Layout),// [															// built-in layouts to be checked, and in this order
-	event: [...Event],																				// built-in events to be mapped to a date, in this order
-	period: [...Period],																			// built-in periods to be mapped to a time, in this order
+	layout: new Map(Layout),
+	event: [...Event],
+	period: [...Period],
 } as Tempo.Options
 
-const Zodiac: Tempo.TermTuple[] = [													// https://www.calendar.best/zodiac-signs.html
+const Zodiac: Tempo.TermTuple[] = [													/** @link https://www.calendar.best/zodiac-signs.html */
 	['Aries', { order: 1, day: 21, month: 3, symbol: 'Ram', longitude: 0, planet: 'Mars' }],
 	['Taurus', { order: 2, day: 20, month: 4, symbol: 'Bull', longitude: 30, planet: 'Venus' }],
 	['Gemini', { order: 3, day: 21, month: 5, symbol: 'Twins', longitude: 60, planet: 'Mercury' }],
@@ -154,13 +155,13 @@ const Zodiac: Tempo.TermTuple[] = [													// https://www.calendar.best/zod
 	['Aquarius', { order: 11, day: 20, month: 1, symbol: 'Ram', longitude: 300, planet: 'Uranus' }],
 	['Pisces', { order: 12, day: 19, month: 2, symbol: 'Fish', longitude: 330, planet: 'Neptune' }],
 ]
-const Season: Tempo.TermTuple[] = [													// meteorological https://www.timeanddate.com/calendar/aboutseasons.html
+const Season: Tempo.TermTuple[] = [													/** meteorological @link https://www.timeanddate.com/calendar/aboutseasons.html */
 	['Spring', { order: 1, day: 1, month: 3 }],
 	['Summer', { order: 2, day: 1, month: 6 }],
 	['Autumn', { order: 3, day: 1, month: 9 }],
 	['Winter', { order: 4, day: 1, month: 12 }],
 ]
-const Quarter: Tempo.TermTuple[] = [												// trimesters https://en.wikipedia.org/wiki/Calendar_year#:~:text=First%20quarter%2C%20Q1%3A%20January%20%E2%80%93,October%20%E2%80%93%20December%20(92%20days)
+const Quarter: Tempo.TermTuple[] = [												/** trimesters @link https://en.wikipedia.org/wiki/Calendar_year#:~:text=First%20quarter%2C%20Q1%3A%20January%20%E2%80%93,October%20%E2%80%93%20December%20(92%20days) */
 	['Q1', { order: 1, day: 1, month: 1 }],
 	['Q2', { order: 2, day: 1, month: 4 }],
 	['Q3', { order: 3, day: 1, month: 7 }],
@@ -209,24 +210,6 @@ export class Tempo {
 	// #endregion
 
 	// #region Static private methods~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	/**
-	 * reference a 'shape' to lookup the requested key.  
-	 * fallback to #global 'shape', if a #local shape is Nullish
-	 */
-	static #shape<T>(shape: Internal.Shape, type: keyof Internal.Shape, key: unknown): T {
-		let res = null;
-
-		switch (type) {
-			case 'config':
-				res = shape[type][key as keyof Internal.Shape["config"]];
-				break;
-		}
-
-		return (isNullish(res) && shape.config.level === Internal.SHAPE.Local)
-			? Tempo.#shape(Tempo.#global, type, key)
-			: res as T
-	}
 
 	/**
 	 * {dt} is a special regex that combines date-related {units} (dd, mm -or- evt) into a pattern against which a string can be tested.  
@@ -428,7 +411,7 @@ export class Tempo {
 							switch (arg.type) {
 								case 'Object':															// add key-value pairs to Map()
 									Object.entries(arg.value)
-										.forEach(([key, val]) => map.set(Tempo.getSymbol(shape, user), asArray(val)));
+										.forEach(([_, val]) => map.set(Tempo.getSymbol(shape, user), asArray(val)));
 									break;
 
 								case 'String':															// add string with unique key to Map()
@@ -501,7 +484,7 @@ export class Tempo {
 							break;
 
 						case 'term':																		// TODO: allow for different format of {terms}
-							Object.entries(arg.value as Record<string, Tempo.TermTuple[]>)
+							allEntries(arg.value as Record<string, Tempo.TermTuple[]>)
 								.forEach(([term, range]) => Tempo.#makeTerm(shape, term, range))
 							break;
 
@@ -949,18 +932,12 @@ export class Tempo {
 	#setLocal(options: Tempo.Options) {
 		Object.assign(this.#local.config, Tempo.#global.config, { level: Internal.SHAPE.Local })
 
-		this.#local.units = {};																	// local {units} object
-		this.#local.terms = {};																	// local {terms} object
-		this.#local.symbols = {};																// local {symbols} registry
-		this.#local.patterns = new Map();												// local {patterns} Map
-
 		Tempo.#setConfig(this.#local, this.#options);						// set #local config
 
 		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
 		// if a timeZone provided but no hemisphere, try to infer hemisphere based on daylight-savings  
-		// if (this.#local.config.timeZone !== Tempo.#global.config.timeZone && isUndefined(this.#options.sphere))
-		// 	Tempo.#dst(this.#local);
+		if (this.#options.timeZone !== Tempo.#global.config.timeZone && isUndefined(this.#options.sphere))
+			Tempo.#dst(this.#local);
 
 		// // change of hemisphere, setup new Seasons / Fiscal start-month
 		// if (this.#local.config.sphere !== Tempo.#global.config.sphere) {
@@ -1140,7 +1117,7 @@ export class Tempo {
 	#parseMatch(value: string | number, pat: RegExp) {
 		const groups = value.toString().match(pat)?.groups || {};
 
-		Object.entries(groups)																	// remove undefined, NaN, null and empty values
+		allEntries(groups)																	// remove undefined, NaN, null and empty values
 			.forEach(([key, val]) => isEmpty(val) && omit(groups, key));
 
 		return groups;
@@ -1437,7 +1414,7 @@ export class Tempo {
 
 	/** return a new object, with only numeric values */
 	#num = (groups: Partial<Internal.RegExpGroups>) => {
-		return Object.entries(groups)
+		return allEntries(groups)
 			.reduce((acc, [key, val]) => {
 				if (isNumeric(val))
 					acc[key] = ifNumeric(val) as number;
@@ -1448,7 +1425,7 @@ export class Tempo {
 	/** create new Tempo with {offset} property */
 	#add = (arg: Tempo.Add) => {
 		const mutate = 'add';
-		const zdt = Object.entries(arg)													// loop through each mutation
+		const zdt = allEntries(arg)														// loop through each mutation
 			.reduce((zdt, [key, offset]) => {											// apply each mutation to preceding one
 				const single = singular(key);
 				const plural = single + 's';
@@ -1765,20 +1742,20 @@ export namespace Tempo {
 	export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | Temporal.ZonedDateTimeLike | undefined | null
 	/** the Options Object found in a json-file, or passed to a call to Tempo.Init({}) or 'new Tempo({}) */
 	export type Options = Partial<{														// allowable settings to override configuration
-		debug: boolean;																					// debug-points into the console.log
-		catch: boolean;																					// Tempo will catch errors (else caller is responsible)
-		timeZone: string;																				// the timeZone on which to base the Tempo
-		calendar: string;																				// the Temporal.Calendar
-		locale: string;																					// the locale (e.g. en-AU)
-		pivot: number;																					// the pivot-year that determines current-or-previous century when year is only two-digits
-		sphere: Tempo.Sphere;																		// the hemisphere (useful for determining 'season')
-		timeStamp: Tempo.TimeStamp;															// granularity of new Tempo().ts
-		monthDay: string | string[];														// Array of locale names that prefer 'mm-dd-yy' date order
-		layout: Internal.InputFormat<Internal.StringPattern>;		// provide additional layouts to define patterns to help parse input
-		event: Internal.StringTuple[];													// provide additional date-maps (e.g. xmas => '25 Dec')
-		period: Internal.StringTuple[];													// provide additional time-maps (e.g. arvo => '3pm')
-		term: Internal.InputFormat<Tempo.Term>;									// provide additional term ranges (e.g. star => {Taurus, {day:21, month:5}, ...})
-		value: Tempo.DateTime;																	// the {value} to interpret can be supplied in the Options argument
+		/** additional console.log for tracking */							debug: boolean;
+		/** catch or throw Errors */														catch: boolean;
+		/** Temporal.TimeZone */																timeZone: string;
+		/** Temporal.Calendar */																calendar: string;
+		/** locale (e.g. en-AU) */															locale: string;
+		/** pivot year for two-digit years */										pivot: number;
+		/** hemisphere for term[@@qtr] or term[@@szn] */				sphere: Tempo.Sphere;
+		/** granulariyt of timestamps (ms | ns) */							timeStamp: Tempo.TimeStamp;
+		/** locale-names that prefer 'mm-dd-yy' date order */		monthDay: string | string[];
+		/** patterns to help parse value */											layout: Internal.InputFormat<Internal.StringPattern>;
+		/** date-events (e.g. xmas => '25 Dec') */							event: Internal.StringTuple[];
+		/** time-periods (e.g. arvo => '3pm') */								period: Internal.StringTuple[];
+		/** term-ranges (e.g. zdc => {Taurus, {day:21, month:5}}) */term: Internal.InputFormat<Tempo.Term>;
+		/** supplied value to parse */													value: Tempo.DateTime;
 	}>
 
 	/** drop the setup-only Options */
@@ -1788,11 +1765,11 @@ export namespace Tempo {
 	 * derived from user-supplied options, else json-stored options, else reasonable-default options
 	 */
 	export interface Config extends Required<OptionsKeep> {
-		version: string;																				// semantic version
-		level: Internal.Level,																	// separate configurations 
-		parse: Internal.Parse,																	// detail about how the Tempo constructor parsed the supplied value
-		monthDay: { locale: string; timeZones: string[]; }[];		// Array of locales/timeZones that prefer 'mm-dd-yy' date order
-		layout: Map<symbol, Internal.StringPattern[]>;					// coerce {layout} to Map<Symbol, (string | RegExp)[]>
+		/** semantic version */																	version: string;
+		/** configuration (global | local) */										level: Internal.Level,
+		/** detail about how value was parsed */								parse: Internal.Parse,
+		/** locales that prefer 'mm-dd-yy' date order */				monthDay: { locale: string; timeZones: string[]; }[];
+		/** layout patterns to parse value */										layout: Map<symbol, Internal.StringPattern[]>;
 	}
 
 	/** Timestamp precision */
