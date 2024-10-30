@@ -30,7 +30,7 @@ import { Temporal } from '@js-temporal/polyfill'
 
 // #region Const variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-const VERSION = '0.1.0';																		// semantic version
+const VERSION = '0.2.0';																		// semantic version
 const STORAGEKEY = '_Tempo_';																// for stash in persistent storage
 
 /** common RegExp patterns */
