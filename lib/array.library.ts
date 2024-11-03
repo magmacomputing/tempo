@@ -1,7 +1,7 @@
 import { isTempo } from '@module/shared/tempo.class.js';
 import { asString } from '@module/shared/string.library.js';
 import { getPath } from '@module/shared/object.library.js';
-import { cloneify } from '@module/shared/serialize.library.js';
+import { cloneify, stringify } from '@module/shared/serialize.library.js';
 import { asType, isNumber, isDate, isIterable, isString, isObject, isDefined, isArrayLike, nullToValue } from '@module/shared/type.library.js';
 
 /** Coerce {value} into {Array\<value>} ( if not already Array<> ), with optional {fill} Object */
@@ -55,13 +55,13 @@ export interface SortBy {
 	index?: number | '*';
 	default?: any;
 }
-/** return a function that will apply a series of sort-keys */
-export function sortBy<T>(...keys: (string | SortBy)[]) {
+/** return an array sorted-by a series of keys */
+export function sortBy<T>(array: T[], ...keys: (string | SortBy)[]) {
 	const sortOptions = keys																	// coerce string => SortBy
 		.flat()																									// flatten Array-of-Array
 		.map(key => isString(key) ? { field: key } : key)				// build Array of sort-options
 
-	return (left: Record<string, T>, right: Record<string, T>) => {
+	return array.sort((left: T, right: T) => {
 		let result = 0;
 
 		sortOptions.forEach(key => {
@@ -85,6 +85,15 @@ export function sortBy<T>(...keys: (string | SortBy)[]) {
 		})
 
 		return result;
-	}
+	})
 }
 
+/** Group documents by key-fields */
+export function keyedBy<T extends Record<PropertyKey, string>>(array: T[], ...keys: PropertyKey[]) {
+	return Object.groupBy(array, itm =>												// group an array into an object with named keys
+		keys
+			.flat()																								// flatten Array-of-Array
+			.map(key => stringify(itm[key]))
+			.join('.')
+	)
+}

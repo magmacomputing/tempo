@@ -66,11 +66,10 @@ declare global {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 declare global {
 	interface Array<T> {
-		/** reduce Array to a keyed-Object */										keyedBy<K extends PropertyKey>(...keys: PropertyKey[]): Record<K, T[]>;
+		/** reduce Array to a keyed-Object */										keyedBy(...keys: PropertyKey[]): Record<string, T[]>;
+		/** reduce Array to a keyed-Object */										groupBy(...keys: PropertyKey[]): Record<string, T[]>;
 
-		/** return ordered Array-of-objects */									orderBy(keys: (string | SortBy)[]): T[];
 		/** return ordered Array-of-objects */									orderBy(...keys: (string | SortBy)[]): T[];
-		/** return sorted Array-of-objects */										sortBy(keys: (string | SortBy)[]): T[];
 		/** return sorted Array-of-objects */										sortBy(...keys: (string | SortBy)[]): T[];
 
 		/** return new Array with no repeated elements */				distinct(): T[];
@@ -85,15 +84,13 @@ declare global {
 	}
 }
 
-function sort(...keys: (string | SortBy)[]) { return this.sort(sortBy(...keys)); }
-patch(Array, 'orderBy', sort);															// order array by named keys
-patch(Array, 'sortBy', sort);																// sort array by named keys
+function sorted(...keys: (string | SortBy)[]) { return sortBy(this, ...keys); }
+patch(Array, 'orderBy', sorted);														// order array by named keys
+patch(Array, 'sortBy', sorted);															// sort array by named keys
 
-patch(Array, 'keyedBy', function (...keys: PropertyKey[]) {
-	return Object.groupBy(this, itm =>												// group an array into an object with named keys
-		keys.map(key => stringify(itm[key])).join('.')
-	)
-})
+function grouped(...keys: PropertyKey[]) { return keyedBy(this, ...keys); }
+patch(Array, 'keyedBy', grouped);														// reduce array by named keys
+patch(Array, 'groupBy', grouped);														// reduce array by named keys
 
 patch(Array, 'tap', function (fn: Function) {
 	fn(this);																									// run an arbitrary function
