@@ -1,6 +1,7 @@
 // @ts-nocheck
 // no typescript checking to get around the 'this' binding warnings
 
+import { stringify } from '@module/shared/serialize.library.js';
 import { trimAll, toProperCase } from '@module/shared/string.library.js';
 import { asArray, keyedBy, sortBy, type SortBy } from '@module/shared/array.library.js';
 
@@ -53,10 +54,10 @@ declare global {
 		 * @param items An iterable.
 		 * @param keySelector A callback which will be invoked for each item in items.
 		 */
-		groupBy<K extends PropertyKey, T>(
-			items: Iterable<T>,
-			keySelector: (item: T, index: number) => K,
-		): Partial<Record<K, T[]>>;
+		// groupBy<K extends PropertyKey, T>(
+		// 	items: Iterable<T>,
+		// 	keySelector: (item: T, index: number) => K,
+		// ): Partial<Record<K, T[]>>;
 	}
 }
 
@@ -65,9 +66,7 @@ declare global {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 declare global {
 	interface Array<T> {
-		/** reduce Array to a keyed-Object */										keyedBy<K extends string>(...keys: string[]): Record<K, T[]>;
-		/** reduce Array to a keyed-Object */										keyedBy<K extends string>(flatten: true, ...keys: string[]): Record<K, T>;
-		/** reduce Array to a keyed-Object */										keyedBy<K extends string>(flatten: false, ...keys: string[]): Record<K, T[]>;
+		/** reduce Array to a keyed-Object */										keyedBy<K extends PropertyKey>(...keys: PropertyKey[]): Record<K, T[]>;
 
 		/** return ordered Array-of-objects */									orderBy(keys: (string | SortBy)[]): T[];
 		/** return ordered Array-of-objects */									orderBy(...keys: (string | SortBy)[]): T[];
@@ -86,12 +85,14 @@ declare global {
 	}
 }
 
-function fn(...keys: (string | SortBy)[]) { return this.sort(sortBy(...keys)); }
-patch(Array, 'orderBy', fn);																// order array by named keys
-patch(Array, 'sortBy', fn);																	// sort array by named keys
+function sort(...keys: (string | SortBy)[]) { return this.sort(sortBy(...keys)); }
+patch(Array, 'orderBy', sort);															// order array by named keys
+patch(Array, 'sortBy', sort);																// sort array by named keys
 
-patch(Array, 'keyedBy', function (key: string) {
-	return keyedBy(this, key);																// group an array into an object with named keys
+patch(Array, 'keyedBy', function (...keys: PropertyKey[]) {
+	return Object.groupBy(this, itm =>												// group an array into an object with named keys
+		keys.map(key => stringify(itm[key])).join('.')
+	)
 })
 
 patch(Array, 'tap', function (fn: Function) {

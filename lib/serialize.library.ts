@@ -102,9 +102,9 @@ function fromSymbol(key: PropertyKey) {
 		: key)
 }
 
+const symKey = /^@(@)?\(([^\)]*)\)$/;												// pattern to match a stringify'd Symbol
 /** reconstruct a Symbol */
 function toSymbol(value: PropertyKey) {
-	const symKey = /^@(@)?\(([^\)]*)\)$/;											// pattern to match a stringify'd Symbol
 	const [pat, keyFor, desc] = value.toString().match(symKey) || [null, void 0, void 0];
 
 	switch (true) {
@@ -152,8 +152,8 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 
 	switch (arg.type) {
 		case 'String':
-			if (!recurse) {																				// these values must be stringified to preserve their type when objectified
-				recurse = arg.value === 'true'
+			if (!recurse) {
+				recurse = arg.value === 'true'											// these words are stringified to preserve their type when objectified
 					|| arg.value === 'false'
 					|| arg.value === 'null'
 					|| isNumeric(arg.value)
@@ -286,7 +286,7 @@ function traverse(obj: any, sentinel?: Function): any {
 }
 
 /** Rebuild an Object from its single-key representation */
-function typeify(json: Record<string, unknown>, sentinel?: Function) {
+function typeify(json: Record<string, any>, sentinel?: Function) {
 	if (!isObject(json))
 		return json;																						// only JSON Objects
 
@@ -310,6 +310,7 @@ function typeify(json: Record<string, unknown>, sentinel?: Function) {
 		case 'Null':
 			return null;
 		case 'Undefined':
+		case 'Empty':
 		case 'Void':
 			return sentinel?.();																	// run Sentinel function
 		case 'Date':
