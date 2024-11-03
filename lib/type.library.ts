@@ -1,10 +1,10 @@
+import { allKeys } from '@module/shared/reflect.library.js';
 import type { Tempo } from '@module/shared/tempo.class.js';
 import type { Pledge } from '@module/shared/pledge.class.js';
 import type { Enum } from '@module/shared/enumerate.library.js';
 
 // TODO:  remove this after Temporal reaches Stage-4
 import { Temporal } from '@js-temporal/polyfill';
-// import 'temporal-polyfill/global';
 
 /** the primitive type reported by toStringTag() */
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
@@ -18,7 +18,7 @@ export const getType = (obj?: any, ...instances: Instance[]) => {
 
 	switch (true) {
 		case type === 'Object':
-			let name = obj.constructor?.name || 'Object';					// some Objects do not have a constructor method
+			let name = obj.constructor?.name ?? 'Object';					// some Objects do not have a constructor method
 
 			switch (true) {
 				case name !== 'Object':
@@ -28,8 +28,9 @@ export const getType = (obj?: any, ...instances: Instance[]) => {
 					break;
 			}
 
-			return (instances.find(inst => obj instanceof inst.class)?.type	// allow for 'real' name of Instance, after minification
-				|| name) as Types;																	// return Object name
+			return (instances
+				.find(inst => obj instanceof inst.class)?.type			// allow for 'real' name of Instance, after minification
+				?? name) as Types;																	// return Object name
 
 		case type === 'Function' && obj.valueOf().toString().startsWith('class '):
 			return 'Class';
@@ -39,7 +40,7 @@ export const getType = (obj?: any, ...instances: Instance[]) => {
 	}
 }
 
-/** convert value to TypeValue<T> object */
+/** return TypeValue<T> object */
 export const asType = <T>(obj?: T, ...instances: Instance[]) => {
 	const type = getType(obj, ...instances);
 	return ({
@@ -62,7 +63,7 @@ export const isInteger = <T>(obj?: T): obj is Extract<T, bigint> => isType(obj, 
 export const isDigit = <T>(obj?: T): obj is Extract<T, number | bigint> => isType(obj, 'Number', 'BigInt');
 export const isBoolean = <T>(obj?: T): obj is Extract<T, boolean> => isType(obj, 'Boolean');
 export const isArray = <T>(obj: T | T[]): obj is Array<T> => isType(obj, 'Array');
-export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => protoType(obj) === 'Object' && Object.keys(obj).includes('length') && Object.keys(obj).every(key => key === 'length' || !isNaN(Number(key)));
+export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => protoType(obj) === 'Object' && allKeys(obj).includes('length') && allKeys(obj).every(key => key === 'length' || !isNaN(Number(key)));
 export const isObject = <T>(obj?: T): obj is Extract<T, Record<any, any>> => isType(obj, 'Object');
 export const isDate = <T>(obj?: T): obj is Extract<T, Date> => isType(obj, 'Date');
 export const isRegExp = <T>(obj?: T): obj is Extract<T, RegExp> => isType(obj, 'RegExp');
@@ -98,14 +99,14 @@ export const nullToValue = <T, R>(obj: T, value: R) => obj ?? value;
 /** object has no values */
 export const isEmpty = <T>(obj?: T) => false
 	|| isNullish(obj)
-	|| (isObject(obj) && Object.keys(obj as Record<any, any>).length === 0)
+	|| (isObject(obj) && allKeys(obj).length === 0)
 	|| (isString(obj) && obj.trim().length === 0)
 	|| (isNumber(obj) && isNaN(obj) === false)
 	|| (isArray(obj) && obj.length === 0)
 	|| (isSet(obj) && obj.size === 0)
 	|| (isMap(obj) && obj.size === 0)
 	|| (isTuple(obj) && obj.length === 0)
-	|| (isRecord(obj) && Object.keys(obj).length === 0)
+	|| (isRecord(obj) && allKeys(obj).length === 0)
 
 export function assertCondition(condition: boolean, message?: string): asserts condition {
 	if (!condition)

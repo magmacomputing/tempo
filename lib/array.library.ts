@@ -61,14 +61,14 @@ export function sortBy<T>(...keys: (string | SortBy)[]) {
 		.flat()																									// flatten Array-of-Array
 		.map(key => isString(key) ? { field: key } : key)				// build Array of sort-options
 
-	return (a: Record<string, T>, b: Record<string, T>) => {
+	return (left: Record<string, T>, right: Record<string, T>) => {
 		let result = 0;
 
 		sortOptions.forEach(key => {
 			if (result === 0) {																		// no need to look further if result !== 0
 				const dir = key.dir === 'desc' ? -1 : 1;
-				const valueA = getPath<number>(a, key.field, nullToValue(key.default, 0), key.index);
-				const valueB = getPath<number>(b, key.field, nullToValue(key.default, 0), key.index);
+				const valueA = getPath<number>(left, key.field, nullToValue(key.default, 0), key.index);
+				const valueB = getPath<number>(right, key.field, nullToValue(key.default, 0), key.index);
 
 				switch (true) {
 					case isNumber(valueA) && isNumber(valueB):
@@ -88,7 +88,3 @@ export function sortBy<T>(...keys: (string | SortBy)[]) {
 	}
 }
 
-/** Group documents by key-fields */
-export function keyedBy<T extends Record<PropertyKey, string>>(array: T[], key: string) {
-	return Object.groupBy(array, itm => itm[key]);
-}
