@@ -55,13 +55,13 @@ export interface SortBy {
 	index?: number | '*';
 	default?: any;
 }
-/** return an array sorted-by a series of keys */
-export function sortBy<T extends Record<PropertyKey, any>>(array: T[], ...keys: (string | SortBy)[]) {
+/** provide a sort-function to order a set of keys */
+export function sortBy<T extends Record<PropertyKey, any>>(...keys: (PropertyKey | SortBy)[]) {
 	const sortOptions = keys																	// coerce string => SortBy
 		.flat()																									// flatten Array-of-Array
-		.map(key => isString(key) ? { field: key } : key)				// build Array of sort-options
+		.map(key => isObject(key) ? key : { field: stringify(key) })	// build Array of sort-options
 
-	return array.sort((left: T, right: T) => {
+	return (left: T, right: T) => {
 		let result = 0;
 
 		sortOptions.forEach(key => {
@@ -85,11 +85,16 @@ export function sortBy<T extends Record<PropertyKey, any>>(array: T[], ...keys: 
 		})
 
 		return result;
-	})
+	}
 }
 
-/** Group documents by key-fields */
-export function keyedBy<T extends Record<PropertyKey, any>>(array: T[], ...keys: (keyof T)[]) {
+/** return an array sorted-by a series of keys */
+export function sortKey<T extends Record<PropertyKey, any>>(array: T[], ...keys: (PropertyKey | SortBy)[]) {
+	return array.sort(sortBy(...keys));
+}
+
+/** group documents by key-fields */
+export function groupKey<T extends Record<PropertyKey, any>>(array: T[], ...keys: (keyof T)[]) {
 	const keyed = keys.flat();																// flatten Array-of-Array
 	return Object.groupBy(array, itm =>												// group an array into an object with named keys
 		keyed
