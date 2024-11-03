@@ -56,7 +56,7 @@ export interface SortBy {
 	default?: any;
 }
 /** return an array sorted-by a series of keys */
-export function sortBy<T>(array: T[], ...keys: (string | SortBy)[]) {
+export function sortBy<T extends Record<PropertyKey, any>>(array: T[], ...keys: (string | SortBy)[]) {
 	const sortOptions = keys																	// coerce string => SortBy
 		.flat()																									// flatten Array-of-Array
 		.map(key => isString(key) ? { field: key } : key)				// build Array of sort-options
@@ -89,10 +89,10 @@ export function sortBy<T>(array: T[], ...keys: (string | SortBy)[]) {
 }
 
 /** Group documents by key-fields */
-export function keyedBy<T extends Record<PropertyKey, string>>(array: T[], ...keys: PropertyKey[]) {
+export function keyedBy<T extends Record<PropertyKey, any>>(array: T[], ...keys: (keyof T)[]) {
+	const keyed = keys.flat();																// flatten Array-of-Array
 	return Object.groupBy(array, itm =>												// group an array into an object with named keys
-		keys
-			.flat()																								// flatten Array-of-Array
+		keyed
 			.map(key => stringify(itm[key]))
 			.join('.')
 	)
