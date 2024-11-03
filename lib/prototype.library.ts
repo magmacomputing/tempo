@@ -3,7 +3,7 @@
 
 import { stringify } from '@module/shared/serialize.library.js';
 import { trimAll, toProperCase } from '@module/shared/string.library.js';
-import { asArray, keyedBy, sortBy, type SortBy } from '@module/shared/array.library.js';
+import { asArray, groupKey, sortKey, type SortBy } from '@module/shared/array.library.js';
 
 // Prototype extensions
 // Remember to define any imports as a Function declaration (not a Function expression)
@@ -69,8 +69,8 @@ declare global {
 		/** reduce Array to a keyed-Object */										keyedBy(...keys: PropertyKey[]): Record<string, T[]>;
 		/** reduce Array to a keyed-Object */										groupBy(...keys: PropertyKey[]): Record<string, T[]>;
 
-		/** return ordered Array-of-objects */									orderBy(...keys: (string | SortBy)[]): T[];
-		/** return sorted Array-of-objects */										sortBy(...keys: (string | SortBy)[]): T[];
+		/** return ordered Array-of-objects */									orderBy(...keys: (PropertyKey | SortBy)[]): T[];
+		/** return sorted Array-of-objects */										sortBy(...keys: (PropertyKey | SortBy)[]): T[];
 
 		/** return new Array with no repeated elements */				distinct(): T[];
 		/** return mapped Array with no repeated elements */		distinct<S>(mapfn: (value: T, index: number, array: T[]) => S, thisArg?: any): S[];
@@ -84,11 +84,11 @@ declare global {
 	}
 }
 
-function sorted(...keys: (string | SortBy)[]) { return sortBy(this, ...keys); }
+function sorted(...keys: (PropertyKey | SortBy)[]) { return sortKey(this, ...keys); }
 patch(Array, 'orderBy', sorted);														// order array by named keys
 patch(Array, 'sortBy', sorted);															// sort array by named keys
 
-function grouped(...keys: PropertyKey[]) { return keyedBy(this, ...keys); }
+function grouped(...keys: PropertyKey[]) { return groupKey(this, ...keys); }
 patch(Array, 'keyedBy', grouped);														// reduce array by named keys
 patch(Array, 'groupBy', grouped);														// reduce array by named keys
 
