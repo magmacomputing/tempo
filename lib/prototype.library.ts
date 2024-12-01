@@ -6,7 +6,7 @@ import { trimAll, toProperCase } from '@module/shared/string.library.js';
 import { asArray, groupKey, sortKey, type SortBy } from '@module/shared/array.library.js';
 
 // Prototype extensions
-// Remember to define any imports as a Function declaration (not a Function expression)
+// Remember to define any imports as a Function Declaration (not a Function Expression)
 // so that they are 'hoisted' prior to extending a prototype
 
 /**
@@ -14,7 +14,7 @@ import { asArray, groupKey, sortKey, type SortBy } from '@module/shared/array.li
  */
 const patch = <T>(proto: T, property: string, method: Function) => {
 	if (proto.prototype.hasOwnProperty(property)) {						// if already defined,
-		if (trimAll(method.toString()) !== trimAll(proto.prototype[property].toString()))	// show error if different method definition
+		if (trimAll(method.toString()) !== trimAll(proto.prototype[property].toString()))	// show warning if different method definition
 			console.warn(`${proto.name}.${property} already defined`);
 	} else {
 		Object.defineProperty(proto.prototype, property, {
@@ -45,19 +45,7 @@ patch(String, 'toProperCase', function () { return toProperCase(this) });
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 declare global {
 	interface ObjectConstructor {
-		// 		entries<T extends {}>(object: T): ReadonlyArray<Entry<T>>
-
-		// node_modules/typescript/lib/lib.esnext.object.d.ts
-		// This is temporary until Typescript sorts out the signature for Object.groupBy
-		/**
-		 * Groups members of an iterable according to the return value of the passed callback.
-		 * @param items An iterable.
-		 * @param keySelector A callback which will be invoked for each item in items.
-		 */
-		// groupBy<K extends PropertyKey, T>(
-		// 	items: Iterable<T>,
-		// 	keySelector: (item: T, index: number) => K,
-		// ): Partial<Record<K, T[]>>;
+		// 		entries<T extends Record<PropertyKey, T>>(object: T): ReadonlyArray<Entry<T>>
 	}
 }
 
@@ -66,11 +54,15 @@ declare global {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 declare global {
 	interface Array<T> {
-		/** reduce Array to a keyed-Object */										keyedBy(...keys: PropertyKey[]): Record<string, T[]>;
-		/** reduce Array to a keyed-Object */										groupBy(...keys: PropertyKey[]): Record<string, T[]>;
+		/** reduce Array to a keyed-Object */										keyedBy(...keys: (keyof T)[]): Record<string, T[]>;
+		/** reduce Array to a keyed-Object, mapped */						keyedBy(mapfn: (value: T, index: number) => Record<string, T[]>);
+		/** reduce Array to a keyed-Object */										groupBy(...keys: (keyof T)[]): Record<string, T[]>;
+		/** reduce Array to a keyed-Object, mapped */						groupBy(mapfn: (value: T, index: number) => Record<string, T[]>);
 
 		/** return ordered Array-of-objects */									orderBy(...keys: (PropertyKey | SortBy)[]): T[];
+		/** return ordered Array-of-objects, mapped */					orderBy<K extends keyof T>(mapfn: (value: T, index: number, array: T[]) => K, thisArg?: any): K[];
 		/** return sorted Array-of-objects */										sortBy(...keys: (PropertyKey | SortBy)[]): T[];
+		/** return ordered Array-of-objects, mapped */					sortBy<K extends keyof T>(mapfn: (value: T, index: number, array: T[]) => K, thisArg?: any): K[];
 
 		/** return new Array with no repeated elements */				distinct(): T[];
 		/** return mapped Array with no repeated elements */		distinct<S>(mapfn: (value: T, index: number, array: T[]) => S, thisArg?: any): S[];
@@ -88,7 +80,7 @@ function sorted(...keys: (PropertyKey | SortBy)[]) { return sortKey(this, ...key
 patch(Array, 'orderBy', sorted);														// order array by named keys
 patch(Array, 'sortBy', sorted);															// sort array by named keys
 
-function grouped(...keys: PropertyKey[]) { return groupKey(this, ...keys); }
+function grouped(key: Function | (keyof T), ...keys: (keyof T)[]) { return groupKey(this, ...keys); }
 patch(Array, 'keyedBy', grouped);														// reduce array by named keys
 patch(Array, 'groupBy', grouped);														// reduce array by named keys
 
@@ -102,10 +94,10 @@ patch(Array, 'truncate', function () {
 	return this;
 })
 
-patch(Array, 'distinct', function (selector: (value: any, index: number, array: any[]) => []) {
-	return selector
-		? this.map(selector).distinct()													// run the mapping selector, then recurse
-		: asArray(new Set(this))																// eliminate duplicates
+patch(Array, 'distinct', function (mapfn: (value: any, index: number, array: any[]) => []) {
+	return mapfn
+		? this.map(mapfn).distinct()														// run the mapping selector, then recurse
+		: Array.from(new Set(this))															// eliminate duplicates
 })
 
 patch(Array, 'cartesian', function (...args: any[]) {

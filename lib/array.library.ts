@@ -2,7 +2,7 @@ import { isTempo } from '@module/shared/tempo.class.js';
 import { asString } from '@module/shared/string.library.js';
 import { getPath } from '@module/shared/object.library.js';
 import { cloneify, stringify } from '@module/shared/serialize.library.js';
-import { asType, isNumber, isDate, isIterable, isString, isObject, isDefined, isArrayLike, nullToValue } from '@module/shared/type.library.js';
+import { asType, isNumber, isDate, isIterable, isString, isObject, isDefined, isArrayLike, nullToValue, isFunction } from '@module/shared/type.library.js';
 
 /** Coerce {value} into {Array\<value>} ( if not already Array<> ), with optional {fill} Object */
 export function asArray<T>(arr: Exclude<ArrayLike<T>, string> | undefined): T[];
@@ -93,9 +93,19 @@ export function sortKey<T extends Record<PropertyKey, any>>(array: T[], ...keys:
 	return array.sort(sortBy(...keys));
 }
 
-/** group documents by key-fields */
-export function groupKey<T extends Record<PropertyKey, any>>(array: T[], ...keys: (keyof T)[]) {
-	const keyed = keys.flat();																// flatten Array-of-Array
+type GroupFn<T> = (itm: T) => keyof T
+type KeyOf<T> = keyof T
+/** return an object grouped by key-fields in an array of documents */
+export function groupKey<T>(array: T[], mapFn: GroupFn<T>): Record<KeyOf<T>, T[]>
+export function groupKey<T>(array: T[], key: KeyOf<T>, ...keys: KeyOf<T>[]): Record<KeyOf<T>, T[]>
+export function groupKey<T>(array: T[], mapFn: KeyOf<T> | GroupFn<T>, ...keys: KeyOf<T>[]) {
+	if (isFunction(mapFn))
+		return Object.groupBy(array, mapFn);
+
+	const keyed = [mapFn]																			// assume mapFn is instead a keyof T
+		.concat(keys)																						// append any trailing keyof T[]
+		.flat() as unknown as KeyOf<T>[];												// flatten Array-of-Array
+
 	return Object.groupBy(array, itm =>												// group an array into an object with named keys
 		keyed
 			.map(key => stringify(itm[key]))

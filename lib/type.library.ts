@@ -69,6 +69,7 @@ export const isDate = <T>(obj?: T): obj is Extract<T, Date> => isType(obj, 'Date
 export const isRegExp = <T>(obj?: T): obj is Extract<T, RegExp> => isType(obj, 'RegExp');
 export const isSymbol = <T>(obj?: T): obj is Extract<T, symbol> => isType(obj, 'Symbol');
 export const isSymbolFor = <T>(obj?: T): obj is Extract<T, symbol> => isType<symbol>(obj, 'Symbol') && Symbol.keyFor(obj) !== void 0;
+export const isPropertyKey = (obj?: unknown): obj is PropertyKey => isType<PropertyKey>(obj, 'String', 'Number', 'Symbol');
 
 // TODO
 export const isRecord = <T>(obj?: T): obj is Readonly<Extract<T, Record<any, any>>> => isType(obj, 'Record');
@@ -227,7 +228,7 @@ type TupleEntry<T extends readonly unknown[], I extends unknown[] = [], R = neve
 	? TupleEntry<Tail, [...I, unknown], R | [`${I['length']}`, Head]>
 	: R
 
-type ObjectEntry<T extends {}> =
+type ObjectEntry<T extends Record<PropertyKey, any>> =
 	T extends object
 	? { [K in keyof T]: [K, Required<T>[K]] }[keyof T] extends infer E
 	? E extends [infer K extends string | number, infer V]
@@ -237,7 +238,7 @@ type ObjectEntry<T extends {}> =
 	: never
 
 /** if T extends readonly[] => [number, T],   if T extends {} => [key:string, T] */
-export type Entry<T extends {}> =
+export type Entry<T extends Record<PropertyKey, any>> =
 	T extends readonly [unknown, ...unknown[]]
 	? TupleEntry<T>
 	: T extends ReadonlyArray<infer U>
@@ -245,8 +246,8 @@ export type Entry<T extends {}> =
 	: ObjectEntry<T>
 
 /** Object.entries<T> as [number,T][] */
-export type Entries<T extends {}> = ReadonlyArray<Entry<T>>
-export type Inverse<T> = { [K in keyof T as (T[K] & (string | number))]: K };
+export type Entries<T extends Record<PropertyKey, any>> = ReadonlyArray<Entry<T>>
+export type Inverse<T> = { [K in keyof T as (T[K] & PropertyKey)]: K };
 export type Index<T extends readonly any[]> = { [K in Entry<T> as `${K[1]}`]: ParseInt<K[0]> } //& { [K in Entry<T> as K[0]]: K[1] }
 
 // https://stackoverflow.com/questions/39494689/is-it-possible-to-restrict-number-to-a-certain-range/70307091#70307091
@@ -254,4 +255,5 @@ type Enumerate<N extends number, Acc extends number[] = []> = Acc['length'] exte
 	? Acc[number]
 	: Enumerate<N, [...Acc, Acc['length']]>
 
+/** declare expected range of values */
 export type IntRange<F extends number, T extends number> = Exclude<Enumerate<T>, Enumerate<F>>

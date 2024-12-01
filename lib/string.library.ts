@@ -100,6 +100,7 @@ export const makeTemplate = (templateString: Object) =>
 	(templateData: Object) =>
 		new Function(`{${Object.keys(templateData).join(',')}}`, 'return `' + templateString + '`')(templateData);
 
+/** stringify if not nullish */
 export function asString(str?: unknown) { return isNullish(str) ? '' : stringify(str); }
 export const toLower = <T>(str: T) => isString(str) ? asString(str).toLowerCase().trim() : str;
 export const toUpper = <T>(str: T) => isString(str) ? asString(str).toUpperCase().trim() : str;
