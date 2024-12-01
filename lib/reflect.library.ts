@@ -1,17 +1,17 @@
 import { isArray, isEmpty } from '@module/shared/type.library.js';
 import { clone } from '@module/shared/serialize.library.js';
 
-type Obj<T> = Record<PropertyKey, T> | T[]
+type Obj = Record<PropertyKey, any> | any[]
 
 /** exclude top-level keys from a copy of an Object */
-export function exclude<T extends Obj<T>>(obj: T, ...keys: (keyof T)[]) {
+export function exclude<T extends Obj>(obj: T, ...keys: (keyof T)[]) {
   return omit(clone(obj), ...keys);                        // exlude properties from clone of object
 }
 
 /** mutate Object | Array reference with properties removed */
-export function omit<T extends Obj<T>>(obj: T): T
-export function omit<T extends Obj<T>>(obj: T, ...keys: (keyof T)[]): T
-export function omit<T extends Obj<T>>(obj: T, ...keys: (keyof T)[]) {
+// export function omit<T extends Obj>(obj: T): T
+// export function omit<T extends Obj>(obj: T, ...keys: (keyof T)[]): T
+export function omit<T extends Obj>(obj: T, ...keys: (keyof T)[]) {
   (isEmpty(keys) ? allKeys(obj) : keys)                     // if no {keys}, assume all ownKeys
     .forEach(key => Reflect.deleteProperty(obj, key));
 
@@ -22,17 +22,17 @@ export function omit<T extends Obj<T>>(obj: T, ...keys: (keyof T)[]) {
 }
 
 /** remove all ownKeys from an Object | Array */
-export function purge<T extends Obj<T>>(obj: T) {
+export function purge<T extends Obj>(obj: T) {
   return omit(obj);
 }
 
 /** collect string | number | symbol object keys */
-export function allKeys<T extends Obj<T>>(json: T) {
+export function allKeys<T extends Obj>(json: T) {
   return Reflect.ownKeys(json) as (keyof T)[]               // Object.keys()
 }
 
 /** collect string | number | symbol key'd objects */
-export function allEntries<T extends Obj<T>>(json: T) {
+export function allEntries<T extends Obj>(json: T) {
   return allKeys<T>(json)                                   // Object.entries() would discard symbol-keys
     .map(key => [key, json[key]] as [keyof T, T[keyof T]])  // cast as tuple
 }
