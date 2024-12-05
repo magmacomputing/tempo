@@ -9,8 +9,8 @@ export function exclude<T extends Obj>(obj: T, ...keys: (keyof T)[]) {
 }
 
 /** mutate Object | Array reference with properties removed */
-// export function omit<T extends Obj>(obj: T): T
-// export function omit<T extends Obj>(obj: T, ...keys: (keyof T)[]): T
+export function omit<T extends Obj>(obj: T): T
+export function omit<T extends Obj>(obj: T, ...keys: (keyof T)[]): T
 export function omit<T extends Obj>(obj: T, ...keys: (keyof T)[]) {
   (isEmpty(keys) ? allKeys(obj) : keys)                     // if no {keys}, assume all ownKeys
     .forEach(key => Reflect.deleteProperty(obj, key));
