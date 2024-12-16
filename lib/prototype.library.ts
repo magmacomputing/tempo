@@ -54,10 +54,10 @@ declare global {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 declare global {
 	interface Array<T> {
-		/** reduce Array to a keyed-Object */										keyedBy(...keys: (keyof T)[]): Record<string, T[]>;
-		/** reduce Array to a keyed-Object, mapped */						keyedBy(mapfn: (value: T, index: number) => Record<string, T[]>);
-		/** reduce Array to a keyed-Object */										groupBy(...keys: (keyof T)[]): Record<string, T[]>;
-		/** reduce Array to a keyed-Object, mapped */						groupBy(mapfn: (value: T, index: number) => Record<string, T[]>);
+		/** reduce Array to a keyed-Object */										keyedBy<S>(...keys: (keyof T)[]): Record<S, T[]>;
+		/** reduce Array to a keyed-Object, mapped */						keyedBy<S>(mapfn: (value: T, index: number) => Record<S, T[]>);
+		/** reduce Array to a keyed-Object */										groupBy<S>(...keys: (keyof T)[]): Record<S, T[]>;
+		/** reduce Array to a keyed-Object, mapped */						groupBy<S>(mapfn: (value: T, index: number) => Record<S, T[]>);
 
 		/** return ordered Array-of-objects */									orderBy(...keys: (PropertyKey | SortBy)[]): T[];
 		/** return ordered Array-of-objects, mapped */					orderBy<K extends keyof T>(mapfn: (value: T, index: number, array: T[]) => K, thisArg?: any): K[];

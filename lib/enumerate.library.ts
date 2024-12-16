@@ -1,6 +1,6 @@
 import { isNumeric } from '@module/shared/number.library.js';
 import { allEntries } from '@module/shared/reflect.library.js';
-import { Entry, Index, isArray, isNumber } from '@module/shared/type.library.js';
+import { type Entry, type Index, isArray, isNumber } from '@module/shared/type.library.js';
 
 /**
  * Typescript Enums have three types:  
@@ -31,7 +31,7 @@ export const enumValues = <T extends {}>(enumType: T) =>		// Enum values
 
 /** array of Enum [key, value] tuple */
 export const enumEntries = <T extends {}>(enumType: T) => {
-	const entries = allEntries<T>({ ...enumType });							// Enum entries
+	const entries = allEntries<T>({ ...enumType });						// Enum entries
 	const type1 = entries																			// only numeric Enum values
 		.filter(([_, val]) => isNumber(val));
 	const type2 = entries																			// only non-numeric Enum keys
@@ -50,8 +50,8 @@ type helper<T> = {
 	/** array of Enum values */																values(): T[keyof T][];
 	/** tuple of Enum entries */															entries(): [keyof T, T[keyof T]][];
 	/** reverse lookup of Enum key by value */								keyOf(val: T[keyof T]): keyof T;
-	/** Iterator for Enum */																	[Symbol.iterator](): Iterator<Entry<T extends {} ? T : never>>;
-	/** string tag */																					[Symbol.toStringTag](): string;
+	/** Iterator for Enum */[Symbol.iterator](): Iterator<Entry<T extends {} ? T : never>>;
+	/** string tag */[Symbol.toStringTag](): string;
 }
 export type Enum<T> = Readonly<Omit<T, keyof helper<T>>>
 type Wrap<T> = Readonly<T & helper<T>>
@@ -72,9 +72,9 @@ export function enumify<const T extends Record<keyof T, keyof any>>(list: T) {
 
 	const enumType = Object.defineProperties(stash, {					// helper methods
 		enum: { value: () => ({ ...stash }) },									// without helper methods
-		count: { value: () => enumCount(stash) },
-		keys: { value: () => enumKeys(stash) },
-		values: { value: () => enumValues(stash) },
+		count: { value: () => entries.length },
+		keys: { value: () => entries.map(([key, _]) => key) },
+		values: { value: () => entries.map(([_, val]) => val) },
 		entries: { value: () => entries },
 		keyOf: { value: (val: string | number) => reverse[val] },
 		[Symbol.toStringTag]: ({ get: () => 'Enum' }),
