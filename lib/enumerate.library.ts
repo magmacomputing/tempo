@@ -1,6 +1,6 @@
-import { isNumeric } from '@module/shared/number.library.js';
-import { allEntries } from '@module/shared/reflect.library.js';
-import { type Entry, type Index, isArray, isNumber } from '@module/shared/type.library.js';
+import { isNumeric } from '@core/shared/number.library.js';
+import { allEntries } from '@core/shared/reflect.library.js';
+import { type Entry, type Index, isArray, isNumber } from '@core/shared/type.library.js';
 
 /**
  * Typescript Enums have three types:  
@@ -53,7 +53,7 @@ type helper<T> = {
 	/** Iterator for Enum */[Symbol.iterator](): Iterator<Entry<T extends {} ? T : never>>;
 	/** string tag */[Symbol.toStringTag](): string;
 }
-export type Enum<T> = Readonly<Omit<T, keyof helper<T>>>
+export type Enumify<T> = Readonly<Omit<T, keyof helper<T>>>
 type Wrap<T> = Readonly<T & helper<T>>
 
 /**
@@ -61,8 +61,8 @@ type Wrap<T> = Readonly<T & helper<T>>
  */
 export function enumify<const T extends (string | number)[]>(...list: T[]): Wrap<Index<T>>;
 export function enumify<const T extends ReadonlyArray<string | number>>(...list: T[]): Wrap<Index<T>>;
-export function enumify<const T extends Record<keyof T, keyof any>>(list: T): Wrap<T>;
-export function enumify<const T extends Record<keyof T, keyof any>>(list: T) {
+export function enumify<const T extends Record<keyof T, any>>(list: T): Wrap<T>;
+export function enumify<const T extends Record<keyof T, any>>(list: T) {
 	const stash = isArray(list)																// clone original Enum as an Object
 		? (list as (string | number)[]).reduce((acc, itm, idx) => Object.assign(acc, { [itm]: idx }), {})
 		: { ...list }
@@ -77,7 +77,7 @@ export function enumify<const T extends Record<keyof T, keyof any>>(list: T) {
 		values: { value: () => entries.map(([_, val]) => val) },
 		entries: { value: () => entries },
 		keyOf: { value: (val: string | number) => reverse[val] },
-		[Symbol.toStringTag]: ({ get: () => 'Enum' }),
+		[Symbol.toStringTag]: ({ get: () => 'Enumify' }),
 		[Symbol.iterator]: {
 			value: () => {
 				const iterator = entries[Symbol.iterator]();

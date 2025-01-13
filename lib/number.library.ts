@@ -1,6 +1,6 @@
-import { asArray } from '@module/shared/array.library.js';
-import { asString } from '@module/shared/string.library.js';
-import { asType, isInteger, isString, type TValues } from '@module/shared/type.library.js';
+import { asArray } from '@core/shared/array.library.js';
+import { asString } from '@core/shared/string.library.js';
+import { asType, isInteger, isString, type TValues } from '@core/shared/type.library.js';
 
 /** convert String to Number */
 export function asNumber(str?: string | number | bigint) {
@@ -19,9 +19,9 @@ export function asInteger<T extends string | number | bigint>(str?: T) {
 		case 'String':
 			return /^[0-9]+n$/.test(arg.value)										// String representation of a BigInt
 				? BigInt(arg.value.slice(0, -1))
-				: arg.value;
+				: BigInt(arg.value);
 		default:
-			return str as Exclude<T, number>;
+			return str as Exclude<T, string | number>;
 	}
 }
 
@@ -53,7 +53,7 @@ export const ifNumeric = (str?: string | number | bigint, stripZero = false) => 
 		case isString(str) && /^[0-9]+n$/.test(str):						// string representation of a BigInt
 			return asInteger(str);
 
-		case isNumeric(str) && (!str!.toString().startsWith('0') || stripZero):
+		case isNumeric(str) && (!str?.toString().startsWith('0') || stripZero):
 			return asNumber(str);
 
 		default:

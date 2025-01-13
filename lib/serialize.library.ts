@@ -1,10 +1,9 @@
-import { Tempo } from '@module/shared/tempo.class.js';
-import { curry } from '@module/shared/function.library.js';
-import { isNumeric } from '@module/shared/number.library.js';
-import { enumify } from '@module/shared/enumerate.library.js';
-import { allEntries } from '@module/shared/reflect.library.js';
+import { curry } from '@core/shared/function.library.js';
+import { isNumeric } from '@core/shared/number.library.js';
+import { enumify } from '@core/shared/enumerate.library.js';
+import { allEntries } from '@core/shared/reflect.library.js';
 
-import { isType, asType, isEmpty, isDefined, isUndefined, isNullish, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types, isSymbolFor, isSymbol, TypeValue } from '@module/shared/type.library.js';
+import { isType, asType, isEmpty, isDefined, isUndefined, isNullish, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types, isSymbolFor, isSymbol } from '@core/shared/type.library.js';
 
 // be aware that 'structuredClone' preserves \<undefined> values...  
 // but JSON.stringify() does not
@@ -325,13 +324,12 @@ function typeify(json: Record<string, any>, sentinel?: Function) {
 			return new Set(value);
 
 		case 'Tempo':
-			return new Tempo(value);															// TODO
-
+		// return new Tempo(value);															// TODO
 		case 'Record':
 		// return Record(obj.value) ;														// TODO
 		case 'Tuple':
 		// return Tuple.from(obj.value) ;												// TODO
-		case 'Enum':
+		case 'Enumify':
 		// return enumify(obj.value);														// TODO
 
 		default:

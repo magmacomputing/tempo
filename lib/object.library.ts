@@ -1,5 +1,5 @@
-import { clone } from '@module/shared/serialize.library.js';
-import { isObject, isArray, isString, isNull, isUndefined, isReference, isFunction, type TValues } from '@module/shared/type.library.js';
+import { allEntries } from '@core/shared/reflect.library.js';
+import { isObject, isArray, isString, isNull, isUndefined, isReference, isFunction, type TValues, isDefined } from '@core/shared/type.library.js';
 
 const regex = /(?<matchWord>.*)\[(?<matchIdx>.)\]$/;				// a pattern to find array-references
 
@@ -84,10 +84,10 @@ export const quoteObj = (obj: any) => {
 
 /** copy enumerable properties to a new Object */
 export const asObject = <T>(obj: any) => {
-	if (obj === null || !(obj instanceof Object))
+	if (obj === null || !isObject(obj))
 		return obj;
 
-	const temp: any = (obj instanceof Array) ? [] : {};
+	const temp: any = isArray(obj) ? [] : {};
 
 	for (const key in obj)
 		temp[key] = asObject(obj[key]);
@@ -146,6 +146,16 @@ export const getMethods = (obj: any, all = false) => {
 	return [...properties.keys()].filter((key: any) => isFunction(obj[key]));
 }
 
+/** remove undefined values from Object */
+export const ifDefined = <T extends Record<PropertyKey, any>>(obj: T) => {
+	return allEntries(obj)
+		.reduce((acc, [key, val]) => {
+			if (isDefined(val))
+				acc[key] = val;
+			return acc;
+		}, {} as T)
+}
+
 export const countProperties = (obj = {}) =>
 	Object
 		.getOwnPropertyNames(obj)
@@ -164,12 +174,3 @@ export const compareObject = (obj1 = {}, obj2 = {}) => {
 /** extend an object with the properties of another */
 export const extend = <T extends {}, U>(obj: T, ...objs: U[]) =>
 	Object.assign(obj, ...objs) as T;
-
-/** get a string-array of 'getter' names for a Class */
-export const getAccessors = <T>(obj: any = {}) => {
-	const getters = Object.getOwnPropertyDescriptors(obj.prototype);
-
-	return Object.entries(getters)
-		.filter(([_, descriptor]) => isFunction(descriptor.get))
-		.map(([key, _]) => key as keyof T)
-}
