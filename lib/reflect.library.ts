@@ -1,7 +1,8 @@
-import { isArray, isEmpty } from '@module/shared/type.library.js';
-import { clone } from '@module/shared/serialize.library.js';
+import { isArray, isEmpty } from '@core/shared/type.library.js';
+import { clone } from '@core/shared/serialize.library.js';
 
 type Obj = Record<PropertyKey, any> | any[]
+type Tuple<T> = [keyof T, T[keyof T]]
 
 /** exclude top-level keys from a copy of an Object */
 export function exclude<T extends Obj>(obj: T, ...keys: (keyof T)[]) {
@@ -34,5 +35,5 @@ export function allKeys<T extends Obj>(json: T) {
 /** collect string | number | symbol key'd objects */
 export function allEntries<T extends Obj>(json: T) {
   return allKeys<T>(json)                                   // Object.entries() would discard symbol-keys
-    .map(key => [key, json[key]] as [keyof T, T[keyof T]])  // cast as tuple
+    .map(key => [key, json[key]] as Tuple<T>)  // cast as tuple
 }

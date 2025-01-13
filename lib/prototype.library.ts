@@ -1,9 +1,9 @@
 // @ts-nocheck
 // no typescript checking to get around the 'this' binding warnings
 
-import { stringify } from '@module/shared/serialize.library.js';
-import { trimAll, toProperCase } from '@module/shared/string.library.js';
-import { asArray, groupKey, sortKey, type SortBy } from '@module/shared/array.library.js';
+import { stringify } from '@core/shared/serialize.library.js';
+import { trimAll, toProperCase } from '@core/shared/string.library.js';
+import { asArray, byKey, byLkp, sortKey, type SortBy } from '@core/shared/array.library.js';
 
 // Prototype extensions
 // Remember to define any imports as a Function Declaration (not a Function Expression)
@@ -54,10 +54,10 @@ declare global {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 declare global {
 	interface Array<T> {
-		/** reduce Array to a keyed-Object */										keyedBy<S>(...keys: (keyof T)[]): Record<S, T[]>;
-		/** reduce Array to a keyed-Object, mapped */						keyedBy<S>(mapfn: (value: T, index: number) => Record<S, T[]>);
-		/** reduce Array to a keyed-Object */										groupBy<S>(...keys: (keyof T)[]): Record<S, T[]>;
-		/** reduce Array to a keyed-Object, mapped */						groupBy<S>(mapfn: (value: T, index: number) => Record<S, T[]>);
+		/** reduce Array to a keyed Object[] */									keyedBy<S extends string>(...keys: (keyof T)[]): Record<S, T[]>;
+		/** reduce Array to a keyed Object[], mapped */					keyedBy<S extends string>(mapfn: (value: T, index: number) => Record<S, T[]>);
+		/** reduce Array to a keyed single-Object */						keyedLkp<S extends string>(...keys: (keyof T)[]): Record<S, T>;
+		/** reduce Array to a keyed single-Object, mapped */		keyedLkp<S extends string>(mapfn: (value: T, index: number) => Record<S, T>);
 
 		/** return ordered Array-of-objects */									orderBy(...keys: (PropertyKey | SortBy)[]): T[];
 		/** return ordered Array-of-objects, mapped */					orderBy<K extends keyof T>(mapfn: (value: T, index: number, array: T[]) => K, thisArg?: any): K[];
@@ -80,9 +80,10 @@ function sorted(...keys: (PropertyKey | SortBy)[]) { return sortKey(this, ...key
 patch(Array, 'orderBy', sorted);														// order array by named keys
 patch(Array, 'sortBy', sorted);															// sort array by named keys
 
-function grouped(key: Function | (keyof T), ...keys: (keyof T)[]) { return groupKey(this, ...keys); }
-patch(Array, 'keyedBy', grouped);														// reduce array by named keys
-patch(Array, 'groupBy', grouped);														// reduce array by named keys
+function keyed(key: Function | (keyof T), ...keys: (keyof T)[]) { return byKey(this, key, ...keys); }
+function lookup(key: Function | (keyof T), ...keys: (keyof T)[]) { return byLkp(this, key, ...keys); }
+patch(Array, 'keyedBy', keyed);															// reduce array by named keys
+patch(Array, 'keyedLkp', lookup);														// reduce array by named keys, only one entry per key
 
 patch(Array, 'tap', function (fn: Function) {
 	fn(this);																									// run an arbitrary function

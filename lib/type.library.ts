@@ -1,10 +1,7 @@
-import { allKeys } from '@module/shared/reflect.library.js';
-import type { Tempo } from '@module/shared/tempo.class.js';
-import type { Pledge } from '@module/shared/pledge.class.js';
-import type { Enum } from '@module/shared/enumerate.library.js';
-
 // TODO:  remove this after Temporal reaches Stage-4
 import { Temporal } from '@js-temporal/polyfill';
+import { Tempo } from '@core/shared/tempo.class.js';
+import { Pledge } from '@core/shared/pledge.class.js';
 
 /** the primitive type reported by toStringTag() */
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
@@ -45,7 +42,7 @@ export const asType = <T>(obj?: T, ...instances: Instance[]) => {
 	const type = getType(obj, ...instances);
 	return ({
 		type,
-		value: type === 'Enum' ? (obj as any).enum?.() : obj,		// kludge to return enum-type
+		value: type === 'Enumify' ? (obj as any).enum?.() : obj,		// kludge to return enum-type
 	}) as TypeValue<T>
 }
 
@@ -63,7 +60,8 @@ export const isInteger = <T>(obj?: T): obj is Extract<T, bigint> => isType(obj, 
 export const isDigit = <T>(obj?: T): obj is Extract<T, number | bigint> => isType(obj, 'Number', 'BigInt');
 export const isBoolean = <T>(obj?: T): obj is Extract<T, boolean> => isType(obj, 'Boolean');
 export const isArray = <T>(obj: T | T[]): obj is Array<T> => isType(obj, 'Array');
-export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => protoType(obj) === 'Object' && allKeys(obj).includes('length') && allKeys(obj).every(key => key === 'length' || !isNaN(Number(key)));
+// export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => protoType(obj) === 'Object' && Object.keys(obj).every(key => key === 'length' || !isNaN(Number(key)));
+export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => protoType(obj) === 'Object' && 'length' in obj && Object.keys(obj).every(key => key === 'length' || !isNaN(Number(key)));
 export const isObject = <T>(obj?: T): obj is Extract<T, Record<any, any>> => isType(obj, 'Object');
 export const isDate = <T>(obj?: T): obj is Extract<T, Date> => isType(obj, 'Date');
 export const isRegExp = <T>(obj?: T): obj is Extract<T, RegExp> => isType(obj, 'RegExp');
@@ -89,9 +87,9 @@ export const isError = (err: unknown): err is Error => isType(err, 'Error');
 export const isTemporal = <T>(obj: T): obj is Extract<T, Temporals> => protoType(obj).startsWith('Temporal.');
 
 // non-standard Objects
-export const isEnum = <E>(obj: unknown): obj is Enum<E> => isType(obj, 'Enum');
+// export const isEnumify = <E>(obj: unknown): obj is Enumify<E> => isType(obj, 'Enumify');
 export const isTempo = (obj: unknown): obj is Tempo => isType(obj, 'Tempo');
-export const isPledge = <P>(obj: unknown): obj is Pledge<P> => isType(obj, 'Pledge');
+// export const isPledge = <P>(obj: unknown): obj is Pledge<P> => isType(obj, 'Pledge');
 
 export const nullToZero = <T>(obj: T) => obj ?? 0;
 export const nullToEmpty = <T>(obj: T) => obj ?? '';
@@ -100,14 +98,14 @@ export const nullToValue = <T, R>(obj: T, value: R) => obj ?? value;
 /** object has no values */
 export const isEmpty = <T>(obj?: T) => false
 	|| isNullish(obj)
-	|| (isObject(obj) && allKeys(obj).length === 0)
+	|| (isObject(obj) && Object.keys(obj).length === 0)
 	|| (isString(obj) && obj.trim().length === 0)
 	|| (isNumber(obj) && isNaN(obj) === false)
 	|| (isArray(obj) && obj.length === 0)
 	|| (isSet(obj) && obj.size === 0)
 	|| (isMap(obj) && obj.size === 0)
 	|| (isTuple(obj) && obj.length === 0)
-	|| (isRecord(obj) && allKeys(obj).length === 0)
+	|| (isRecord(obj) && Object.keys(obj).length === 0)
 
 export function assertCondition(condition: boolean, message?: string): asserts condition {
 	if (!condition)
@@ -139,7 +137,7 @@ export type OneKey<K extends keyof any, V, KK extends keyof any = K> =
 export type ParseInt<T> = T extends `${infer N extends number}` ? N : never
 
 type Primitive = string | number | bigint | boolean | symbol | void | undefined | null // TODO: add  record | tuple
-type Instance = | { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling)
+type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling)
 export type Temporals = Exclude<keyof typeof Temporal, 'Now'>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -176,7 +174,7 @@ export type Types =
 	| 'Temporal.PlainYearMonth'
 	| 'Temporal.PlainMonthDay'
 
-	| 'Enum'
+	| 'Enumify'
 	| 'Tempo'
 	| 'Pledge'
 
@@ -218,7 +216,7 @@ export type TypeValue<T> =
 	| { type: 'Temporal.PlainYearMonth', value: Temporal.PlainYearMonth }
 	| { type: 'Temporal.PlainMonthDay', value: Temporal.PlainMonthDay }
 
-	| { type: 'Enum', value: Record<PropertyKey, T> }
+	| { type: 'Enumify', value: Record<PropertyKey, T> }
 	| { type: 'Tempo', value: Tempo }
 	| { type: 'Pledge', value: Pledge<T> }
 
@@ -248,12 +246,19 @@ export type Entry<T extends Record<PropertyKey, any>> =
 /** Object.entries<T> as [number,T][] */
 export type Entries<T extends Record<PropertyKey, any>> = ReadonlyArray<Entry<T>>
 export type Inverse<T> = { [K in keyof T as (T[K] & PropertyKey)]: K };
-export type Index<T extends readonly any[]> = { [K in Entry<T> as `${K[1]}`]: ParseInt<K[0]> } //& { [K in Entry<T> as K[0]]: K[1] }
+export type Index<T extends readonly any[]> = { [K in Entry<T> as `${K[1]}`]: ParseInt<K[0]> }
 
 // https://stackoverflow.com/questions/39494689/is-it-possible-to-restrict-number-to-a-certain-range/70307091#70307091
-type Enumerate<N extends number, Acc extends number[] = []> = Acc['length'] extends N
+type EnumerateMin<N extends number, Acc extends number[] = []> = Acc['length'] extends N
 	? Acc[number]
-	: Enumerate<N, [...Acc, Acc['length']]>
+	: EnumerateMin<N, [...Acc, Acc['length']]>
+type EnumerateMax<N extends number, Acc extends number[] = []> = Acc['length'] extends N
+	? ([...Acc, Acc['length']])[number]												// add one more element to make 'inclusive' upper-range
+	: EnumerateMax<N, [...Acc, Acc['length']]>
 
 /** declare expected range of values */
-export type IntRange<F extends number, T extends number> = Exclude<Enumerate<T>, Enumerate<F>>
+export type IntRange<Lower extends number, Upper extends number> = Exclude<EnumerateMax<Upper>, EnumerateMin<Lower>>
+
+declare const __brand: unique symbol
+type Brand<B> = { [__brand]: B }
+export type Branded<T, B> = T & Brand<B>

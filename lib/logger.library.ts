@@ -1,38 +1,49 @@
-import { sprintf } from '@module/shared/string.library.js';
-import { isString } from '@module/shared/type.library.js';
+import { sprintf } from '@core/shared/string.library.js';
+import { isString } from '@core/shared/type.library.js';
 
 /** setup a reference for debug(), bind the current component name */
 export const dbg = (self: any, component?: string) =>
 	lprintf.bind(self, component || self.constructor.name);
 
-/** console.log() formatter */
-export const lprintf = (name: string = '', fmt?: any, ...msg: any[]) => {
-	const [type, log] = fprintf(fmt, ...msg);
+enum Level {
+	Log = 'log',
+	Debug = 'debug',
+	Info = 'info',
+	Warn = 'warn',
+	Error = 'error',
+}
+
+/** console[method]() formatter */
+export const lprintf = (method: Logger, name: string = '', fmt?: any, ...msg: any[]) => {
+	const log = fprintf(fmt, ...msg);
 	const sep = isString(fmt) && (fmt.includes(':') || msg.length === 0)
 		? '.'
 		: ': '
 	const info = `${name}${sep}${log}`;
 
-	console[type](info);
+	console[method](info);
 	return info;
 }
 
-enum Level {
-	Debug,
-	Verbose,
-	Info,
-	Warn,
-	Error,
-	Silent,
+class Logify {
+	static log = Logify.#log.bind(this, Level.Log);
+	static info = Logify.#log.bind(this, Level.Info);
+	static warn = Logify.#log.bind(this, Level.Warn);
+	static debug = Logify.#log.bind(this, Level.Debug);
+	static error = Logify.#log.bind(this, Level.Error);
+	static #log(method = Level.Info, ...msg: any[]) {
+		console[method](...msg);
+	}
 }
+
 export type Logger = Extract<keyof Console, 'log' | 'info' | 'debug' | 'warn' | 'error'>;
 
-/** break a fmt/msg into a Console[type] and 'message' */
+/** break a fmt/msg into a Console[method] and 'message' */
 const fprintf = (fmt?: any, ...msg: any[]) => {
 	let type = 'log';
 
-	if (isString<string>(fmt)) {
-		const keys = ['log', 'info', 'debug', 'warn', 'error'] as Logger[];
+	if (isString(fmt)) {
+		const keys = ['log', 'info', 'debug', 'warn', 'error'] as Logify[];
 		const match = fmt.match(/(\w*;)/i) ?? [];
 		const part = match[1];
 
@@ -44,5 +55,5 @@ const fprintf = (fmt?: any, ...msg: any[]) => {
 
 	const message = sprintf(fmt, ...msg);
 
-	return [type, message] as [Logger, string];
+	return message as Logify;
 }

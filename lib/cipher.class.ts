@@ -1,7 +1,7 @@
-import { toHex } from '@module/shared/number.library.js';
-import { asString } from '@module/shared/string.library.js';
-import { stringify, objectify } from '@module/shared/serialize.library.js';
-import { base64DecToArr, base64EncArr, strToUTF8Arr, UTF8ArrToStr } from '@module/shared/buffer.library.js';
+import { toHex } from '@core/shared/number.library.js';
+import { asString } from '@core/shared/string.library.js';
+import { stringify, objectify } from '@core/shared/serialize.library.js';
+import { base64DecToArr, base64EncArr, strToUTF8Arr, UTF8ArrToStr } from '@core/shared/buffer.library.js';
 
 /** Static-only cryptographic methods */
 export class Cipher {
@@ -39,7 +39,7 @@ export class Cipher {
 		return base64EncArr(uint8);															// convert to string
 	}
 
-	static hash = async (source: string | Object, len: number = 64, alg: AlgorithmIdentifier = 'SHA-256') => {
+	static hash = async (source: string | Object, len = 64, alg = 'SHA-256') => {
 		const buffer = Cipher.encodeBuffer(asString(source));
 		const hash = await globalThis.crypto.subtle.digest(alg, buffer);
 

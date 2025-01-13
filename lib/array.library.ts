@@ -1,8 +1,8 @@
-import { isTempo } from '@module/shared/tempo.class.js';
-import { asString } from '@module/shared/string.library.js';
-import { getPath } from '@module/shared/object.library.js';
-import { cloneify, stringify } from '@module/shared/serialize.library.js';
-import { asType, isNumber, isDate, isIterable, isString, isObject, isDefined, isArrayLike, nullToValue, isFunction } from '@module/shared/type.library.js';
+import { asString } from '@core/shared/string.library.js';
+import { getPath } from '@core/shared/object.library.js';
+import { cloneify, stringify } from '@core/shared/serialize.library.js';
+import { isType, isNumber, isDate, isTempo, isIterable, isString, isObject, isDefined, isArrayLike, nullToValue, isFunction, isUndefined } from '@core/shared/type.library.js';
+import { allEntries } from './reflect.library';
 
 /** Coerce {value} into {Array\<value>} ( if not already Array<> ), with optional {fill} Object */
 export function asArray<T>(arr: Exclude<ArrayLike<T>, string> | undefined): T[];
@@ -12,10 +12,9 @@ export function asArray<T, K>(arr: T | Iterable<T> | ArrayLike<T> = [], fill?: K
 	switch (true) {
 		case isArrayLike<T>(arr):																// allow for {length:nn} objects
 		case isIterable<T>(arr) && !isString(arr):							// dont iterate Strings
-			const args = asType(fill);														// get type of {fill} parameter
 
 			return Array.from<T, K>(arr as T[], val => {
-				return args.type === 'Undefined' || val !== void 0
+				return isType(fill, 'Undefined') || val !== void 0
 					? val as unknown as K															// if no {fill}, then use val
 					: cloneify(fill as K)															// clone {fill} to create new Objects
 			});
@@ -96,19 +95,29 @@ export function sortKey<T extends Record<PropertyKey, any>>(array: T[], ...keys:
 type GroupFn<T> = (itm: T) => keyof T
 type KeyOf<T> = keyof T
 /** return an object grouped by key-fields in an array of documents */
-export function groupKey<T>(array: T[], mapFn: GroupFn<T>): Record<KeyOf<T>, T[]>
-export function groupKey<T>(array: T[], key: KeyOf<T>, ...keys: KeyOf<T>[]): Record<KeyOf<T>, T[]>
-export function groupKey<T>(array: T[], mapFn: KeyOf<T> | GroupFn<T>, ...keys: KeyOf<T>[]) {
+// export function byKey<T>(array: T[], mapFn: GroupFn<T>): Record<KeyOf<T>, T[]>
+// export function byKey<T>(array: T[], key: KeyOf<T>, ...keys: KeyOf<T>[]): Record<KeyOf<T>, T[]>
+export function byKey<T>(array: T[], mapFn: KeyOf<T> | GroupFn<T>, ...keys: KeyOf<T>[]) {
 	if (isFunction(mapFn))
 		return Object.groupBy(array, mapFn);
 
-	const keyed = [mapFn]																			// assume mapFn is instead a keyof T
+	const keyed = [mapFn]																			// assume mapFn is a keyof T
 		.concat(keys)																						// append any trailing keyof T[]
 		.flat() as unknown as KeyOf<T>[];												// flatten Array-of-Array
 
 	return Object.groupBy(array, itm =>												// group an array into an object with named keys
 		keyed
-			.map(key => stringify(itm[key]))
+			.map(key => isUndefined(itm[key]) ? '' : stringify(itm[key]))
 			.join('.')
 	)
+}
+
+/** return an object grouped by key-fields in an array of documents, but only the 'last' entry */
+// export function byLkp<T>(array: T[], mapFn: GroupFn<T>): Record<KeyOf<T>, T>
+// export function byLkp<T>(array: T[], key: KeyOf<T>, ...keys: KeyOf<T>[]): Record<KeyOf<T>, T>
+export function byLkp<T>(array: T[], mapFn: KeyOf<T> | GroupFn<T>, ...keys: KeyOf<T>[]) {
+	const group = byKey(array, mapFn, ...keys);
+
+	return allEntries(group)
+		.reduce((acc, [key, grp]) => Object.assign(acc, { [key]: grp?.pop() }), {} as Record<string, T>)
 }

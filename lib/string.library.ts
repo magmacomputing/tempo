@@ -1,6 +1,6 @@
-import { asNumber, isNumeric } from '@module/shared/number.library.js';
-import { stringify } from '@module/shared/serialize.library.js';
-import { isString, isObject, isNullish, assertCondition, assertString, nullToValue } from '@module/shared/type.library.js';
+import { stringify } from '@core/shared/serialize.library.js';
+import { asNumber, isNumeric } from '@core/shared/number.library.js';
+import { isString, isObject, isNullish, assertCondition, assertString, nullToValue } from '@core/shared/type.library.js';
 
 // General <string> functions
 
@@ -9,8 +9,7 @@ import { isString, isObject, isNullish, assertCondition, assertString, nullToVal
 // (because they are referenced in prototype.library)
 
 /**
- * clean a string to remove some standard control-characters (tab, line-feed, carriage-return)  
- * and trim redundant spaces.  
+ * clean a string to remove some standard control-characters (tab, line-feed, carriage-return) and trim redundant spaces.  
  * allow for optional RegExp to specify additional match
  */
 export function trimAll(str: string | number, pat?: RegExp) {
@@ -26,22 +25,23 @@ export function trimAll(str: string | number, pat?: RegExp) {
 /** every word has its first letter capitalized */
 export function toProperCase<T extends string>(...str: T[]) {
 	return str
+		.flat()																									// in case {str} was already an array
 		.map(text => text.replace(/\w\S*/g,
 			word => word.charAt(0).toUpperCase() + word.substring(1).toLowerCase()))
 		.join(' ') as T
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+const PAT = /[A-Z\xC0-\xD6\xD8-\xDE]?[a-z\xDF-\xF6\xF8-\xFF]+|[A-Z\xC0-\xD6\xD8-\xDE]+(?![a-z\xDF-\xF6\xF8-\xFF])|\d+/g;
 export const toCamelCase = <T extends string>(sentence: T) => {
-	let [word, ...rest] = sentence.match(/[A-Z\xC0-\xD6\xD8-\xDE]?[a-z\xDF-\xF6\xF8-\xFF]+|[A-Z\xC0-\xD6\xD8-\xDE]+(?![a-z\xDF-\xF6\xF8-\xFF])|\d+/g) ?? [''];
+	let [word, ...rest] = sentence.match(PAT) ?? [''];
 
 	if (isNumeric(word)) {
 		word = rest[0];
 		rest.splice(0, 1);
 	}
 
-	return (sentence.startsWith('_') ? '_' : '') + word.toLowerCase() + toProperCase(...rest).replace(/ /g, '') as T;
+	return (sentence.startsWith('_') ? '_' : '') + word.toLocaleLowerCase() + toProperCase(...rest).replace(/ /g, '') as T;
 }
 
 const HEX = 16;
