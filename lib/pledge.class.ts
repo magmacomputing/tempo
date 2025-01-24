@@ -1,6 +1,8 @@
 import { asArray } from '@core/shared/array.library.js';
+import { Logger } from '@core/shared/logger.library.js';
+import { sprintf } from '@core/shared/string.library.js';
 import { ifDefined } from '@core/shared/object.library.js';
-import { isObject } from '@core/shared/type.library.js';
+import { isEmpty, isObject } from '@core/shared/type.library.js';
 
 /**
  * Wrap a Promise's resolve/reject/finally methods for later fulfilment.  
@@ -16,32 +18,56 @@ export class Pledge<T> {
 	static #static = {} as Pledge.Constructor;
 
 	/** initialize future Pledge instances */
-	static init(arg: Pledge.Constructor | string) {
+	static init(arg?: Pledge.Constructor | string) {
 		if (isObject(arg)) {
-			Object.assign(Pledge.#static, {
-				tag: arg.tag,
-				...{ ...ifDefined({ debug: arg?.debug, catch: arg?.catch }) },
-				...{ ...ifDefined({ onResolve: arg.onResolve, onReject: arg.onReject, onSettle: arg.onSettle }) }
-			})
+			if (isEmpty(arg))
+				Pledge.#static = {};																// reset static values
+
+			Object.assign(Pledge.#static,
+				ifDefined({ tag: arg.tag, debug: arg.debug, catch: arg.catch, }),
+				ifDefined({ onResolve: arg.onResolve, onReject: arg.onReject, onSettle: arg.onSettle, }),
+			)
 		} else {
-			this.#static.tag = arg;
+			Object.assign(Pledge.#static, ifDefined({ tag: arg, }));
 		}
+
+		if (Pledge.#static.debug)
+			console.log('Pledge: ', Pledge.#static);							// debug
+
+		return Pledge.status;
 	}
 
 	static get status() {
-		return JSON.parse(JSON.stringify(Pledge.#static)) as Pledge.Status<unknown>;
+		return Pledge.#static as Pledge.Status<unknown>;
+	}
+
+	#info = this.#debug.bind(this, 'info');
+	#warn = this.#debug.bind(this, 'warn');
+	#error = this.#debug.bind(this, 'error');
+	#debug(method: Logger = 'info', ...msg: any[]) {
+		if (this.status.debug)
+			console[method](sprintf('pledge:', ...msg));
+	}
+	/** use catch:boolean to determine whether to throw or return  */
+	#catch(...msg: any[]) {
+		if (this.status.catch) {
+			this.#warn(...msg);																		// catch, but warn {error}
+			return;
+		}
+
+		this.#error(...msg);																		// assume {error}
+		throw new Error(sprintf('pledge:', ...msg));
 	}
 
 	constructor(arg?: Pledge.Constructor | string) {
 		this.#pledge = Promise.withResolvers();
-		this.#status = { state: Pledge.STATE.Pending };
+		this.#status = { state: Pledge.STATE.Pending, ...Pledge.#static };
 
 		if (isObject(arg)) {
-			Object.assign(this.#status, {
-				tag: arg.tag,
-				state: Pledge.STATE.Pending,
-				...{ ...ifDefined({ debug: arg?.debug ?? Pledge.#static.debug, catch: arg?.catch ?? Pledge.#static.catch, }) }
-			})
+			Object.assign(this.#status,
+				ifDefined({ tag: Pledge.#static.tag, debug: Pledge.#static.debug, catch: Pledge.#static.catch }),
+				ifDefined({ tag: arg.tag, debug: arg.debug, catch: arg.catch, }),
+			)
 
 			asArray(Pledge.#static.onResolve)											// stack any static onResolve actions
 				.concat(asArray(arg.onResolve))											// stack any instance onResolve actions
@@ -53,10 +79,10 @@ export class Pledge<T> {
 				.concat(asArray(arg.onSettle))											// stack any instance onSettle actions
 				.forEach(settle => this.#pledge.promise.finally(settle));
 
-			if (this.#status.catch ?? Pledge.#static.catch)				// stack a 'catch-all'
-				this.#pledge.promise.catch(_ => this.#status.error);
+			if (this.#status.catch)																// stack a 'catch-all'
+				this.#pledge.promise.catch(_ => this.#catch(this.#status, this.#status.error));
 		} else {
-			this.#status.tag = arg;
+			Object.assign(this.#status, ifDefined({ tag: arg ?? Pledge.#static.tag, }));
 		}
 	}
 
@@ -86,6 +112,7 @@ export class Pledge<T> {
 			this.#status.state = Pledge.STATE.Resolved;
 			this.#pledge.resolve(value);													// resolve, then trigger any Pledge.onResolve, then Pledge.onSettle
 		}
+		else this.#warn(this.#status, `Pledge was already ${this.status.state}`);
 
 		return this.#pledge.promise;
 	}
@@ -96,8 +123,13 @@ export class Pledge<T> {
 			this.#status.state = Pledge.STATE.Rejected;
 			this.#pledge.reject(error);														// reject, then trigger any Pledge.onReject, then Pledge.onSettle
 		}
+		else this.#warn(this.#status, `Pledge was already ${this.status.state}`);
 
 		return this.#pledge.promise;
+	}
+
+	then(fn: Function) {																			// TODO:  can we make Pledge 'then-able' ?
+
 	}
 }
 
@@ -111,8 +143,8 @@ export namespace Pledge {
 		onResolve?: Pledge.Resolve | Pledge.Resolve[];
 		onReject?: Pledge.Reject | Pledge.Reject[];
 		onSettle?: Pledge.Settle | Pledge.Settle[];
-		catch?: boolean;
 		debug?: boolean;
+		catch?: boolean;
 	}
 
 	export enum STATE {
