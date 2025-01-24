@@ -45,7 +45,7 @@ patch(String, 'toProperCase', function () { return toProperCase(this) });
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 declare global {
 	interface ObjectConstructor {
-		// 		entries<T extends Record<PropertyKey, T>>(object: T): ReadonlyArray<Entry<T>>
+		// 		entries<T extends Entity<T>>(object: T): ReadonlyArray<Entry<T>>
 	}
 }
 

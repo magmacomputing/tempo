@@ -1,7 +1,8 @@
-// TODO:  remove this after Temporal reaches Stage-4
-import { Temporal } from '@js-temporal/polyfill';
 import { Tempo } from '@core/shared/tempo.class.js';
 import { Pledge } from '@core/shared/pledge.class.js';
+
+// TODO:  remove this after Temporal reaches Stage-4
+import { Temporal } from '@js-temporal/polyfill';
 
 /** the primitive type reported by toStringTag() */
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
@@ -42,7 +43,7 @@ export const asType = <T>(obj?: T, ...instances: Instance[]) => {
 	const type = getType(obj, ...instances);
 	return ({
 		type,
-		value: type === 'Enumify' ? (obj as any).enum?.() : obj,		// kludge to return enum-type
+		value: type === 'Enumify' ? (obj as any).enum?.() : obj,// kludge to return enum-type
 	}) as TypeValue<T>
 }
 
@@ -98,14 +99,14 @@ export const nullToValue = <T, R>(obj: T, value: R) => obj ?? value;
 /** object has no values */
 export const isEmpty = <T>(obj?: T) => false
 	|| isNullish(obj)
-	|| (isObject(obj) && Object.keys(obj).length === 0)
+	|| (isObject(obj) && Reflect.ownKeys(obj).length === 0)
 	|| (isString(obj) && obj.trim().length === 0)
 	|| (isNumber(obj) && isNaN(obj) === false)
 	|| (isArray(obj) && obj.length === 0)
 	|| (isSet(obj) && obj.size === 0)
 	|| (isMap(obj) && obj.size === 0)
 	|| (isTuple(obj) && obj.length === 0)
-	|| (isRecord(obj) && Object.keys(obj).length === 0)
+	|| (isRecord(obj) && Reflect.ownKeys(obj).length === 0)
 
 export function assertCondition(condition: boolean, message?: string): asserts condition {
 	if (!condition)
@@ -126,6 +127,9 @@ export type Nullish = null | undefined | void;
 export type TPlural<T extends string> = `${T}s`;
 export type ValueOf<T> = T[keyof T];
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+
+/** Generic Record */
+export type Property<T> = Record<PropertyKey, T>
 
 /** Record with only one-key */
 export type OneKey<K extends keyof any, V, KK extends keyof any = K> =
@@ -183,7 +187,7 @@ export type TypeValue<T> =
 	| { type: 'Number', value: number }
 	| { type: 'BigInt', value: bigint }
 	| { type: 'Boolean', value: boolean }
-	| { type: 'Object', value: Extract<T, Record<PropertyKey, unknown>> }
+	| { type: 'Object', value: Extract<T, Property<unknown>> }
 	| { type: 'Array', value: Array<T> }
 	| { type: 'ArrayLike', value: ArrayLike<T> }
 	| { type: 'Undefined', value: undefined }
@@ -198,13 +202,13 @@ export type TypeValue<T> =
 	| { type: 'Blob', value: Blob }
 	| { type: 'Map', value: Map<any, T> }
 	| { type: 'Set', value: Set<T> }
-	| { type: 'WeakMap', value: WeakMap<Record<PropertyKey, unknown>, T> }
-	| { type: 'WeakSet', value: WeakSet<Record<PropertyKey, unknown>> }
-	// | { type: 'WeakRef', value: WeakRef<Record<PropertyKey, any>, T> }
+	| { type: 'WeakSet', value: WeakSet<Property<unknown>> }
+	| { type: 'WeakMap', value: WeakMap<Property<unknown>, T> }
+	// | { type: 'WeakRef', value: WeakRef<Property<unknown>, T> }
 	| { type: 'Symbol', value: symbol }
 	| { type: 'Error', value: Error }
 
-	| { type: 'Record', value: Record<PropertyKey, T> }				// TODO
+	| { type: 'Record', value: Property<T> }									// TODO
 	| { type: 'Tuple', value: Array<T> }											// TODO
 
 	| { type: 'Temporal', value: Temporals }
@@ -216,9 +220,9 @@ export type TypeValue<T> =
 	| { type: 'Temporal.PlainYearMonth', value: Temporal.PlainYearMonth }
 	| { type: 'Temporal.PlainMonthDay', value: Temporal.PlainMonthDay }
 
-	| { type: 'Enumify', value: Record<PropertyKey, T> }
 	| { type: 'Tempo', value: Tempo }
 	| { type: 'Pledge', value: Pledge<T> }
+	| { type: 'Enumify', value: Property<T> }
 
 // https://dev.to/harry0000/a-bit-convenient-typescript-type-definitions-for-objectentries-d6g
 type TupleEntry<T extends readonly unknown[], I extends unknown[] = [], R = never> =
@@ -226,7 +230,7 @@ type TupleEntry<T extends readonly unknown[], I extends unknown[] = [], R = neve
 	? TupleEntry<Tail, [...I, unknown], R | [`${I['length']}`, Head]>
 	: R
 
-type ObjectEntry<T extends Record<PropertyKey, any>> =
+type ObjectEntry<T extends Property<any>> =
 	T extends object
 	? { [K in keyof T]: [K, Required<T>[K]] }[keyof T] extends infer E
 	? E extends [infer K extends string | number, infer V]
@@ -236,7 +240,7 @@ type ObjectEntry<T extends Record<PropertyKey, any>> =
 	: never
 
 /** if T extends readonly[] => [number, T],   if T extends {} => [key:string, T] */
-export type Entry<T extends Record<PropertyKey, any>> =
+export type Entry<T extends Property<any>> =
 	T extends readonly [unknown, ...unknown[]]
 	? TupleEntry<T>
 	: T extends ReadonlyArray<infer U>
@@ -244,7 +248,7 @@ export type Entry<T extends Record<PropertyKey, any>> =
 	: ObjectEntry<T>
 
 /** Object.entries<T> as [number,T][] */
-export type Entries<T extends Record<PropertyKey, any>> = ReadonlyArray<Entry<T>>
+export type Entries<T extends Property<T>> = ReadonlyArray<Entry<T>>
 export type Inverse<T> = { [K in keyof T as (T[K] & PropertyKey)]: K };
 export type Index<T extends readonly any[]> = { [K in Entry<T> as `${K[1]}`]: ParseInt<K[0]> }
 

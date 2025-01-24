@@ -1,8 +1,8 @@
 import { asString } from '@core/shared/string.library.js';
 import { getPath } from '@core/shared/object.library.js';
+import { ownEntries } from '@core/shared/reflect.library.js';
 import { cloneify, stringify } from '@core/shared/serialize.library.js';
-import { isType, isNumber, isDate, isTempo, isIterable, isString, isObject, isDefined, isArrayLike, nullToValue, isFunction, isUndefined } from '@core/shared/type.library.js';
-import { allEntries } from './reflect.library';
+import { isType, isNumber, isDate, isTempo, isIterable, isString, isObject, isDefined, isArrayLike, nullToValue, isFunction, isUndefined, Property } from '@core/shared/type.library.js';
 
 /** Coerce {value} into {Array\<value>} ( if not already Array<> ), with optional {fill} Object */
 export function asArray<T>(arr: Exclude<ArrayLike<T>, string> | undefined): T[];
@@ -55,7 +55,7 @@ export interface SortBy {
 	default?: any;
 }
 /** provide a sort-function to order a set of keys */
-export function sortBy<T extends Record<PropertyKey, any>>(...keys: (PropertyKey | SortBy)[]) {
+export function sortBy<T extends Property<T>>(...keys: (PropertyKey | SortBy)[]) {
 	const sortOptions = keys																	// coerce string => SortBy
 		.flat()																									// flatten Array-of-Array
 		.map(key => isObject(key) ? key : { field: stringify(key) })	// build Array of sort-options
@@ -88,7 +88,7 @@ export function sortBy<T extends Record<PropertyKey, any>>(...keys: (PropertyKey
 }
 
 /** return an array sorted-by a series of keys */
-export function sortKey<T extends Record<PropertyKey, any>>(array: T[], ...keys: (PropertyKey | SortBy)[]) {
+export function sortKey<T extends Property<any>>(array: T[], ...keys: (PropertyKey | SortBy)[]) {
 	return array.sort(sortBy(...keys));
 }
 
@@ -118,6 +118,6 @@ export function byKey<T>(array: T[], mapFn: KeyOf<T> | GroupFn<T>, ...keys: KeyO
 export function byLkp<T>(array: T[], mapFn: KeyOf<T> | GroupFn<T>, ...keys: KeyOf<T>[]) {
 	const group = byKey(array, mapFn, ...keys);
 
-	return allEntries(group)
+	return ownEntries(group)
 		.reduce((acc, [key, grp]) => Object.assign(acc, { [key]: grp?.pop() }), {} as Record<string, T>)
 }

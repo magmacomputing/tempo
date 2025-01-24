@@ -1,7 +1,7 @@
 import { curry } from '@core/shared/function.library.js';
 import { isNumeric } from '@core/shared/number.library.js';
 import { enumify } from '@core/shared/enumerate.library.js';
-import { allEntries } from '@core/shared/reflect.library.js';
+import { ownEntries } from '@core/shared/reflect.library.js';
 
 import { isType, asType, isEmpty, isDefined, isUndefined, isNullish, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types, isSymbolFor, isSymbol } from '@core/shared/type.library.js';
 
@@ -61,12 +61,14 @@ const safeList = ['20', '22', '3B', '3C', '3E', '5B', '5D', '5E', '7B', '7C', '7
 function encode(val: string) {
 	let enc = encodeURI(val);
 
-	safeList.forEach(code => {
-		const uri = '%' + code;
-		const reg = new RegExp(uri, 'g');
+	if (enc.includes('%')) {																	// if a encoded URI might be in string
+		safeList.forEach(code => {
+			const uri = '%' + code;
+			const reg = new RegExp(uri, 'g');
 
-		enc = enc.replace(reg, decodeURI(uri));
-	})
+			enc = enc.replace(reg, decodeURI(uri));
+		})
+	}
 
 	return enc;
 }
@@ -176,7 +178,7 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 
 		case 'Object':
 		case 'Record':
-			const obj = allEntries(arg.value)
+			const obj = ownEntries(arg.value)
 				.filter(([, val]) => isStringable(val))
 				.map(([key, val]) => `${fromSymbol(key)}: ${stringize(val)}`)
 				.join(',')
@@ -260,7 +262,7 @@ export function objectify<T>(str: string, sentinel?: Function): T {
 /** Recurse into Object / Array, looking for special single-key Objects */
 function traverse(obj: any, sentinel?: Function): any {
 	if (isObject(obj)) {
-		return typeify(allEntries(obj)
+		return typeify(ownEntries(obj)
 			.reduce((acc, [key, val]) =>
 				Object.assign(acc, { [toSymbol(key)]: typeify(traverse(val, sentinel)) }),
 				{}),
@@ -292,7 +294,7 @@ function typeify(json: Record<string, any>, sentinel?: Function) {
 	if (Object.keys(json).length !== 1)												// only single-key Objects accepted
 		return json;
 
-	const { type, value } = allEntries(json)
+	const { type, value } = ownEntries(json)
 		.reduce((acc, [type, value]) => Object.assign(acc, { type, value }), {} as { type: Types, value: any })
 
 	switch (type) {

@@ -1,5 +1,5 @@
 import { isNumeric } from '@core/shared/number.library.js';
-import { allEntries } from '@core/shared/reflect.library.js';
+import { ownEntries } from '@core/shared/reflect.library.js';
 import { type Entry, type Index, isArray, isNumber } from '@core/shared/type.library.js';
 
 /**
@@ -31,7 +31,7 @@ export const enumValues = <T extends {}>(enumType: T) =>		// Enum values
 
 /** array of Enum [key, value] tuple */
 export const enumEntries = <T extends {}>(enumType: T) => {
-	const entries = allEntries<T>({ ...enumType });						// Enum entries
+	const entries = ownEntries<T>({ ...enumType });						// Enum entries
 	const type1 = entries																			// only numeric Enum values
 		.filter(([_, val]) => isNumber(val));
 	const type2 = entries																			// only non-numeric Enum keys

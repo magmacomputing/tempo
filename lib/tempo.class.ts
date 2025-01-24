@@ -5,7 +5,7 @@ import { enumify } from '@core/shared/enumerate.library.js';
 import { getAccessors } from '@core/shared/class.library.js';
 import { asArray, sortInsert } from '@core/shared/array.library.js';
 import { getStore, setStore } from '@core/shared/storage.library.js';
-import { allEntries, omit, purge } from '@core/shared/reflect.library.js';
+import { ownEntries, omit, purge } from '@core/shared/reflect.library.js';
 import { getContext, sleep, CONTEXT } from '@core/shared/utility.library.js';
 import { asNumber, asInteger, isNumeric, ifNumeric } from '@core/shared/number.library.js';
 import { asString, pad, singular, toProperCase, trimAll, sprintf } from '@core/shared/string.library.js';
@@ -390,7 +390,7 @@ export class Tempo {
 		let idx = -1;
 
 		options.forEach(option => {
-			allEntries(option)
+			ownEntries(option)
 				.forEach(([optKey, optVal]) => {
 					const arg = asType(optVal);
 					const user = `usr${++idx}`;
@@ -416,7 +416,7 @@ export class Tempo {
 								case 'Array':
 									if (isObject(arg.value[0])) {							// add array of objects to Map()
 										(arg.value as unknown as NonNullable<Record<string, Internal.StringPattern | Internal.StringPattern[]>>[])
-											.forEach(obj => allEntries(obj)
+											.forEach(obj => ownEntries(obj)
 												.forEach(([key, val]) => map.set(Tempo.getSymbol(shape, key), asArray(val)))
 											)
 									} else {																	// add array of <string | RegExp> to Map()
@@ -475,7 +475,7 @@ export class Tempo {
 							break;
 
 						case 'term':																		// TODO: allow for different format of {terms}
-							allEntries(arg.value as NonNullable<Tempo.Options["term"]>)
+							ownEntries(arg.value as NonNullable<Tempo.Options["term"]>)
 								.forEach(([key, term]) => Tempo.#makeTerm(shape, key, term));
 							break;
 
@@ -609,7 +609,7 @@ export class Tempo {
 	/** lookup local Symbol registry */
 	static getSymbol(shape: Internal.Shape, key: string) {
 		const [sym, description = key] = key.split('.');				// for example, 'zdc.zodiac'
-		const idx = allEntries(shape.symbols)
+		const idx = ownEntries(shape.symbols)
 			.find(([symKey, symVal]) => symKey === sym || symVal.description === description);
 
 		return idx
@@ -711,7 +711,7 @@ export class Tempo {
 
 	/** static Tempo.Terms getter */
 	static get terms() {
-		return allEntries(Tempo.#global.terms)
+		return ownEntries(Tempo.#global.terms)
 			.reduce((acc, [sym, term]) => {
 				const key = sym.description ?? sym.toString();
 				return Object.assign(acc, { [key]: new Map(term.entries()) });
@@ -788,7 +788,7 @@ export class Tempo {
 
 	/** iterate over instance formats */
 	[Symbol.iterator]() {
-		const props = allEntries(this.#fmt)[Symbol.iterator]();	// instance Iterator over tuple of FormatType[]
+		const props = ownEntries(this.#fmt)[Symbol.iterator]();	// instance Iterator over tuple of FormatType[]
 
 		return {
 			next: () => props.next(),															// tuple of [fmtCode, value]
@@ -857,7 +857,7 @@ export class Tempo {
 			this.#zdt = this.#parse(this.#tempo);									// attempt to interpret the DateTime arg
 
 			if (['iso8601', 'gregory'].includes(this.config.calendar)) {
-				allEntries(Tempo.FORMAT)														// add all the pre-defined FORMATs to the instance (eg. Tempo().fmt.yearMonthDay)
+				ownEntries(Tempo.FORMAT)														// add all the pre-defined FORMATs to the instance (eg. Tempo().fmt.yearMonthDay)
 					.forEach(([key, val]) =>
 						Object.assign(this.#fmt, { [key]: this.format(val) }))	// add-on short-cut format
 			}
@@ -1108,7 +1108,7 @@ export class Tempo {
 	#parseMatch(value: string | number, pat: RegExp) {
 		const groups = value.toString().match(pat)?.groups || {};
 
-		allEntries(groups)																			// remove undefined, NaN, null and empty values
+		ownEntries(groups)																			// remove undefined, NaN, null and empty values
 			.forEach(([key, val]) => isEmpty(val) && omit(groups, key));
 
 		return groups;
@@ -1369,7 +1369,7 @@ export class Tempo {
 
 	/** set {term} values for current DateTime */
 	#setTerm(dateTime: Temporal.ZonedDateTime = this.#zdt) {
-		allEntries(this.#local.terms)
+		ownEntries(this.#local.terms)
 			.forEach(([, term]) => {
 				for (const [key, range] of term.entries()) {
 					const order = [] as { nano: bigint, range: typeof range }[];
@@ -1379,7 +1379,7 @@ export class Tempo {
 					 * for example: the 'quarter' {term} could yield (with {nano} equal to the actual Instant)
 					 * [ {nano: 9999, range: {month: 7}}, {nano: 9999, range: {month: 10}}, {nano: 9999, range: {month: 1}}, {nano: 9999, range: {month: 4}} ]
 					 */
-					allEntries(range as Pick<Tempo.Range, Temporal.DateTimeUnit>)
+					ownEntries(range as Pick<Tempo.Range, Temporal.DateTimeUnit>)
 						.filter(([unit]) => Tempo.elements.includes(unit))	// TODO: combine all {unit} into one object for .with()
 						.forEach(([unit, nbr]) => {
 							let nano = dateTime														// start with base dateTime
@@ -1405,7 +1405,7 @@ export class Tempo {
 
 	/** return a new object, with only numeric values */
 	#num = (groups: Partial<Internal.RegExpGroups>) => {
-		return allEntries(groups)
+		return ownEntries(groups)
 			.reduce((acc, [key, val]) => {
 				if (isNumeric(val))
 					acc[key] = ifNumeric(val) as number;
@@ -1416,7 +1416,7 @@ export class Tempo {
 	/** create new Tempo with {offset} property */
 	#add = (arg: Tempo.Add) => {
 		const mutate = 'add';
-		const zdt = allEntries(arg)														// loop through each mutation
+		const zdt = ownEntries(arg)														// loop through each mutation
 			.reduce((zdt, [key, offset]) => {											// apply each mutation to preceding one
 				const single = singular(key);
 				const plural = single + 's';
