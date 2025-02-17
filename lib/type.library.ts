@@ -99,14 +99,14 @@ export const nullToValue = <T, R>(obj: T, value: R) => obj ?? value;
 /** object has no values */
 export const isEmpty = <T>(obj?: T) => false
 	|| isNullish(obj)
-	|| (isObject(obj) && Reflect.ownKeys(obj).length === 0)
-	|| (isString(obj) && obj.trim().length === 0)
-	|| (isNumber(obj) && isNaN(obj) === false)
-	|| (isArray(obj) && obj.length === 0)
-	|| (isSet(obj) && obj.size === 0)
-	|| (isMap(obj) && obj.size === 0)
-	|| (isTuple(obj) && obj.length === 0)
-	|| (isRecord(obj) && Reflect.ownKeys(obj).length === 0)
+	|| (isObject(obj) && (Reflect.ownKeys(obj).length === 0))
+	|| (isString(obj) && (obj.trim().length === 0))
+	|| (isNumber(obj) && (isNaN(obj) === false))
+	|| (isArray(obj) && (obj.length === 0))
+	|| (isSet(obj) && (obj.size === 0))
+	|| (isMap(obj) && (obj.size === 0))
+	|| (isTuple(obj) && (obj.length === 0))
+	|| (isRecord(obj) && (Reflect.ownKeys(obj).length === 0))
 
 export function assertCondition(condition: boolean, message?: string): asserts condition {
 	if (!condition)
@@ -249,7 +249,7 @@ export type Entry<T extends Property<any>> =
 
 /** Object.entries<T> as [number,T][] */
 export type Entries<T extends Property<T>> = ReadonlyArray<Entry<T>>
-export type Inverse<T> = { [K in keyof T as (T[K] & PropertyKey)]: K };
+export type Inverse<T> = { [K in keyof T as (T[K] & PropertyKey)]: K }
 export type Index<T extends readonly any[]> = { [K in Entry<T> as `${K[1]}`]: ParseInt<K[0]> }
 
 // https://stackoverflow.com/questions/39494689/is-it-possible-to-restrict-number-to-a-certain-range/70307091#70307091
@@ -266,3 +266,39 @@ export type IntRange<Lower extends number, Upper extends number> = Exclude<Enume
 declare const __brand: unique symbol
 type Brand<B> = { [__brand]: B }
 export type Branded<T, B> = T & Brand<B>
+
+// https://www.youtube.com/watch?v=_-QYbP9rOhg&list=WL&index=1
+type Length<T extends string, Count extends number[] = []> =
+	T extends `${string}${infer Tail}`
+	? Length<Tail, [...Count, 0]>
+	: Count['length']
+
+type Compare<First extends number, Second extends number, Count extends number[] = []> =
+	First extends Second
+	? 0
+	: Count['length'] extends First
+	? -1
+	: Count['length'] extends Second
+	? 1
+	: Compare<First, Second, [...Count, 0]>
+
+export type MaxLength<T extends string, Max extends number> =
+	Compare<Length<T>, Max> extends -1 | 0 ? T : never
+export type MinLength<T extends string, Min extends number> =
+	Compare<Min, Length<T>> extends -1 | 0 ? T : never
+
+export type InRange<T extends string, Min extends number, Max extends number> =
+	MinLength<T, Min> & MaxLength<T, Max>
+
+
+export type Substring<T extends string, Start extends number, Max extends number> =
+	Substr<T, Start, Max, '', [0]>
+
+type Substr<T, Start, Max, Str extends string, Count extends number[]> =
+	T extends `${infer Head}${infer Tail}`										// if there is a first-char (and optional trail-chars)
+	? Count['length'] extends Start														// if offset beginning of T reached
+	? Length<Str> extends Max																	// if length of Str is equal to Max
+	? Str																											// return Str, all done
+	: Substr<Tail, Start, Max, `${Str}${Head}`, Count>				// else Str less than Max; recurse & append Head to Str
+	: Substr<Tail, Start, Max, Str, [...Count, 0]>						// else offset not reached; recurse & increment offset-Count
+	: Str																											// else no more chars; return Str

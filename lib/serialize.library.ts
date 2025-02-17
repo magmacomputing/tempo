@@ -217,11 +217,11 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 				case !isStringable(arg.value):											// Object is not stringify-able
 					return void 0 as unknown as string;
 
+				case isFunction(arg.value.toJSON):									// Object has its own toJSON method
+					return one(stringize(arg.value.toJSON(), /** replacer */));
+
 				case isFunction(arg.value.toString):								// Object has its own toString method
 					return one(JSON.stringify(arg.value.toString()));
-
-				case isFunction(arg.value.toJSON):									// Object has its own toJSON method
-					return one(JSON.stringify(arg.value.toJSON(), replacer));
 
 				case isFunction(arg.value.valueOf):									// Object has its own valueOf method		
 					return one(JSON.stringify(arg.value.valueOf()));

@@ -25,17 +25,6 @@ export const lprintf = (method: Logger, name: string = '', fmt?: any, ...msg: an
 	return info;
 }
 
-class Logify {
-	static log = Logify.#log.bind(this, Level.Log);
-	static info = Logify.#log.bind(this, Level.Info);
-	static warn = Logify.#log.bind(this, Level.Warn);
-	static debug = Logify.#log.bind(this, Level.Debug);
-	static error = Logify.#log.bind(this, Level.Error);
-	static #log(method = Level.Info, ...msg: any[]) {
-		console[method](...msg);
-	}
-}
-
 export type Logger = Extract<keyof Console, 'log' | 'info' | 'debug' | 'warn' | 'error'>;
 
 /** break a fmt/msg into a Console[method] and 'message' */
@@ -43,7 +32,7 @@ const fprintf = (fmt?: any, ...msg: any[]) => {
 	let type = 'log';
 
 	if (isString(fmt)) {
-		const keys = ['log', 'info', 'debug', 'warn', 'error'] as Logify[];
+		const keys = ['log', 'info', 'debug', 'warn', 'error'] as Level[];
 		const match = fmt.match(/(\w*;)/i) ?? [];
 		const part = match[1];
 
@@ -55,5 +44,5 @@ const fprintf = (fmt?: any, ...msg: any[]) => {
 
 	const message = sprintf(fmt, ...msg);
 
-	return message as Logify;
+	return message;
 }

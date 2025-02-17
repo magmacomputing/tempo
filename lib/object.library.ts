@@ -1,80 +1,20 @@
 import { ownKeys, ownEntries } from '@core/shared/reflect.library.js';
-import { isObject, isArray, isString, isNull, isUndefined, isReference, isFunction, isDefined, isEmpty } from '@core/shared/type.library.js';
-import type { TValues, Property } from '@core/shared/type.library.js';
+import { isObject, isArray, isReference, isFunction, isDefined, isEmpty, isNullish } from '@core/shared/type.library.js';
+import type { Property } from '@core/shared/type.library.js';
 
-const regex = /(?<matchWord>.*)\[(?<matchIdx>.)\]$/;				// a pattern to find array-references
-
-/**
- * Get nested value
- */
-export function extract<T>(obj: Property<T>, path: PropertyKey, dflt: T): T;
-export function extract<T>(obj: Property<T>, path: PropertyKey): T | undefined;
-export function extract<T>(obj: Property<T>, path = '' as PropertyKey, dflt?: T) {
+/** Get nested value */
+export function extract<T>(obj: any, path: string | number, dflt?: T): T {
 	if (isEmpty(path))
-		return obj as unknown as T;															// finished searching
+		return obj as T;																				// finished searching
 	if (!isObject(obj) && !isArray(obj))
-		return dflt;
+		return obj as T;
 
-	const fields = path.toString()
-		.replace(/\[(\w+)\]/g, '.$1')														// convert indexes to properties
-		.replace(/^\./, '')																			// strip a leading dot
-		.replace(/\.$/, '')																			// strip a trailing dot
-		.replace(' ', '')																				// remove readability-spaces
+	return path
+		.toString()
+		.replace(/\[([^\[\]]*)\]/g, '.$1.')											// convert [indexes] to properties
 		.split('.')
-
-	const [word, ...rest] = fields;
-	for (const [key, val] of ownEntries(obj))
-		if (word === key.toString())
-			return extract({ [key]: val }, rest.join('.'), dflt);	// recurse into object
-
-	return dflt;
-}
-
-/**
- * Get nested value,  
- * allow for array-references in \<path>
- */
-export const getPath = <T>(obj: any, path: TValues<string>, dflt?: any, indx?: string | number): T => {
-	if (!isObject(obj) && !isArray(obj))
-		return dflt || void 0;
-
-	const [word, ...rest] = isString(path)										// first word in the index-path, and the rest
-		? path.replace(' ', '').split('.')											// remove readability-spaces
-		: path
-
-	const match = regex.exec(word);														// eg. does the 'word' end in "*[0]"?
-	const { matchWord, matchIdx } = !isNull(match) && match.groups || { matchWord: word, matchIdx: '*' };
-
-	let clone = isArray(obj)
-		? obj
-			.map(itm => { if (isUndefined(itm[matchWord])) itm[matchWord] = dflt; return itm; })
-			.map(itm => itm[matchWord])
-			.filter((_row, idx) => indx === '*' || indx === idx.toString())
-		: obj[matchWord]
-	if (isArray(clone) && matchIdx !== '*')
-		clone = clone[0];																				// limit to the first filtered element
-
-	return rest.length
-		? getPath(clone, rest, dflt, matchIdx)									// recurse into object
-		: clone || dflt
-}
-export const getPath1 = <T>(obj: unknown, path: string, dflt?: T, idx?: string | number) => {
-	const words = path.replace(' ', '').split('.');
-
-	if (isArray(obj)) {
-		const { matchWord, matchIdx } = regex.exec(words[0])?.groups || { matchWord: words[0], matchIdx: '*' };
-	} else {
-		if (!isObject(obj))
-			return dflt;
-	}
-
-	let res = obj as Record<string, any>;
-	path
-		.replace(' ', '')
-		.split('.')
-		.forEach(word => res = res?.[word])
-
-	return res ?? dflt;
+		.filter(field => !isEmpty(field))												// remove empty fields
+		.reduce((acc, field) => acc?.[field] ?? null, obj) ?? dflt
 }
 
 export const quoteObj = (obj: any) => {
@@ -84,9 +24,9 @@ export const quoteObj = (obj: any) => {
 }
 
 /** copy enumerable properties to a new Object */
-export const asObject = <T>(obj: any) => {
-	if (obj === null || !isObject(obj))
-		return obj;
+export const asObject = <T>(obj?: Record<PropertyKey, any>) => {
+	if (isNullish(obj) || !isObject(obj))
+		return obj as T;
 
 	const temp: any = isArray(obj) ? [] : {};
 
@@ -105,9 +45,9 @@ export const isEqual = (obj1: any = {}, obj2: any = {}): boolean => {
 	keys1.forEach(key => keys.add(key));
 	keys2.forEach(key => keys.add(key));
 
-	return keys
+	return [...keys]																					// cast as Array
 		.values()
-		.every(key => {																					// 'every' will shortcut if <false>
+		.every(key => {
 			const val1 = obj1[key];
 			const val2 = obj2[key];
 

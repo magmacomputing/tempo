@@ -2,6 +2,7 @@ import { asArray } from '@core/shared/array.library.js';
 import { Logger } from '@core/shared/logger.library.js';
 import { sprintf } from '@core/shared/string.library.js';
 import { ifDefined } from '@core/shared/object.library.js';
+import { cleanify } from '@core/shared/serialize.library.js';
 import { isEmpty, isObject } from '@core/shared/type.library.js';
 
 /**
@@ -95,7 +96,7 @@ export class Pledge<T> {
 	}
 
 	get status() {
-		return JSON.parse(JSON.stringify(this.#status)) as Pledge.Status<T>;
+		return cleanify(this.#status) as Pledge.Status<T>;
 	}
 
 	get promise() {
@@ -134,7 +135,7 @@ export class Pledge<T> {
 }
 
 export namespace Pledge {
-	export type Resolve = (val: any) => any;									// function to call after Pledge resolves
+	export type Resolve = (val?: any) => any;									// function to call after Pledge resolves
 	export type Reject = (err: Error) => any;									// function to call after Pledge rejects
 	export type Settle = () => void;													// function to call after Pledge settles
 

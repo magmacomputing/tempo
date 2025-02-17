@@ -1845,20 +1845,20 @@ export namespace Tempo {
 
 	export type Duration = Temporal.DurationLike & Partial<Record<"iso", string>>
 
-	export const WEEKDAY = enumify(['Every', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',]);
-	export const WEEKDAYS = enumify({ Everyday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6, Sunday: 7, });
+	export const WEEKDAY = enumify(['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',]);
+	// export const WEEKDAYS = enumify({ All: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6, Sunday: 7, });
+	export const WEEKDAYS = enumify(['Alldays', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',])
 	export enum MONTH { All, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec }
 	export enum MONTHS { Every, January, February, March, April, May, June, July, August, September, October, November, December }
 	export enum DURATION { year, month, week, day, hour, minute, second, millisecond, microsecond, nanosecond }
 	export enum DURATIONS { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds }
 
-	// export type Weekday = Exclude<keyof typeof Tempo.WEEKDAY, 'All'>
+	// export type Weekday = Exclude<Enumify<typeof Tempo.WEEKDAY>, 'All'>
 	export type WeekdayShort = keyof Enumify<typeof Tempo.WEEKDAY>
 	export type WeekdayLong = keyof Enumify<typeof Tempo.WEEKDAYS>
 	export type Calendar = Exclude<keyof typeof Tempo.MONTH, 'All'>
 
 	export const eMONTH = enumify(MONTH);
-	// export const eWEEKDAY = enumify(WEEKDAY);
 
 	/** Compass Cardinal Points */
 	export type Sphere = typeof Tempo.COMPASS.North | typeof Tempo.COMPASS.South | null
