@@ -1,48 +1,8 @@
-import { isNumeric } from '@core/shared/number.library.js';
 import { ownEntries } from '@core/shared/reflect.library.js';
-import { type Entry, type Index, isArray, isNumber } from '@core/shared/type.library.js';
+import { isArray } from '@core/shared/type.library.js';
+import type { Entry, Index } from '@core/shared/type.library.js';
 
-/**
- * Typescript Enums have three types:  
- * a. Numeric (with reverse-mapping),
- * b. String, and 
- * c. Heterogeneous (mixed Number and String) keys.  
- * 
- * https://www.typescriptlang.org/docs/handbook/enums.html  
- * 
- * if Object.values(enum) contains only numeric values, 
- * we presume type a.   otherwise, type b. or type c.
- */
-
-/** count of Enum entries */
-export const enumCount = <T extends {}>(enumType: T) =>
-	enumEntries(enumType)
-		.length;
-
-/** array of Enum keys */
-export const enumKeys = <T extends {}>(enumType: T) =>			// Enum keys
-	enumEntries(enumType)
-		.map(([key, _]) => key);
-
-/** array of Enum values */
-export const enumValues = <T extends {}>(enumType: T) =>		// Enum values
-	enumEntries(enumType)
-		.map(([_, val]) => val);
-
-/** array of Enum [key, value] tuple */
-export const enumEntries = <T extends {}>(enumType: T) => {
-	const entries = ownEntries<T>({ ...enumType });						// Enum entries
-	const type1 = entries																			// only numeric Enum values
-		.filter(([_, val]) => isNumber(val));
-	const type2 = entries																			// only non-numeric Enum keys
-		.filter(([key, _]) => !isNumeric(key.toString()))
-
-	return (type1.length == type2.length)											// if Numeric Enum
-		? type1																									// just the numeric Enum values
-		: type2																									// else String/Heterogeneous Enum
-}
-
-/** extend the Enum type with 'helper' methods */
+/** extend the Enum object with 'helper' methods */
 type helper<T> = {
 	/** original Enum as Readonly Record */										enum(): T;
 	/** count of Enum keys */																	count(): number;
@@ -66,7 +26,7 @@ export function enumify<const T extends Record<keyof T, any>>(list: T) {
 	const stash = isArray(list)																// clone original Enum as an Object
 		? (list as (string | number)[]).reduce((acc, itm, idx) => Object.assign(acc, { [itm]: idx }), {})
 		: { ...list }
-	const entries = enumEntries(stash);												// define once; use in entries(), keyOf, iterator()
+	const entries = ownEntries(stash);												// define once; use in entries(), keyOf, iterator()
 	const reverse = entries																		// build a reverse-keyof object
 		.reduce((acc, [key, val]) => Object.assign(acc, { [val]: key }), {} as Record<string | number, T>);
 

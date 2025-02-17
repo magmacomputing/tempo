@@ -1,5 +1,5 @@
 import { asString } from '@core/shared/string.library.js';
-import { getPath } from '@core/shared/object.library.js';
+import { extract } from '@core/shared/object.library.js';
 import { ownEntries } from '@core/shared/reflect.library.js';
 import { cloneify, stringify } from '@core/shared/serialize.library.js';
 import { isType, isNumber, isDate, isTempo, isIterable, isString, isObject, isDefined, isArrayLike, nullToValue, isFunction, isUndefined, Property } from '@core/shared/type.library.js';
@@ -66,8 +66,9 @@ export function sortBy<T extends Property<T>>(...keys: (PropertyKey | SortBy)[])
 		sortOptions.forEach(key => {
 			if (result === 0) {																		// no need to look further if result !== 0
 				const dir = key.dir === 'desc' ? -1 : 1;
-				const valueA = getPath<number>(left, key.field, nullToValue(key.default, 0), key.index);
-				const valueB = getPath<number>(right, key.field, nullToValue(key.default, 0), key.index);
+				const field = key.field + (key.index ? `[${key.index}]` : '');
+				const valueA = extract(left, field, nullToValue(key.default, 0));
+				const valueB = extract(right, field, nullToValue(key.default, 0));
 
 				switch (true) {
 					case isNumber(valueA) && isNumber(valueB):
