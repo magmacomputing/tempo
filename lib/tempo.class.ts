@@ -1,6 +1,7 @@
 // #region library modules~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import { Pledge } from '@core/shared/pledge.class.js';
+import { Logify } from '@core/shared/logify.class.js';
 import { enumify } from '@core/shared/enumerate.library.js';
 import { getAccessors } from '@core/shared/class.library.js';
 import { asArray, sortInsert } from '@core/shared/array.library.js';
@@ -39,9 +40,11 @@ const Match = {
 	/** match all {} pairs */																	braces: /{([^}]+)}/g,
 	/** event */																							event: /^evt\d+$/,
 	/** period */																							period: /^per\d+$/,
-	/** two digit year */																			twoDigit: /^\d{2}$/,
+	/** two digit year */																			twoDigits: /^\d{2}$/,
 	/** year-term */																					yearTerm: /(?<yy>yy).?#(?<term>\w+)/,
 	/** hour-minute-second with no separator */								hhmiss: /(hh)?(m[i|m])(ss)?/i,
+	/** separator characters (/-. ,) */												separators: /[\/\-\.\s,]/,
+	/** modifier characters (+-<>=) */												modifiers: /[\+\-\<\>][\=]?/,
 } as const
 
 /** Tempo Symbol registry */
@@ -62,10 +65,10 @@ const Sym = {
 
 /**
  * user will need to know these in order to configure their own patterns  
- * a {unit} is a simple regex	snippet												, e.g. { yy: /(\d{2})?\d{2})/ }  
+ * {unit} is a simple regex	snippet													, e.g. { yy: /(\d{2})?\d{2})/ }  
  * {unit} keys are combined to build a {layout} Map					, e.g. Map([[ Symbol('ymd'): '{yy}{mm}{dd}?' ]]    
- * {layout}s are translated into a regex {pattern} Map			, e.g. Map([[ Symbol('ymd'), /^ ... $/ ]])    
- * the {pattern} will be used to parse a string | number in the constructor {DateTime} argument    
+ * {layout} is translated into an anchored regex {pattern}	, e.g. Map([[ Symbol('ymd'), /^ ... $/ ]])    
+ * {pattern} will be used to parse a string | number in the constructor {DateTime} argument    
  */
 const Unit = {																							// define some components to help interpret input-strings
 	/** arbitrary upper-limit of yy=9999 */										yy: /(?<yy>(\d{2})?\d{2})/,
@@ -77,26 +80,26 @@ const Unit = {																							// define some components to help interpret
 	/** seconds-number 00-59 */																ss: /(\:(?<ss>[0-5]\d))/,
 	/** fractional-seconds up-to 9-digits */									ff: /(\.(?<ff>\d{1,9}))/,
 	/** meridiem suffix (am,pm) */														mer: /(\s*(?<mer>am|pm))/,
-	/** date-component separator character "/\\-., " */				sep: /(?<sep>[\/\\\-\.\s,])/,
 	/** time-component suffix "T {tm}*/												sfx: /((?:[\s,T])({tm}))/,
-	/** modifier (+,-,<,<=,>,>=) plus optional offset-count */mod: /((?<mod>[\+\-\<\>][\=]?)?(?<cnt>\d*)\s*)/,
+	/** date-component separator character "/\\-., " */				sep: new RegExp(`(?<sep>${Match.separators.source})`),
+	/** modifier (+,-,<,<=,>,>=) plus optional offset-count */mod: new RegExp(`((?<mod>${Match.modifiers.source})?(?<cnt>\d*)\s*)`),
 } as Internal.Regexp
 // Note: computed Units ('tm', 'dt', 'evt', 'per') are added during 'Tempo.init()' and 'new Tempo()'
 
-/** a {layout} is a combination of {units} describing an expected DateTime format */
+/** a {layout} is a combination of {unit}-codes describing an expected DateTime format */
 const Layout = [
 	[Sym.dow, '{mod}?{dow}{sfx}?'],														// special layout (no {dt}!) used for day-of-week calcs (only one that requires {dow} unit)
 	[Sym.dt, '{dt}'],																					// calendar or event
 	[Sym.tm, '{tm}'],																					// clock or period
 	[Sym.dtm, '({dt}){sfx}?'],																// calendar/event and clock/period
-	[Sym.dmy, '{dow}?{dd}{sep}?{mm}({sep}{yy})?{sfx}?'],			// day-month-year
-	[Sym.mdy, '{dow}?{mm}{sep}?{dd}({sep}{yy})?{sfx}?'],			// month-day-year
-	[Sym.ymd, '{dow}?{yy}{sep}?{mm}({sep}{dd})?{sfx}?'],			// year-monthg-day
+	[Sym.dmy, '{dow}?{dd}{sep}?{mm}({sep}{yy})?{sfx}?'],			// day-month(-year)
+	[Sym.mdy, '{dow}?{mm}{sep}?{dd}({sep}{yy})?{sfx}?'],			// month-day(-year)
+	[Sym.ymd, '{dow}?{yy}{sep}?{mm}({sep}{dd})?{sfx}?'],			// year-month(-day)
 	[Sym.evt, '{evt}'],																				// event only
 	[Sym.per, '{per}'],																				// period only
 ] as Internal.SymbolTuple[];
 
-/* an {event} is a combination of regex-patterns that describe an expected Date */
+/* an {event} is a Map of a regex-pattern that describes an expected Date */
 const Event = [
 	['new.?years? ?eve', '31 Dec'],
 	['nye', '31 Dec'],
@@ -108,7 +111,7 @@ const Event = [
 	['xmas', '25 Dec'],
 ] as Internal.StringTuple[]
 
-/** a {period} is a combination of regex-patterns that describe an exepcted Time */
+/** a {period} is a Map of a regex-pattern that describes an exepcted Time */
 const Period = [
 	['mid[ -]?night', '24:00'],
 	['morning', '8:00'],
@@ -153,6 +156,8 @@ const Default = {
  */
 export class Tempo {
 	// #region Static private properties~~~~~~~~~~~~~~~~~~~~~~
+
+	static #dbg = new Logify(this);
 
 	static #ready = {
 		static: new Pledge<boolean>('static'),									// ready when static-blocks settled
@@ -351,10 +356,9 @@ export class Tempo {
 		if (isUndefined(shape.config.timeZone) || isDefined(shape.config.sphere))
 			return shape.config.sphere;														// already specified
 
-		const tz = new Temporal.TimeZone(shape.config.timeZone);
-		const yy = Temporal.Now.plainDateISO(tz).year;					// current year
-		const jan = tz.getOffsetNanosecondsFor(Temporal.Instant.from(`${yy}-${Tempo.MONTH.Jan}-01T00:00+00:00`));
-		const jun = tz.getOffsetNanosecondsFor(Temporal.Instant.from(`${yy}-${Tempo.MONTH.Jun}-01T00:00+00:00`));
+		const zdt = Temporal.Now.zonedDateTimeISO(shape.config.timeZone);
+		const jan = zdt.with({ day: 1, month: 1 }).offsetNanoseconds;
+		const jun = zdt.with({ day: 1, month: 6 }).offsetNanoseconds;
 		const dst = jan - jun;																	// timezone offset difference between Jan and Jun
 
 		if (dst < 0)
@@ -431,7 +435,7 @@ export class Tempo {
 									break;
 
 								default:
-									Tempo.#catch(shape.config, `Unexpected type for "layout": ${arg.type}`);
+									Tempo.#dbg.catch(shape.config, 'Unexpected type for "layout": ', arg.type);
 									break;
 							}
 
@@ -464,7 +468,7 @@ export class Tempo {
 									break;
 
 								default:
-									Tempo.#catch(shape.config, `Unexpected type for "${optKey}": ${arg.type}`);
+									Tempo.#dbg.catch(shape.config, `Unexpected type for "${optKey}": `, arg.type);
 							}
 							break;
 
@@ -494,27 +498,7 @@ export class Tempo {
 		shape.patterns.clear();																	// reset {patterns} Map
 
 		for (const [sym, units] of shape.config.layout)
-			shape.patterns.set(sym, Tempo.regexp(shape.units, ...units))
-	}
-
-	/** use debug:boolean to determine if console() */
-	static #info = Tempo.#debug.bind(this, 'info');
-	static #warn = Tempo.#debug.bind(this, 'warn');
-	static #error = Tempo.#debug.bind(this, 'error');
-	static #debug(method: Logger = 'info', config: Tempo.Config, ...msg: any[]) {
-		if (config.debug)
-			console[method](sprintf('tempo:', ...msg));
-	}
-
-	/** use catch:boolean to determine whether to throw or return  */
-	static #catch(config: Tempo.Config, ...msg: any[]) {
-		if (config.catch) {
-			Tempo.#warn(config, ...msg);													// catch, but warn {error}
-			return;
-		}
-
-		Tempo.#error(config, ...msg);														// assume {error}
-		throw new Error(sprintf('tempo:', ...msg));
+			shape.patterns.set(sym, Tempo.regexp(shape.units, ...units));
 	}
 
 	// #endregion Static private methods
@@ -571,6 +555,7 @@ export class Tempo {
 
 				// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 				Tempo.#dst(Tempo.#global);													// setup hemisphere
+
 				if (isEmpty(Tempo.#global.terms[Tempo.getSymbol(Tempo.#global, 'zdc.zodiac')]))
 					Tempo.#zodiac(Tempo.#global);											// setup default Zodiac star-signs
 				if (isEmpty(Tempo.#global.terms[Tempo.getSymbol(Tempo.#global, 'szn.season')]))
@@ -588,11 +573,11 @@ export class Tempo {
 				Tempo.#makePattern(Tempo.#global);									// setup Regex DateTime patterns
 
 				if (getContext().type === CONTEXT.Browser || options.debug === true)
-					Tempo.#info(Tempo.config, 'Tempo:', Tempo.#global.config);
+					Tempo.#dbg.info(Tempo.config, 'Tempo:', Tempo.#global.config);
 
 				return true;
 			})
-			.catch(err => Tempo.#catch(Tempo.#global.config, err.message))
+			.catch(err => Tempo.#dbg.catch(Tempo.#global.config, err.message))
 			.finally(() => Tempo.#ready["init"].resolve(true))		// Tempo.init() has completed
 	}
 
@@ -606,9 +591,11 @@ export class Tempo {
 		setStore(STORAGEKEY, config);
 	}
 
-	/** lookup local Symbol registry */
+	/** lookup Symbol registry */
 	static getSymbol(shape: Internal.Shape, key: string) {
-		const [sym, description = key] = key.split('.');				// for example, 'zdc.zodiac'
+		const [sym, description = key] = key										// for example, 'zdc.zodiac'
+			.split(Match.separators)
+			.filter(s => !isEmpty(s));
 		const idx = ownEntries(shape.symbols)
 			.find(([symKey, symVal]) => symKey === sym || symVal.description === description);
 
@@ -782,7 +769,7 @@ export class Tempo {
 
 	/** allow for auto-convert of Tempo to BigInt */
 	[Symbol.toPrimitive](hint?: 'string' | 'number' | 'default') {
-		Tempo.#info(this.config, getType(this), '.hint: ', hint);
+		Tempo.#dbg.info(this.config, getType(this), '.hint: ', hint);
 		return this.nano;
 	}
 
@@ -797,7 +784,7 @@ export class Tempo {
 
 	/** dispose Tempo */
 	[Symbol.dispose]() {																			// TODO: for future implementation
-		Tempo.#info(this.config, 'dispose: ', this.#tempo);
+		Tempo.#dbg.info(this.config, 'dispose: ', this.#tempo);
 	}
 
 	/** safe-assignment Tempo */															// TODO: for future implementation (check for recursion?)
@@ -862,7 +849,7 @@ export class Tempo {
 						Object.assign(this.#fmt, { [key]: this.format(val) }))	// add-on short-cut format
 			}
 		} catch (err) {
-			Tempo.#catch(this.config, `Cannot create Tempo: ${(err as Error).message}`);
+			Tempo.#dbg.catch(this.config, `Cannot create Tempo: ${(err as Error).message}`);
 			return {} as unknown as Tempo;												// return empty Object
 		}
 	}
@@ -963,7 +950,7 @@ export class Tempo {
 		const today = dateTime ?? this.#instant									// cast instantiation to current timeZone, calendar
 			.toZonedDateTime({ timeZone: this.#getConfig('timeZone'), calendar: this.#getConfig('calendar') });
 		const arg = this.#conform(tempo, today);								// if String or Number, conform the input against known patterns
-		Tempo.#info(this.#local.config, 'parse', `{type: ${arg.type}, value: ${arg.value}}`);					// show what we're parsing
+		Tempo.#dbg.info(this.#local.config, 'parse', `{type: ${arg.type}, value: ${arg.value}}`);					// show what we're parsing
 
 		switch (arg.type) {
 			case 'Null':																					// TODO: special Tempo for null?
@@ -978,7 +965,7 @@ export class Tempo {
 					return Temporal.ZonedDateTime.from(arg.value);		// attempt to parse value
 				} catch {																						// fallback to browser's Date.parse() method
 					this.#local.config.parse.match = 'Date.parse';
-					Tempo.#warn(this.#local.config, 'Cannot detect DateTime; fallback to Date.parse');
+					Tempo.#dbg.warn(this.#local.config, 'Cannot detect DateTime; fallback to Date.parse');
 					return Temporal.ZonedDateTime.from(`${new Date(arg.value.toString()).toISOString()}[${this.config.timeZone}]`);
 				}
 
@@ -1022,7 +1009,7 @@ export class Tempo {
 				return new Temporal.ZonedDateTime(arg.value, this.#local.config.timeZone, this.#local.config.calendar);
 
 			default:
-				Tempo.#catch(this.#local.config, `Unexpected Tempo parameter type: ${arg.type}, ${String(arg.value)}`);
+				Tempo.#dbg.catch(this.#local.config, `Unexpected Tempo parameter type: ${arg.type}, ${String(arg.value)}`);
 				return today;
 		}
 	}
@@ -1068,7 +1055,7 @@ export class Tempo {
 			}
 		} else {
 			if (value.length <= 7) {         											// cannot reliably interpret small numbers:  might be {ss} or {yymmdd} or {dmmyyyy}
-				Tempo.#catch(this.#local.config, 'Cannot safely interpret number with less than 8-digits: use string instead');
+				Tempo.#dbg.catch(this.#local.config, 'Cannot safely interpret number with less than 8-digits: use string instead');
 				return arg;
 			}
 		}
@@ -1095,8 +1082,8 @@ export class Tempo {
 			Object.assign(arg, { type: 'Temporal.ZonedDateTime', value: dateTime });
 			Object.assign(this.#local.config.parse, { match: sym.description, groups });// stash the {key} of the pattern that was matched								
 
-			Tempo.#info(this.config, 'pattern', sym.description);	// show the pattern that was matched
-			Tempo.#info(this.config, 'groups', groups);						// show the resolved date-time elements
+			Tempo.#dbg.info(this.config, 'pattern', sym.description);	// show the pattern that was matched
+			Tempo.#dbg.info(this.config, 'groups', groups);						// show the resolved date-time elements
 
 			break;																								// stop checking patterns
 		}
@@ -1135,7 +1122,7 @@ export class Tempo {
 
 			const { mod, cnt, yy, mm, dd } = groups as { mod: Tempo.Modifier, [key: string]: string };
 			if (isEmpty(yy) && isEmpty(mm) && isEmpty(dd))
-				return Tempo.#catch(this.#local.config, `Cannot determine a {date} or {event} from "${evt}"`);
+				return Tempo.#dbg.catch(this.#local.config, `Cannot determine a {date} or {event} from "${evt}"`);
 
 			if (mod) {																						// adjust the {year} if a Modifier is present
 				const adjust = +cnt;																// how many years to adjust
@@ -1153,7 +1140,7 @@ export class Tempo {
 
 			Object.assign(groups, this.#parsePeriod(per));				// determine the time-values for the {period}
 			if (isEmpty(groups["hh"]))														// must have at-least {hh} time-component
-				return Tempo.#catch(this.#local.config, `Cannot determine a {time} from "${per}"`);
+				return Tempo.#dbg.catch(this.#local.config, `Cannot determine a {time} from "${per}"`);
 		}
 
 		// fix {mm}
@@ -1270,14 +1257,14 @@ export class Tempo {
 		 * pivot		= (currYear - Tempo.pivot) % 100						// for example: Rem((2024 - 75) / 100) => 49
 		 * century	= Int(currYear / 100)												// for example: Int(2024 / 100) => 20
 		 * 22				=> 2022																			// 22 is less than pivot, so use {century}
-		 * 57				=> 1957																			// 57 is greater than pivot, so use {century - 1}
+		 * 57				=> 1957																			// 57 is more than pivot, so use {century - 1}
 		 */
-		if (date.yy.toString().match(Match.twoDigit)) {					// if {yy} match just-two digits
+		if (date.yy.toString().match(Match.twoDigits)) {				// if {yy} match just-two digits
 			const pivot = dateTime
 				.subtract({ years: this.#local.config.pivot })			// pivot cutoff to determine century
 				.year % 100																					// remainder 
 			const century = Math.trunc(dateTime.year / 100);			// current century
-			date.yy += (century - Number(date.yy > pivot)) * 100;
+			date.yy += (century - Number(date.yy >= pivot)) * 100;
 		}
 
 		// adjust the {year} if a Modifier is present
@@ -1340,7 +1327,7 @@ export class Tempo {
 				?? Tempo.#global.patterns.get(Tempo.getSymbol(Tempo.#global, pat));// get the RegExp for the date-pattern
 
 			if (isUndefined(reg)) {
-				Tempo.#catch(this.#local.config, `Cannot find pattern: "${pat}"`);
+				Tempo.#dbg.catch(this.#local.config, `Cannot find pattern: "${pat}"`);
 			} else {
 				Object.assign(groups, this.#parseMatch(evt, reg));
 			}
@@ -1358,7 +1345,7 @@ export class Tempo {
 			?? Tempo.#global.patterns.get(Tempo.getSymbol(Tempo.#global, 'tm'));	// get the RegExp for the time-pattern
 
 		if (isUndefined(tm)) {
-			Tempo.#catch(this.#local.config, `Cannot find pattern "tm"`);
+			Tempo.#dbg.catch(this.#local.config, `Cannot find pattern "tm"`);
 			return;
 		}
 
@@ -1436,7 +1423,7 @@ export class Tempo {
 							.add({ [plural]: offset });
 
 					default:
-						Tempo.#catch(this.#local.config, `Unexpected method(${mutate}), unit(${key}) and offset(${offset})`);
+						Tempo.#dbg.catch(this.#local.config, `Unexpected method(${mutate}), unit(${key}) and offset(${offset})`);
 						return zdt;
 				}
 
@@ -1597,7 +1584,7 @@ export class Tempo {
 							.subtract({ nanoseconds: 1 });
 
 					default:
-						Tempo.#catch(this.#local.config, `Unexpected method(${mutate}), unit(${unit}) and offset(${single})`);
+						Tempo.#dbg.catch(this.#local.config, `Unexpected method(${mutate}), unit(${unit}) and offset(${single})`);
 						return zdt;
 				}
 			}, this.#zdt)																					// start reduce with the Tempo zonedDateTime
@@ -1735,8 +1722,8 @@ export namespace Tempo {
 	export type Options = Partial<{														// allowable settings to override configuration
 		/** additional console.log for tracking */							debug: boolean;
 		/** catch or throw Errors */														catch: boolean;
-		/** Temporal.TimeZone */																timeZone: string;
-		/** Temporal.Calendar */																calendar: string;
+		/** Temporal timeZone */																timeZone: string;
+		/** Temporal calendar*/																	calendar: string;
 		/** locale (e.g. en-AU) */															locale: string;
 		/** pivot year for two-digit years */										pivot: number;
 		/** hemisphere for term[@@qtr] or term[@@szn] */				sphere: Tempo.Sphere;

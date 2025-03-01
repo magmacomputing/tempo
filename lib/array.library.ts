@@ -93,8 +93,8 @@ export function sortKey<T extends Property<any>>(array: T[], ...keys: (PropertyK
 	return array.sort(sortBy(...keys));
 }
 
-type GroupFn<T> = (itm: T) => keyof T
 type KeyOf<T> = keyof T
+type GroupFn<T> = (itm: T) => KeyOf<T>
 /** return an object grouped by key-fields in an array of documents */
 // export function byKey<T>(array: T[], mapFn: GroupFn<T>): Record<KeyOf<T>, T[]>
 // export function byKey<T>(array: T[], key: KeyOf<T>, ...keys: KeyOf<T>[]): Record<KeyOf<T>, T[]>
