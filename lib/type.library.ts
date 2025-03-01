@@ -275,11 +275,11 @@ type Length<T extends string, Count extends number[] = []> =
 
 type Compare<First extends number, Second extends number, Count extends number[] = []> =
 	First extends Second
-	? 0
+	? 0																												// equal
 	: Count['length'] extends First
-	? -1
+	? -1																											// first less than second
 	: Count['length'] extends Second
-	? 1
+	? 1																												// first more than second
 	: Compare<First, Second, [...Count, 0]>
 
 export type MaxLength<T extends string, Max extends number> =
@@ -290,15 +290,26 @@ export type MinLength<T extends string, Min extends number> =
 export type InRange<T extends string, Min extends number, Max extends number> =
 	MinLength<T, Min> & MaxLength<T, Max>
 
-
-export type Substring<T extends string, Start extends number, Max extends number> =
+	/**
+	 * return a substring of a string-type  
+	 * eg: Substr<Monday|Tuesday|Wednesday, 3> returns Mon|Tue|Wed  
+	 * T is the original string  
+	 * Max is the number of chars to return  
+	 * Start is the offset (starting from '1')  
+	 */
+export type Substring<T extends string, Max extends number, Start extends number = 1> =
 	Substr<T, Start, Max, '', [0]>
 
-type Substr<T, Start, Max, Str extends string, Count extends number[]> =
-	T extends `${infer Head}${infer Tail}`										// if there is a first-char (and optional trail-chars)
-	? Count['length'] extends Start														// if offset beginning of T reached
+	/**
+	 * internal Type to for Substring<> to recurse
+	 * Str is the string to build and return
+	 * Offset is an internal array used to assist with determining start-point of T
+	 */
+type Substr<T, Start, Max, Str extends string, Offset extends number[]> =
+	T extends `${infer NextChar}${infer Rest}`								// if there is a next-char (and optional trail-chars)
+	? Offset['length'] extends Start													// if offset beginning of T reached
 	? Length<Str> extends Max																	// if length of Str is equal to Max
 	? Str																											// return Str, all done
-	: Substr<Tail, Start, Max, `${Str}${Head}`, Count>				// else Str less than Max; recurse & append Head to Str
-	: Substr<Tail, Start, Max, Str, [...Count, 0]>						// else offset not reached; recurse & increment offset-Count
+	: Substr<Rest, Start, Max, `${Str}${NextChar}`, Offset>		// else Str less than Max; recurse & append NextChar to Str
+	: Substr<Rest, Start, Max, Str, [...Offset, 0]>						// else offset not reached; recurse & increment offset-Count
 	: Str																											// else no more chars; return Str
