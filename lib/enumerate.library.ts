@@ -9,6 +9,7 @@ type helper<T> = {
 	/** array of Enum keys */																	keys(): (keyof T)[];
 	/** array of Enum values */																values(): T[keyof T][];
 	/** tuple of Enum entries */															entries(): [keyof T, T[keyof T]][];
+	/** inverse of Enum */																		inverse(): Record<string | number, T>;
 	/** reverse lookup of Enum key by value */								keyOf(val: T[keyof T]): keyof T;
 	/** Iterator for Enum */[Symbol.iterator](): Iterator<Entry<T extends {} ? T : never>>;
 	/** string tag */[Symbol.toStringTag](): string;
@@ -27,7 +28,7 @@ export function enumify<const T extends Record<keyof T, any>>(list: T) {
 		? (list as (string | number)[]).reduce((acc, itm, idx) => Object.assign(acc, { [itm]: idx }), {})
 		: { ...list }
 	const entries = ownEntries(stash);												// define once; use in entries(), keyOf, iterator()
-	const reverse = entries																		// build a reverse-keyof object
+	const inverse = entries																		// build a reverse-keyof object
 		.reduce((acc, [key, val]) => Object.assign(acc, { [val]: key }), {} as Record<string | number, T>);
 
 	const enumType = Object.defineProperties(stash, {					// helper methods
@@ -36,7 +37,8 @@ export function enumify<const T extends Record<keyof T, any>>(list: T) {
 		keys: { value: () => entries.map(([key, _]) => key) },
 		values: { value: () => entries.map(([_, val]) => val) },
 		entries: { value: () => entries },
-		keyOf: { value: (val: string | number) => reverse[val] },
+		inverse: { value: () => inverse },
+		keyOf: { value: (val: string | number) => inverse[val] },
 		[Symbol.toStringTag]: ({ get: () => 'Enumify' }),
 		[Symbol.iterator]: {
 			value: () => {
