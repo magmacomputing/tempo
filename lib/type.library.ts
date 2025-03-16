@@ -76,7 +76,7 @@ export const isTuple = <T>(obj?: T): obj is Readonly<Extract<T, Array<T>>> => is
 
 export const isNull = <T>(obj?: T): obj is Extract<T, null> => isType(obj, 'Null');
 export const isNullish = <T>(obj: T): obj is Extract<T, Nullish> => isType<undefined | null | void>(obj, 'Null', 'Undefined', 'Void', 'Empty');
-export const isUndefined = <T>(obj?: T): obj is undefined => isType<undefined>(obj, 'Undefined', 'Void');
+export const isUndefined = <T>(obj?: T): obj is undefined => isType<undefined>(obj, 'Undefined', 'Void', 'Empty');
 export const isDefined = <T>(obj: T): obj is NonNullable<T> => !isNullish(obj);
 
 export const isClass = <T>(obj?: T): obj is Extract<T, Function> => isType(obj, 'Class');
@@ -290,21 +290,21 @@ export type MinLength<T extends string, Min extends number> =
 export type InRange<T extends string, Min extends number, Max extends number> =
 	MinLength<T, Min> & MaxLength<T, Max>
 
-	/**
-	 * return a substring of a string-type  
-	 * eg: Substr<Monday|Tuesday|Wednesday, 3> returns Mon|Tue|Wed  
-	 * T is the original string  
-	 * Max is the number of chars to return  
-	 * Start is the offset (starting from '1')  
-	 */
+/**
+ * return a substring of a string-type  
+ * eg: Substr<Monday|Tuesday|Wednesday, 3> returns Mon|Tue|Wed  
+ * T is the original string  
+ * Max is the number of chars to return  
+ * Start is the offset (starting from '1')  
+ */
 export type Substring<T extends string, Max extends number, Start extends number = 1> =
 	Substr<T, Start, Max, '', [0]>
 
-	/**
-	 * internal Type to for Substring<> to recurse
-	 * Str is the string to build and return
-	 * Offset is an internal array used to assist with determining start-point of T
-	 */
+/**
+ * internal Type to for Substring<> to recurse
+ * Str is the string to build and return
+ * Offset is an internal array used to assist with determining start-point of T
+ */
 type Substr<T, Start, Max, Str extends string, Offset extends number[]> =
 	T extends `${infer NextChar}${infer Rest}`								// if there is a next-char (and optional trail-chars)
 	? Offset['length'] extends Start													// if offset beginning of T reached

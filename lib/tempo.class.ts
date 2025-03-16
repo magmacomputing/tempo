@@ -6,10 +6,10 @@ import { enumify } from '@core/shared/enumerate.library.js';
 import { getAccessors } from '@core/shared/class.library.js';
 import { asArray, sortInsert } from '@core/shared/array.library.js';
 import { getStore, setStore } from '@core/shared/storage.library.js';
-import { ownEntries, omit, purge } from '@core/shared/reflect.library.js';
+import { ownEntries, omit, purge, ownKeys } from '@core/shared/reflect.library.js';
 import { getContext, sleep, CONTEXT } from '@core/shared/utility.library.js';
 import { asNumber, asInteger, isNumeric, ifNumeric } from '@core/shared/number.library.js';
-import { asString, pad, singular, toProperCase, trimAll, sprintf } from '@core/shared/string.library.js';
+import { asString, pad, singular, toProperCase, trimAll } from '@core/shared/string.library.js';
 import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isNumber, isObject, isRegExp } from '@core/shared/type.library.js';
 
 import type { Enumify } from '@core/shared/enumerate.library.js';
@@ -17,10 +17,17 @@ import type { Logger } from '@core/shared/logger.library.js';
 import type { IntRange, Types } from '@core/shared/type.library.js';
 
 import '@core/shared/prototype.library.js';									// patch prototype
+// #endregion
 
-/** TODO: THIS IMPORT CAN TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
-import { Temporal } from '@js-temporal/polyfill'
-
+// #region Temporal ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/** TODO: THIS SECTION CAN TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
+import { Temporal } from '@js-temporal/polyfill';
+declare global {
+	interface Window {
+		Temporal: typeof Temporal,
+	}
+}
+window["Temporal"] = Temporal;
 // #endregion
 
 /**
@@ -126,13 +133,14 @@ const Period = [
 /** Reasonable default options for initial Tempo config */
 const Default = {
 	version: VERSION,
-	pivot: 75,	/** @link https://en.wikipedia.org/wiki/Date_windowing */
+	key: STORAGEKEY,
+	pivot: 75,																								/** @link https://en.wikipedia.org/wiki/Date_windowing */
 	catch: false,
 	debug: false,
 	timeStamp: 'ms',
 	calendar: 'iso8601',
 	sphere: 'north',
-	monthDay: ['en-US', 'en-AS'], /** @link https://en.wikipedia.org/wiki/Date_format_by_country */
+	monthDay: ['en-US', 'en-AS'],															/** @link https://en.wikipedia.org/wiki/Date_format_by_country */
 	layout: new Map(Layout),
 	event: [...Event],
 	period: [...Period],
@@ -230,8 +238,8 @@ export class Tempo {
 	 * swap parsing-order of patterns (to suit different locales)  
 	 * this allows the parser to interpret '04012023' as Apr-01-2023 instead of 04-Jan-2023  
 	 */
-	static #swap(shape: Internal.Shape) {
-		const isMonthDay = Tempo.#isMonthDay(shape);						// found an Intl.Locale which prefers {mdy} and conatains our {timeZone}
+	static #swapLocale(shape: Internal.Shape) {
+		const isMonthDay = Tempo.#isMonthDay(shape);						// found an Intl.Locale which prefers {mdy} and contains our {timeZone}
 		const swap = [																					// regexs to swap (to change conform priority)
 			['dmy', 'mdy'],																				// swap {dmy} for {mdy}
 		] as const;
@@ -263,8 +271,8 @@ export class Tempo {
 	}
 
 	/** setup zodiac signs */
-	static #zodiac(shape: Internal.Shape) {
-		const term: Tempo.Term = [											/** @link https://www.calendar.best/zodiac-signs.html */
+	static #initZodiac(shape: Internal.Shape) {
+		const term: Tempo.Term = [															/** @link https://www.calendar.best/zodiac-signs.html */
 			{ key: 'Aries', order: 1, day: 21, month: 3, symbol: 'Ram', longitude: 0, planet: 'Mars' },
 			{ key: 'Taurus', order: 2, day: 20, month: 4, symbol: 'Bull', longitude: 30, planet: 'Venus' },
 			{ key: 'Gemini', order: 3, day: 21, month: 5, symbol: 'Twins', longitude: 60, planet: 'Mercury' },
@@ -283,7 +291,7 @@ export class Tempo {
 	}
 
 	/** setup seasons inferred from current hemisphere */
-	static #season(shape: Internal.Shape) {										/** meteorological @link https://www.timeanddate.com/calendar/aboutseasons.html */
+	static #initSeason(shape: Internal.Shape) {								/** meteorological @link https://www.timeanddate.com/calendar/aboutseasons.html */
 		const term: Tempo.Term = shape.config.sphere !== Tempo.COMPASS.South
 			? [{ key: 'Spring', day: 20, month: 3 }, { key: 'Summer', day: 21, month: 6 }, { key: 'Autumn', day: 22, month: 9 }, { key: 'Winter', day: 21, month: 12 }]
 			: [{ key: 'Autumn', day: 1, month: 3 }, { key: 'Winter', day: 1, month: 6 }, { key: 'Spring', day: 1, month: 9 }, { key: 'Summer', day: 1, month: 12 }]
@@ -292,7 +300,7 @@ export class Tempo {
 	}
 
 	/** setup quarters, inferred from current hemisphere */
-	static #quarter(shape: Internal.Shape) {									/** trimesters @link https://en.wikipedia.org/wiki/Calendar_year#:~:text=First%20quarter%2C%20Q1%3A%20January%20%E2%80%93,October%20%E2%80%93%20December%20(92%20days) */
+	static #initQuarter(shape: Internal.Shape) {							/** trimesters @link https://en.wikipedia.org/wiki/Calendar_year#:~:text=First%20quarter%2C%20Q1%3A%20January%20%E2%80%93,October%20%E2%80%93%20December%20(92%20days) */
 		const month = shape.config.sphere !== Tempo.COMPASS.North
 			? Tempo.MONTH.Oct
 			: Tempo.MONTH.Jul
@@ -332,7 +340,7 @@ export class Tempo {
 	}
 
 	/** properCase week-day / calendar-month */
-	static #prefix = <T extends Tempo.WeekdayShort | Tempo.Calendar>(str: T) =>
+	static #prefix = <T extends Tempo.Weekday | Tempo.Month>(str: T) =>
 		toProperCase(str.substring(0, 3)) as T;
 
 	/** get first Canonical name of a supplied locale */
@@ -352,23 +360,23 @@ export class Tempo {
 	}
 
 	/** try to infer hemisphere using the timezone's daylight-savings setting */
-	static #dst = (shape: Internal.Shape) => {
+	static #initSphere = (shape: Internal.Shape) => {
 		if (isUndefined(shape.config.timeZone) || isDefined(shape.config.sphere))
 			return shape.config.sphere;														// already specified
 
 		const zdt = Temporal.Now.zonedDateTimeISO(shape.config.timeZone);
 		const jan = zdt.with({ day: 1, month: 1 }).offsetNanoseconds;
 		const jun = zdt.with({ day: 1, month: 6 }).offsetNanoseconds;
-		const dst = jan - jun;																	// timezone offset difference between Jan and Jun
+		const dst = Math.sign(jan - jun);												// timeZone offset difference between Jan and Jun
 
-		if (dst < 0)
-			return shape.config.sphere = Tempo.COMPASS.North;
-
-		if (dst > 0)
-			return shape.config.sphere = Tempo.COMPASS.South;
-
-		omit(shape.config, 'sphere');
-		return void 0;																					// timeZone does not observe DST
+		switch (dst) {
+			case -1:
+				return shape.config.sphere = Tempo.COMPASS.North;		// clock moves backward in Northern hemisphere
+			case 1:
+				return shape.config.sphere = Tempo.COMPASS.South;		// clock moves forward in Southern hemisphere
+			default:
+				return null;																				// indicate timeZone does not observe DST
+		}
 	}
 
 	/**
@@ -549,21 +557,21 @@ export class Tempo {
 					}
 
 					// allow for storage-values to overwrite
-					Tempo.#setConfig(Tempo.#global, Tempo.read());
+					Tempo.#setConfig(Tempo.#global, Tempo.readStore());
 				}
 				else Tempo.#setConfig(Tempo.#global, options);			// overload with init() argument {options}
 
 				// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-				Tempo.#dst(Tempo.#global);													// setup hemisphere
+				Tempo.#initSphere(Tempo.#global);										// setup hemisphere
 
 				if (isEmpty(Tempo.#global.terms[Tempo.getSymbol(Tempo.#global, 'zdc.zodiac')]))
-					Tempo.#zodiac(Tempo.#global);											// setup default Zodiac star-signs
+					Tempo.#initZodiac(Tempo.#global);									// setup default Zodiac star-signs
 				if (isEmpty(Tempo.#global.terms[Tempo.getSymbol(Tempo.#global, 'szn.season')]))
-					Tempo.#season(Tempo.#global);											// setup default seasons
+					Tempo.#initSeason(Tempo.#global);									// setup default seasons
 				if (isEmpty(Tempo.#global.terms[Tempo.getSymbol(Tempo.#global, 'qtr.quarter')]))
-					Tempo.#quarter(Tempo.#global);										// setup default quarters
+					Tempo.#initQuarter(Tempo.#global);								// setup default quarters
 
-				const locale = Tempo.#swap(Tempo.#global);					// determine if we need to swap the order of some {layouts}
+				const locale = Tempo.#swapLocale(Tempo.#global);		// determine if we need to swap the order of some {layouts}
 				if (locale && !options.locale)
 					Tempo.#global.config.locale = locale;							// found an override locale based on timeZone
 				Tempo.#global.config.locale = Tempo.#locale(Tempo.#global.config.locale);
@@ -582,13 +590,13 @@ export class Tempo {
 	}
 
 	/** read Options from persistent storage */
-	static read() {
-		return getStore(STORAGEKEY, {}) as Tempo.Options;
+	static readStore() {
+		return getStore(Tempo.#global.config.key, {}) as Tempo.Options;
 	}
 
 	/** write Options into persistent storage */
-	static write(config?: Tempo.Options) {
-		setStore(STORAGEKEY, config);
+	static writeStore(config?: Tempo.Options) {
+		setStore(Tempo.#global.config.key, config);
 	}
 
 	/** lookup Symbol registry */
@@ -662,7 +670,7 @@ export class Tempo {
 	 * static method to allow compare of Tempo's.  
 	 * (tempo2 defaults to current Instant).
 	 * ```` 
-	 * const diff = Tempo.compare(tempo1, tempo2);
+	 * const diff = Tempo.compare(tempo1, tempo2?);
 	 * 		-1 if tempo1 comes before tempo2  
 	 * 		 0 if tempo1 and tempo2 represent the same time  
 	 * 		 1 if tempo1 comes after tempo2 
@@ -900,7 +908,7 @@ export class Tempo {
 	/** as Temporal.ZonedDateTime */													toDateTime() { return this.#zdt }
 	/** as Temporal.Instant */																toInstant() { return this.#instant }
 	/** as Date object */																			toDate() { return new Date(this.#zdt.round({ smallestUnit: 'millisecond' }).epochMilliseconds) }
-	/** as String */																					toString() { return this.#zdt.toString() }
+	/** as String */																					toString() { return `Tempo(${this.#zdt.epochNanoseconds})` }
 	/** as Object */																					toJSON() { return { ...this.#local.config, value: this.toString() } }
 
 	// #endregion Instance public methods
@@ -915,7 +923,7 @@ export class Tempo {
 		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 		// if a timeZone provided but no hemisphere, try to infer hemisphere based on daylight-savings  
 		if (this.#options.timeZone !== Tempo.#global.config.timeZone && isUndefined(this.#options.sphere))
-			Tempo.#dst(this.#local);
+			Tempo.#initSphere(this.#local);
 
 		// // change of hemisphere, setup new Seasons / Fiscal start-month
 		// if (this.#local.config.sphere !== Tempo.#global.config.sphere) {
@@ -1016,9 +1024,9 @@ export class Tempo {
 
 	/** check if we've been given a ZonedDateTimeLike object */
 	#zonedDateTimeLike(tempo: Tempo.DateTime | undefined) {
-		const ZonedDateTimeLike = ['year', 'month', 'monthCode', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond', 'offset', 'timeZone', 'calendar'];
+		const ZonedDateTimeLike = getAccessors<Temporal.ZonedDateTimeLike>(Temporal.ZonedDateTime);
 
-		return isObject(tempo) && Object.keys(tempo).every(key => ZonedDateTimeLike.includes(key));
+		return isObject(tempo) && ownKeys(tempo as Temporal.ZonedDateTimeLike).every(key => ZonedDateTimeLike.includes(key));
 	}
 
 	/** lookup local config, else fallback to global config */
@@ -1029,9 +1037,9 @@ export class Tempo {
 	/** evaluate 'string | number' input against known patterns */
 	#conform(tempo: Tempo.DateTime | undefined, dateTime: Temporal.ZonedDateTime) {
 		const arg = asType(tempo);
-		this.#local.config.parse = { ...arg };
+		this.#local.config.parse = { ...arg };									// for debugging
 
-		if (this.#zonedDateTimeLike(tempo)) {										// override {type}, if Object is ZonedDateTimeLike
+		if (this.#zonedDateTimeLike(tempo)) {										// override {arg.type}, if Object is ZonedDateTimeLike
 			this.#local.config.parse.match = 'Temporal.ZonedDateTimeLike';
 
 			return Object.assign(arg, {
@@ -1145,7 +1153,7 @@ export class Tempo {
 
 		// fix {mm}
 		if (isDefined(groups["mm"]) && !isNumeric(groups["mm"])) {
-			const mm = Tempo.#prefix(groups["mm"] as Tempo.Calendar);
+			const mm = Tempo.#prefix(groups["mm"] as Tempo.Month);
 
 			groups["mm"] = Tempo.eMONTH.keys()
 				.findIndex(el => el === mm)													// resolve month-name into a month-number
@@ -1209,7 +1217,7 @@ export class Tempo {
 	 * @returns  ZonedDateTime with computed date-offset  
 	 */
 	#parseWeekday(groups: Internal.RegExpGroups, dateTime: Temporal.ZonedDateTime) {
-		const { dow, mod, cnt, ...rest } = groups as { dow: Tempo.WeekdayShort, mod: Tempo.Modifier, [key: string]: string };
+		const { dow, mod, cnt, ...rest } = groups as { dow: Tempo.Weekday, mod: Tempo.Modifier, [key: string]: string };
 		if (isUndefined(dow))																		// this is not a {dow} pattern match
 			return dateTime;
 
@@ -1734,6 +1742,7 @@ export namespace Tempo {
 		/** time-periods (e.g. arvo => '3pm') */								period: Internal.StringTuple[];
 		/** term-ranges (e.g. zdc: [{key:Taurus, day:21, month:5},...]) */term: Record<string, Tempo.Term>;
 		/** supplied value to parse */													value: Tempo.DateTime;
+		/** localStorage key */																	key: string;
 	}>
 
 	/** drop the setup-only Options */
@@ -1833,19 +1842,16 @@ export namespace Tempo {
 	export type Duration = Temporal.DurationLike & Partial<Record<"iso", string>>
 
 	export const WEEKDAY = enumify(['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',]);
-	// export const WEEKDAYS = enumify({ All: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6, Sunday: 7, });
-	export const WEEKDAYS = enumify(['Alldays', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',])
+	export const WEEKDAYS = enumify(['All', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',]);
 	export enum MONTH { All, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec }
 	export enum MONTHS { Every, January, February, March, April, May, June, July, August, September, October, November, December }
 	export enum DURATION { year, month, week, day, hour, minute, second, millisecond, microsecond, nanosecond }
 	export enum DURATIONS { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds }
 
-	// export type Weekday = Exclude<Enumify<typeof Tempo.WEEKDAY>, 'All'>
-	export type WeekdayShort = keyof Enumify<typeof Tempo.WEEKDAY>
-	export type WeekdayLong = keyof Enumify<typeof Tempo.WEEKDAYS>
-	export type Calendar = Exclude<keyof typeof Tempo.MONTH, 'All'>
+	export type Weekday = Exclude<keyof Enumify<typeof Tempo.WEEKDAY>, 'All'>
+	export type Month = Exclude<keyof typeof Tempo.MONTH, 'All'>
 
-	export const eMONTH = enumify(MONTH);
+	export const eMONTH = enumify(Tempo.MONTH);
 
 	/** Compass Cardinal Points */
 	export type Sphere = typeof Tempo.COMPASS.North | typeof Tempo.COMPASS.South | null
@@ -1858,22 +1864,22 @@ export namespace Tempo {
 
 	/** pre-configured format names */
 	export const FORMAT = {
-		display: 'ddd, dd mmm yyyy',
-		dayDate: 'ddd, yyyy-mmm-dd',
-		dayTime: 'ddd, yyyy-mmm-dd hh:mi',
-		dayFull: 'ddd, yyyy-mmm-dd hh:mi:ss',										// useful for Sheets cell-format
-		dayStamp: 'ddd, yyyy-mmm-dd hh:mi:ss.ff',								// day, date and time to nanosecond
-		logStamp: 'hhmiss.ff',																	// useful for stamping logs 
-		sortTime: 'yyyy-mm-dd hh:mi:ss',												// useful for sorting display-strings
-		monthDay: 'dd-mmm',																			// useful for readable month and day
-		monthTime: 'yyyy-mmm-dd hh:mi',													// useful for dates where dow is not needed
-		hourMinute: 'hh:mi',																		// 24-hour format
-		yearWeek: 'yyyyww',
-		yearMonth: 'yyyymm',
-		yearMonthDay: 'yyyymmdd',
-		weekDay: 'dd',																					// day of week
-		date: 'yyyy-mmm-dd',																		// just Date portion
-		time: 'hh:mi:ss',																				// just Time portion
+		/** useful for standard date display */									display: 'ddd, dd mmm yyyy',
+		/** useful for standard datestamps */										dayDate: 'ddd, yyyy-mmm-dd',
+		/** useful for stamping logs */													dayTime: 'ddd, yyyy-mmm-dd hh:mi',
+		/** useful for standard timestamps */										dayFull: 'ddd, yyyy-mmm-dd hh:mi:ss',
+		/** day, date and time to nanosecond */									dayStamp: 'ddd, yyyy-mmm-dd hh:mi:ss.ff',
+		/** useful for stamping logs */													logStamp: 'hhmiss.ff',
+		/** useful for sorting display-strings */								sortTime: 'yyyy-mm-dd hh:mi:ss',
+		/** useful for readable month and day */								monthDay: 'dd-mmm',
+		/** useful for dates where dow is not needed */					monthTime: 'yyyy-mmm-dd hh:mi',
+		/** 24-hour format */																		hourMinute: 'hh:mi',
+		/** useful for sorting week order */										yearWeek: 'yyyyww',
+		/** useful for sirting month order */										yearMonth: 'yyyymm',
+		/** useful for sorting date order */										yearMonthDay: 'yyyymmdd',
+		/** day of week */																			weekDay: 'dd',
+		/** just Date portion */																date: 'yyyy-mmm-dd',																		// 
+		/** just Time portion */																time: 'hh:mi:ss',
 	} as const
 
 	/** approx number of seconds per unit-of-time */
@@ -1890,7 +1896,7 @@ export namespace Tempo {
 		nanosecond: .000_000_001,
 	})
 
-	/** approxnumber of milliseconds per unit-of-time */
+	/** approx number of milliseconds per unit-of-time */
 	export const TIMES = enumify({
 		years: TIME.year * 1_000,
 		months: TIME.month * 1_000,
@@ -1906,9 +1912,9 @@ export namespace Tempo {
 
 	/** some useful Dates */
 	export const DATE = {
-		/** Date(Unix epoch) */																	startDate: new Date(0),
-		/** Date(31-Dec-9999) */																maxDate: new Date('9999-12-31T23:59:59'),
-		/** Date(01-Jan-1000) */																minDate: new Date('1000-01-01T00:00:00'),
+		/** Date(Unix epoch) */																	epochDate: new Date(0),
+		/** Date(31-Dec-9999) */																maxDate: new Date(Date.UTC(9999, 11, 31, 23, 59, 59, 59)),
+		/** Date(01-Jan-1000) */																minDate: new Date(Date.UTC(1000, 0, 1, 0, 0, 0, 0)),
 		/** Tempo(31-Dec-9999.23:59:59).ns */										maxTempo: Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds,
 		/** Tempo(01-Jan-1000.00:00:00).ns */										minTempo: Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds,
 	} as const
