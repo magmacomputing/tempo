@@ -45,7 +45,6 @@ patch(String, 'toProperCase', function () { return toProperCase(this) });
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 declare global {
 	interface ObjectConstructor {
-		// 		entries<T extends Entity<T>>(object: T): ReadonlyArray<Entry<T>>
 	}
 }
 
@@ -56,8 +55,8 @@ declare global {
 	interface Array<T> {
 		/** reduce Array to a keyed Object[] */									keyedBy<S extends string>(...keys: (keyof T)[]): Record<S, T[]>;
 		/** reduce Array to a keyed Object[], mapped */					keyedBy<S extends string>(mapfn: (value: T, index: number) => Record<S, T[]>);
-		/** reduce Array to a keyed single-Object */						keyedLkp<S extends string>(...keys: (keyof T)[]): Record<S, T>;
-		/** reduce Array to a keyed single-Object, mapped */		keyedLkp<S extends string>(mapfn: (value: T, index: number) => Record<S, T>);
+		/** reduce Array to a keyed single-Object */						lookupBy<S extends string>(...keys: (keyof T)[]): Record<S, T>;
+		/** reduce Array to a keyed single-Object, mapped */		lookupBy<S extends string>(mapfn: (value: T, index: number) => Record<S, T>);
 
 		/** return ordered Array-of-objects */									orderBy(...keys: (PropertyKey | SortBy)[]): T[];
 		/** return ordered Array-of-objects, mapped */					orderBy<K extends keyof T>(mapfn: (value: T, index: number, array: T[]) => K, thisArg?: any): K[];
@@ -83,7 +82,7 @@ patch(Array, 'sortBy', sorted);															// sort array by named keys
 function keyed(key: Function | (keyof T), ...keys: (keyof T)[]) { return byKey(this, key, ...keys); }
 function lookup(key: Function | (keyof T), ...keys: (keyof T)[]) { return byLkp(this, key, ...keys); }
 patch(Array, 'keyedBy', keyed);															// reduce array by named keys
-patch(Array, 'keyedLkp', lookup);														// reduce array by named keys, only one entry per key
+patch(Array, 'lookupBy', lookup);														// reduce array by named keys, only one entry per key
 
 patch(Array, 'tap', function (fn: Function) {
 	fn(this);																									// run an arbitrary function

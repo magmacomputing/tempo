@@ -263,9 +263,13 @@ type EnumerateMax<N extends number, Acc extends number[] = []> = Acc['length'] e
 /** declare expected range of values */
 export type IntRange<Lower extends number, Upper extends number> = Exclude<EnumerateMax<Upper>, EnumerateMin<Lower>>
 
+// branded object
 declare const __brand: unique symbol
 type Brand<B> = { [__brand]: B }
 export type Branded<T, B> = T & Brand<B>
+
+// JSON object with zero properties
+export type EmptyObject = { [__brand]?: never }
 
 // https://www.youtube.com/watch?v=_-QYbP9rOhg&list=WL&index=1
 type Length<T extends string, Count extends number[] = []> =
@@ -313,3 +317,6 @@ type Substr<T, Start, Max, Str extends string, Offset extends number[]> =
 	: Substr<Rest, Start, Max, `${Str}${NextChar}`, Offset>		// else Str less than Max; recurse & append NextChar to Str
 	: Substr<Rest, Start, Max, Str, [...Offset, 0]>						// else offset not reached; recurse & increment offset-Count
 	: Str																											// else no more chars; return Str
+
+// https://www.totaltypescript.com/concepts/the-prettify-helper
+export type Prettify<T> = { [K in keyof T]: T[K]; } & {}

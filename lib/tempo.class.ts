@@ -27,7 +27,8 @@ declare global {
 		Temporal: typeof Temporal,
 	}
 }
-window["Temporal"] = Temporal;
+
+window["Temporal"] ??= Temporal;
 // #endregion
 
 /**
@@ -483,7 +484,7 @@ export class Tempo {
 						case 'monthDay':
 							shape.config.monthDay = asArray(arg.value as NonNullable<Tempo.Options["monthDay"]>)
 								.map(locale => new Intl.Locale(locale))
-								.map(locale => ({ locale: locale.baseName, timeZones: locale.timeZones }))
+								.map(locale => ({ locale: locale.baseName, timeZones: locale.getTimeZones() }))
 							break;
 
 						case 'term':																		// TODO: allow for different format of {terms}
