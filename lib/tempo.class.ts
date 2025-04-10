@@ -182,11 +182,11 @@ export class Tempo {
 	} as Internal.Shape
 
 	static #timeStamp = {																			// lookup object for Tempo().ts resolution
-		ss: 'epochSeconds',
+		// ss: 'epochSeconds',
 		ms: 'epochMilliseconds',
-		us: 'epochMicroseconds',
+		// us: 'epochMicroseconds',
 		ns: 'epochNanoseconds',
-	} as Internal.TimeStamps
+	} as Record<string, keyof Temporal.ZonedDateTime>
 
 	// #endregion
 
@@ -592,7 +592,7 @@ export class Tempo {
 
 	/** read Options from persistent storage */
 	static readStore() {
-		return getStore(Tempo.#global.config.key, {}) as Tempo.Options;
+		return getStore<Tempo.Options>(Tempo.#global.config.key, {});// as Tempo.Options;
 	}
 
 	/** write Options into persistent storage */
@@ -877,7 +877,7 @@ export class Tempo {
 	/** fractional seconds since last second */								get ff() { return +(`0.${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`) }
 	/** number of weeks */																		get ww() { return this.#zdt.weekOfYear as Tempo.ww }
 	/** timezone */																						get tz() { return this.#zdt.timeZoneId }
-	/** Unix epoch ms / ns (default to milliseconds) */				get ts() { return this.#zdt[Tempo.#timeStamp[this.#local.config.timeStamp]] as number | bigint }
+	/** Unix epoch ms / ns (default to milliseconds) */				get ts() { return this.epoch[this.#local.config.timeStamp] }
 	/** short month name */																		get mmm() { return Tempo.MONTH[this.#zdt.month] }
 	/** long month name */																		get mon() { return Tempo.MONTHS[this.#zdt.month] }
 	/** weekday: Mon=1, Sun=7 */															get dow() { return this.#zdt.dayOfWeek as Tempo.dow }
@@ -889,9 +889,9 @@ export class Tempo {
 	/** in-built format-codes and formatted-results */				get fmt() { return { ...this.#fmt } }
 	/** units since epoch */																	get epoch() {
 		return {
-			/** seconds since epoch */														ss: this.#zdt.epochSeconds,
+			/** seconds since epoch */														ss: Math.trunc(this.#zdt.epochMilliseconds / 1000),
 			/** milliseconds since epoch */												ms: this.#zdt.epochMilliseconds,
-			/** microseconds since epoch */												us: this.#zdt.epochMicroseconds,
+			/** microseconds since epoch */												us: Number(BigInt.asIntN(64, this.#zdt.epochNanoseconds / 1000n)),
 			/** nanoseconds since epoch */												ns: this.#zdt.epochNanoseconds,
 		}
 	}
@@ -957,7 +957,7 @@ export class Tempo {
 	/** parse DateTime input */
 	#parse(tempo?: Tempo.DateTime, dateTime?: Temporal.ZonedDateTime) {
 		const today = dateTime ?? this.#instant									// cast instantiation to current timeZone, calendar
-			.toZonedDateTime({ timeZone: this.#getConfig('timeZone'), calendar: this.#getConfig('calendar') });
+			.toZonedDateTimeISO(this.#getConfig('timeZone'));
 		const arg = this.#conform(tempo, today);								// if String or Number, conform the input against known patterns
 		Tempo.#dbg.info(this.#local.config, 'parse', `{type: ${arg.type}, value: ${arg.value}}`);					// show what we're parsing
 
@@ -984,8 +984,7 @@ export class Tempo {
 					.toZonedDateTime(this.#local.config.timeZone);
 
 			case 'Temporal.PlainTime':
-				return arg.value
-					.toZonedDateTime({ timeZone: this.#local.config.timeZone, plainDate: today.toPlainDate() });
+				return today.withPlainTime(arg.value);
 
 			case 'Temporal.PlainYearMonth':												// assume current day, else end-of-month
 				return arg.value
@@ -999,7 +998,7 @@ export class Tempo {
 
 			case 'Temporal.Instant':
 				return arg.value
-					.toZonedDateTime({ timeZone: this.#local.config.timeZone, calendar: this.#local.config.calendar });
+					.toZonedDateTimeISO(this.#local.config.timeZone);
 
 			case 'Tempo':
 				return arg.value
@@ -1284,15 +1283,14 @@ export class Tempo {
 		date.yy += this.#parseModifier({ mod, adjust, offset, period });
 
 		// all date-components are now set; check for overflow in case past end-of-month
-		const overflow = Temporal.PlainDate.from({ year: date.yy, month: date.mm, day: date.dd }, { overflow: 'constrain' });
-
-		return dateTime
-			.withPlainDate(overflow);															// adjust to constrained date
+		return Temporal.PlainDate.from({ year: date.yy, month: date.mm, day: date.dd }, { overflow: 'constrain' })
+			.toZonedDateTime(dateTime.timeZoneId)									// adjust to constrained date
+			.withPlainTime(dateTime.toPlainTime());								// restore the time
 	}
 
 	/**
 	 * match input against 'tm' pattern.  
-	 * {groups} is expected to contain time-components (like {hh:'15', mi: '00', mer:'pm'}).  
+	 * {groups} is expected to contain time-components (like {hh:'3', mi: '30', mer:'pm'}).  
 	 * returns an adjusted ZonedDateTime  
 	 */
 	#parseTime(groups: Internal.RegExpGroups = {}, dateTime: Temporal.ZonedDateTime) {
@@ -1302,10 +1300,8 @@ export class Tempo {
 		let { hh = 0, mi = 0, ss = 0, ms = 0, us = 0, ns = 0 } = this.#num(groups);
 
 		if (hh >= 24) {
-			const days = Math.trunc(hh / 24);											// number of days to offset
-
-			hh = hh % 24;																					// midnight is '00:00' on the next-day
-			dateTime = dateTime.add({ days });										// move the date forward
+			dateTime = dateTime.add({ days: Math.trunc(hh / 24) })// move the date forward number of days to offset								
+			hh %= 24;																							// midnight is '00:00' on the next-day
 		}
 
 		if (isDefined(groups["ff"])) {													// {ff} is fractional seconds and overrides {ms|us|ns}
@@ -1328,8 +1324,8 @@ export class Tempo {
 	#parseEvent(evt: string) {
 		const groups: Internal.RegExpGroups = {};
 		const pats = Tempo.#isMonthDay(this.#local)							// first find out if we have a US-format locale
-			? ['mdy', 'dmy', 'ymd']																// try {mdy} before {dmy} if US-format
-			: ['dmy', 'mdy', 'ymd']																// else try {dmy} before {mdy}
+			? ['mdy', 'dmy', 'ymd'] as const											// try {mdy} before {dmy} if US-format
+			: ['dmy', 'mdy', 'ymd'] as const											// else try {dmy} before {mdy}
 
 		pats.find(pat => {
 			const reg = this.#local.patterns.get(Tempo.getSymbol(this.#local, pat))
@@ -1438,7 +1434,7 @@ export class Tempo {
 
 			}, this.#zdt)
 
-		return new Tempo(zdt as unknown as typeof Temporal, this.#options);
+		return new Tempo(zdt, this.#options);
 	}
 
 	/** create a new Tempo with {adjust} property */
@@ -1736,7 +1732,7 @@ export namespace Tempo {
 		/** locale (e.g. en-AU) */															locale: string;
 		/** pivot year for two-digit years */										pivot: number;
 		/** hemisphere for term[@@qtr] or term[@@szn] */				sphere: Tempo.Sphere;
-		/** granulariyt of timestamps (ms | ns) */							timeStamp: Tempo.TimeStamp;
+		/** granularity of timestamps (ms | ns) */							timeStamp: Tempo.TimeStamp;
 		/** locale-names that prefer 'mm-dd-yy' date order */		monthDay: string | string[];
 		/** patterns to help parse value */											layout: Internal.InputFormat<Internal.StringPattern>;
 		/** date-events (e.g. xmas => '25 Dec') */							event: Internal.StringTuple[];
@@ -1957,8 +1953,6 @@ namespace Internal {
 	export type StringObject = Record<string, string>
 	export type RegexpMap = Map<symbol, RegExp>
 	export type RegExpGroups = NonNullable<RegExpMatchArray["groups"]>
-
-	export type TimeStamps = Record<Tempo.TimeStamp, keyof Temporal.ZonedDateTime>
 }
 // #endregion Namespace
 

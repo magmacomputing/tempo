@@ -13,6 +13,8 @@ export function selStore(store: 'local' | 'session' = 'local') {
 }
 
 /** get storage */
+export function getStore<T>(key: string, dflt: T): T;
+export function getStore<T>(key: string): T | undefined;
 export function getStore<T>(key: string, dflt?: T) {
 	let store: string | undefined | null;
 
