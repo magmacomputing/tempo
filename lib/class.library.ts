@@ -1,10 +1,20 @@
+import { ownEntries } from '@core/shared/reflect.library';
 import { isFunction } from '@core/shared/type.library.js';
 
 /** get a string-array of 'getter' names for a Class */
-export const getAccessors = <T>(obj: any = {}) => {
-	const getters = Object.getOwnPropertyDescriptors(obj.prototype);
+export const getAccessors = (obj: any = {}) => {
+	return ownAccessors(obj, 'get');
+}
 
-	return Object.entries(getters)
-		.filter(([_, descriptor]) => isFunction(descriptor.get))
-		.map(([key, _]) => key as keyof T)
+/** get a string-array of 'setter' names for a Class */
+export const setAccessors = (obj: any = {}) => {
+	return ownAccessors(obj, 'set');
+}
+
+const ownAccessors = (obj: any = {}, type: 'get' | 'set') => {
+	const accessors = Object.getOwnPropertyDescriptors(obj.prototype);
+
+	return ownEntries(accessors)
+		.filter(([_, descriptor]) => isFunction(descriptor[type]))
+		.map(([key, _]) => key)
 }

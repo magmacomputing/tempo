@@ -31,11 +31,6 @@ declare global {
 window["Temporal"] ??= Temporal;
 // #endregion
 
-/**
- * TODO: Localization options on output?  on input?  
- * this affects month-names, day-names !  
- */
-
 // #region Const variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 const VERSION = '0.2.0';																		// semantic version
@@ -73,9 +68,8 @@ const Sym = {
 
 /**
  * user will need to know these in order to configure their own patterns  
- * {unit} is a simple regex	snippet													, e.g. { yy: /(\d{2})?\d{2})/ }  
- * {unit} keys are combined to build a {layout} Map					, e.g. Map([[ Symbol('ymd'): '{yy}{mm}{dd}?' ]]    
- * {layout} is translated into an anchored regex {pattern}	, e.g. Map([[ Symbol('ymd'), /^ ... $/ ]])    
+ * Tempo.Unit is a simple regex	snippet													, e.g. { yy: /(\d{2})?\d{2})/ }    
+ * Tempo.Layout is translated into an anchored regex {pattern}	, e.g. Map([[ Symbol('ymd'), /^{yy}{mm}{dd}?$/ ]])    
  * {pattern} will be used to parse a string | number in the constructor {DateTime} argument    
  */
 const Unit = {																							// define some components to help interpret input-strings
@@ -107,7 +101,7 @@ const Layout = [
 	[Sym.per, '{per}'],																				// period only
 ] as Internal.SymbolTuple[];
 
-/* an {event} is a Map of a regex-pattern that describes an expected Date */
+/** Tempo.Event is a Tuple of regex-patterns that describe pre-defined Date strings */
 const Event = [
 	['new.?years? ?eve', '31 Dec'],
 	['nye', '31 Dec'],
@@ -119,7 +113,7 @@ const Event = [
 	['xmas', '25 Dec'],
 ] as Internal.StringTuple[]
 
-/** a {period} is a Map of a regex-pattern that describes an exepcted Time */
+/** Tempo.Period is a Tuple of regex-patterns that describe pre-defined Time strings */
 const Period = [
 	['mid[ -]?night', '24:00'],
 	['morning', '8:00'],
@@ -153,9 +147,8 @@ const Default = {
  * Wrapper class around Temporal.ZonedDateTime 
  * ````
  * (Instance)		new Tempo(DateTime, Options) or
- * (Static Method)		Tempo.from(DateTime, Options) or
- * (shortcut Function)	getTempo(DateTime, Options)  
- * 	DateTime?:	string | number | Tempo	- value to be interpreted as a Temporal.ZonedDateTime, default 'now'
+ * (Static Method)		Tempo.from(DateTime, Options) or 
+ * 	DateTime?:	string | number | Tempo	- value to be interpreted as a Temporal.ZonedDateTime (default 'now')  
  * 	Options?: 	object			- arguments to assist with parsing the <date> and configuring the instance
  * ````
  * A Tempo is an object that is used to wrap a Temporal.ZonedDateTime.  
@@ -180,13 +173,6 @@ export class Tempo {
 		/** Tempo units to aid in parsing */										units: { ...Unit },
 		/** Map of regex-patterns to match input-string */			patterns: new Map(),
 	} as Internal.Shape
-
-	static #timeStamp = {																			// lookup object for Tempo().ts resolution
-		// ss: 'epochSeconds',
-		ms: 'epochMilliseconds',
-		// us: 'epochMicroseconds',
-		ns: 'epochNanoseconds',
-	} as Record<string, keyof Temporal.ZonedDateTime>
 
 	// #endregion
 
@@ -716,7 +702,7 @@ export class Tempo {
 
 	/** static Tempo properties getter */
 	static get properties() {
-		return getAccessors<Tempo>(Tempo)
+		return getAccessors(Tempo)
 	}
 
 	/** Tempo global config settings */
@@ -907,7 +893,7 @@ export class Tempo {
 
 	/** is valid Tempo */																			isValid() { return !isEmpty(this) }
 	/** as Temporal.ZonedDateTime */													toDateTime() { return this.#zdt }
-	/** as Temporal.Instant */																toInstant() { return this.#instant }
+	/** as Temporal.Instant */																toInstant() { return this.#zdt.toInstant() }
 	/** as Date object */																			toDate() { return new Date(this.#zdt.round({ smallestUnit: 'millisecond' }).epochMilliseconds) }
 	/** as String */																					toString() { return `Tempo(${this.#zdt.epochNanoseconds})` }
 	/** as Object */																					toJSON() { return { ...this.#local.config, value: this.toString() } }
@@ -975,13 +961,16 @@ export class Tempo {
 				} catch {																						// fallback to browser's Date.parse() method
 					this.#local.config.parse.match = 'Date.parse';
 					Tempo.#dbg.warn(this.#local.config, 'Cannot detect DateTime; fallback to Date.parse');
-					return Temporal.ZonedDateTime.from(`${new Date(arg.value.toString()).toISOString()}[${this.config.timeZone}]`);
+					return Temporal.ZonedDateTime
+						.from(`${new Date(arg.value.toString()).toISOString()}[${this.#local.config.timeZone}]`)
+						.withCalendar(this.#local.config.calendar)
 				}
 
 			case 'Temporal.PlainDate':
 			case 'Temporal.PlainDateTime':
 				return arg.value
-					.toZonedDateTime(this.#local.config.timeZone);
+					.toZonedDateTime(this.#local.config.timeZone)
+					.withCalendar(this.#local.config.calendar);
 
 			case 'Temporal.PlainTime':
 				return today.withPlainTime(arg.value);
@@ -989,16 +978,19 @@ export class Tempo {
 			case 'Temporal.PlainYearMonth':												// assume current day, else end-of-month
 				return arg.value
 					.toPlainDate({ day: Math.min(today.day, arg.value.daysInMonth) })
-					.toZonedDateTime(this.#local.config.timeZone);
+					.toZonedDateTime(this.#local.config.timeZone)
+					.withCalendar(this.#local.config.calendar)
 
 			case 'Temporal.PlainMonthDay':												// assume current year
 				return arg.value
 					.toPlainDate({ year: today.year })
-					.toZonedDateTime(this.#local.config.timeZone);
+					.toZonedDateTime(this.#local.config.timeZone)
+					.withCalendar(this.#local.config.calendar)
 
 			case 'Temporal.Instant':
 				return arg.value
-					.toZonedDateTimeISO(this.#local.config.timeZone);
+					.toZonedDateTimeISO(this.#local.config.timeZone)
+					.withCalendar(this.#local.config.calendar)
 
 			case 'Tempo':
 				return arg.value
@@ -1023,10 +1015,13 @@ export class Tempo {
 	}
 
 	/** check if we've been given a ZonedDateTimeLike object */
-	#zonedDateTimeLike(tempo: Tempo.DateTime | undefined) {
-		const ZonedDateTimeLike = getAccessors<Temporal.ZonedDateTimeLike>(Temporal.ZonedDateTime);
+	#zonedDateTimeLike(tempo: Tempo.DateTime | undefined): tempo is Temporal.ZonedDateTimeLike {
+		if (!isObject(tempo))
+			return false;
 
-		return isObject(tempo) && ownKeys(tempo as Temporal.ZonedDateTimeLike).every(key => ZonedDateTimeLike.includes(key));
+		return ownKeys(tempo).every(key =>											// if every key in tempo-object included in this array
+			['year', 'month', 'monthCode', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond', 'offset', 'timeZone', 'calendar']
+				.includes(key));																		// then 'ZonedDateTimeLike' object
 	}
 
 	/** lookup local config, else fallback to global config */
@@ -1039,12 +1034,20 @@ export class Tempo {
 		const arg = asType(tempo);
 		this.#local.config.parse = { ...arg };									// for debugging
 
-		if (this.#zonedDateTimeLike(tempo)) {										// override {arg.type}, if Object is ZonedDateTimeLike
+		if (this.#zonedDateTimeLike(tempo)) {										// tempo is ZonedDateTime-ishAccessor object
+			const { timeZone, calendar, ...options } = tempo;
+			let zdt = dateTime.with({ ...options });
+
+			if (timeZone)
+				zdt = zdt.withTimeZone(timeZone);										// optionally set timeZone
+			if (calendar)
+				zdt = zdt.withCalendar(calendar);										// optionally set calendar
+
 			this.#local.config.parse.match = 'Temporal.ZonedDateTimeLike';
 
 			return Object.assign(arg, {
-				type: 'Temporal.ZonedDateTime',
-				value: dateTime.with({ ...tempo as Temporal.ZonedDateTimeLike }),
+				type: 'Temporal.ZonedDateTime',											// override {arg.type}
+				value: zdt,
 			})
 		}
 
