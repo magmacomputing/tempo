@@ -2,7 +2,7 @@ import { asString } from '@core/shared/string.library.js';
 import { extract } from '@core/shared/object.library.js';
 import { ownEntries } from '@core/shared/reflect.library.js';
 import { cloneify, stringify } from '@core/shared/serialize.library.js';
-import { isType, isNumber, isDate, isTempo, isIterable, isString, isObject, isDefined, isArrayLike, nullToValue, isFunction, isUndefined, Property } from '@core/shared/type.library.js';
+import { isNumber, isDate, isTempo, isIterable, isString, isObject, isDefined, isArrayLike, nullToValue, isFunction, isUndefined, type Property } from '@core/shared/type.library.js';
 
 /** Coerce {value} into {Array\<value>} ( if not already Array<> ), with optional {fill} Object */
 export function asArray<T>(arr: Exclude<ArrayLike<T>, string> | undefined): T[];
@@ -13,14 +13,14 @@ export function asArray<T, K>(arr: T | Iterable<T> | ArrayLike<T> = [], fill?: K
 		case isArrayLike<T>(arr):																// allow for {length:nn} objects
 		case isIterable<T>(arr) && !isString(arr):							// dont iterate Strings
 
-			return Array.from<T, K>(arr as T[], val => {
-				return isType(fill, 'Undefined') || val !== void 0
-					? val as unknown as K															// if no {fill}, then use val
+			return Array.from<T, K>(arr, val => {
+				return isUndefined(fill) || val !== void 0
+					? val as unknown as K															// if no {fill}, then use {val}
 					: cloneify(fill as K)															// clone {fill} to create new Objects
 			});
 
 		default:
-			return Array.of<T>(arr as T);
+			return Array.of(arr);
 	}
 }
 
