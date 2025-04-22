@@ -1,7 +1,7 @@
-import { toHex } from '@core/shared/number.library.js';
-import { asString } from '@core/shared/string.library.js';
-import { stringify, objectify } from '@core/shared/serialize.library.js';
-import { base64DecToArr, base64EncArr, strToUTF8Arr, UTF8ArrToStr } from '@core/shared/buffer.library.js';
+import { toHex } from '#core/shared/number.library.js';
+import { asString } from '#core/shared/string.library.js';
+import { stringify, objectify } from '#core/shared/serialize.library.js';
+import { base64DecToArr, base64EncArr, strToUTF8Arr, UTF8ArrToStr } from '#core/shared/buffer.library.js';
 
 /** Static-only cryptographic methods */
 export class Cipher {

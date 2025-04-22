@@ -1,4 +1,4 @@
-import { isDefined } from '@core/shared/type.library.js';
+import { isDefined } from '#core/shared/type.library.js';
 
 /** General utility functions */
 

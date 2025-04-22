@@ -1,6 +1,6 @@
-import { ownKeys, ownEntries } from '@core/shared/reflect.library.js';
-import { isObject, isArray, isReference, isFunction, isDefined, isEmpty, isNullish } from '@core/shared/type.library.js';
-import type { Property } from '@core/shared/type.library.js';
+import { ownKeys, ownEntries } from '#core/shared/reflect.library.js';
+import { isObject, isArray, isReference, isFunction, isDefined, isEmpty, isNullish } from '#core/shared/type.library.js';
+import type { Property } from '#core/shared/type.library.js';
 
 /** Get nested value */
 export function extract<T>(obj: any, path: string | number, dflt?: T): T {

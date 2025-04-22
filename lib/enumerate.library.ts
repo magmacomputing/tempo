@@ -1,6 +1,6 @@
-import { ownEntries } from '@core/shared/reflect.library.js';
-import { isArray } from '@core/shared/type.library.js';
-import type { Entry, Index } from '@core/shared/type.library.js';
+import { ownEntries } from '#core/shared/reflect.library.js';
+import { isArray } from '#core/shared/type.library.js';
+import type { Entry, Index } from '#core/shared/type.library.js';
 
 /** extend the Enum object with 'helper' methods */
 type helper<T> = {
@@ -17,12 +17,17 @@ type helper<T> = {
 export type Enumify<T> = Readonly<Omit<T, keyof helper<T>>>
 type Wrap<T> = Readonly<T & helper<T>>
 
+/** add a \{value} function to an Object's property */
+function value(value: Function) {
+	return Object.assign({}, { enumerable: false, configurable: false, writable: false }, { value });
+}
+
 /**
- * an 'enum-like' object that we can use (until Javascript implements one)
+ * an 'enum-like' object that we can use (until Javascript implements its own)
  */
-export function enumify<const T extends (string | number)[]>(...list: T[]): Wrap<Index<T>>;
-export function enumify<const T extends ReadonlyArray<string | number>>(...list: T[]): Wrap<Index<T>>;
-export function enumify<const T extends Record<keyof T, any>>(list: T): Wrap<T>;
+// export function enumify<const T extends (string | number)[]>(...list: T[]): Wrap<Index<T>>;
+// export function enumify<const T extends ReadonlyArray<string | number>>(...list: T[]): Wrap<Index<T>>;
+// export function enumify<const T extends Record<keyof T, any>>(list: T): Wrap<T>;
 export function enumify<const T extends Record<keyof T, any>>(list: T) {
 	const stash = isArray(list)																// clone original Enum as an Object
 		? (list as (string | number)[]).reduce((acc, itm, idx) => Object.assign(acc, { [itm]: idx }), {})
@@ -31,22 +36,20 @@ export function enumify<const T extends Record<keyof T, any>>(list: T) {
 	const inverse = entries																		// build a reverse-keyof object
 		.reduce((acc, [key, val]) => Object.assign(acc, { [val]: key }), {} as Record<string | number, T>);
 
-	const enumType = Object.defineProperties(stash, {					// helper methods
-		enum: { value: () => ({ ...stash }) },									// without helper methods
-		count: { value: () => entries.length },
-		keys: { value: () => entries.map(([key, _]) => key) },
-		values: { value: () => entries.map(([_, val]) => val) },
-		entries: { value: () => entries },
-		inverse: { value: () => inverse },
-		keyOf: { value: (val: string | number) => inverse[val] },
+	Object.defineProperties(stash, {													// add the helper methods
+		enum: value(() => ({ ...stash })),
+		count: value(() => entries.length),
+		keys: value(() => entries.map(([key, _]) => key)),
+		values: value(() => entries.map(([_, val]) => val)),
+		entries: value(() => ({ entries })),
+		inverse: value(() => ({ inverse })),
+		keyOf: value((val: string | number) => inverse[val]),
 		[Symbol.toStringTag]: ({ get: () => 'Enumify' }),
-		[Symbol.iterator]: {
-			value: () => {
-				const iterator = entries[Symbol.iterator]();
-				return { next: () => iterator.next(), }							// iterate through entries()
-			}
-		}
+		[Symbol.iterator]: value(() => {
+			const iterator = entries[Symbol.iterator]();
+			return { next: () => iterator.next(), }
+		}),
 	})
 
-	return Object.freeze(enumType);														// block mutations
+	return Object.freeze(stash) as Wrap<T>;										// block mutations
 }

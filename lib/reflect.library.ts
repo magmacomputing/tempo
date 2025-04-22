@@ -1,5 +1,5 @@
-import { isArray, isEmpty, type Property } from '@core/shared/type.library.js';
-import { clone } from '@core/shared/serialize.library.js';
+import { isArray, isEmpty, type Property } from '#core/shared/type.library.js';
+import { clone } from '#core/shared/serialize.library.js';
 
 type Obj = Property<any> | any[]
 

@@ -1,4 +1,4 @@
-import { sprintf } from '@core/shared/string.library.js';
+import { sprintf } from '#core/shared/string.library.js';
 
 const Level = {
 	Debug: 'debug',

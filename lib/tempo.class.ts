@@ -1,22 +1,22 @@
 // #region library modules~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-import { Pledge } from '@core/shared/pledge.class.js';
-import { Logify } from '@core/shared/logify.class.js';
-import { enumify } from '@core/shared/enumerate.library.js';
-import { getAccessors } from '@core/shared/class.library.js';
-import { asArray, sortInsert } from '@core/shared/array.library.js';
-import { getStore, setStore } from '@core/shared/storage.library.js';
-import { ownEntries, omit, purge, ownKeys } from '@core/shared/reflect.library.js';
-import { getContext, sleep, CONTEXT } from '@core/shared/utility.library.js';
-import { asNumber, asInteger, isNumeric, ifNumeric } from '@core/shared/number.library.js';
-import { asString, pad, singular, toProperCase, trimAll } from '@core/shared/string.library.js';
-import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isNumber, isObject, isRegExp } from '@core/shared/type.library.js';
+import { Pledge } from '#core/shared/pledge.class.js';
+import { Logify } from '#core/shared/logify.class.js';
+import { enumify } from '#core/shared/enumerate.library.js';
+import { getAccessors } from '#core/shared/class.library.js';
+import { asArray, sortInsert } from '#core/shared/array.library.js';
+import { getStore, setStore } from '#core/shared/storage.library.js';
+import { ownEntries, purge, ownKeys } from '#core/shared/reflect.library.js';
+import { getContext, sleep, CONTEXT } from '#core/shared/utility.library.js';
+import { asNumber, asInteger, isNumeric, ifNumeric } from '#core/shared/number.library.js';
+import { asString, pad, singular, toProperCase, trimAll } from '#core/shared/string.library.js';
+import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isNumber, isObject, isRegExp } from '#core/shared/type.library.js';
 
-import type { Enumify } from '@core/shared/enumerate.library.js';
-import type { Logger } from '@core/shared/logger.library.js';
-import type { IntRange, Types } from '@core/shared/type.library.js';
+import type { Enumify } from '#core/shared/enumerate.library.js';
+import type { Logger } from '#core/shared/logger.library.js';
+import type { IntRange, Types } from '#core/shared/type.library.js';
 
-import '@core/shared/prototype.library.js';									// patch prototype
+import '#core/shared/prototype.library.js';									// patch prototype
 // #endregion
 
 // #region Temporal ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -28,7 +28,8 @@ declare global {
 	}
 }
 
-window["Temporal"] ??= Temporal;
+if ('window' in globalThis)
+	window["Temporal"] ??= Temporal;
 // #endregion
 
 // #region Const variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -45,7 +46,7 @@ const Match = {
 	/** period */																							period: /^per\d+$/,
 	/** two digit year */																			twoDigits: /^\d{2}$/,
 	/** year-term */																					yearTerm: /(?<yy>yy).?#(?<term>\w+)/,
-	/** hour-minute-second with no separator */								hhmiss: /(hh)?(m[i|m])(ss)?/i,
+	/** hour-minute-second with no separator */								hhmiss: /(hh)(m[i|m])(ss)?/i,
 	/** separator characters (/-. ,) */												separators: /[\/\-\.\s,]/,
 	/** modifier characters (+-<>=) */												modifiers: /[\+\-\<\>][\=]?/,
 } as const
@@ -328,7 +329,7 @@ export class Tempo {
 
 	/** properCase week-day / calendar-month */
 	static #prefix = <T extends Tempo.Weekday | Tempo.Month>(str: T) =>
-		toProperCase(str.substring(0, 3)) as T;
+		toProperCase(str.toString().substring(0, 3)) as T;
 
 	/** get first Canonical name of a supplied locale */
 	static #locale = (locale: string) => {
@@ -470,7 +471,7 @@ export class Tempo {
 						case 'monthDay':
 							shape.config.monthDay = asArray(arg.value as NonNullable<Tempo.Options["monthDay"]>)
 								.map(locale => new Intl.Locale(locale))
-								.map(locale => ({ locale: locale.baseName, timeZones: locale.getTimeZones() }))
+								.map(locale => ({ locale: locale.baseName, timeZones: locale.getTimeZones?.() }))
 							break;
 
 						case 'term':																		// TODO: allow for different format of {terms}
@@ -824,7 +825,6 @@ export class Tempo {
 	constructor(options?: Tempo.DateTime | Tempo.Options);
 	constructor(tempo?: Tempo.DateTime, options?: Tempo.Options);
 	constructor(tempo?: Tempo.DateTime | Tempo.Options, options: Tempo.Options = {}) {
-
 		this.#instant = Temporal.Now.instant();									// stash current Instant
 		[this.#tempo, this.#options] = isObject(tempo) && !this.#zonedDateTimeLike(tempo)
 			? [(tempo as Tempo.Options)?.value, tempo as Tempo.Options]	// swap arguments, if arg1=Options
@@ -1107,7 +1107,7 @@ export class Tempo {
 		const groups = value.toString().match(pat)?.groups || {};
 
 		ownEntries(groups)																			// remove undefined, NaN, null and empty values
-			.forEach(([key, val]) => isEmpty(val) && omit(groups, key));
+			.forEach(([key, val]) => isEmpty(val) && delete groups[key]);
 
 		return groups;
 	}
@@ -1619,8 +1619,8 @@ export class Tempo {
 			case fmt === Tempo.FORMAT.yearMonthDay:
 				return asNumber(`${this.yy}${pad(this.mm)}${pad(this.dd)}`);
 
-			case fmt === Tempo.FORMAT.logStamp:
-				return asNumber(`${this.hh}${this.mi}${this.ss}.${this.ff}`);
+			case fmt === Tempo.FORMAT.weekDay:										// weekday as number (1-7)
+				return this.dow;
 
 			// case isDefined(groups["yy"]) && isDefined(groups["term"]):
 			// 	const term = this.term[groups["term"]] ?? '{undefined term}';
@@ -1634,11 +1634,11 @@ export class Tempo {
 				return asString(fmt)
 					.replace(/:m{2}/gi, ':mi')												// special: intercept ':mm' which should properly be ':mi'
 					.replace(/m{2}:/gi, 'mi:')
-					.replace(Match.hhmiss, (_, hh, mi, ss) => {				// if 'hhmiss' without separators
+					.replace(Match.hhmiss, (match: string) => {				// if 'hhmiss' or 'hhmi' (without separators)
 						let res = '';
-						res += isUndefined(hh) ? '' : pad(this.hh);
-						res += isUndefined(hh) && isUndefined(ss) ? mi : pad(this.mi);
-						res += isUndefined(ss) ? '' : pad(this.ss);
+						res += pad(this.hh);
+						res += pad(this.mi);
+						res += match.toString().endsWith('ss') ? '' : pad(this.ss);
 						return res;
 					})
 					.replace(/y{4}/g, pad(this.yy))
@@ -1793,7 +1793,7 @@ export namespace Tempo {
 		[Tempo.FORMAT.dayTime]: string;
 		[Tempo.FORMAT.dayFull]: string;
 		[Tempo.FORMAT.dayStamp]: string;
-		[Tempo.FORMAT.logStamp]: number;
+		[Tempo.FORMAT.logStamp]: string;
 		[Tempo.FORMAT.sortTime]: string;
 		[Tempo.FORMAT.monthDay]: string;
 		[Tempo.FORMAT.monthTime]: string;
@@ -1816,7 +1816,7 @@ export namespace Tempo {
 		/** ddd, yyyy-mmm-dd hh:mi */														dayTime: string;
 		/** ddd, yyyy-mmm-dd hh:mi:ss */												dayFull: string;
 		/** ddd, yyyy-mmm-dd hh:mi:ss.ff */											dayStamp: string;
-		/** hhmiss.ff */																				logStamp: number;
+		/** hhmiss.ff */																				logStamp: string;
 		/** yyyy-mm-dd hh:mi:ss */															sortTime: string;
 		/** ddd-mm */																						monthDay: string;
 		/** yyyy-mmm-dd hh:mi */																monthTime: string;
@@ -1869,7 +1869,7 @@ export namespace Tempo {
 		/** useful for stamping logs */													dayTime: 'ddd, yyyy-mmm-dd hh:mi',
 		/** useful for standard timestamps */										dayFull: 'ddd, yyyy-mmm-dd hh:mi:ss',
 		/** day, date and time to nanosecond */									dayStamp: 'ddd, yyyy-mmm-dd hh:mi:ss.ff',
-		/** useful for stamping logs */													logStamp: 'hhmiss.ff',
+		/** useful for stamping logs */													logStamp: 'yyyymmdd.hhmiss.ff',
 		/** useful for sorting display-strings */								sortTime: 'yyyy-mm-dd hh:mi:ss',
 		/** useful for readable month and day */								monthDay: 'dd-mmm',
 		/** useful for dates where dow is not needed */					monthTime: 'yyyy-mmm-dd hh:mi',

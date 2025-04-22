@@ -1,9 +1,9 @@
 // @ts-nocheck
 // no typescript checking to get around the 'this' binding warnings
 
-import { stringify } from '@core/shared/serialize.library.js';
-import { trimAll, toProperCase } from '@core/shared/string.library.js';
-import { asArray, byKey, byLkp, sortKey, type SortBy } from '@core/shared/array.library.js';
+import { stringify } from '#core/shared/serialize.library.js';
+import { trimAll, toProperCase } from '#core/shared/string.library.js';
+import { asArray, byKey, byLkp, sortKey, type SortBy } from '#core/shared/array.library.js';
 
 // Prototype extensions
 // Remember to define any imports as a Function Declaration (not a Function Expression)

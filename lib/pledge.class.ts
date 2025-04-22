@@ -1,9 +1,9 @@
-import { asArray } from '@core/shared/array.library.js';
-import { Logger } from '@core/shared/logger.library.js';
-import { sprintf } from '@core/shared/string.library.js';
-import { ifDefined } from '@core/shared/object.library.js';
-import { cleanify } from '@core/shared/serialize.library.js';
-import { isEmpty, isObject } from '@core/shared/type.library.js';
+import { asArray } from '#core/shared/array.library.js';
+import { sprintf } from '#core/shared/string.library.js';
+import { ifDefined } from '#core/shared/object.library.js';
+import { cleanify } from '#core/shared/serialize.library.js';
+import { isEmpty, isObject } from '#core/shared/type.library.js';
+import type { Logger } from '#core/shared/logger.library.js';
 
 /**
  * Wrap a Promise's resolve/reject/finally methods for later fulfilment.  

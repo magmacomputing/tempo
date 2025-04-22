@@ -1,8 +1,8 @@
-import { asString } from '@core/shared/string.library.js';
-import { extract } from '@core/shared/object.library.js';
-import { ownEntries } from '@core/shared/reflect.library.js';
-import { cloneify, stringify } from '@core/shared/serialize.library.js';
-import { isNumber, isDate, isTempo, isIterable, isString, isObject, isDefined, isArrayLike, nullToValue, isFunction, isUndefined, type Property } from '@core/shared/type.library.js';
+import { asString } from '#core/shared/string.library.js';
+import { extract } from '#core/shared/object.library.js';
+import { ownEntries } from '#core/shared/reflect.library.js';
+import { cloneify, stringify } from '#core/shared/serialize.library.js';
+import { isNumber, isDate, isTempo, isIterable, isString, isObject, isDefined, isArrayLike, nullToValue, isFunction, isUndefined, type Property } from '#core/shared/type.library.js';
 
 /** Coerce {value} into {Array\<value>} ( if not already Array<> ), with optional {fill} Object */
 export function asArray<T>(arr: Exclude<ArrayLike<T>, string> | undefined): T[];
