@@ -1,9 +1,9 @@
-import { curry } from '@core/shared/function.library.js';
-import { isNumeric } from '@core/shared/number.library.js';
-import { enumify } from '@core/shared/enumerate.library.js';
-import { ownEntries } from '@core/shared/reflect.library.js';
+import { curry } from '#core/shared/function.library.js';
+import { isNumeric } from '#core/shared/number.library.js';
+import { enumify } from '#core/shared/enumerate.library.js';
+import { ownEntries } from '#core/shared/reflect.library.js';
 
-import { isType, asType, isEmpty, isDefined, isUndefined, isNullish, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types, isSymbolFor, isSymbol } from '@core/shared/type.library.js';
+import { isType, asType, isEmpty, isDefined, isUndefined, isNullish, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types, isSymbolFor, isSymbol } from '#core/shared/type.library.js';
 
 // be aware that 'structuredClone' preserves \<undefined> values...  
 // but JSON.stringify() does not

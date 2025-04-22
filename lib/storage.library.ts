@@ -1,6 +1,6 @@
-import { objectify, stringify } from '@core/shared/serialize.library.js';
-import { CONTEXT, getContext } from '@core/shared/utility.library.js';
-import { isDefined, isString } from '@core/shared/type.library.js';
+import { objectify, stringify } from '#core/shared/serialize.library.js';
+import { CONTEXT, getContext } from '#core/shared/utility.library.js';
+import { isDefined, isString } from '#core/shared/type.library.js';
 
 const context = getContext();
 let storage = context.global?.localStorage as globalThis.Storage;	// select context storage

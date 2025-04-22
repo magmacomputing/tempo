@@ -1,6 +1,6 @@
-import { asArray } from '@core/shared/array.library.js';
-import { asString } from '@core/shared/string.library.js';
-import { asType, isInteger, isString, type TValues } from '@core/shared/type.library.js';
+import { asArray } from '#core/shared/array.library.js';
+import { asString } from '#core/shared/string.library.js';
+import { asType, isInteger, isString, type TValues } from '#core/shared/type.library.js';
 
 /** convert String to Number */
 export function asNumber(str?: string | number | bigint) {
