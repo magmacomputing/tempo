@@ -1,5 +1,6 @@
+import { asArray } from '#core/shared/array.library.js';
 import { ownEntries } from '#core/shared/reflect.library.js';
-import { isArray } from '#core/shared/type.library.js';
+import { isArrayLike } from '#core/shared/type.library.js';
 import type { Entry, Index } from '#core/shared/type.library.js';
 
 /** extend the Enum object with 'helper' methods */
@@ -14,7 +15,14 @@ type helper<T> = {
 	/** Iterator for Enum */[Symbol.iterator](): Iterator<Entry<T extends {} ? T : never>>;
 	/** string tag */[Symbol.toStringTag](): string;
 }
-export type Enumify<T> = Readonly<Omit<T, keyof helper<T>>>
+type Enumify<T> = Readonly<Omit<T, keyof helper<T>>>
+type keyOf<T> = keyof Enumify<T>
+export namespace Enum {
+	export type type<T> = Enumify<T>
+	export type keys<T> = keyOf<T>
+	export type values<T> = T[keyOf<T>]
+}
+
 type Wrap<T> = Readonly<T & helper<T>>
 
 /** add a \{value} function to an Object's property */
@@ -29,8 +37,8 @@ function value(value: Function) {
 // export function enumify<const T extends ReadonlyArray<string | number>>(...list: T[]): Wrap<Index<T>>;
 // export function enumify<const T extends Record<keyof T, any>>(list: T): Wrap<T>;
 export function enumify<const T extends Record<keyof T, any>>(list: T) {
-	const stash = isArray(list)																// clone original Enum as an Object
-		? (list as (string | number)[]).reduce((acc, itm, idx) => Object.assign(acc, { [itm]: idx }), {})
+	const stash = isArrayLike(list)														// clone original Enum as an Object
+		? (asArray(list) as (string | number)[]).reduce((acc, itm, idx) => Object.assign(acc, { [itm]: idx }), {})
 		: { ...list }
 	const entries = ownEntries(stash);												// define once; use in entries(), keyOf, iterator()
 	const inverse = entries																		// build a reverse-keyof object

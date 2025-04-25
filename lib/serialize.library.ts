@@ -36,11 +36,7 @@ export function cleanify<T>(obj: T) {
 	return copy;
 }
 
-/** deep-copy an Object	*/
-export function cloneify<T>(obj: T): T;
-/** deep-copy and replace \<undefined> field with a call to Sentinel */
-export function cloneify<T>(obj: T, sentinel: Function): T;
-/** deep-copy and replace \<undefined> field with a Sentinel function */
+/** deep-copy an Object, and optionally replace \<undefined> fields with a Sentinel function call	*/
 export function cloneify<T>(obj: T, sentinel?: Function): T {
 	try {
 		return objectify(stringify(obj), sentinel) as T;
