@@ -17,6 +17,7 @@ export function extract<T>(obj: any, path: string | number, dflt?: T): T {
 		.reduce((acc, field) => acc?.[field] ?? null, obj) ?? dflt
 }
 
+/** remove quotes around property names */
 export const quoteObj = (obj: any) => {
 	return JSON.stringify(obj)
 		?.replace(/"([^"]+)":/g, '$1: ')
@@ -30,8 +31,8 @@ export const asObject = <T>(obj?: Record<PropertyKey, any>) => {
 
 	const temp: any = isArray(obj) ? [] : {};
 
-	for (const key in obj)
-		temp[key] = asObject(obj[key]);
+	ownKeys(obj)
+		.forEach(key => temp[key] = asObject(obj[key]));
 
 	return temp as T;
 }
