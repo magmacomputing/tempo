@@ -65,25 +65,27 @@ export function enumify<const T extends Record<keyof T, any>>(list: T, opts?: Re
 	const stash = isArray(list)																// refactor Array as an Object
 		? (asArray(list) as (string | number)[]).reduce((acc, itm, idx) => Object.assign(acc, { [itm]: idx }), {})
 		: { ...list }
-	const entries = ownEntries(stash);												// define once; use in entries(), keyOf, iterator()
-	const inverse = entries																		// build a reverse-keyof object
-		.reduce((acc, [key, val]) => Object.assign(acc, { [val]: key }), {} as Record<string | number, T>);
 
-	Object.defineProperties(stash, {													// add the helper methods
-		count: value(() => entries.length),
-		enum: value(() => Object.freeze({ ...stash })),
-		keys: value(() => Object.freeze(entries.map(([key, _]) => key))),
-		values: value(() => Object.freeze(entries.map(([_, val]) => val))),
-		entries: value(() => Object.freeze(entries.map(([key, val]) => [key, val]))),
-		inverse: value(() => Object.freeze({ ...inverse })),
-		keyOf: value((val: string | number) => inverse[val]),
-		toString: value(() => JSON.stringify({ ...stash })),
-		[Symbol.toStringTag]: value('Enumify'),
-		[Symbol.iterator]: value(() => {
-			const iterator = entries[Symbol.iterator]();
-			return { next: () => Object.freeze(iterator.next()), }
-		}),
-	})
+	return Object.freeze(Object.assign(Object.create(ENUM, { ...stash })));
+	// const entries = ownEntries(stash);												// define once; use in entries(), keyOf, iterator()
+	// const inverse = entries																		// build a reverse-keyof object
+	// 	.reduce((acc, [key, val]) => Object.assign(acc, { [val]: key }), {} as Record<string | number, T>);
 
-	return Object.freeze(stash);															// block mutations
+	// Object.defineProperties(stash, {													// add the helper methods
+	// 	count: value(() => entries.length),
+	// 	enum: value(() => Object.freeze({ ...stash })),
+	// 	keys: value(() => Object.freeze(entries.map(([key, _]) => key))),
+	// 	values: value(() => Object.freeze(entries.map(([_, val]) => val))),
+	// 	entries: value(() => Object.freeze(entries.map(([key, val]) => [key, val]))),
+	// 	inverse: value(() => Object.freeze({ ...inverse })),
+	// 	keyOf: value((val: string | number) => inverse[val]),
+	// 	toString: value(() => JSON.stringify({ ...stash })),
+	// 	[Symbol.toStringTag]: value('Enumify'),
+	// 	[Symbol.iterator]: value(() => {
+	// 		const iterator = entries[Symbol.iterator]();
+	// 		return { next: () => Object.freeze(iterator.next()), }
+	// 	}),
+	// })
+
+	// return Object.freeze(stash);															// block mutations
 }
