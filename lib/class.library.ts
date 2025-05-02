@@ -18,3 +18,13 @@ const ownAccessors = (obj: any = {}, type: 'get' | 'set') => {
 		.filter(([_, descriptor]) => isFunction(descriptor[type]))
 		.map(([key, _]) => key)
 }
+
+/**
+ * prevents instantiation of a class with only static members    
+ * eg. class \<MyClass> extends Static
+ */
+export class Static {
+	constructor() {
+		throw new TypeError(`${this.constructor.name} is not a constructor`);
+	}
+}

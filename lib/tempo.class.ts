@@ -12,7 +12,7 @@ import { asNumber, asInteger, isNumeric, ifNumeric } from '#core/shared/number.l
 import { asString, pad, singular, toProperCase, trimAll } from '#core/shared/string.library.js';
 import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isNumber, isObject, isRegExp } from '#core/shared/type.library.js';
 
-import type { Enumify } from '#core/shared/enumerate.library.js';
+import type { Enum } from '#core/shared/enumerate.library.js';
 import type { Logger } from '#core/shared/logger.library.js';
 import type { IntRange, Types } from '#core/shared/type.library.js';
 
@@ -158,6 +158,14 @@ const Default = {
  * It has simple methods to perform manipulations (add, format, diff, offset, ...)  
  */
 export class Tempo {
+	// #region Static enum properties~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	// static WEEKDAY = enumify(['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',]);
+	static WEEKDAY = enumify({ 0: 'All', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' })
+	// static WEEKDAYS = enumify(['All', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',]);
+	static WEEKDAYS = enumify({ 0: 'Alldays', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday', 7: 'Sunday' });
+
+	// #endregion
 	// #region Static private properties~~~~~~~~~~~~~~~~~~~~~~
 
 	static #dbg = new Logify(this);
@@ -1841,8 +1849,8 @@ export namespace Tempo {
 
 	export type Duration = Temporal.DurationLike & Partial<Record<"iso", string>>
 
-	export const WEEKDAY = enumify(['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',]);
-	export const WEEKDAYS = enumify(['All', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',]);
+	export type WEEKDAY = Enum.values<typeof Tempo.WEEKDAY>
+	export type WEEKDAYS = Enum.values<typeof Tempo.WEEKDAYS>
 	export enum MONTH { All, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec }
 	export enum MONTHS { Every, January, February, March, April, May, June, July, August, September, October, November, December }
 	export enum DURATION { year, month, week, day, hour, minute, second, millisecond, microsecond, nanosecond }
