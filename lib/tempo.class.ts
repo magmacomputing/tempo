@@ -158,12 +158,77 @@ const Default = {
  * It has simple methods to perform manipulations (add, format, diff, offset, ...)  
  */
 export class Tempo {
-	// #region Static enum properties~~~~~~~~~~~~~~~~~~~~~~~~~
+	// #region Static enum and const properties~~~~~~~~~~~~~~~~~~~~~~~~~
+	static WEEKDAY = enumify(['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+	static WEEKDAYS = enumify(['Everyday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
+	static MONTH = enumify(['All', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']);
+	static MONTHS = enumify(['Every', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']);
+	static DURATION = enumify(['year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond']);
+	static DURATIONS = enumify(['years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds', 'nanoseconds']);
 
-	// static WEEKDAY = enumify(['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',]);
-	static WEEKDAY = enumify({ 0: 'All', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' })
-	// static WEEKDAYS = enumify(['All', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',]);
-	static WEEKDAYS = enumify({ 0: 'Alldays', 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday', 7: 'Sunday' });
+	static SEASONS = enumify({ 'North': 'north', 'East': 'east', 'South': 'south', 'West': 'west' });
+	// static {
+	// 	const inverse = enumify(Tempo.SEASONS.count());
+	// 	for (const [key,val] of inverse)
+	// 		;
+	// }
+
+	static TIME = enumify({																		// approx number of seconds per unit-of-time
+		year: 31_536_000,
+		month: 2_628_000,
+		week: 604_800,
+		day: 86_400,
+		hour: 3_600,
+		minute: 60,
+		second: 1,
+		millisecond: .001,
+		microsecond: .000_001,
+		nanosecond: .000_000_001,
+	});
+
+	static TIMES = enumify({																	// approx number of milliseconds per unit-of-time
+		years: Tempo.TIME.year * 1_000,
+		months: Tempo.TIME.month * 1_000,
+		weeks: Tempo.TIME.week * 1_000,
+		days: Tempo.TIME.day * 1_000,
+		hours: Tempo.TIME.hour * 1_000,
+		minutes: Tempo.TIME.minute * 1_000,
+		seconds: Tempo.TIME.second * 1_000,
+		milliseconds: Tempo.TIME.millisecond * 1_000,
+		microseconds: Tempo.TIME.microsecond * 1_000,
+		nanoseconds: Number((Tempo.TIME.nanosecond * 1_000).toPrecision(6)),
+	});
+
+	static COMPASS = { North: 'north', East: 'east', South: 'south', West: 'west' } as const;
+
+	static FORMAT = {																					// pre-configured format names
+		/** useful for standard date display */									display: 'ddd, dd mmm yyyy',
+		/** useful for standard datestamps */										dayDate: 'ddd, yyyy-mmm-dd',
+		/** useful for stamping logs */													dayTime: 'ddd, yyyy-mmm-dd hh:mi',
+		/** useful for standard timestamps */										dayFull: 'ddd, yyyy-mmm-dd hh:mi:ss',
+		/** day, date and time to nanosecond */									dayStamp: 'ddd, yyyy-mmm-dd hh:mi:ss.ff',
+		/** useful for stamping logs */													logStamp: 'yyyymmdd.hhmiss.ff',
+		/** useful for sorting display-strings */								sortTime: 'yyyy-mm-dd hh:mi:ss',
+		/** useful for readable month and day */								monthDay: 'dd-mmm',
+		/** useful for dates where dow is not needed */					monthTime: 'yyyy-mmm-dd hh:mi',
+		/** 24-hour format */																		hourMinute: 'hh:mi',
+		/** useful for sorting week order */										yearWeek: 'yyyyww',
+		/** useful for sirting month order */										yearMonth: 'yyyymm',
+		/** useful for sorting date order */										yearMonthDay: 'yyyymmdd',
+		/** day of week */																			weekDay: 'dd',
+		/** just Date portion */																date: 'yyyy-mmm-dd',																		// 
+		/** just Time portion */																time: 'hh:mi:ss',
+	} as const
+
+	static DATE = {																						// some useful Dates
+		/** Date(Unix epoch) */																	epochDate: new Date(0),
+		/** Date(31-Dec-9999) */																maxDate: new Date(Date.UTC(9999, 11, 31, 23, 59, 59, 59)),
+		/** Date(01-Jan-1000) */																minDate: new Date(Date.UTC(1000, 0, 1, 0, 0, 0, 0)),
+		/** Tempo(31-Dec-9999.23:59:59).ns */										maxTempo: Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds,
+		/** Tempo(01-Jan-1000.00:00:00).ns */										minTempo: Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds,
+	} as const
+
+	static SHAPE = { Global: 'global', Local: 'local', } as const;
 
 	// #endregion
 	// #region Static private properties~~~~~~~~~~~~~~~~~~~~~~
@@ -336,7 +401,7 @@ export class Tempo {
 	}
 
 	/** properCase week-day / calendar-month */
-	static #prefix = <T extends Tempo.Weekday | Tempo.Month>(str: T) =>
+	static #prefix = <T extends Tempo.DayName | Tempo.MonthName>(str: T) =>
 		toProperCase(str.toString().substring(0, 3)) as T;
 
 	/** get first Canonical name of a supplied locale */
@@ -534,7 +599,7 @@ export class Tempo {
 					Tempo.#setConfig(Tempo.#global, Default);
 
 					Object.assign(Tempo.#global.config, {							// some global locale-specific defaults
-						level: Internal.SHAPE.Global,
+						level: Tempo.SHAPE.Global,
 						calendar: dateTime.calendar,
 						timeZone: dateTime.timeZone,
 						locale: dateTime.locale,
@@ -872,8 +937,8 @@ export class Tempo {
 	/** number of weeks */																		get ww() { return this.#zdt.weekOfYear as Tempo.ww }
 	/** timezone */																						get tz() { return this.#zdt.timeZoneId }
 	/** Unix epoch ms / ns (default to milliseconds) */				get ts() { return this.epoch[this.#local.config.timeStamp] }
-	/** short month name */																		get mmm() { return Tempo.MONTH[this.#zdt.month] }
-	/** long month name */																		get mon() { return Tempo.MONTHS[this.#zdt.month] }
+	/** short month name */																		get mmm() { return Tempo.MONTH.keyOf(this.#zdt.month as Tempo.MONTH) }
+	/** long month name */																		get mon() { return Tempo.MONTHS.keyOf(this.#zdt.month as Tempo.MONTHS) }
 	/** weekday: Mon=1, Sun=7 */															get dow() { return this.#zdt.dayOfWeek as Tempo.dow }
 	/** short weekday name */																	get ddd() { return Tempo.WEEKDAY.keyOf(this.#zdt.dayOfWeek as Tempo.dow) }
 	/** long weekday name */																	get day() { return Tempo.WEEKDAYS.keyOf(this.#zdt.dayOfWeek as Tempo.dow) }
@@ -911,7 +976,7 @@ export class Tempo {
 	// #region Instance private methods~~~~~~~~~~~~~~~~~~~~~~~
 	/** setup local Shape */
 	#setLocal(options: Tempo.Options) {
-		Object.assign(this.#local.config, Tempo.#global.config, { level: Internal.SHAPE.Local })
+		Object.assign(this.#local.config, Tempo.#global.config, { level: Tempo.SHAPE.Local })
 
 		Tempo.#setConfig(this.#local, this.#options);						// set #local config
 
@@ -1164,9 +1229,9 @@ export class Tempo {
 
 		// fix {mm}
 		if (isDefined(groups["mm"]) && !isNumeric(groups["mm"])) {
-			const mm = Tempo.#prefix(groups["mm"] as Tempo.Month);
+			const mm = Tempo.#prefix(groups["mm"] as Tempo.MonthName);
 
-			groups["mm"] = Tempo.eMONTH.keys()
+			groups["mm"] = Tempo.MONTH.keys()
 				.findIndex(el => el === mm)													// resolve month-name into a month-number
 				.toString()																					// (some browsers do not allow month-names when parsing a Date)
 				.padStart(2, '0')
@@ -1228,7 +1293,7 @@ export class Tempo {
 	 * @returns  ZonedDateTime with computed date-offset  
 	 */
 	#parseWeekday(groups: Internal.RegExpGroups, dateTime: Temporal.ZonedDateTime) {
-		const { dow, mod, cnt, ...rest } = groups as { dow: Tempo.Weekday, mod: Tempo.Modifier, [key: string]: string };
+		const { dow, mod, cnt, ...rest } = groups as { dow: Tempo.DayName, mod: Tempo.Modifier, [key: string]: string };
 		if (isUndefined(dow))																		// this is not a {dow} pattern match
 			return dateTime;
 
@@ -1851,88 +1916,22 @@ export namespace Tempo {
 
 	export type WEEKDAY = Enum.values<typeof Tempo.WEEKDAY>
 	export type WEEKDAYS = Enum.values<typeof Tempo.WEEKDAYS>
-	export enum MONTH { All, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec }
-	export enum MONTHS { Every, January, February, March, April, May, June, July, August, September, October, November, December }
-	export enum DURATION { year, month, week, day, hour, minute, second, millisecond, microsecond, nanosecond }
-	export enum DURATIONS { years, months, weeks, days, hours, minutes, seconds, milliseconds, microseconds, nanoseconds }
+	export type MONTH = Enum.values<typeof Tempo.MONTH>
+	export type MONTHS = Enum.values<typeof Tempo.MONTHS>
+	export type DURATION = Enum.values<typeof Tempo.DURATION>
+	export type DURATIONS = Enum.values<typeof Tempo.DURATIONS>
 
-	export type Weekday = Exclude<keyof Enumify<typeof Tempo.WEEKDAY>, 'All'>
-	export type Month = Exclude<keyof typeof Tempo.MONTH, 'All'>
-
-	export const eMONTH = enumify(Tempo.MONTH);
+	export type DayName = Enum.keys<typeof Tempo.WEEKDAY>
+	export type MonthName = Enum.keys<typeof Tempo.MONTH>
 
 	/** Compass Cardinal Points */
-	export type Sphere = typeof Tempo.COMPASS.North | typeof Tempo.COMPASS.South | null
-	export const COMPASS = {
-		North: 'north',
-		East: 'east',
-		South: 'south',
-		West: 'west',
-	} as const
-
-	/** pre-configured format names */
-	export const FORMAT = {
-		/** useful for standard date display */									display: 'ddd, dd mmm yyyy',
-		/** useful for standard datestamps */										dayDate: 'ddd, yyyy-mmm-dd',
-		/** useful for stamping logs */													dayTime: 'ddd, yyyy-mmm-dd hh:mi',
-		/** useful for standard timestamps */										dayFull: 'ddd, yyyy-mmm-dd hh:mi:ss',
-		/** day, date and time to nanosecond */									dayStamp: 'ddd, yyyy-mmm-dd hh:mi:ss.ff',
-		/** useful for stamping logs */													logStamp: 'yyyymmdd.hhmiss.ff',
-		/** useful for sorting display-strings */								sortTime: 'yyyy-mm-dd hh:mi:ss',
-		/** useful for readable month and day */								monthDay: 'dd-mmm',
-		/** useful for dates where dow is not needed */					monthTime: 'yyyy-mmm-dd hh:mi',
-		/** 24-hour format */																		hourMinute: 'hh:mi',
-		/** useful for sorting week order */										yearWeek: 'yyyyww',
-		/** useful for sirting month order */										yearMonth: 'yyyymm',
-		/** useful for sorting date order */										yearMonthDay: 'yyyymmdd',
-		/** day of week */																			weekDay: 'dd',
-		/** just Date portion */																date: 'yyyy-mmm-dd',																		// 
-		/** just Time portion */																time: 'hh:mi:ss',
-	} as const
-
-	/** approx number of seconds per unit-of-time */
-	export const TIME = enumify({
-		year: 31_536_000,
-		month: 2_628_000,
-		week: 604_800,
-		day: 86_400,
-		hour: 3_600,
-		minute: 60,
-		second: 1,
-		millisecond: .001,
-		microsecond: .000_001,
-		nanosecond: .000_000_001,
-	})
-
-	/** approx number of milliseconds per unit-of-time */
-	export const TIMES = enumify({
-		years: TIME.year * 1_000,
-		months: TIME.month * 1_000,
-		weeks: TIME.week * 1_000,
-		days: TIME.day * 1_000,
-		hours: TIME.hour * 1_000,
-		minutes: TIME.minute * 1_000,
-		seconds: TIME.second * 1_000,
-		milliseconds: TIME.millisecond * 1_000,
-		microseconds: TIME.microsecond * 1_000,
-		nanoseconds: Number((TIME.nanosecond * 1_000).toPrecision(6)),
-	})
-
-	/** some useful Dates */
-	export const DATE = {
-		/** Date(Unix epoch) */																	epochDate: new Date(0),
-		/** Date(31-Dec-9999) */																maxDate: new Date(Date.UTC(9999, 11, 31, 23, 59, 59, 59)),
-		/** Date(01-Jan-1000) */																minDate: new Date(Date.UTC(1000, 0, 1, 0, 0, 0, 0)),
-		/** Tempo(31-Dec-9999.23:59:59).ns */										maxTempo: Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds,
-		/** Tempo(01-Jan-1000.00:00:00).ns */										minTempo: Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds,
-	} as const
+	export type Sphere = Enum.values<typeof Tempo.COMPASS>//typeof Tempo.COMPASS.North | typeof Tempo.COMPASS.South | null
 }
 // #endregion Tempo types / interfaces / enums
 
 // #region Namespace that doesn't need to be shared externally
 namespace Internal {
 	export type Level = 'global' | 'local'
-	export const SHAPE = enumify({ Global: 'global', Local: 'local', });
 
 	export type StringPattern = string | RegExp
 	export type StringTuple = [string, string];
@@ -1972,6 +1971,7 @@ namespace Internal {
  * kick-start Tempo configuration with default config  
  * use top-level await to hold until Tempo is ready  
  */
+Object.freeze(Tempo);																				// protect the Class from modification
 await Tempo.init();
 
 type Params<T> = {																					// Type for consistency in expected arguments

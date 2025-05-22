@@ -31,13 +31,13 @@ export function purge<T extends Obj>(obj: T) {
 
 /** array of PropertyKeys as string | symbol */
 export function ownKeys<T extends Obj>(json: T) {
-  return Reflect.ownKeys(json) as (keyof T)[]               // Object.keys()
+  return Reflect.ownKeys(json) as (keyof T)[]               // Object.keys() would discard symbol-keys
 }
 
 /** array of object values */
 export function ownValues<T extends Obj>(json: T) {
   return ownKeys<T>(json)
-    .map(key => json[key] as T)                             // Object.values()
+    .map(key => json[key] as T)                             // Object.values() would discard symbol-keys
 }
 
 /** tuple of Object entries with string | symbol keys */
