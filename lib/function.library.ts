@@ -1,3 +1,5 @@
+import { Property } from '#core/shared/type.library.js';
+
 // https://medium.com/codex/currying-in-typescript-ca5226c85b85
 type PartialTuple<T extends any[], X extends any[] = []> =
 	T extends [infer N, ...infer R]														// If the tuple provided has at least one required value
@@ -37,16 +39,54 @@ export function curry<
 	}
 }
 
-/** memoize repeated lookups */
-export const memoize = <F extends (...args: any) => any>(fn: F) => {
-	const cache = new Map<string | symbol, ReturnType<F>>();
+/** memoize repeated function calls */
+export const memoize = <F extends (...args: any[]) => any>(fn: F) => {
+	const cache = new Map<string, ReturnType<F>>();
 
-	return (...args: unknown[]) => {
+	return function (this: {}, ...args: unknown[]) {
 		const key = JSON.stringify(args);
 
 		if (!cache.has(key))
-			cache.set(key, fn(...args));
+			cache.set(key, fn.apply(this, args));
 
-		return cache.get(key) as ReturnType<F>;
+		return Object.freeze(cache.get(key)) as ReturnType<F>;
+	}
+}
+
+/** memoize repeated functions calls on an Object's methods */
+export function memoizeObject<F extends (...args: any[]) => any>(func: F) {
+	const cache = new WeakMap();
+
+	return function (obj: {}) {																// curry the Object reference
+		return function (...args: any[]) {
+			if (!cache.has(obj)) {
+				cache.set(obj, new Map());
+			}
+			const objCache = cache.get(obj);
+			const key = JSON.stringify(args);
+
+			if (objCache.has(key)) {
+				return objCache.get(key);
+			}
+
+			const result = func.apply(obj, [obj, ...args]);
+			objCache.set(key, result);
+			return result;
+		}
+	}
+}
+
+export function memoizeMethod(obj: Property<Function>, methodName: string) {
+	const originalMethod = obj[methodName];
+	const cache = new Map();
+
+	obj[methodName] = function (...args: any[]) {
+		const cacheKey = JSON.stringify(args);
+
+		if (!cache.has(cacheKey)) {
+			cache.set(cacheKey, originalMethod.apply(this, args));
+		}
+
+		return Object.freeze(cache.get(cacheKey));
 	}
 }

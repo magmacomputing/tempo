@@ -61,7 +61,6 @@ export const isInteger = <T>(obj?: T): obj is Extract<T, bigint> => isType(obj, 
 export const isDigit = <T>(obj?: T): obj is Extract<T, number | bigint> => isType(obj, 'Number', 'BigInt');
 export const isBoolean = <T>(obj?: T): obj is Extract<T, boolean> => isType(obj, 'Boolean');
 export const isArray = <T>(obj: T | T[]): obj is Array<T> => isType(obj, 'Array');
-// export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => protoType(obj) === 'Object' && Object.keys(obj).every(key => key === 'length' || !isNaN(Number(key)));
 export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => protoType(obj) === 'Object' && 'length' in obj && Object.keys(obj).every(key => key === 'length' || !isNaN(Number(key)));
 export const isObject = <T>(obj?: T): obj is Extract<T, Record<any, any>> => isType(obj, 'Object');
 export const isDate = <T>(obj?: T): obj is Extract<T, Date> => isType(obj, 'Date');
@@ -80,7 +79,7 @@ export const isUndefined = <T>(obj?: T): obj is undefined => isType<undefined>(o
 export const isDefined = <T>(obj: T): obj is NonNullable<T> => !isNullish(obj);
 
 export const isClass = <T>(obj?: T): obj is Extract<T, Function> => isType(obj, 'Class');
-export const isFunction = <T>(obj?: T): obj is Extract<T, Function> => isType(obj, 'Function', 'AsyncFunction');
+export const isFunction = <T>(obj?: T): obj is Extract<T, Function> => isType<Function>(obj, 'Function', 'AsyncFunction');
 export const isPromise = <T>(obj?: T): obj is Extract<T, Promise<any>> => isType(obj, 'Promise');
 export const isMap = <K, V>(obj?: unknown): obj is Map<K, V> => isType(obj, 'Map');
 export const isSet = <K>(obj?: unknown): obj is Set<K> => isType(obj, 'Set');
@@ -138,6 +137,7 @@ export type OneKey<K extends keyof any, V, KK extends keyof any = K> =
 		{ [Q in keyof O]: O[Q] } : never
 	}[K]
 
+export type Prettify<T> = { [K in keyof T]: T[K]; } & {}
 export type ParseInt<T> = T extends `${infer N extends number}` ? N : never
 
 type Primitive = string | number | bigint | boolean | symbol | void | undefined | null // TODO: add  record | tuple
@@ -235,6 +235,8 @@ type ObjectEntry<T extends Property<any>> =
 	? { [K in keyof T]: [K, Required<T>[K]] }[keyof T] extends infer E
 	? E extends [infer K extends string | number, infer V]
 	? [`${K}`, V]
+	: E extends [infer K extends symbol, infer V]
+	? [K, V]
 	: never
 	: never
 	: never
@@ -251,6 +253,10 @@ export type Entry<T extends Property<any>> =
 export type Entries<T extends Property<T>> = ReadonlyArray<Entry<T>>
 export type Inverse<T> = { [K in keyof T as (T[K] & PropertyKey)]: K }
 export type Index<T extends readonly any[]> = { [K in Entry<T> as `${K[1]}`]: ParseInt<K[0]> }
+
+/** reverse a Tuple */
+export type Reverse<T extends any[], R extends any[] = []> = ReturnType<T extends [infer F, ...infer L] ? () => Reverse<L, [F, ...R]> : () => R>
+export type ReverseMap<T extends Record<keyof T, keyof any>> = { [K in keyof T as T[K]]: K; }
 
 // https://stackoverflow.com/questions/39494689/is-it-possible-to-restrict-number-to-a-certain-range/70307091#70307091
 type EnumerateMin<N extends number, Acc extends number[] = []> = Acc['length'] extends N
@@ -318,5 +324,21 @@ type Substr<T, Start, Max, Str extends string, Offset extends number[]> =
 	: Substr<Rest, Start, Max, Str, [...Offset, 0]>						// else offset not reached; recurse & increment offset-Count
 	: Str																											// else no more chars; return Str
 
-// https://www.totaltypescript.com/concepts/the-prettify-helper
-export type Prettify<T> = { [K in keyof T]: T[K]; } & {}
+// https://stackoverflow.com/questions/69571110/how-to-turn-union-into-a-tuple-in-typescript
+// UnionToIntersection<A | B> = A & B
+type UnionToIntersection<U> = (U extends unknown ? (arg: U) => 0 : never) extends (arg: infer I) => 0
+	? I
+	: never
+
+// LastInUnion<A | B> = B
+type LastInUnion<U> = UnionToIntersection<U extends unknown ? (x: U) => 0 : never> extends (x: infer L) => 0
+	? L
+	: never
+
+// UnionToTuple<A | B> = [A, B]
+type UnionToTuple<T, Last = LastInUnion<T>> = [T] extends [never]
+	? []
+	: [...UnionToTuple<Exclude<T, Last>>, Last]
+
+// Count the members of a Union	
+export type Count<T> = UnionToTuple<T>["length"]
