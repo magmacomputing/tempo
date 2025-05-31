@@ -167,11 +167,12 @@ export class Tempo {
 	static DURATIONS = enumify(['years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds', 'nanoseconds']);
 
 	static SEASONS = enumify({ 'North': 'north', 'East': 'east', 'South': 'south', 'West': 'west' });
-	// static {
-	// 	const inverse = enumify(Tempo.SEASONS.count());
-	// 	for (const [key,val] of inverse)
-	// 		;
-	// }
+	static {
+		const mam = this.MONTHS.invert()[0]
+		const inverse = Tempo.SEASONS.invert();
+		for (const [key,val] of inverse)
+			;
+	}
 
 	static TIME = enumify({																		// approx number of seconds per unit-of-time
 		year: 31_536_000,

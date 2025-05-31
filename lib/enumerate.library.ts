@@ -3,28 +3,27 @@ import { ownKeys, ownValues, ownEntries } from '#core/shared/reflect.library.js'
 import type { Index, Prettify, Entry, ReverseMap, Property, Count } from '#core/shared/type.library.js';
 
 /**
- * The intent of this module is to provide a Javascript-supported syntax for 
- * an object to behave as an Enum.  
- * It can be used instead of Typescript's enum (which is not supported in vanilla JS)
+ * The intent of this module is to provide a Javascript-supported syntax for an object to behave as an Enum.  
+ * It can be used instead of Typescript's Enum (which is not supported in vanilla JS)
  */
 
 /**
- * This is the prototype for an Enumify object.  
- * It contains just the methods we need.
+ * This is the prototype for an Enum object.  
+ * It contains just the methods / symbols we need.
  */
 const ENUM = Object.create(null, {
 	count: value(function (this: Property<any>) { return ownKeys(this).length }),
 	keys: value(function (this: Property<any>) { return ownKeys(this) }),
 	values: value(function (this: Property<any>) { return ownValues(this) }),
 	entries: value(function (this: Property<any>) { return ownEntries(this) }),
-	// invert: value(function (this: Property<any>) { return enumify(ownEntries(this).reduce((acc, [key, val]) => { acc[val] = key; return acc; }, {} as any)) }),
+	invert: value(function (this: Property<any>) { return enumify(ownEntries(this).reduce((acc, [key, val]) => ({ ...acc, [val]: key }), {})) }),
 	keyOf: value(function (this: Property<any>, search: any) { return ownEntries(this).filter(([, val]) => val === search)[0]?.[0] }),
 	toString: value(function (this: Property<any>) { return JSON.stringify(this) }),
 	[Symbol.toStringTag]: value('Enumify'),
 	[Symbol.iterator]: value(function (this: Property<any>) { return ownEntries(this)[Symbol.iterator](); }),
 });
 
-/** add a \{value} object to an Object's property */
+/** define a Descriptor for an Enum's method */
 function value(value: PropertyDescriptor["value"]) {
 	return Object.assign({ enumerable: false, configurable: false, writable: false } as const, { value } as const);
 }
@@ -41,8 +40,9 @@ type Methods<T extends Property<any>> = {
 	/** array of Enum keys */																	keys(): (keyof T)[];
 	/** array of Enum values */																values(): T[keyof T][];
 	/** tuple of Enum entries */															entries(): { [K in keyof T]: [K, T[K]] }[keyof T][];
-	// /** reverse of Enum */																		invert(): Prettify<Wrap<ReverseMap<Enumify<T>>>>
-	// /** reverse lookup of Enum key by value */								keyOf<V extends T[keyof T]>(value: V): Prettify<ReverseMap<T>>[V]
+	/** reverse of Enum */																		invert(): Prettify<ReverseMap<T>>	& {[Symbol.iterator](): Iterator<Entries<T>, [keyof T, T[keyof T]]>}
+	;// & Methods<ReverseMap<T>>>;//invert(): Prettify<Wrap<ReverseMap<Enumify<T>>>>
+	/** reverse lookup of Enum key by value */								keyOf<V extends T[keyof T]>(value: V): Prettify<ReverseMap<T>>[V]
 	/** stringify method */																		toString(): string;
 	/** string tag */[Symbol.toStringTag](): 'Enumify';
 	/** Iterator for Enum */[Symbol.iterator](): Iterator<Entries<T>, [keyof T, T[keyof T]]>;
