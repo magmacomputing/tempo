@@ -1,4 +1,4 @@
-import { Property } from '#core/shared/type.library.js';
+import type { Property } from '#core/shared/type.library.js';
 
 // https://medium.com/codex/currying-in-typescript-ca5226c85b85
 type PartialTuple<T extends any[], X extends any[] = []> =
