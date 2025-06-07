@@ -6,7 +6,7 @@ import { enumify } from '#core/shared/enumerate.library.js';
 import { getAccessors } from '#core/shared/class.library.js';
 import { asArray, sortInsert } from '#core/shared/array.library.js';
 import { getStore, setStore } from '#core/shared/storage.library.js';
-import { ownEntries, purge, ownKeys } from '#core/shared/reflect.library.js';
+import { ownEntries, purge, ownKeys } from '#core/shared/reflection.library.js';
 import { getContext, sleep, CONTEXT } from '#core/shared/utility.library.js';
 import { asNumber, asInteger, isNumeric, ifNumeric } from '#core/shared/number.library.js';
 import { asString, pad, singular, toProperCase, trimAll } from '#core/shared/string.library.js';
@@ -167,37 +167,31 @@ export class Tempo {
 	static DURATIONS = enumify(['years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds', 'nanoseconds']);
 
 	static SEASONS = enumify({ 'North': 'north', 'East': 'east', 'South': 'south', 'West': 'west' });
-	static {
-		const mam = this.MONTHS.invert()[0]
-		const inverse = Tempo.SEASONS.invert();
-		for (const [key,val] of inverse)
-			;
-	}
 
-	static TIME = enumify({																		// approx number of seconds per unit-of-time
-		year: 31_536_000,
-		month: 2_628_000,
-		week: 604_800,
-		day: 86_400,
-		hour: 3_600,
-		minute: 60,
-		second: 1,
-		millisecond: .001,
-		microsecond: .000_001,
-		nanosecond: .000_000_001,
+	static TIME = enumify({
+		/** approx number of seconds in a year */								year: 31_536_000,
+		/** approx number of seconds in a month */							month: 2_628_000,
+		/** number of seconds in a week */											week: 604_800,
+		/** number of seconds in a day */												day: 86_400,
+		/** number of seconds in an hour */											hour: 3_600,
+		/** number of seconds in a minute */										minute: 60,
+		/** one second */																				second: 1,
+		/** number of seconds in a millisecond */								millisecond: .001,
+		/** number of seconds in a microsecond */								microsecond: .000_001,
+		/** number of seconds in a nanosecond */								nanosecond: .000_000_001,
 	});
 
-	static TIMES = enumify({																	// approx number of milliseconds per unit-of-time
-		years: Tempo.TIME.year * 1_000,
-		months: Tempo.TIME.month * 1_000,
-		weeks: Tempo.TIME.week * 1_000,
-		days: Tempo.TIME.day * 1_000,
-		hours: Tempo.TIME.hour * 1_000,
-		minutes: Tempo.TIME.minute * 1_000,
-		seconds: Tempo.TIME.second * 1_000,
-		milliseconds: Tempo.TIME.millisecond * 1_000,
-		microseconds: Tempo.TIME.microsecond * 1_000,
-		nanoseconds: Number((Tempo.TIME.nanosecond * 1_000).toPrecision(6)),
+	static TIMES = enumify({
+		/** approx number of milliseconds in a year */					years: Tempo.TIME.year * 1_000,
+		/** approx number of milliseconds in a month */					months: Tempo.TIME.month * 1_000,
+		/** number of milliseconds in a week */									weeks: Tempo.TIME.week * 1_000,
+		/** number of milliseconds in a day */									days: Tempo.TIME.day * 1_000,
+		/** number of milliseconds in an hour */								hours: Tempo.TIME.hour * 1_000,
+		/** number of milliseconds in a minute */								minutes: Tempo.TIME.minute * 1_000,
+		/** number of milliseconds in a second */								seconds: Tempo.TIME.second * 1_000,
+		/** one millisecond */																	milliseconds: Tempo.TIME.millisecond * 1_000,
+		/** number of milliseconds in a microsecond */					microseconds: Tempo.TIME.microsecond * 1_000,
+		/** number of milliseconds in a nanosecond */						nanoseconds: Number((Tempo.TIME.nanosecond * 1_000).toPrecision(6)),
 	});
 
 	static COMPASS = { North: 'north', East: 'east', South: 'south', West: 'west' } as const;
@@ -217,7 +211,7 @@ export class Tempo {
 		/** useful for sirting month order */										yearMonth: 'yyyymm',
 		/** useful for sorting date order */										yearMonthDay: 'yyyymmdd',
 		/** day of week */																			weekDay: 'dd',
-		/** just Date portion */																date: 'yyyy-mmm-dd',																		// 
+		/** just Date portion */																date: 'yyyy-mmm-dd',
 		/** just Time portion */																time: 'hh:mi:ss',
 	} as const
 
@@ -228,8 +222,6 @@ export class Tempo {
 		/** Tempo(31-Dec-9999.23:59:59).ns */										maxTempo: Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds,
 		/** Tempo(01-Jan-1000.00:00:00).ns */										minTempo: Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds,
 	} as const
-
-	static SHAPE = { Global: 'global', Local: 'local', } as const;
 
 	// #endregion
 	// #region Static private properties~~~~~~~~~~~~~~~~~~~~~~
@@ -242,7 +234,7 @@ export class Tempo {
 	}
 
 	static #global = {
-		/** current defaults for all Tempo instantiation */			config: {},
+		/** current defaults for all Tempo instantiation */			config: { level: 'global' },
 		/** Tempo terms to define date-range blocks */					terms: {},
 		/** Tempo Symbol registry */														symbols: { ...Sym },
 		/** Tempo units to aid in parsing */										units: { ...Unit },
@@ -600,7 +592,6 @@ export class Tempo {
 					Tempo.#setConfig(Tempo.#global, Default);
 
 					Object.assign(Tempo.#global.config, {							// some global locale-specific defaults
-						level: Tempo.SHAPE.Global,
 						calendar: dateTime.calendar,
 						timeZone: dateTime.timeZone,
 						locale: dateTime.locale,
@@ -852,20 +843,6 @@ export class Tempo {
 		}
 	}
 
-	/** dispose Tempo */
-	[Symbol.dispose]() {																			// TODO: for future implementation
-		Tempo.#dbg.info(this.config, 'dispose: ', this.#tempo);
-	}
-
-	/** safe-assignment Tempo */															// TODO: for future implementation (check for recursion?)
-	// [Symbol.result] = ((tempo, options) => {
-	// 	try {
-	// 		return [null, new Tempo(tempo, { ...options, catch: false })];
-	// 	} catch (err: unknown) {
-	// 		return [err, null];
-	// 	}
-	// }) as Safe<Tempo>
-
 	get [Symbol.toStringTag]() {															// default string description
 		return 'Tempo';																					// hard-coded to avoid minification mangling
 	}
@@ -939,7 +916,7 @@ export class Tempo {
 	/** timezone */																						get tz() { return this.#zdt.timeZoneId }
 	/** Unix epoch ms / ns (default to milliseconds) */				get ts() { return this.epoch[this.#local.config.timeStamp] }
 	/** short month name */																		get mmm() { return Tempo.MONTH.keyOf(this.#zdt.month as Tempo.MONTH) }
-	/** long month name */																		get mon() { return Tempo.MONTHS.keyOf(this.#zdt.month as Tempo.MONTHS) }
+	/** long month name */																		get mon() { return Tempo.MONTHS.keyOf(this.#zdt.month as Tempo.MONTH) }
 	/** weekday: Mon=1, Sun=7 */															get dow() { return this.#zdt.dayOfWeek as Tempo.dow }
 	/** short weekday name */																	get ddd() { return Tempo.WEEKDAY.keyOf(this.#zdt.dayOfWeek as Tempo.dow) }
 	/** long weekday name */																	get day() { return Tempo.WEEKDAYS.keyOf(this.#zdt.dayOfWeek as Tempo.dow) }
@@ -977,7 +954,7 @@ export class Tempo {
 	// #region Instance private methods~~~~~~~~~~~~~~~~~~~~~~~
 	/** setup local Shape */
 	#setLocal(options: Tempo.Options) {
-		Object.assign(this.#local.config, Tempo.#global.config, { level: Tempo.SHAPE.Local })
+		Object.assign(this.#local.config, Tempo.#global.config, { level: 'local' })
 
 		Tempo.#setConfig(this.#local, this.#options);						// set #local config
 
@@ -1827,7 +1804,7 @@ export namespace Tempo {
 	 */
 	export interface Config extends Required<OptionsKeep> {
 		/** semantic version */																	version: string;
-		/** configuration (global | local) */										level: Internal.Level,
+		/** configuration (global | local) */										level: 'global' | 'local',
 		/** detail about how value was parsed */								parse: Internal.Parse,
 		/** locales that prefer 'mm-dd-yy' date order */				monthDay: { locale: string; timeZones: string[]; }[];
 		/** layout patterns to parse value */										layout: Map<symbol, Internal.StringPattern[]>;
@@ -1926,14 +1903,12 @@ export namespace Tempo {
 	export type MonthName = Enum.keys<typeof Tempo.MONTH>
 
 	/** Compass Cardinal Points */
-	export type Sphere = Enum.values<typeof Tempo.COMPASS>//typeof Tempo.COMPASS.North | typeof Tempo.COMPASS.South | null
+	export type Sphere = Enum.values<typeof Tempo.COMPASS>
 }
 // #endregion Tempo types / interfaces / enums
 
 // #region Namespace that doesn't need to be shared externally
 namespace Internal {
-	export type Level = 'global' | 'local'
-
 	export type StringPattern = string | RegExp
 	export type StringTuple = [string, string];
 	export type SymbolTuple = [symbol, string];
