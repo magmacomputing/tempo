@@ -40,7 +40,7 @@ const STORAGEKEY = '_Tempo_';																// for stash in persistent storage
 /** common RegExp patterns */
 const Match = {
 	/** string that looks like a BigInt */										bigint: /^\d+n$/,
-	/** string that looks like a RegExp */										regexp: /^\/.*\/$/,
+	/** string that looks like a RegExp */										regexp: /^\/.*\/[a-zA-Z]+$/,
 	/** match all {} pairs */																	braces: /{([^}]+)}/g,
 	/** event */																							event: /^evt\d+$/,
 	/** period */																							period: /^per\d+$/,
