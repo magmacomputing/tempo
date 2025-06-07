@@ -1,12 +1,13 @@
+import { Tempo } from '#core/shared/tempo.class.js';
 import { curry } from '#core/shared/function.library.js';
 import { isNumeric } from '#core/shared/number.library.js';
 import { enumify } from '#core/shared/enumerate.library.js';
-import { ownEntries } from '#core/shared/reflect.library.js';
+import { ownKeys, ownValues, ownEntries } from '#core/shared/reflection.library.js';
 
-import { isType, asType, isEmpty, isDefined, isUndefined, isNullish, isString, isObject, isArray, isFunction, isRecord, isTuple, type Types, isSymbolFor, isSymbol } from '#core/shared/type.library.js';
+import { isType, asType, isEmpty, isDefined, isUndefined, isNullish, isString, isObject, isArray, isFunction, type Types, isSymbolFor, isSymbol } from '#core/shared/type.library.js';
 
 // be aware that 'structuredClone' preserves \<undefined> values...  
-// but JSON.stringify() does not
+// and JSON.stringify() does not
 
 /** make a deep-copy, using standard browser or JSON functions */
 export function clone<T>(obj: T) {
@@ -50,7 +51,7 @@ export function cloneify<T>(obj: T, sentinel?: Function): T {
 function replacer(key: string, obj: any): any { return isEmpty(key) ? obj : stringize(obj) }
 function reviver() { return (_key: string, val: any) => decode(val) }
 
-// safe-characters [sp, ", ;, <, >, [, ], ^, {, |, }]
+// safe-characters [sp " ; < > [ ] ^ { | }]
 const safeList = ['20', '22', '3B', '3C', '3E', '5B', '5D', '5E', '7B', '7C', '7D'];
 
 /** encode control characters, then replace a safe-subset back to text-string */
@@ -173,20 +174,18 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 			return one(arg.value.toString());											// even though BigInt has a toString method, it is not supported in JSON.stringify
 
 		case 'Object':
-		case 'Record':
 			const obj = ownEntries(arg.value)
 				.filter(([, val]) => isStringable(val))
 				.map(([key, val]) => `${fromSymbol(key)}: ${stringize(val)}`)
 				.join(',')
-			return `${arg.type === 'Record' ? '#' : ''}{${obj}}`;
+			return `{${obj}}`;
 
 		case 'Array':
-		case 'Tuple':
 			const arr = arg.value
 				.filter(val => isStringable(val))
 				.map(val => stringize(val))
 				.join(',')
-			return `${arg.type === 'Tuple' ? '#' : ''}[${arr}]`;
+			return `[${arr}]`;
 
 		case 'Map':
 			const map = Array.from(arg.value.entries())
@@ -239,8 +238,6 @@ export function objectify<T>(str: string, sentinel?: Function): T {
 		switch (true) {
 			case str.startsWith('{') && str.endsWith('}'):				// looks like Object
 			case str.startsWith('[') && str.endsWith(']'):				// looks like Array
-			case str.startsWith('#{') && str.endsWith('}'):				// looks like Record
-			case str.startsWith('#[') && str.endsWith(']'):				// looks like Tuple
 				return traverse(parse, sentinel);										// recurse into object
 
 			default:
@@ -251,7 +248,7 @@ export function objectify<T>(str: string, sentinel?: Function): T {
 			console.warn(`objectify.parse: -> ${str}, ${(error as Error).message}`);
 			return str as T;
 		}
-		else return objectify('"' + str + '"', sentinel);				// have another try
+		else return objectify('"' + str + '"', sentinel);				// have another try, quoted
 	}
 }
 
@@ -267,16 +264,8 @@ function traverse(obj: any, sentinel?: Function): any {
 	}
 
 	if (isArray(obj)) {
-		return Object.values(obj)
+		return ownValues(obj)
 			.map(val => typeify(traverse(val, sentinel)))
-	}
-
-	// TODO
-	if (isRecord(obj)) {
-
-	}
-	if (isTuple(obj)) {
-
 	}
 
 	return obj;
@@ -284,11 +273,8 @@ function traverse(obj: any, sentinel?: Function): any {
 
 /** Rebuild an Object from its single-key representation */
 function typeify(json: Record<string, any>, sentinel?: Function) {
-	if (!isObject(json))
-		return json;																						// only JSON Objects
-
-	if (Object.keys(json).length !== 1)												// only single-key Objects accepted
-		return json;
+	if (!isObject(json) || ownKeys(json).length !== 1)
+		return json;																						// only JSON Objects, with a single key:value pair
 
 	const { type, value } = ownEntries(json)
 		.reduce((acc, [type, value]) => Object.assign(acc, { type, value }), {} as { type: Types, value: any })
@@ -322,13 +308,9 @@ function typeify(json: Record<string, any>, sentinel?: Function) {
 			return new Set(value);
 
 		case 'Tempo':
-		// return new Tempo(value);															// TODO
-		case 'Record':
-		// return Record(obj.value) ;														// TODO
-		case 'Tuple':
-		// return Tuple.from(obj.value) ;												// TODO
+			return new Tempo(value);
 		case 'Enumify':
-		// return enumify(obj.value);														// TODO
+			return enumify(value);
 
 		default:
 			return json;																					// return JSON Object

@@ -51,7 +51,7 @@ export const asType = <T>(obj?: T, ...instances: Instance[]) => {
 export const isType = <T>(obj: unknown, ...types: Types[]): obj is T => types.includes(getType(obj));
 
 /** Type-Guards: assert \<obj> is of \<type> */
-export const isPrimitive = (obj?: unknown): obj is Primitive => isType(obj, 'String', 'Number', 'BigInt', 'Boolean', 'Symbol', 'Undefined', 'Void', 'Null', 'Empty', 'Record', 'Tuple');
+export const isPrimitive = (obj?: unknown): obj is Primitive => isType(obj, 'String', 'Number', 'BigInt', 'Boolean', 'Symbol', 'Undefined', 'Void', 'Null', 'Empty');
 export const isReference = (obj?: unknown): obj is Object => !isPrimitive(obj);
 export const isIterable = <T>(obj: unknown): obj is Iterable<T> => Symbol.iterator in Object(obj) && !isString(obj);
 
@@ -68,10 +68,6 @@ export const isRegExp = <T>(obj?: T): obj is Extract<T, RegExp> => isType(obj, '
 export const isSymbol = <T>(obj?: T): obj is Extract<T, symbol> => isType(obj, 'Symbol');
 export const isSymbolFor = <T>(obj?: T): obj is Extract<T, symbol> => isType<symbol>(obj, 'Symbol') && Symbol.keyFor(obj) !== void 0;
 export const isPropertyKey = (obj?: unknown): obj is PropertyKey => isType<PropertyKey>(obj, 'String', 'Number', 'Symbol');
-
-// TODO
-export const isRecord = <T>(obj?: T): obj is Readonly<Extract<T, Record<any, any>>> => isType(obj, 'Record');
-export const isTuple = <T>(obj?: T): obj is Readonly<Extract<T, Array<T>>> => isType(obj, 'Tuple');
 
 export const isNull = <T>(obj?: T): obj is Extract<T, null> => isType(obj, 'Null');
 export const isNullish = <T>(obj: T): obj is Extract<T, Nullish> => isType<undefined | null | void>(obj, 'Null', 'Undefined', 'Void', 'Empty');
@@ -104,8 +100,6 @@ export const isEmpty = <T>(obj?: T) => false
 	|| (isArray(obj) && (obj.length === 0))
 	|| (isSet(obj) && (obj.size === 0))
 	|| (isMap(obj) && (obj.size === 0))
-	|| (isTuple(obj) && (obj.length === 0))
-	|| (isRecord(obj) && (Reflect.ownKeys(obj).length === 0))
 
 export function assertCondition(condition: boolean, message?: string): asserts condition {
 	if (!condition)
@@ -123,7 +117,8 @@ export type TArray<T> = Array<TValue<T>>;
 
 /** bottom value */
 export type Nullish = null | undefined | void;
-export type TPlural<T extends string> = `${T}s`;
+
+export type KeyOf<T> = keyof T;
 export type ValueOf<T> = T[keyof T];
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
@@ -132,13 +127,14 @@ export type Property<T> = Record<PropertyKey, T>
 
 /** Record with only one-key */
 export type OneKey<K extends keyof any, V, KK extends keyof any = K> =
-	{ [P in K]: { [Q in P]: V } &
-	{ [Q in Exclude<KK, P>]?: undefined } extends infer O ?
-		{ [Q in keyof O]: O[Q] } : never
-	}[K]
+{ [P in K]: { [Q in P]: V } &
+{ [Q in Exclude<KK, P>]?: undefined } extends infer O ?
+{ [Q in keyof O]: O[Q] } : never
+}[K]
 
 export type Prettify<T> = { [K in keyof T]: T[K]; } & {}
 export type ParseInt<T> = T extends `${infer N extends number}` ? N : never
+export type TPlural<T extends string> = `${T}s`;
 
 type Primitive = string | number | bigint | boolean | symbol | void | undefined | null // TODO: add  record | tuple
 type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling)
@@ -166,8 +162,6 @@ export type Types =
 	| 'WeakMap' | 'WeakSet' | 'WeakRef'
 	| 'Symbol'
 	| 'Error'
-	| 'Record'
-	| 'Tuple'
 
 	| 'Temporal'
 	| 'Temporal.Instant'
@@ -207,9 +201,6 @@ export type TypeValue<T> =
 	// | { type: 'WeakRef', value: WeakRef<Property<unknown>, T> }
 	| { type: 'Symbol', value: symbol }
 	| { type: 'Error', value: Error }
-
-	| { type: 'Record', value: Property<T> }									// TODO
-	| { type: 'Tuple', value: Array<T> }											// TODO
 
 	| { type: 'Temporal', value: Temporals }
 	| { type: 'Temporal.Instant', value: Temporal.Instant }
@@ -256,7 +247,8 @@ export type Index<T extends readonly any[]> = { [K in Entry<T> as `${K[1]}`]: Pa
 
 /** reverse a Tuple */
 export type Reverse<T extends any[], R extends any[] = []> = ReturnType<T extends [infer F, ...infer L] ? () => Reverse<L, [F, ...R]> : () => R>
-export type ReverseMap<T extends Record<keyof T, keyof any>> = { [K in keyof T as T[K]]: K; }
+/** reverse a Record */
+export type Invert<T extends Record<keyof T, keyof any>> = { [K in keyof T as T[K]]: K; }
 
 // https://stackoverflow.com/questions/39494689/is-it-possible-to-restrict-number-to-a-certain-range/70307091#70307091
 type EnumerateMin<N extends number, Acc extends number[] = []> = Acc['length'] extends N
@@ -303,7 +295,7 @@ export type InRange<T extends string, Min extends number, Max extends number> =
 /**
  * return a substring of a string-type  
  * eg: Substr<Monday|Tuesday|Wednesday, 3> returns Mon|Tue|Wed  
- * T is the original string  
+ * T is the original string union  
  * Max is the number of chars to return  
  * Start is the offset (starting from '1')  
  */

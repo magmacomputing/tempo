@@ -1,4 +1,4 @@
-import { ownKeys, ownEntries } from '#core/shared/reflect.library.js';
+import { ownKeys, ownEntries } from '#core/shared/reflection.library.js';
 import { isObject, isArray, isReference, isFunction, isDefined, isEmpty, isNullish } from '#core/shared/type.library.js';
 import type { Property } from '#core/shared/type.library.js';
 

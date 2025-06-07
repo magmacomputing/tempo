@@ -1,4 +1,4 @@
-import { ownEntries } from '#core/shared/reflect.library.js';
+import { ownEntries } from '#core/shared/reflection.library.js';
 import { isFunction } from '#core/shared/type.library.js';
 
 /** get a string-array of 'getter' names for a Class */
