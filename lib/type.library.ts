@@ -39,12 +39,10 @@ export const getType = (obj?: any, ...instances: Instance[]) => {
 }
 
 /** return TypeValue<T> object */
-export const asType = <T>(obj?: T, ...instances: Instance[]) => {
-	const type = getType(obj, ...instances);
-	return ({
-		type,
-		value: type === 'Enumify' ? (obj as any).enum?.() : obj,// kludge to return enum-type
-	}) as TypeValue<T>
+export const asType = <T>(value?: T, ...instances: Instance[]) => {
+	const type = getType(value, ...instances);
+
+	return ({ type, value }) as TypeValue<T>
 }
 
 /** assert value is one of a list of Types */
@@ -60,7 +58,8 @@ export const isNumber = <T>(obj?: T): obj is Extract<T, number> => isType(obj, '
 export const isInteger = <T>(obj?: T): obj is Extract<T, bigint> => isType(obj, 'BigInt');
 export const isDigit = <T>(obj?: T): obj is Extract<T, number | bigint> => isType(obj, 'Number', 'BigInt');
 export const isBoolean = <T>(obj?: T): obj is Extract<T, boolean> => isType(obj, 'Boolean');
-export const isArray = <T>(obj: T | T[]): obj is Array<T> => isType(obj, 'Array');
+export const isArray = <T>(obj: unknown): obj is T[] => isType(obj, 'Array');
+// export const isArray = <T>(obj?: T): obj is Extract<T, any[]> => isType(obj, 'Array');
 export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => protoType(obj) === 'Object' && 'length' in obj && Object.keys(obj).every(key => key === 'length' || !isNaN(Number(key)));
 export const isObject = <T>(obj?: T): obj is Extract<T, Record<any, any>> => isType(obj, 'Object');
 export const isDate = <T>(obj?: T): obj is Extract<T, Date> => isType(obj, 'Date');
@@ -127,10 +126,10 @@ export type Property<T> = Record<PropertyKey, T>
 
 /** Record with only one-key */
 export type OneKey<K extends keyof any, V, KK extends keyof any = K> =
-{ [P in K]: { [Q in P]: V } &
-{ [Q in Exclude<KK, P>]?: undefined } extends infer O ?
-{ [Q in keyof O]: O[Q] } : never
-}[K]
+	{ [P in K]: { [Q in P]: V } &
+	{ [Q in Exclude<KK, P>]?: undefined } extends infer O ?
+		{ [Q in keyof O]: O[Q] } : never
+	}[K]
 
 export type Prettify<T> = { [K in keyof T]: T[K]; } & {}
 export type ParseInt<T> = T extends `${infer N extends number}` ? N : never
