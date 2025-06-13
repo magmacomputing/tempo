@@ -1,5 +1,5 @@
-import { isArray, isEmpty, type Property } from '#core/shared/type.library.js';
 import { clone } from '#core/shared/serialize.library.js';
+import { isArray, isEmpty, type Property } from '#core/shared/type.library.js';
 
 type Obj = Property<any> | any[]
 
@@ -9,9 +9,10 @@ export function exclude<T extends Obj>(obj: T, ...keys: (keyof T)[]) {
 }
 
 /** mutate Object | Array reference with properties removed */
-export function omit<T extends Obj>(obj: T): T
-export function omit<T extends Obj>(obj: T, ...keys: (keyof T)[]): T
-export function omit<T extends Obj>(obj: T, ...keys: (keyof T)[]) {
+/** TODO:  does this ever need to be 'export'ed ? */
+function omit<T extends Obj>(obj: T): T
+function omit<T extends Obj>(obj: T, ...keys: (keyof T)[]): T
+function omit<T extends Obj>(obj: T, ...keys: (keyof T)[]) {
   (isEmpty(keys) ? ownKeys(obj) : keys)                     // if no {keys}, assume all ownKeys
     .forEach(key => Reflect.deleteProperty(obj, key));
 
