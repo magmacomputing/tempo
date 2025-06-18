@@ -24,9 +24,9 @@
   "homepage": "https://github.com/magmacomputing/tempo#readme",
   "devDependencies": {
     "@js-temporal/polyfill": "^0.5.1",
-    "@types/jest": "^29.5.14",
-    "@vitest/ui": "^3.1.4",
+    "@types/jest": "^30.0.0",
+    "@vitest/ui": "^3.2.4",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.1.4"
+    "vitest": "^3.2.4"
   }
 }
