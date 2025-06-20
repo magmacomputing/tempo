@@ -996,6 +996,7 @@ export class Tempo {
 		const today = dateTime ?? this.#instant									// cast instantiation to current timeZone, calendar
 			.toZonedDateTimeISO(this.#getConfig('timeZone'));
 		const arg = this.#conform(tempo, today);								// if String or Number, conform the input against known patterns
+
 		Tempo.#dbg.info(this.#local.config, 'parse', `{type: ${arg.type}, value: ${arg.value}}`);					// show what we're parsing
 
 		switch (arg.type) {
@@ -1085,7 +1086,7 @@ export class Tempo {
 		const arg = asType(tempo);
 		this.#local.config.parse = { ...arg };									// for debugging
 
-		if (this.#zonedDateTimeLike(tempo)) {										// tempo is ZonedDateTime-ishAccessor object
+		if (this.#zonedDateTimeLike(tempo)) {										// tempo is ZonedDateTime-ish object
 			const { timeZone, calendar, ...options } = tempo;
 			let zdt = dateTime.with({ ...options });
 
@@ -1144,8 +1145,8 @@ export class Tempo {
 			Object.assign(arg, { type: 'Temporal.ZonedDateTime', value: dateTime });
 			Object.assign(this.#local.config.parse, { match: sym.description, groups });// stash the {key} of the pattern that was matched								
 
-			Tempo.#dbg.info(this.config, 'pattern', sym.description);	// show the pattern that was matched
-			Tempo.#dbg.info(this.config, 'groups', groups);						// show the resolved date-time elements
+			Tempo.#dbg.info(this.#local.config, 'pattern', sym.description);	// show the pattern that was matched
+			Tempo.#dbg.info(this.#local.config, 'groups', groups);						// show the resolved date-time elements
 
 			break;																								// stop checking patterns
 		}
