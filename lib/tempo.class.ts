@@ -13,26 +13,14 @@ import { asString, pad, singular, toProperCase, trimAll } from '#core/shared/str
 import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isNumber, isObject, isRegExp } from '#core/shared/type.library.js';
 
 import type { Enum } from '#core/shared/enumerate.library.js';
-import type { Logger } from '#core/shared/logger.library.js';
 import type { IntRange, Types } from '#core/shared/type.library.js';
 
 import '#core/shared/prototype.library.js';									// patch prototype
-// #endregion
-
-// #region Temporal ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/** TODO: THIS SECTION CAN TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
+// /** TODO: THIS IMPORT CAN TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
 import { Temporal } from '@js-temporal/polyfill';
-declare global {
-	interface Window {
-		Temporal: typeof Temporal,
-	}
-}
-
-if ('window' in globalThis)
-	window["Temporal"] ??= Temporal;
 // #endregion
 
-// #region Const variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// #region local const variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 const VERSION = '0.2.0';																		// semantic version
 const STORAGEKEY = '_Tempo_';																// for stash in persistent storage
@@ -158,7 +146,7 @@ const Default = {
  * It has simple methods to perform manipulations (add, format, diff, offset, ...)  
  */
 export class Tempo {
-	// #region Static enum and const properties~~~~~~~~~~~~~~~~~~~~~~~~~
+	// #region Static enum and const properties~~~~~~~~~~~~~~~
 	static WEEKDAY = enumify(['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
 	static WEEKDAYS = enumify(['Everyday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']);
 	static MONTH = enumify(['All', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']);
@@ -217,8 +205,6 @@ export class Tempo {
 
 	static DATE = {																						// some useful Dates
 		/** Date(Unix epoch) */																	epochDate: new Date(0),
-		/** Date(31-Dec-9999) */																maxDate: new Date(Date.UTC(9999, 11, 31, 23, 59, 59, 59)),
-		/** Date(01-Jan-1000) */																minDate: new Date(Date.UTC(1000, 0, 1, 0, 0, 0, 0)),
 		/** Tempo(31-Dec-9999.23:59:59).ns */										maxTempo: Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds,
 		/** Tempo(01-Jan-1000.00:00:00).ns */										minTempo: Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds,
 	} as const
@@ -226,7 +212,7 @@ export class Tempo {
 	// #endregion
 	// #region Static private properties~~~~~~~~~~~~~~~~~~~~~~
 
-	static #dbg = new Logify(this);
+	static #dbg = new Logify(this, { debug: Default.debug, catch: Default.catch });
 
 	static #ready = {
 		static: new Pledge<boolean>('static'),									// ready when static-blocks settled
@@ -569,7 +555,7 @@ export class Tempo {
 
 	/**
 	 * set a default configuration for a subsequent 'new Tempo()' instance to inherit.  
-	 * Tempo.#config is set from  
+	 * Tempo.#config is set from:  
 	 * a) reasonable default values, then  
 	 * b) local storage, then  
 	 * c) 'init' argument values  
@@ -917,9 +903,9 @@ export class Tempo {
 	/** Unix epoch ms / ns (default to milliseconds) */				get ts() { return this.epoch[this.#local.config.timeStamp] }
 	/** short month name */																		get mmm() { return Tempo.MONTH.keyOf(this.#zdt.month as Tempo.MONTH) }
 	/** long month name */																		get mon() { return Tempo.MONTHS.keyOf(this.#zdt.month as Tempo.MONTH) }
-	/** weekday: Mon=1, Sun=7 */															get dow() { return this.#zdt.dayOfWeek as Tempo.dow }
-	/** short weekday name */																	get ddd() { return Tempo.WEEKDAY.keyOf(this.#zdt.dayOfWeek as Tempo.dow) }
-	/** long weekday name */																	get day() { return Tempo.WEEKDAYS.keyOf(this.#zdt.dayOfWeek as Tempo.dow) }
+	/** weekday: Mon=1, Sun=7 */															get dow() { return this.#zdt.dayOfWeek as Tempo.WEEKDAY }
+	/** short weekday name */																	get ddd() { return Tempo.WEEKDAY.keyOf(this.#zdt.dayOfWeek as Tempo.WEEKDAY) }
+	/** long weekday name */																	get day() { return Tempo.WEEKDAYS.keyOf(this.#zdt.dayOfWeek as Tempo.WEEKDAY) }
 	/** nanoseconds (BigInt) since Unix epoch */							get nano() { return this.#zdt.epochNanoseconds }
 	/** Instance configuration */															get config() { return { ...this.#local.config } }
 	/** calculated instance terms */													get term() { return { ...this.#local.term } }
@@ -1173,7 +1159,7 @@ export class Tempo {
 	#parseGroups(groups: Internal.RegExpGroups, dateTime: Temporal.ZonedDateTime) {
 		// fix {cnt}
 		if (isDefined(groups["mod"]))
-			groups["cnt"] ||= '1';																// default {cnt} if {mod} is present
+			groups["cnt"] ||= '1';																// default {cnt} to '1' if {mod} is present
 
 		// fix {event}
 		const event = Object.keys(groups).find(key => key.match(Match.event));
@@ -1853,7 +1839,7 @@ export namespace Tempo {
 		[Tempo.FORMAT.yearWeek]: number;
 		[Tempo.FORMAT.yearMonth]: number;
 		[Tempo.FORMAT.yearMonthDay]: number;
-		[Tempo.FORMAT.weekDay]: Tempo.dow;
+		[Tempo.FORMAT.weekDay]: Tempo.WEEKDAY;
 		[Tempo.FORMAT.date]: string;
 		[Tempo.FORMAT.time]: string;
 		[str: string]: string | number;													// allow for user-supplied format-codes
@@ -1876,12 +1862,11 @@ export namespace Tempo {
 		/** yyyyww */																						yearWeek: number;
 		/** yyyymm */																						yearMonth: number;
 		/** yyyymmdd */																					yearMonthDay: number;
-		/** dd */																								weekDay: Tempo.dow;
+		/** dd */																								weekDay: Tempo.WEEKDAY;
 		/** yyyy-mm-dd */																				date: string;
 		/** hh:mi:ss */																					time: string;
 	}
 
-	export type dow = IntRange<0, 7>
 	export type mm = IntRange<0, 12>
 	export type hh = IntRange<0, 24>
 	export type mi = IntRange<0, 60>

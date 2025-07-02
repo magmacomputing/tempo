@@ -1,5 +1,6 @@
 import { clone } from '#core/shared/serialize.library.js';
-import { isArray, isEmpty, type Property } from '#core/shared/type.library.js';
+import { isArray, isEmpty } from '#core/shared/type.library.js';
+import type { Property, KeyOf, ValueOf } from '#core/shared/type.library.js';
 
 type Obj = Property<any> | any[]
 
@@ -9,10 +10,9 @@ export function exclude<T extends Obj>(obj: T, ...keys: (keyof T)[]) {
 }
 
 /** mutate Object | Array reference with properties removed */
-/** TODO:  does this ever need to be 'export'ed ? */
-function omit<T extends Obj>(obj: T): T
-function omit<T extends Obj>(obj: T, ...keys: (keyof T)[]): T
-function omit<T extends Obj>(obj: T, ...keys: (keyof T)[]) {
+export function omit<T extends Obj>(obj: T): T
+export function omit<T extends Obj>(obj: T, ...keys: (keyof T)[]): T
+export function omit<T extends Obj>(obj: T, ...keys: (keyof T)[]) {
   (isEmpty(keys) ? ownKeys(obj) : keys)                     // if no {keys}, assume all ownKeys
     .forEach(key => Reflect.deleteProperty(obj, key));
 
@@ -32,17 +32,17 @@ export function purge<T extends Obj>(obj: T) {
 
 /** array of PropertyKeys as string | symbol */
 export function ownKeys<T extends Obj>(json: T) {
-  return Reflect.ownKeys(json) as (keyof T)[]               // Object.keys() would discard symbol-keys
+  return Reflect.ownKeys(json) as KeyOf<T>[]                // Object.keys() would discard symbol-keys
 }
 
 /** array of object values */
 export function ownValues<T extends Obj>(json: T) {
-  return ownKeys<T>(json)
-    .map(key => json[key] as T)                             // Object.values() would discard symbol-keys
+  return ownKeys(json)                                      // Object.values() would discard symbol-keys
+    .map(key => json[key] as ValueOf<T>)
 }
 
-/** tuple of Object entries with string | symbol keys */
+/** tuple of object entries with string | symbol keys */
 export function ownEntries<T extends Obj>(json: T) {
-  return ownKeys<T>(json)                                   // Object.entries() would discard symbol-keys
-    .map(key => [key, json[key]] as [keyof T, T[keyof T]])  // cast as tuple
+  return ownKeys(json)                                      // Object.entries() would discard symbol-keys
+    .map(key => [key, json[key]] as [KeyOf<T>, ValueOf<T>]) // cast as tuple
 }

@@ -19,11 +19,11 @@ export class Logify {
 
 	catch(...msg: any[]) {
 		if (this.opts.catch) {
-			this.warn(...msg);																		// show a warning on the console.log
+			this.warn(...msg);																		// show a warning on the console
 			return;																								// safe-return
 		}
 
-		this.error(...msg);																			// this goes to the console.log
+		this.error(...msg);																			// this goes to the console
 		throw new Error(`${this.#name}${msg}`);									// this goes back to the caller
 	}
 
@@ -36,7 +36,7 @@ export class Logify {
 	constructor(self?: any, opts = {} as Logify.Constructor) {
 		this.#name = self?.constructor.name.concat(': ') ?? '';
 
-		this.opts.debug = opts.debug ?? true;
+		this.opts.debug = opts.debug ?? false;
 		this.opts.catch = opts.catch ?? false;
 	}
 }
