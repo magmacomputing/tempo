@@ -10,125 +10,16 @@ import { ownEntries, purge, ownKeys } from '#core/shared/reflection.library.js';
 import { getContext, sleep, CONTEXT } from '#core/shared/utility.library.js';
 import { asNumber, asInteger, isNumeric, ifNumeric } from '#core/shared/number.library.js';
 import { asString, pad, singular, toProperCase, trimAll } from '#core/shared/string.library.js';
+import { Default, Match, Sym, Unit } from '#core/shared/tempo.default.js';
 import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isNumber, isObject, isRegExp } from '#core/shared/type.library.js';
 
 import type { Enum } from '#core/shared/enumerate.library.js';
-import type { IntRange, Types } from '#core/shared/type.library.js';
+import type { IntRange, Types, ValueOf } from '#core/shared/type.library.js';
 
 import '#core/shared/prototype.library.js';									// patch prototype
 // /** TODO: THIS IMPORT CAN TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
 import { Temporal } from '@js-temporal/polyfill';
 // #endregion
-
-// #region local const variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-const VERSION = '0.2.0';																		// semantic version
-const STORAGEKEY = '_Tempo_';																// for stash in persistent storage
-
-/** common RegExp patterns */
-const Match = {
-	/** string that looks like a BigInt */										bigint: /^\d+n$/,
-	/** string that looks like a RegExp */										regexp: /^\/.*\/[a-zA-Z]+$/,
-	/** match all {} pairs */																	braces: /{([^}]+)}/g,
-	/** event */																							event: /^evt\d+$/,
-	/** period */																							period: /^per\d+$/,
-	/** two digit year */																			twoDigits: /^\d{2}$/,
-	/** year-term */																					yearTerm: /(?<yy>yy).?#(?<term>\w+)/,
-	/** hour-minute-second with no separator */								hhmiss: /(hh)(m[i|m])(ss)?/i,
-	/** separator characters (/-. ,) */												separators: /[\/\-\.\s,]/,
-	/** modifier characters (+-<>=) */												modifiers: /[\+\-\<\>][\=]?/,
-} as const
-
-/** Tempo Symbol registry */
-const Sym = {
-	/** date pattern */																				dt: Symbol('date'),
-	/** time pattern */																				tm: Symbol('time'),
-	/** date and time pattern */															dtm: Symbol('dateTime'),
-	/** day-month-year pattern */															dmy: Symbol('dayMonthYear'),
-	/** month-day-year pattern */															mdy: Symbol('monthDayYear'),
-	/** year-month-day pattern */															ymd: Symbol('yearMonthDay'),
-	/** day-of-week pattern */																dow: Symbol('dayOfWeek'),
-	/** Tempo event pattern */																evt: Symbol('event'),
-	/** Tempo period pattern */																per: Symbol('period'),
-	/** Tempo term (zodiac) */																zdc: Symbol('zodiac'),
-	/** Tempo term (season) */																szn: Symbol('season'),
-	/** Tempo term (quarter) */																qtr: Symbol('quarter'),
-} as Internal.Symbol;
-
-/**
- * user will need to know these in order to configure their own patterns  
- * Tempo.Unit is a simple regex	snippet													, e.g. { yy: /(\d{2})?\d{2})/ }    
- * Tempo.Layout is translated into an anchored regex {pattern}	, e.g. Map([[ Symbol('ymd'), /^{yy}{mm}{dd}?$/ ]])    
- * {pattern} will be used to parse a string | number in the constructor {DateTime} argument    
- */
-const Unit = {																							// define some components to help interpret input-strings
-	/** arbitrary upper-limit of yy=9999 */										yy: /(?<yy>(\d{2})?\d{2})/,
-	/** month-name (abbrev or full) or month-number 01-12 */	mm: /(?<mm>[0\s]?[1-9]|1[0-2]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/,
-	/** day-number 00-31 */																		dd: /(?<dd>[0\s]?[1-9]|[12][0-9]|3[01])/,
-	/** day-name (abbrev or full) */													dow: /((?<dow>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)(?:[\/\-\s\,])*)/,
-	/** hour-number 00-24 */																	hh: /(?<hh>2[0-4]|[01]?\d)/,
-	/** minute-number 00-59 */																mi: /(\:(?<mi>[0-5]\d))/,
-	/** seconds-number 00-59 */																ss: /(\:(?<ss>[0-5]\d))/,
-	/** fractional-seconds up-to 9-digits */									ff: /(\.(?<ff>\d{1,9}))/,
-	/** meridiem suffix (am,pm) */														mer: /(\s*(?<mer>am|pm))/,
-	/** time-component suffix "T {tm}*/												sfx: /((?:[\s,T])({tm}))/,
-	/** date-component separator character "/\\-., " */				sep: new RegExp(`(?<sep>${Match.separators.source})`),
-	/** modifier (+,-,<,<=,>,>=) plus optional offset-count */mod: new RegExp(`((?<mod>${Match.modifiers.source})?(?<cnt>\d*)\s*)`),
-} as Internal.Regexp
-// Note: computed Units ('tm', 'dt', 'evt', 'per') are added during 'Tempo.init()' and 'new Tempo()'
-
-/** a {layout} is a combination of {unit}-codes describing an expected DateTime format */
-const Layout = [
-	[Sym.dow, '{mod}?{dow}{sfx}?'],														// special layout (no {dt}!) used for day-of-week calcs (only one that requires {dow} unit)
-	[Sym.dt, '{dt}'],																					// calendar or event
-	[Sym.tm, '{tm}'],																					// clock or period
-	[Sym.dtm, '({dt}){sfx}?'],																// calendar/event and clock/period
-	[Sym.dmy, '{dow}?{dd}{sep}?{mm}({sep}{yy})?{sfx}?'],			// day-month(-year)
-	[Sym.mdy, '{dow}?{mm}{sep}?{dd}({sep}{yy})?{sfx}?'],			// month-day(-year)
-	[Sym.ymd, '{dow}?{yy}{sep}?{mm}({sep}{dd})?{sfx}?'],			// year-month(-day)
-	[Sym.evt, '{evt}'],																				// event only
-	[Sym.per, '{per}'],																				// period only
-] as Internal.SymbolTuple[];
-
-/** Tempo.Event is a Tuple of regex-patterns that describe pre-defined Date strings */
-const Event = [
-	['new.?years? ?eve', '31 Dec'],
-	['nye', '31 Dec'],
-	['new.?years?( ?day)?', '01 Jan'],
-	['ny', '01 Jan'],
-	['christmas ?eve', '24 Dec'],
-	['christmas', '25 Dec'],
-	['xmas ?eve', '24 Dec'],
-	['xmas', '25 Dec'],
-] as Internal.StringTuple[]
-
-/** Tempo.Period is a Tuple of regex-patterns that describe pre-defined Time strings */
-const Period = [
-	['mid[ -]?night', '24:00'],
-	['morning', '8:00'],
-	['mid[ -]?morning', '10:00'],
-	['mid[ -]?day', '12:00'],
-	['noon', '12:00'],
-	['after[ -]?noon', '3:00pm'],
-	['evening', '18:00'],
-	['night', '20:00'],
-] as Internal.StringTuple[]
-
-/** Reasonable default options for initial Tempo config */
-const Default = {
-	version: VERSION,
-	key: STORAGEKEY,
-	pivot: 75,																								/** @link https://en.wikipedia.org/wiki/Date_windowing */
-	catch: false,
-	debug: false,
-	timeStamp: 'ms',
-	calendar: 'iso8601',
-	sphere: 'north',
-	monthDay: ['en-US', 'en-AS'],															/** @link https://en.wikipedia.org/wiki/Date_format_by_country */
-	layout: new Map(Layout),
-	event: [...Event],
-	period: [...Period],
-} as Tempo.Options
 
 // #endregion Const variables
 
@@ -196,7 +87,7 @@ export class Tempo {
 		/** useful for dates where dow is not needed */					monthTime: 'yyyy-mmm-dd hh:mi',
 		/** 24-hour format */																		hourMinute: 'hh:mi',
 		/** useful for sorting week order */										yearWeek: 'yyyyww',
-		/** useful for sirting month order */										yearMonth: 'yyyymm',
+		/** useful for sorting month order */										yearMonth: 'yyyymm',
 		/** useful for sorting date order */										yearMonthDay: 'yyyymmdd',
 		/** day of week */																			weekDay: 'dd',
 		/** just Date portion */																date: 'yyyy-mmm-dd',
@@ -212,7 +103,8 @@ export class Tempo {
 	// #endregion
 	// #region Static private properties~~~~~~~~~~~~~~~~~~~~~~
 
-	static #dbg = new Logify(this, { debug: Default.debug, catch: Default.catch });
+	// static #dbg = new Logify(this, { debug: Default.debug, catch: Default.catch });
+	static #dbg = new Logify();
 
 	static #ready = {
 		static: new Pledge<boolean>('static'),									// ready when static-blocks settled
@@ -380,7 +272,7 @@ export class Tempo {
 	}
 
 	/** properCase week-day / calendar-month */
-	static #prefix = <T extends Tempo.DayName | Tempo.MonthName>(str: T) =>
+	static #prefix = <T extends Tempo.Day | Tempo.Month>(str: T) =>
 		toProperCase(str.toString().substring(0, 3)) as T;
 
 	/** get first Canonical name of a supplied locale */
@@ -1194,7 +1086,7 @@ export class Tempo {
 
 		// fix {mm}
 		if (isDefined(groups["mm"]) && !isNumeric(groups["mm"])) {
-			const mm = Tempo.#prefix(groups["mm"] as Tempo.MonthName);
+			const mm = Tempo.#prefix(groups["mm"] as Tempo.Month);
 
 			groups["mm"] = Tempo.MONTH.keys()
 				.findIndex(el => el === mm)													// resolve month-name into a month-number
@@ -1258,7 +1150,7 @@ export class Tempo {
 	 * @returns  ZonedDateTime with computed date-offset  
 	 */
 	#parseWeekday(groups: Internal.RegExpGroups, dateTime: Temporal.ZonedDateTime) {
-		const { dow, mod, cnt, ...rest } = groups as { dow: Tempo.DayName, mod: Tempo.Modifier, [key: string]: string };
+		const { dow, mod, cnt, ...rest } = groups as { dow: Tempo.Day, mod: Tempo.Modifier, [key: string]: string };
 		if (isUndefined(dow))																		// this is not a {dow} pattern match
 			return dateTime;
 
@@ -1765,23 +1657,23 @@ export namespace Tempo {
 	/** the value that Tempo will attempt to interpret as a valid ISO date / time */
 	export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | Temporal.ZonedDateTimeLike | undefined | null
 	/** the Options Object found in a json-file, or passed to a call to Tempo.Init({}) or 'new Tempo({}) */
-	export type Options = Partial<{														// allowable settings to override configuration
+	export type Options = Partial<Readonly<{														// allowable settings to override configuration
 		/** additional console.log for tracking */							debug: boolean;
 		/** catch or throw Errors */														catch: boolean;
 		/** Temporal timeZone */																timeZone: string;
 		/** Temporal calendar*/																	calendar: string;
 		/** locale (e.g. en-AU) */															locale: string;
 		/** pivot year for two-digit years */										pivot: number;
-		/** hemisphere for term[@@qtr] or term[@@szn] */				sphere: Tempo.Sphere;
+		/** hemisphere for term[@@qtr] or term[@@szn] */				sphere: Tempo.Cardinal;
 		/** granularity of timestamps (ms | ns) */							timeStamp: Tempo.TimeStamp;
 		/** locale-names that prefer 'mm-dd-yy' date order */		monthDay: string | string[];
 		/** patterns to help parse value */											layout: Internal.InputFormat<Internal.StringPattern>;
-		/** date-events (e.g. xmas => '25 Dec') */							event: Internal.StringTuple[];
-		/** time-periods (e.g. arvo => '3pm') */								period: Internal.StringTuple[];
+		/** date-events (e.g. xmas => '25 Dec') */							event: readonly [string, string][];
+		/** time-periods (e.g. arvo => '3pm') */								period: readonly [string, string][];
 		/** term-ranges (e.g. zdc: [{key:Taurus, day:21, month:5},...]) */term: Record<string, Tempo.Term>;
 		/** supplied value to parse */													value: Tempo.DateTime;
 		/** localStorage key */																	key: string;
-	}>
+	}>>
 
 	/** drop the setup-only Options */
 	type OptionsKeep = Omit<Options, "value" | "monthDay" | "layout">
@@ -1885,11 +1777,18 @@ export namespace Tempo {
 	export type DURATION = Enum.values<typeof Tempo.DURATION>
 	export type DURATIONS = Enum.values<typeof Tempo.DURATIONS>
 
-	export type DayName = Enum.keys<typeof Tempo.WEEKDAY>
-	export type MonthName = Enum.keys<typeof Tempo.MONTH>
+	export type Day = Enum.keys<typeof Tempo.WEEKDAY>
+	export type Month = Enum.keys<typeof Tempo.MONTH>
 
 	/** Compass Cardinal Points */
-	export type Sphere = Enum.values<typeof Tempo.COMPASS>
+	export type Cardinal = Enum.values<typeof Tempo.COMPASS>
+
+	/** debug a Tempo instantiation */
+	export interface Parse {
+		/** pattern which matched the input */									match?: string;
+		/** the type of the original input */										type: Types;
+		/** the value of the original input */									value: any;
+	}
 }
 // #endregion Tempo types / interfaces / enums
 
@@ -1913,13 +1812,6 @@ namespace Internal {
 		/** Symbol registry */																	symbols: Internal.Symbol,
 		/** Tempo units to aid in parsing */										units: Internal.Regexp,
 		/** Map of regex-patterns to match input-string */			patterns: Internal.RegexpMap,
-	}
-
-	/** debug a Tempo instantiation */
-	export interface Parse {
-		/** pattern which matched the input */									match?: string;
-		/** the type of the original input */										type: Types;
-		/** the value of the original input */									value: any;
 	}
 
 	export type StringObject = Record<string, string>

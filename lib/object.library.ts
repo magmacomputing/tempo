@@ -58,17 +58,6 @@ export const isEqual = (obj1: any = {}, obj2: any = {}): boolean => {
 		})
 }
 
-/** extract a subset of keys from an object */
-export const pick = <T extends Property<T>, K extends string>(obj: T, ...keys: K[]): Partial<T> => {
-	const ownKeys = Object.getOwnPropertyNames(obj);
-
-	return keys.reduce((acc, key) => {
-		if (ownKeys.includes(key))
-			acc[key] = obj[key];
-		return acc;
-	}, {} as T);
-}
-
 /** find all methods on an Object */
 export const getMethods = (obj: any, all = false) => {
 	const properties = new Set();
@@ -93,13 +82,24 @@ export function ifDefined<T>(obj: Property<T>) {
 		}, {} as Property<T>)
 }
 
+/** extract a subset of keys from an object */
+export const pick = <T extends Property<T>, K extends string>(obj: T, ...keys: K[]): Partial<T> => {
+	const ownKeys = Object.getOwnPropertyNames(obj);
+
+	return keys.reduce((acc, key) => {
+		if (ownKeys.includes(key))
+			acc[key] = obj[key];
+		return acc;
+	}, {} as T);
+}
+
 /** extract a named key from an array of objects */
 export const pluck = <T, K extends keyof T>(objs: T[], key: K): T[K][] =>
 	objs.map(obj => obj[key]);
 
-export const countProperties = (obj = {}) =>
-	ownKeys(obj).length
-
 /** extend an object with the properties of another */
 export const extend = <T extends {}, U>(obj: T, ...objs: U[]) =>
 	Object.assign(obj, ...objs) as T;
+
+export const countProperties = (obj = {}) =>
+	ownKeys(obj).length
