@@ -333,3 +333,18 @@ type UnionToTuple<T, Last = LastInUnion<T>> = [T] extends [never]
 
 // Count the members of a Union	
 export type Count<T> = UnionToTuple<T>["length"]
+
+// DeepReadonly type for type safety
+export type Secure<T> = T extends (infer R)[]
+	? SecureArray<R>
+	: T extends Function
+	? T
+	: T extends object
+	? SecureObject<T>
+	: T
+
+interface SecureArray<T> extends ReadonlyArray<Secure<T>> { }
+
+type SecureObject<T> = {
+	readonly [K in keyof T]: Secure<T[K]>;
+}

@@ -45,7 +45,7 @@ type Methods<T extends Property<any>> = {
 	/** reverse lookup of Enum key by value */								keyOf<V extends T[keyof T]>(value: V): Invert<T>[V];
 	/** stringify method */																		toString(): string;
 	/** string tag */																					[Symbol.toStringTag](): 'Enumify';
-	/** Iterator for Enum */																	[Symbol.iterator](): Iterator<Entries<T>, [keyof T, T[keyof T]]>;
+	/** iterator for Enum */																	[Symbol.iterator](): Iterator<Entries<T>, [keyof T, T[keyof T]]>;
 }
 
 export namespace Enum {
@@ -68,9 +68,8 @@ export function enumify<const T extends Record<keyof T, any>>(list: T) {
 		? list.reduce((acc, itm, idx) => Object.assign(acc, { [itm]: idx }), {})
 		: { ...list }
 
-	return Object.create(ENUM, Object.getOwnPropertyDescriptors(stash));
+	return Object.freeze(Object.create(ENUM, Object.getOwnPropertyDescriptors(stash)));
 }
-
 
 /**
  * Example of usage

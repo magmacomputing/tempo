@@ -95,7 +95,7 @@ function oneKey(type: Types, value: string) {
 
 /** Symbols in an Object-key will need special treatment */
 function fromSymbol(key: PropertyKey) {
-	return stringize(isSymbol(key)														// @@(name) for global, @(name) for local
+	return stringize(isSymbol(key)														// @@(name) for global, @(name) for local symbols
 		? `${isSymbolFor(key) ? '@' : ''}@(${key.description ?? ''})`
 		: key)
 }
@@ -207,6 +207,7 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 		case 'RegExp':
 			return one(stringize({ source: arg.value.source, flags: arg.value.flags }));
 
+		case 'Class':																						// TODO
 		default:
 			switch (true) {
 				case !isStringable(arg.value):											// Object is not stringify-able
