@@ -136,44 +136,44 @@ export type ParseInt<T> = T extends `${infer N extends number}` ? N : never
 export type TPlural<T extends string> = `${T}s`;
 
 type Primitive = string | number | bigint | boolean | symbol | void | undefined | null // TODO: add  record | tuple
-type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling)
+type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling issues)
 export type Temporals = Exclude<keyof typeof Temporal, 'Now'>;
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export type Types =
-	| 'String'
-	| 'Number'
-	| 'BigInt'
-	| 'Boolean'
-	| 'Object'
-	| 'Array' | 'ArrayLike'
-	| 'Null'
-	| 'Undefined' | 'Void' | 'Empty'
-	| 'Date'
-	| 'Function' | 'AsyncFunction'
-	| 'Class'
-	| 'Promise'
-	| 'RegExp'
-	| 'Blob'
-	| 'Map'
-	| 'Set'
-	| 'WeakMap' | 'WeakSet' | 'WeakRef'
-	| 'Symbol'
-	| 'Error'
+	export type Types =
+		| 'String'
+		| 'Number'
+		| 'BigInt'
+		| 'Boolean'
+		| 'Object'
+		| 'Array' | 'ArrayLike'
+		| 'Null'
+		| 'Undefined' | 'Void' | 'Empty'
+		| 'Date'
+		| 'Function' | 'AsyncFunction'
+		| 'Class'
+		| 'Promise'
+		| 'RegExp'
+		| 'Blob'
+		| 'Map'
+		| 'Set'
+		| 'WeakMap' | 'WeakSet' | 'WeakRef'
+		| 'Symbol'
+		| 'Error'
 
-	| 'Temporal'
-	| 'Temporal.Instant'
-	| 'Temporal.ZonedDateTime'
-	| 'Temporal.PlainDateTime'
-	| 'Temporal.PlainDate'
-	| 'Temporal.PlainTime'
-	| 'Temporal.PlainYearMonth'
-	| 'Temporal.PlainMonthDay'
+		| 'Temporal'
+		| 'Temporal.Instant'
+		| 'Temporal.ZonedDateTime'
+		| 'Temporal.PlainDateTime'
+		| 'Temporal.PlainDate'
+		| 'Temporal.PlainTime'
+		| 'Temporal.PlainYearMonth'
+		| 'Temporal.PlainMonthDay'
 
-	| 'Enumify'
-	| 'Tempo'
-	| 'Pledge'
+		| 'Enumify'
+		| 'Tempo'
+		| 'Pledge'
 
 export type TypeValue<T> =
 	| { type: 'String', value: string }
