@@ -229,7 +229,7 @@ function stringize(obj: any, recurse = true): string {			// hide the second para
 }
 
 /** rebuild an Object from its stringified representation */
-export function objectify<T>(str: string, sentinel?: Function): T {
+export function objectify<T>(str: any, sentinel?: Function): T {
 	if (!isString(str))
 		return str;																							// skip parsing
 
