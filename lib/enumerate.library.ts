@@ -44,8 +44,8 @@ type Methods<T extends Property<any>> = {
 	/** invert Enum key-values */															invert(): Prettify<Depth<T>>;
 	/** reverse lookup of Enum key by value */								keyOf<V extends T[keyof T]>(value: V): Invert<T>[V];
 	/** stringify method */																		toString(): string;
-	/** string tag */[Symbol.toStringTag](): 'Enumify';
-	/** Iterator for Enum */[Symbol.iterator](): Iterator<Entries<T>, [keyof T, T[keyof T]]>;
+	/** string tag */																					[Symbol.toStringTag](): 'Enumify';
+	/** iterator for Enum */																	[Symbol.iterator](): Iterator<Entries<T>, [keyof T, T[keyof T]]>;
 }
 
 export namespace Enum {
@@ -62,11 +62,27 @@ export function enumify<const T extends ReadonlyArray<PropertyKey>>(list: T): Pr
 export function enumify<const T extends Record<keyof T, any>>(list: T): Prettify<Wrap<T>>;
 export function enumify<const T extends Record<keyof T, any>>(list: T) {
 	if (!isArray(list) && !isObject(list))
-		throw new Error(`enumify requires an array or object as the argument`);
+		throw new Error(`enumify requires an array or object as input`);
 
-	const stash = isArray(list)																// refactor Array as an Object
-		? (list as PropertyKey[]).reduce((acc, itm, idx) => Object.assign(acc, { [itm]: idx }), {})
+	const stash = isArray<PropertyKey>(list)									// refactor Array as an Object
+		? list.reduce((acc, itm, idx) => Object.assign(acc, { [itm]: idx }), {})
 		: { ...list }
 
-	return Object.create(ENUM, Object.getOwnPropertyDescriptors(stash));
+	return Object.freeze(Object.create(ENUM, Object.getOwnPropertyDescriptors(stash)));
 }
+
+/**
+ * Example of usage
+ * 
+ * const SEASON = enumify({ Spring: 'spring', Summer: 'summer', Autumn: 'autumn', Winter: 'winter' });
+ * type SEASON = Enum.values<typeof SEASON>
+ * 
+ * SEASON.keys()																						// Spring | Summer | Autumn | Winter
+ * SEASON.values()																					// spring | summer | autumn | winter
+ * SEASON.entries()																					// [['Spring','spring'], ['Summer','summer'], ['Autumn','autumn'], ['Winter','winter']];
+ * SEASON.count()																						// 4
+ * SEASON.keyOf('summer')																		// Summer
+ * getType(SEASON)																					// Enumify
+ * SEASON.toString()																				// '{"Spring": "spring", "Summer": "summer", "Autumn": "autumn", "Winter": "winter"}'
+ * SEASON.invert()																					// enumify({spring: 'Spring', summer: 'Summer', autumn: 'Autumn', winter: 'Winter'})
+ */
