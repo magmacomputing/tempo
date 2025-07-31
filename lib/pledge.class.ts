@@ -3,6 +3,8 @@ import { sprintf } from '#core/shared/string.library.js';
 import { ifDefined } from '#core/shared/object.library.js';
 import { cleanify } from '#core/shared/serialize.library.js';
 import { isEmpty, isObject } from '#core/shared/type.library.js';
+
+import type { ValueOf } from '#core/shared/type.library.js';
 import type { Logger } from '#core/shared/logger.library.js';
 
 /**
@@ -17,6 +19,12 @@ export class Pledge<T> {
 	#pledge: PromiseWithResolvers<T>;
 	#status = {} as Pledge.Status<T>;
 	static #static = {} as Pledge.Constructor;
+
+	static STATE = {
+		Pending: 'pending',
+		Resolved: 'resolved',
+		Rejected: 'rejected',
+	} as const
 
 	/** initialize future Pledge instances */
 	static init(arg?: Pledge.Constructor | string) {
@@ -134,6 +142,7 @@ export class Pledge<T> {
 	}
 }
 
+
 export namespace Pledge {
 	export type Resolve = (val?: any) => any;									// function to call after Pledge resolves
 	export type Reject = (err: Error) => any;									// function to call after Pledge rejects
@@ -148,11 +157,7 @@ export namespace Pledge {
 		catch?: boolean;
 	}
 
-	export enum STATE {
-		Pending = 'pending',
-		Resolved = 'resolved',
-		Rejected = 'rejected',
-	}
+	export type STATE = ValueOf<typeof Pledge.STATE>
 
 	export interface Status<T> {
 		tag?: string;
