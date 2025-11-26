@@ -25,8 +25,8 @@
   "devDependencies": {
     "@js-temporal/polyfill": "^0.5.1",
     "@types/jest": "^30.0.0",
-    "@vitest/ui": "^4.0.13",
+    "@vitest/ui": "^4.0.14",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^4.0.13"
+    "vitest": "^4.0.14"
   }
 }
