@@ -36,7 +36,7 @@ describe(`${label}`, () => {
 	})
 
 	test(`${label} test {default} day`, () => {
-		expect(tempo.ddd)
+		expect(tempo.www)
 			.toBe(date.toDateString().substring(0, 3))
 	})
 })
