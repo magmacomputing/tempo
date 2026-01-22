@@ -1,6 +1,6 @@
 import { Tempo } from '../lib/tempo.class.js';
 
-const label = 'pattern.dow:';
+const label = 'pattern.weekday:';
 const Wed = Tempo.WEEKDAY.Wed, Sun = Tempo.WEEKDAY.Sun;
 
 function formatDate(date: Date) {
@@ -17,26 +17,26 @@ function formatDate(date: Date) {
  */
 describe(`${label}`, () => {
 
-  test(`${label} test pattern {dow}, Wednesday this week`, () => {
+  test(`${label} test pattern {weekday}, Wednesday this week`, () => {
     const tempo = new Tempo('Wed');
     const date = new Date();
 
     date.setDate(date.getDate() - (date.getDay() || Sun) + Wed);
 
     expect(tempo.config.parse.match)
-      .toBe('dayOfWeek');
+      .toBe('weekDay');
     expect(tempo.fmt.yearMonthDay)
       .toBe(formatDate(date));
   })
 
-  test(`${label} test pattern {dow}, Wednesday next week`, () => {
+  test(`${label} test pattern {weekday}, Wednesday next week`, () => {
     const tempo = new Tempo('+Wed');
     const date = new Date();
 
     date.setDate(date.getDate() - (date.getDay() || Sun) + 7 + Wed);
 
     expect(tempo.config.parse.match)
-      .toBe('dayOfWeek');
+      .toBe('weekDay');
     expect(tempo.fmt.yearMonthDay)
       .toBe(formatDate(date));
   })

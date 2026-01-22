@@ -101,6 +101,7 @@
 	// 	"./lib/**/*.ts",
 	// ],
 	"exclude": [
+		"dist",
 		"**/test/*.test.ts",
 	]
 }
