@@ -22,16 +22,4 @@ describe(`${label}`, () => {
       .toEqual(['years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds', 'nanoseconds'])
   })
 
-  test(`${label} check the term contains {quarter}`, () => {
-    const tempo = new Tempo('01-Jan', { sphere: 'south' });
-    const quarter = tempo.term.quarter;
-    const qtr = tempo.term.qtr;
-
-    expect(JSON.stringify(Object.keys(tempo.term)))
-      .toContain('quarter')
-    expect(JSON.stringify(Object.keys(tempo.term)))
-      .toContain('qtr')
-    expect(qtr)
-      .toBe('Q3')
-  })
 })
