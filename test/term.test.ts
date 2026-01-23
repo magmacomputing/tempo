@@ -11,7 +11,7 @@ describe(`${label}`, () => {
     const qtr = Tempo.terms.find((plugin: any) => plugin.key === 'qtr');
 
     expect(qtr)
-      .toBe(qtr)
+      .toBeDefined()
   })
 
   test(`${label} check the term contains {quarter}`, () => {
@@ -19,9 +19,9 @@ describe(`${label}`, () => {
     const quarter = tempo.term.quarter;
     const qtr = tempo.term.qtr;
 
-    expect(JSON.stringify(Object.keys(tempo.term)))
+    expect(Object.keys(tempo.term))
       .toContain('quarter')
-    expect(JSON.stringify(Object.keys(tempo.term)))
+    expect(Object.keys(tempo.term))
       .toContain('qtr')
     expect(qtr)
       .toBe('Q3')
