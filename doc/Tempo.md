@@ -28,7 +28,7 @@ npm install @js-temporal/polyfill
 
 - **ISO Strings**: `2024-05-20T10:00:00Z`
 - **Short Dates**: `20-May`, `May 20` (locale-aware)
-- **Relative Strings**: `next Monday`, `3 days ago`, `yesterday`
+- **Relative Strings**: `next Monday`, `last Friday`
 - **Numbers/BigInt**: Unix timestamps in milliseconds or nanoseconds
 - **Temporal Objects**: `ZonedDateTime`, `PlainDate`, etc.
 
@@ -48,14 +48,18 @@ Formatting uses a placeholder syntax similar to many template engines:
 | `{dd}` | 2-digit day | `20` |
 | `{mon}` | Long month name | `May` |
 | `{mmm}` | Short month name | `May` |
+| `{www}` | Short weekday name | `Mon` |
 | `{wkd}` | Full weekday name | `Monday` |
 | `{hh}` | 24-hour hour | `14` |
 | `{mi}` | Minutes | `05` |
+| `{ss}` | Seconds | `05` |
+| `{ff}` | Fraction of a second | `05` |
+| `{mer}` | Meridiem (AM/PM) | `AM` |
 
 Example:
 ```typescript
 const t = new Tempo();
-t.format('{dd} {mon} {yy}'); // "24 January 2026"
+t.format('dd mon yyyy'); // "24 January 2026"
 ```
 
 ---
