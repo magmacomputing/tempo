@@ -30,16 +30,14 @@ by instantiating a class that wraps an immutable Temporal.ZonedDateTime
 		Null and Undefined tell Tempo to use the current date-time
 
 		The second argument is an object that further refines the new Tempo.
-		timeZone: string													// overrides the TimeZone (default: 'Australia/Sydney')
+		timeZone: string													// overrides the TimeZone (default: Temporal.Now.timeZoneId())
 		calendar: string													// overrides the Calendar to use (default: 'iso8601')
 		locale: string														// overrides the Locale to use when parsing the first Tempo argument
-																							// (default: 'en-AU').  When set to 'en-US' dates are parsed in m-d-y order
+																							// (default: navigator.language).  When set to 'en-US' dates are parsed in m-d-y order
 		debug: boolean														// allows a console.log to show how a Tempo was parsed (default: false)
 		catch: boolean														// allows a Tempo to exit gracefully and the caller handles any errors (default: false)
 		pivot: number															// the two-digit year number that determines which century to prepend (default: 75)
 																							// for example, 50-May-01  will be interpreted as 1950-May-01 because it was less than 75 years from now
-		season: [summer, autumn, winter, spring]	// an array of Temporal.MonthDay that determine when a season starts
-		quarter: [Date, Date, Date, Date]					// an array of Temporal.MonthDay that determine when a financial quarter starts
 		format: string[]													// an array of Temporal properties that can be used to parse the first argument
 	
 
@@ -60,12 +58,11 @@ instance:
 	dd																					// day of month
 	dow																					// weekday: Mon=1, Sun=7
 	ww																					// number of elapsed weeks in year
-	qtr																					// quarter: Q1-Q4
 
 	mmm																					// short month name
 	mon																					// full month name
-	ddd																					// short weekday name
-	day																					// full weekday name
+	www																					// short weekday name
+	wkd																					// full weekday name
 
 	hh																					// hours since midnight: 24-hour format
 	mi																					// minutes since last hour
@@ -77,7 +74,7 @@ instance:
 	ff																					// fractional seconds since last second
 	tz																					// timezone
 	ts																					// seconds (timeStamp) since Unix epoch
-	age																					// nanoseconds (BigInt) since Unix epoch
+	nano																				// nanoseconds (BigInt) since Unix epoch
 
 	season																			// season: Summer/Autumn/Winter/Spring
 	config																			// Instance configuration
@@ -94,39 +91,15 @@ instance:
 	TIME																				// {keyof DURATION: number of seconds per unit-of-time}
 	TIMES																				// {keyof DURATIONS: number of milli-seconds per unit-of-time}
 	SEASON																			// Summer/Autumn/Winter/Spring
+	COMPASS																			// North/East/South/West
 
 # consts
 	DATE {
-		epoch: 0,
-		maxDate: PlainDate('9999-12-31'),
-		minDate: PlainDate('1000-01-01'),
-		maxStamp: Instant('9999-12-31').epochSeconds,
-		minStamp: Instant('1000-01-01').epochSeconds,
+		epochDate: 0,
+		maxTempo: Instant('9999-12-31').epochSeconds,
+		minTempo: Instant('1000-01-01').epochSeconds,
 	}
 
-	QUARTERS [																								// QUARTERS[quarter-number]
-		,
-		Tempo.MONTH.Jul,
-		Tempo.MONTH.Oct,
-		Tempo.MONTH.Jan,
-		Tempo.MONTH.Apr,
-	]
-
-	SEASONS [																									// SEASONS[month-number]
-		,
-		Tempo.SEASON.Summer,
-		Tempo.SEASON.Summer,
-		Tempo.SEASON.Autumn,
-		Tempo.SEASON.Autumn,
-		Tempo.SEASON.Autumn,
-		Tempo.SEASON.Winter,
-		Tempo.SEASON.Winter,
-		Tempo.SEASON.Winter,
-		Tempo.SEASON.Spring,
-		Tempo.SEASON.Spring,
-		Tempo.SEASON.Spring,
-		Tempo.SEASON.Summer,
-	]
 *~~~
 # methods:
 static:
@@ -140,13 +113,12 @@ instance:																										// for the following assume 'const tempo = ne
 	format(args:format)																				// applies a format-string to a Tempo
 																														// e.g.		tempo.format('HH:MI:SS seconds')
 
-	add(offset: number, unit: string)													// returns a new Tempo offset by a value and component
-																														// e.g.		tempo.add(1, 'days')
-	startOf(unit: string)																			// returns a new Tempo offset to a position (start, middle, end) of a unit
-	midOf(unit: string)																				// e.g.		tempo.startOf('hour')
-	endOf(unit: string)																				// e.g.		tempo.endOf('month')
+  add({offset: unit})																				// returns a new Tempo offset by a value and component
+																														// e.g.		tempo.add({days: 1, hours: 3})
+  set({offset: unit})																				// returns a new Tempo adjusted by a value and component
+																														// e.g.		tempo.set({www: 'Thu', start: 'day' })
 
-	toTemporal()																							// returns the underlying Temporal.ZonedDateTime
+	toDateTime()																							// returns the underlying Temporal.ZonedDateTime
 	toDate()																									// returns the Tempo as a Javascript Date
 	toString()																								// returns the Temporal.ZonedDateTime.toString()
 	toJSON()																									// returns the Temporal.ZonedDateTime.toJSON()
