@@ -34,6 +34,19 @@ Some components are built from others:
 - `{dt}`: Matches a date (e.g., `{dd}{sep}{mm}`) OR an event alias `{evt}`.
 - `{tm}`: Matches a time (e.g., `{hh}{mi}`) OR a period alias `{per}`.
 
+## Built-in Layouts
+| Key | Layout | Description |
+| :--- | :--- | :--- |
+| `dt` | `{dt}` | Calendar or event |
+| `tm` | `{tm}` | Clock or period |
+| `www` | `{mod}?{www}{sfx}?` | Weekday name |
+| `dtm` | `({dt}){sfx}?` | Calendar/event and clock/period |
+| `dmy` | `{www}?{dd}{sep}?{mm}({sep}{yy})?{sfx}?` | Day-month(-year) |
+| `mdy` | `{www}?{mm}{sep}?{dd}({sep}{yy})?{sfx}?` | Month-day(-year) |
+| `ymd` | `{www}?{yy}{sep}?{mm}({sep}{dd})?{sfx}?` | Year-month(-day) |
+| `evt` | `{evt}` | Event only |
+| `per` | `{per}` | Period only |
+
 ## Creating a Layout
 
 To create a layout, arrange the components in the order they appear in your input string.

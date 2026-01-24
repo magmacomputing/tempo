@@ -16,6 +16,7 @@
 
 ```bash
 npm install @js-temporal/polyfill
+npm install @magma/tempo
 ```
 
 `Tempo` requires a `Temporal` polyfill if your environment does not yet support it natively.
