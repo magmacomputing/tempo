@@ -35,6 +35,8 @@ npm install @js-temporal/polyfill
 ### Patterns & Layouts
 The parsing engine uses a library of RegEx patterns. You can extend these patterns globally via `Tempo.init()` or per instance.
 
+See the [Layout Patterns Guide](file:///home/michael/Project/tempo/doc/tempo.layout.md) for more details on creating custom parsing patterns.
+
 ---
 
 ## Formatting
