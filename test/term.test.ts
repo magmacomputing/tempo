@@ -29,9 +29,9 @@ describe(`${label}`, () => {
 
   test(`${label} check the {daily} term`, () => {
     const tempo = new Tempo('1pm');
-    const dly = tempo.term.dly;
+    const period = tempo.term.per;
 
-    expect(dly)
+    expect(period)
       .toBe('midday')
   })
 })

@@ -36,7 +36,8 @@ npm install @magma/tempo
 ### Patterns & Layouts
 The parsing engine uses a library of RegEx patterns. You can extend these patterns globally via `Tempo.init()` or per instance.
 
-See the [Layout Patterns Guide](file:///home/michael/Project/tempo/doc/tempo.layout.md) for more details on creating custom parsing patterns.
+- [Layout Patterns Guide](file:///home/michael/Project/tempo/doc/tempo.layout.md): Details on creating custom parsing patterns.
+- [Weekday Parsing Guide](file:///home/michael/Project/tempo/doc/tempo.weekday.md): Details on how relative weekday strings are interpreted.
 
 ---
 

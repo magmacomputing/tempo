@@ -4,7 +4,7 @@
 
 ## What is a Layout?
 
-A **Layout** is a string or array of strings that combines pre-defined **Components** (placeholders) into a pattern. When you provide a layout to `Tempo`, it is translated into an anchored, case-insensitive Regular Expression used to match and extract date-time values.
+A **Layout** is a string that combines pre-defined **Components** (placeholders) into a pattern. When you provide a layout to `Tempo`, it is translated into an anchored, case-insensitive Regular Expression used to match and extract date-time values.
 
 ## Available Components
 
@@ -66,6 +66,9 @@ You can register custom layouts globally or use them for a specific instance.
 ### Global Registration
 
 Use `Tempo.init()` to add layouts that should be available to all new instances.
+> [!NOTE]
+> Assigning a 'name' to a Layout is optional and is auto-generated if not provided.
+> It is used internally-only to identify the layout when parsing a string.
 
 ```typescript
 import { Tempo } from '@magma/tempo';
