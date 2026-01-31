@@ -21,7 +21,7 @@ import '#core/shared/prototype.library.js';									// patch prototype
 
 // /** TODO: THIS IMPORT CAN TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
 import { Temporal } from '@js-temporal/polyfill';
-import termImport from '#core/shared/tempo.config/plugins/term.import.js';
+
 // #endregion
 
 export const VERSION = '0.2.0';															// semantic version
@@ -31,6 +31,7 @@ const Context = getContext();																// get current execution context
 // #endregion Const variables
 
 /**
+ * # Tempo
  * **Tempo** is a powerful wrapper around `Temporal.ZonedDateTime` designed for flexible parsing and intuitive manipulation of date-time objects.
  * 
  * It bridges the gap between raw string/number inputs and the strict requirements of the ECMAScript Temporal API.
