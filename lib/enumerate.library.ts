@@ -11,9 +11,9 @@ import type { Index, Prettify, Entry, Invert, Property, OwnOf, CountOf, KeyOf, V
 	/** array of Enum keys */																	keys(): KeyOf<T>[];
 	/** array of Enum values */																values(): ValueOf<T>[];
 	/** tuple of Enum entries */															entries(): EntryOf<T>[];
-
 	/** new Enum with inverted key-values except invert() */	invert(): Prettify<Invert<T> & Omit<Enum.proto<T>, "invert">>;
 	/** serialized Enum */																		toString(): string;
+
 	/** key exists in Enum */																	has<K extends LooseKey<keyof T>>(key: K): boolean;
 	/** value exists in Enum */																includes<V extends LooseKey<T[keyof T]>>(value: V): boolean;
 	/** reverse lookup of Enum key by value */								keyOf<V extends ValueOf<T>>(value: V): Invert<T>[V];
@@ -25,8 +25,6 @@ import type { Index, Prettify, Entry, Invert, Property, OwnOf, CountOf, KeyOf, V
 	/** iterator for Enum */[Symbol.iterator](): Iterator<Entry<T extends {} ? T : never>, EntryOf<T>>;
 	/** string tag */[Symbol.toStringTag](): typeof tag;
 }
-/** Argument can be an array of PropertyKeys */							type ArrayArg = ReadonlyArray<PropertyKey>
-/** Argument can be a JSON object */												type ObjectArg = Record<PropertyKey, any>
 
 /**
  * This is the prototype implementation for an Enum object.  
@@ -38,9 +36,9 @@ const ENUM = secure(Object.create(null, {
 	keys: memoize('keys', function (this: Property<any>) { return ownKeys(this) }),
 	values: memoize('values', function (this: Property<any>) { return ownValues(this) }),
 	entries: memoize('entries', function (this: Property<any>) { return ownEntries(this) }),
-
 	invert: memoize('invert', function (this: Property<any>) { return enumify(this.entries().reduce((acc: ObjectArg, [key, val]: [PropertyKey, any]) => ({ ...acc, [val]: key }), {} as ObjectArg)) }),
 	toString: memoize('toString', function (this: Property<any>) { return stringify({ ...this }) }),
+
 	has: value(function (this: Property<any> & Proto<any>, key: PropertyKey) { return this.keys().includes(key as any) }),
 	includes: value(function (this: Property<any> & Proto<any>, search: any) { return this.values().includes(search) }),
 	keyOf: value(function (this: Property<any> & Proto<any>, search: any) { return this.invert()[search] }),
@@ -77,7 +75,8 @@ function memoize<T>(name: PropertyKey, fn: (this: Property<any>) => T) {
 	})
 }
 
-/** namespace for Enum type-helpers */	export namespace Enum {
+/** namespace for Enum type-helpers */
+export namespace Enum {
 	/** Enum property keys */																	export type keys<T extends Property<any>> = KeyOf<T>;
 	/** Enum property values */																export type values<T extends Property<any>> = ValueOf<T>;
 	/** Enum own properties */																export type props<T extends Property<any>> = Readonly<OwnOf<T>>;
@@ -85,34 +84,42 @@ function memoize<T>(name: PropertyKey, fn: (this: Property<any>) => T) {
 	/** Enum properties & methods */													export type wrap<T extends Property<any>> = Prettify<Enum.props<T> & Enum.proto<T>>;
 }
 
+/** Argument can be an array of PropertyKeys */							type ArrayArg = ReadonlyArray<PropertyKey>
+/** Argument can be a JSON object */												type ObjectArg = Record<PropertyKey, any>
+
 /**
+ * # Enumify
  * The intent of this function is to provide Javascript-supported syntax for an object to behave as a read-only Enum.  
  * It can be used instead of Typescript's Enum (which must be compiled down to plain Javascript, and is not supported in NodeJS)  
  *   
- * usage example:  
- ```javascript
-			const SEASON = enumify({ Spring: 'spring', Summer: 'summer', Autumn: 'autumn', Winter: 'winter' });
-			type SEASON = ValueOf<typeof SEASON>
-	
-			SEASON.keys()      // (Spring | Summer | Autumn | Winter)[]  
-			SEASON.values()    // (spring | summer | autumn | winter)[]  
-			SEASON.entries()   // [['Spring','spring'], ['Summer','summer'], ['Autumn','autumn'], ['Winter','winter']];  
-			SEASON.count()     // 4  
-			SEASON.keyOf(SEASON.Summer)// 'Summer' (using the Enum value directly)  
-			SEASON.keyOf('summer')// 'Summer' (using a string value)  
-			SEASON.toString()  // '{"Spring": "spring", "Summer": "summer", "Autumn": "autumn", "Winter": "winter"}'  
-			SEASON.invert()    // enumify({spring: 'Spring', summer: 'Summer', autumn: 'Autumn', winter: 'Winter'})  
-			SEASON.has('xxx')  // false (using an invalid key)
-			SEASON.includes('summer') // true (using a string value)
-			
-			typeof SEASON      // 'Enumify'  
-			function getSeason(season: SEASON) { ... } // function accepts both string and Enum values
-			for (const [key, value] of SEASON) { ... } // iterate over Enum entries
- ```
+ * @example
+ * ```typescript
+ * const SEASON = enumify({ Spring: 'spring', Summer: 'summer', Autumn: 'autumn', Winter: 'winter' });
+ * type SEASON = ValueOf<typeof SEASON>
+ * ```
+ * 
+ * | Method | Value |
+ * | :--- | :---- |
+ * | `SEASON.keys()` | ['Spring', 'Summer', 'Autumn', 'Winter'] |
+ * | `SEASON.values()` | ['spring', 'summer', 'autumn', 'winter'] |
+ * | `SEASON.entries()` | ['Spring','spring'], ['Summer','summer'], ['Autumn','autumn'], ['Winter','winter']] |
+ * | `SEASON.count()` | 4 |
+ * | `SEASON.keyOf(SEASON.Summer)` | 'Summer' (using the Enum value directly) |
+ * | `SEASON.keyOf('summer')` | 'Summer' (using a string value) |
+ * | `SEASON.toString()` | '{"Spring": "spring", "Summer": "summer", "Autumn": "autumn", "Winter": "winter"}' |
+ * | `SEASON.invert() ` | enumify({spring: 'Spring', summer: 'Summer', autumn: 'Autumn', winter: 'Winter'}) |
+ * | `SEASON.has('xxx')` | false (using an invalid key) |
+ * | `SEASON.includes('summer')` | true (using a string value) |
+ * | `Object.prototype.toString.call(SEASON).slice(8,-1)` | 'Enumify' |
+ *
+ * @template T - The structure of the enumeration (Array or Object)  
+ * if Array, Values will be the array indices.  if Object, keys and values are preserved.
+ * @param {T} list - The list of keys (Array) or key-value pairs (Object) to enumify
+ * @returns {Enum.wrap<T>} A frozen object enhanced with enumeration methods
  */
 export function enumify<const T extends ArrayArg>(list: T): Enum.wrap<Index<T>>;
 export function enumify<const T extends ObjectArg>(list: T): Enum.wrap<T>;
-export function enumify<T extends PropertyKey>(list: T) {
+export function enumify<T>(list: T) {
 	const arg = asType(list);
 	const stash = {};
 
@@ -122,7 +129,7 @@ export function enumify<T extends PropertyKey>(list: T) {
 			break;
 
 		case 'Array':
-			arg.value																							// convert Array to an Object with indexes as values
+			(arg.value as ArrayArg)																// reduce Array to an Object with indexes as values
 				.reduce((_, itm, idx) => Object.assign(stash, { [itm]: idx }), stash)
 			break;
 
