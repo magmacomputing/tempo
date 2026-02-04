@@ -1,4 +1,4 @@
-import { Immutable } from '#core/shared/decorator.library.js';
+import { Immutable } from '#core/shared/class.library.js';
 import { asType, type ValueOf } from '#core/shared/type.library.js';
 
 const Method = {

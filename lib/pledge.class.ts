@@ -4,7 +4,7 @@ import { sprintf } from '#core/shared/string.library.js';
 import { ifDefined } from '#core/shared/object.library.js';
 import { secure } from '#core/shared/enumerate.library.js';
 import { cleanify } from '#core/shared/serialize.library.js';
-import { Immutable } from '#core/shared/decorator.library.js';
+import { Immutable } from '#core/shared/class.library.js';
 import { isEmpty, isObject } from '#core/shared/type.library.js';
 
 
