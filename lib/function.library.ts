@@ -1,4 +1,4 @@
-import { isFunction } from '#core/shared/type.library.js';
+import { isFunction, Property } from '#core/shared/type.library.js';
 
 // https://medium.com/codex/currying-in-typescript-ca5226c85b85
 type PartialTuple<T extends any[], X extends any[] = []> =
@@ -39,7 +39,7 @@ export function curry<Args extends any[], Res>(fn: (...args: Args) => Res): Curr
 }
 
 /** generic function to memoize repeated function calls */
-export function memoize<F extends (...args: any[]) => any>(fn: F) {
+export function memoizeFunction<F extends (...args: any[]) => any>(fn: F) {
 	const cache = new Map<string, ReturnType<F>>();						// using a Map for better key handling than plain objects
 
 	return function (...args: unknown[]) {
@@ -57,34 +57,25 @@ export function memoize<F extends (...args: any[]) => any>(fn: F) {
 	}
 }
 
-/** memoize repeated functions calls on an Object's methods */
-export function memoizeObject<F extends (...args: any[]) => any>(func: F) {
-	const cache = new WeakMap();
+const wm = new WeakMap<object, Property<any>>();
 
-	return function (obj: {}) {																// curry the Object reference
-		return function (...args: any[]) {
-			if (!cache.has(obj)) {
-				cache.set(obj, new Map());
+/** memoize repeated calls on an Object's methods */
+export function memozify(obj: object) {
+	if (!wm.has(obj))
+		wm.set(obj, Object.create(null));
+
+	return ({
+		get(name: PropertyKey, fn: (this: any) => any) {
+			const cache = wm.get(obj) as Property<any>;
+
+			if (!(name in cache)) {
+				const result = fn.apply(obj);
+				cache[name] = result;
+
 			}
-			const objCache = cache.get(obj);
-			const key = JSON.stringify(args);
 
-			if (objCache.has(key)) {
-				return objCache.get(key);
-			}
-
-			const result = func.apply(obj, [obj, ...args]);
-			objCache.set(key, result);
-			return result;
+			return cache[name];
 		}
-	}
+	})
 }
 
-export function memoizeMethod(methodName: string) {
-	// @ts-ignore
-	const method = this[methodName];
-
-	if (isFunction(method))
-		// @ts-ignore
-		this[methodName] = memoize(method);											// overwrite the method with a memoized version
-}

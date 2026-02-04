@@ -125,12 +125,13 @@ export const Default = {
 	/** used to parse two-digit years*/												pivot: 75,										/** @link https://en.wikipedia.org/wiki/Date_windowing */
 	/** precision to measure timestamps (ms | us) */					timeStamp: 'ms',
 	/** calendaring system */																	calendar: 'iso8601',
-	/** used to parse daylight-savings */											sphere: 'north',
+	// /** used to parse daylight-savings */											sphere: 'north',
 	/** locales that prefer month-day order */								monthDay: ['en-US', 'en-AS'],	/** @link https://en.wikipedia.org/wiki/Date_format_by_country */
 	/** date-time components */																component: Component,
 	/** used to parse dateTime formats */											layout: Layout,
 	/** used to parse Date strings */													event: Event,
 	/** used to parse Time strings */													period: Period,
-} as Tempo.Options
+	/** internal symbols */																		symbol: Sym,
+} as Tempo.store
 
 // #endregion

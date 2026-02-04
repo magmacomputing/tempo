@@ -18,7 +18,7 @@ export function extract<T>(obj: any, path: string | number, dflt?: T): T {
 }
 
 /** remove quotes around property names */
-export const quoteObj = (obj: any) => {
+export const unQuoteObj = (obj: any) => {
 	return JSON.stringify(obj)
 		?.replace(/"([^"]+)":/g, '$1: ')
 		?.replace(/,/g, ', ')

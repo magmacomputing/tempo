@@ -147,9 +147,10 @@ type toName<T extends Primitive> =
 type Primitive = string | number | bigint | boolean | symbol | void | undefined | null // TODO: add  composite (record & tuple) ?
 export type Primitives = toName<Primitive>
 
+/** Generic constructor type */
+export type Constructor<T = any> = new (...args: any[]) => T;
 type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling issues)
 export type Temporals = Exclude<keyof typeof Temporal, 'Now'>
-
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 export type Type =

@@ -1,7 +1,7 @@
-import { asType, isReference, isUndefined, isArray } from '#core/shared/type.library.js';
 import { stringify } from '#core/shared/serialize.library.js';
-import { Serializable } from '#core/shared/decorator.library.js';
+import { Serializable } from '#core/shared/class.library.js';
 import { ownKeys, ownValues, ownEntries } from '#core/shared/reflection.library.js';
+import { asType, isReference, isUndefined, isArray } from '#core/shared/type.library.js';
 import type { Index, Prettify, Entry, Invert, Property, OwnOf, CountOf, KeyOf, ValueOf, EntryOf, LooseKey, Secure, Obj } from '#core/shared/type.library.js';
 
 /** used to identify the Enumify type */										const tag = 'Enumify' as const;
@@ -50,6 +50,7 @@ const ENUM = secure(Object.create(null, {
 	[Symbol.iterator]: value(function (this: Property<any> & Proto<any>) { return this.entries()[Symbol.iterator](); }),
 	[Symbol.toStringTag]: value(tag),
 }) as Enum.proto<any>)
+
 
 /** define a Descriptor for an Enum's method */
 function value<T>(value: T): PropertyDescriptor {
