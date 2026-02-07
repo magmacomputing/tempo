@@ -6,15 +6,15 @@ import type { Tempo } from '#core/shared/tempo.class.js';
 /** definition of fiscal quarter ranges */
 const ranges = [
 	[																													// [0] = northern hemisphere
-		{ key: 'Q1', day: 1, month: 1, fiscal: 0 },
-		{ key: 'Q2', day: 1, month: 4, fiscal: 0 },
-		{ key: 'Q3', day: 1, month: 7, fiscal: 0 },
-		{ key: 'Q4', day: 1, month: 10, fiscal: 0 },
+		{ key: 'Q1', day: 1, month: 1, fiscal: 0, sphere: COMPASS.North },
+		{ key: 'Q2', day: 1, month: 4, fiscal: 0, sphere: COMPASS.North },
+		{ key: 'Q3', day: 1, month: 7, fiscal: 0, sphere: COMPASS.North },
+		{ key: 'Q4', day: 1, month: 10, fiscal: 0, sphere: COMPASS.North },
 	], [																											// [1] = southern hemisphere
-		{ key: 'Q1', day: 1, month: 7, fiscal: 1 },
-		{ key: 'Q2', day: 1, month: 10, fiscal: 1 },
-		{ key: 'Q3', day: 1, month: 1, fiscal: 0 },
-		{ key: 'Q4', day: 1, month: 4, fiscal: 0 },
+		{ key: 'Q1', day: 1, month: 7, fiscal: 1, sphere: COMPASS.South },
+		{ key: 'Q2', day: 1, month: 10, fiscal: 1, sphere: COMPASS.South },
+		{ key: 'Q3', day: 1, month: 1, fiscal: 0, sphere: COMPASS.South },
+		{ key: 'Q4', day: 1, month: 4, fiscal: 0, sphere: COMPASS.South },
 	]
 ] as Range[][]
 
