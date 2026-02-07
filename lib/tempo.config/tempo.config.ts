@@ -22,7 +22,7 @@ export const Sym = {
 // Layout Symbols ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	/** date */																								dt: Symbol('date'),
 	/** time */																								tm: Symbol('time'),
-	/** weekday */																						www: Symbol('weekDay'),
+	/** weekday */																						wkd: Symbol('weekDay'),
 	/** date and time */																			dtm: Symbol('dateTime'),
 	/** day-month-year */																			dmy: Symbol('dayMonthYear'),
 	/** month-day-year */																			mdy: Symbol('monthDayYear'),
@@ -38,7 +38,7 @@ export const Sym = {
 	/** second */																							ss: Symbol('ss'),
 	/** fraction */																						ff: Symbol('ff'),
 	/** meridiem */																						mer: Symbol('mer'),
-	/** weekday name */																				wkd: Symbol('wkd'),
+	/** short weekday name */																	www: Symbol('www'),
 	/** suffix */																							sfx: Symbol('sfx'),
 	/** separator */																					sep: Symbol('sep'),
 	/** modifier */																						mod: Symbol('mod'),
@@ -125,13 +125,13 @@ export const Default = {
 	/** used to parse two-digit years*/												pivot: 75,										/** @link https://en.wikipedia.org/wiki/Date_windowing */
 	/** precision to measure timestamps (ms | us) */					timeStamp: 'ms',
 	/** calendaring system */																	calendar: 'iso8601',
-	// /** used to parse daylight-savings */											sphere: 'north',
 	/** locales that prefer month-day order */								monthDay: ['en-US', 'en-AS'],	/** @link https://en.wikipedia.org/wiki/Date_format_by_country */
+	/** layouts that need to swap parse-order */							swap: [['dayMonthYear', 'monthDayYear']],
 	/** date-time components */																component: Component,
 	/** used to parse dateTime formats */											layout: Layout,
 	/** used to parse Date strings */													event: Event,
 	/** used to parse Time strings */													period: Period,
 	/** internal symbols */																		symbol: Sym,
-} as Tempo.store
+} as Tempo.Options
 
 // #endregion
