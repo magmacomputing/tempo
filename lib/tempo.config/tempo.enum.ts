@@ -1,4 +1,5 @@
-import { enumify, secure } from '#core/shared/enumerate.library.js';
+import { enumify } from '#core/shared/enumerate.library.js';
+import { secure } from '#core/shared/utility.library.js';
 import type { KeyOf, ValueOf } from '#core/shared/type.library.js';
 
 /** TODO: remove this when Temporal proposal is supported in JavaScript runtimes */
@@ -79,7 +80,6 @@ export const FORMAT = enumify({
 export type FORMAT = ValueOf<typeof FORMAT>
 
 export const LIMIT = secure({
-		/** Date(0) */																					epochDate: new Date(0),
 		/** Tempo(31-Dec-9999.23:59:59).ns */										maxTempo: Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds,
 		/** Tempo(01-Jan-1000.00:00:00).ns */										minTempo: Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds,
 });

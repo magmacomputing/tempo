@@ -1,5 +1,6 @@
-import { isDefined } from '#core/shared/type.library.js';
-import type { ValueOf } from '#core/shared/type.library.js';
+import { ownValues } from '#core/shared/reflection.library.js';
+import { isDefined, isReference } from '#core/shared/type.library.js';
+import type { Obj, Secure, ValueOf } from '#core/shared/type.library.js';
 
 /** General utility functions */
 
@@ -59,4 +60,14 @@ export const getContext = (): Context => {
 		return { global, type: CONTEXT.NodeJS };
 
 	return { global, type: CONTEXT.Unknown };
+}
+
+// Useful for those times when a full Enumify object is not needed, but still lock the Object from mutations
+/** deep-freeze an Array | Object to make it immutable */
+export function secure<const T extends Obj>(obj: T) {
+	if (isReference(obj))																			// skip primitive values
+		ownValues(obj)																					// retrieve the properties on obj
+			.forEach(val => Object.isFrozen(val) || secure(val));	// secure each value, if not already Frozen
+
+	return Object.freeze(obj) as Secure<T>;										// freeze the object itself
 }

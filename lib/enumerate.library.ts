@@ -1,7 +1,9 @@
-import { stringify } from '#core/shared/serialize.library.js';
+import { secure } from '#core/shared/utility.library.js';
 import { Serializable } from '#core/shared/class.library.js';
+import { stringify } from '#core/shared/serialize.library.js';
+import { memoizeMethod } from '#core/shared/function.library.js';
 import { ownKeys, ownValues, ownEntries } from '#core/shared/reflection.library.js';
-import { asType, isReference, isUndefined, isArray } from '#core/shared/type.library.js';
+import { asType, isArray } from '#core/shared/type.library.js';
 import type { Index, Prettify, Entry, Invert, Property, OwnOf, CountOf, KeyOf, ValueOf, EntryOf, LooseKey, Secure, Obj } from '#core/shared/type.library.js';
 
 /** used to identify the Enumify type */										const tag = 'Enumify' as const;
@@ -11,7 +13,7 @@ import type { Index, Prettify, Entry, Invert, Property, OwnOf, CountOf, KeyOf, V
 	/** array of Enum keys */																	keys(): KeyOf<T>[];
 	/** array of Enum values */																values(): ValueOf<T>[];
 	/** tuple of Enum entries */															entries(): EntryOf<T>[];
-	/** new Enum with inverted key-values except invert() */	invert(): Prettify<Invert<T> & Omit<Enum.proto<T>, "invert">>;
+	/** new Enum with inverted key-values except invert() */	invert(): Prettify<Invert<T> & Omit<Proto<T>, "invert">>;
 	/** serialized Enum */																		toString(): string;
 
 	/** key exists in Enum */																	has<K extends LooseKey<keyof T>>(key: K): boolean;
@@ -30,14 +32,13 @@ import type { Index, Prettify, Entry, Invert, Property, OwnOf, CountOf, KeyOf, V
  * This is the prototype implementation for an Enum object.  
  * It contains just the methods / symbols we need, without standard Object methods like `hasOwnProperty`, etc.
  */
-const MEMO = new WeakMap<object, Property<any>>();
 const ENUM = secure(Object.create(null, {
-	count: memoize('count', function (this: Property<any>) { return ownKeys(this).length }),
-	keys: memoize('keys', function (this: Property<any>) { return ownKeys(this) }),
-	values: memoize('values', function (this: Property<any>) { return ownValues(this) }),
-	entries: memoize('entries', function (this: Property<any>) { return ownEntries(this) }),
-	invert: memoize('invert', function (this: Property<any>) { return enumify(this.entries().reduce((acc: ObjectArg, [key, val]: [PropertyKey, any]) => ({ ...acc, [val]: key }), {} as ObjectArg)) }),
-	toString: memoize('toString', function (this: Property<any>) { return stringify({ ...this }) }),
+	count: memoizeMethod('count', function (this: Property<any>) { return ownKeys(this).length }),
+	keys: memoizeMethod('keys', function (this: Property<any>) { return ownKeys(this) }),
+	values: memoizeMethod('values', function (this: Property<any>) { return ownValues(this) }),
+	entries: memoizeMethod('entries', function (this: Property<any>) { return ownEntries(this) }),
+	invert: memoizeMethod('invert', function (this: Property<any>) { return enumify(this.entries().reduce((acc: ObjectArg, [key, val]: [PropertyKey, any]) => ({ ...acc, [val]: key }), {} as ObjectArg)) }),
+	toString: memoizeMethod('toString', function (this: Property<any>) { return stringify({ ...this }) }),
 
 	has: value(function (this: Property<any> & Proto<any>, key: PropertyKey) { return this.keys().includes(key as any) }),
 	includes: value(function (this: Property<any> & Proto<any>, search: any) { return this.values().includes(search) }),
@@ -49,40 +50,17 @@ const ENUM = secure(Object.create(null, {
 
 	[Symbol.iterator]: value(function (this: Property<any> & Proto<any>) { return this.entries()[Symbol.iterator](); }),
 	[Symbol.toStringTag]: value(tag),
-}) as Enum.proto<any>)
-
+}) as Proto<any>)
 
 /** define a Descriptor for an Enum's method */
 function value<T>(value: T): PropertyDescriptor {
 	return Object.assign({ enumerable: false, configurable: false, writable: false, value } as const);
 }
 
-/** define a Descriptor for an Enum's memoized-method */
-function memoize<T>(name: PropertyKey, fn: (this: Property<any>) => T) {
-	return value(function (this: Property<any>) {
-		let cache = MEMO.get(this);
-
-		if (!cache) {
-			cache = Object.create(null) as Property<any>;
-			MEMO.set(this, cache);
-		}
-
-		if (isUndefined(cache[name])) {													// first time for this method
-			cache[name] = fn.call(this);													// evaluate the prototype method
-			secure(cache[name]);																	// freeze the returned value
-		}
-
-		return cache[name] as T;
-	})
-}
-
 /** namespace for Enum type-helpers */
 export namespace Enum {
-	/** Enum property keys */																	export type keys<T extends Property<any>> = KeyOf<T>;
-	/** Enum property values */																export type values<T extends Property<any>> = ValueOf<T>;
 	/** Enum own properties */																export type props<T extends Property<any>> = Readonly<OwnOf<T>>;
-	/** Enum prototype methods */															export type proto<T extends Property<any>> = Proto<T>;
-	/** Enum properties & methods */													export type wrap<T extends Property<any>> = Prettify<Enum.props<T> & Enum.proto<T>>;
+	/** Enum properties & methods */													export type wrap<T extends Property<any>> = Prettify<Enum.props<T> & Proto<T>>;
 }
 
 /** Argument can be an array of PropertyKeys */							type ArrayArg = ReadonlyArray<PropertyKey>
@@ -149,12 +127,3 @@ class Enumify {
 	}
 }
 
-// Useful for those times when a full Enumify object is not needed, but still lock the Object from mutations
-/** deep-freeze an Array | Object to make it immutable */
-export function secure<const T extends Obj>(obj: T) {
-	if (isReference(obj))																			// skip primitive values
-		ownValues(obj)																					// retrieve the properties on obj
-			.forEach(val => Object.isFrozen(val) || secure(val));	// secure each value, if not already Frozen
-
-	return Object.freeze(obj) as Secure<T>;										// freeze the object itself
-}

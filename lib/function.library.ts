@@ -1,4 +1,5 @@
-import { isFunction, Property } from '#core/shared/type.library.js';
+import { secure } from '#core/shared/utility.library.js';
+import { isUndefined, type Property } from '#core/shared/type.library.js';
 
 // https://medium.com/codex/currying-in-typescript-ca5226c85b85
 type PartialTuple<T extends any[], X extends any[] = []> =
@@ -59,23 +60,27 @@ export function memoizeFunction<F extends (...args: any[]) => any>(fn: F) {
 
 const wm = new WeakMap<object, Property<any>>();
 
-/** memoize repeated calls on an Object's methods */
-export function memozify(obj: object) {
-	if (!wm.has(obj))
-		wm.set(obj, Object.create(null));
+/** define a Descriptor for an Object's memoized-methods */
+export function memoizeMethod<T>(name: PropertyKey, fn: (this: Property<any>, ...args: any[]) => T) {
+	return {
+		enumerable: true,
+		configurable: false,
+		writable: false,
+		value: function (this: Property<any>, ...args: any[]) {
+			const key = `${String(name)},${JSON.stringify(args)}`;
+			let cache = wm.get(this);
 
-	return ({
-		get(name: PropertyKey, fn: (this: any) => any) {
-			const cache = wm.get(obj) as Property<any>;
-
-			if (!(name in cache)) {
-				const result = fn.apply(obj);
-				cache[name] = result;
-
+			if (!cache) {																					// add a new object into the WeakMap
+				cache = Object.create(null) as Property<any>;
+				wm.set(this, cache);
 			}
 
-			return cache[name];
-		}
-	})
-}
+			if (isUndefined(cache[key])) {												// first time for this method
+				cache[key] = fn.apply(this, args);									// evaluate the method
+				secure(cache[key]);																	// freeze the returned value
+			}
 
+			return cache[key] as T;
+		}
+	} as PropertyDescriptor;
+}

@@ -2,7 +2,7 @@ import { Logify } from '#core/shared/logify.class.js';
 import { asArray } from '#core/shared/array.library.js';
 import { sprintf } from '#core/shared/string.library.js';
 import { ifDefined } from '#core/shared/object.library.js';
-import { secure } from '#core/shared/enumerate.library.js';
+import { secure } from '#core/shared/utility.library.js';
 import { cleanify } from '#core/shared/serialize.library.js';
 import { Immutable } from '#core/shared/class.library.js';
 import { isEmpty, isObject } from '#core/shared/type.library.js';
