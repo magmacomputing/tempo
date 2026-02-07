@@ -6,15 +6,15 @@ import type { Tempo } from '#core/shared/tempo.class.js';
 /** definition of meteorological season ranges */
 const ranges = [																						// @link https://www.timeanddate.com/calendar/aboutseasons.html
 	[																													// [0] = northern hemisphere
-		{ key: 'Spring', day: 20, month: 3, symbol: 'Flower' },
-		{ key: 'Summer', day: 21, month: 6, symbol: 'Sun' },
-		{ key: 'Autumn', day: 23, month: 9, symbol: 'Leaf' },
-		{ key: 'Winter', day: 22, month: 12, symbol: 'Snowflake' },
+		{ key: 'Spring', day: 20, month: 3, symbol: 'Flower', sphere: COMPASS.North },
+		{ key: 'Summer', day: 21, month: 6, symbol: 'Sun', sphere: COMPASS.North },
+		{ key: 'Autumn', day: 23, month: 9, symbol: 'Leaf', sphere: COMPASS.North },
+		{ key: 'Winter', day: 22, month: 12, symbol: 'Snowflake', sphere: COMPASS.North },
 	], [																											// [1] = southern hemisphere
-		{ key: 'Spring', day: 1, month: 9, symbol: 'Flower' },
-		{ key: 'Summer', day: 1, month: 12, symbol: 'Sun' },
-		{ key: 'Autumn', day: 1, month: 3, symbol: 'Leaf' },
-		{ key: 'Winter', day: 1, month: 6, symbol: 'Snowflake' },
+		{ key: 'Spring', day: 1, month: 9, symbol: 'Flower', sphere: COMPASS.South },
+		{ key: 'Summer', day: 1, month: 12, symbol: 'Sun', sphere: COMPASS.South },
+		{ key: 'Autumn', day: 1, month: 3, symbol: 'Leaf', sphere: COMPASS.South },
+		{ key: 'Winter', day: 1, month: 6, symbol: 'Snowflake', sphere: COMPASS.South },
 	], [																											// [2] = chinese seasons
 		{ key: 'Spring', day: 1, month: 3, symbol: 'Flower', trait: 'A time of renewal and growth' },
 		{ key: 'Summer', day: 1, month: 6, symbol: 'Sun', trait: 'A period of heat and fruition' },
