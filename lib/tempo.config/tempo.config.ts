@@ -39,7 +39,8 @@ export const Sym = {
 	/** fraction */																						ff: Symbol('ff'),
 	/** meridiem */																						mer: Symbol('mer'),
 	/** short weekday name */																	www: Symbol('www'),
-	/** suffix */																							sfx: Symbol('sfx'),
+	/** weekday-suffix */																			afx: Symbol('afx'),
+	/** time-suffix */																				sfx: Symbol('sfx'),
 	/** separator */																					sep: Symbol('sep'),
 	/** modifier */																						mod: Symbol('mod'),
 	/** time zone offset */																		tzd: Symbol('tzd'),
@@ -57,13 +58,14 @@ export const Component = {																	// define some components to help int
 	[Sym.yy]: /(?<yy>(\d{2})?\d{2})/,													// arbitrary upper-limit of yy=9999
 	[Sym.mm]: /(?<mm>[0\s]?[1-9]|1[0-2]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/,	// month-name (abbrev or full) or month-number 01-12
 	[Sym.dd]: /(?<dd>[0\s]?[1-9]|[12][0-9]|3[01])/,						// day-number 01-31
-	[Sym.wkd]: /((?<wkd>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)((s)? (?<sfx>ago|hence))?(?:[\/\-\s\,])*)/,//day-name (abbrev or full)
+	[Sym.wkd]: /(?<wkd>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)/,//day-name (abbrev or full)
 	[Sym.hh]: /(?<hh>2[0-4]|[01]?\d)/,												// hour-number 00-24
 	[Sym.mi]: /(\:(?<mi>[0-5]\d))/,														// minute-number 00-59
 	[Sym.ss]: /(\:(?<ss>[0-5]\d))/,														// seconds-number 00-59
 	[Sym.ff]: /(\.(?<ff>\d{1,9}))/,														// fractional-seconds up-to 9-digits
 	[Sym.mer]: /(\s*(?<mer>am|pm))/,													// meridiem suffix (am,pm)
 	[Sym.sfx]: /((?:[\s,T])({tm}))/,													// time-pattern suffix "T {tm}"
+	[Sym.afx]: new RegExp(`((s)? (?<afx>ago|hence))?(?:${Match.separators.source})*`),// affix optional plural 's' and (ago|hence) to weekday
 	[Sym.sep]: new RegExp(`(?<sep>${Match.separators.source})`),	// date-pattern separator character "/\\-., "
 	[Sym.mod]: new RegExp(`((?<mod>${Match.modifiers.source})?(?<cnt>\\d*)\\s*)`),	// modifier (+,-,<,<=,>,>=) plus optional offset-count
 	// Note: computed Components ('dt', 'tm', 'evt', 'per', 'tzd') are added during 'Tempo.init()' (for static) and/or 'new Tempo()' (for instance)
@@ -82,7 +84,7 @@ export type Component = typeof Component
 export const Layout = {
 	[Sym.dt]: '{dt}',																					// calendar or event
 	[Sym.tm]: '{tm}',																					// clock or period
-	[Sym.wkd]: '{mod}?{wkd}{sfx}?',														// special layout (no {dt}!) used for weekday calcs (only one that requires {wkd} pattern)
+	[Sym.wkd]: '{mod}?{wkd}{afx}?{sfx}?',											// special layout (no {dt}!) used for weekday calcs (only one that requires {wkd} pattern)
 	[Sym.dtm]: '({dt}){sfx}?',																// calendar/event and clock/period
 	[Sym.dmy]: '{wkd}?{dd}{sep}?{mm}({sep}{yy})?{sfx}?',			// day-month(-year)
 	[Sym.mdy]: '{wkd}?{mm}{sep}?{dd}({sep}{yy})?{sfx}?',			// month-day(-year)
