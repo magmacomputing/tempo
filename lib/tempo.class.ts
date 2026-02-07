@@ -953,17 +953,18 @@ export class Tempo {
 	*/
 	#parseGroups(groups: Internal.StringRecord, dateTime: Temporal.ZonedDateTime) {
 		// fix {event}
+		console.log('parseGroups: ', groups);
 		const event = ownKeys(groups).find(key => key.match(Match.event));
 		if (event) {
 			const idx = +event[3];																// number index of the {event}	
 			const [_, evt] = this.#local.parse.event[idx] ?? Tempo.#global.parse.event[idx];				// fetch the indexed tuple's value
 
 			Object.assign(groups, this.#parseEvent(evt));					// determine the date-values for the {event}
+			delete groups[event];
 
 			const { mod, cnt = '1', sfx, yy, mm, dd } = groups as Internal.GroupDate;
 			if (isEmpty(yy) && isEmpty(mm) && isEmpty(dd))
 				return Tempo.#dbg.catch(this.#local.config, `Cannot determine a {date} or {event} from "${evt}"`);
-			delete groups[event];
 		}
 
 		// fix {period}
@@ -973,9 +974,10 @@ export class Tempo {
 			const [_, per] = this.#local.parse.period[idx];				// fetch the indexed tuple's value
 
 			Object.assign(groups, this.#parsePeriod(per));				// determine the time-values for the {period}
+			delete groups[period];
+
 			if (isEmpty(groups["hh"]))														// must have at-least {hh} time-component
 				return Tempo.#dbg.catch(this.#local.config, `Cannot determine a {time} or {period} from "${per}"`);
-			delete groups[period];
 		}
 
 		// fix {mm}
