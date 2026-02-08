@@ -360,6 +360,7 @@ export type SecureObject<T> = {
 }
 
 type LooseString = (string & {})
+type LooseSymbol = (symbol & {})
 type LooseProperty = (PropertyKey & {})
 
 // https://www.youtube.com/watch?v=lraHlXpuhKs&t=43s
@@ -368,4 +369,8 @@ export type LooseUnion<T extends string> = T | LooseString
 /** Loose property key */
 export type LooseKey<T extends PropertyKey> = T | LooseProperty
 /** Loose auto-complete */
-export type LooseRecord<T extends Property<any>> = Record<keyof T | LooseString, T[keyof T]>
+export type LooseRecord<T extends Property<any>> = Partial<T> & Record<PropertyKey, any>
+/** Generic Index Signature */
+type Signature<K extends PropertyKey = string, V = any> = { [P in K]: V }
+/** Extend an object with a signature */
+export type Extend<T, K extends PropertyKey = string, V = any> = T & { [P in K]: V }
