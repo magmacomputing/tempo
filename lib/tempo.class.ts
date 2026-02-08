@@ -6,7 +6,7 @@ import { secure } from '#core/shared/utility.library.js';
 import { Immutable, Serializable } from '#core/shared/class.library.js';
 import { asArray } from '#core/shared/array.library.js';
 import { getStorage, setStorage } from '#core/shared/storage.library.js';
-import { ownKeys, ownEntries, purge, getAccessors } from '#core/shared/reflection.library.js';
+import { ownKeys, ownEntries, getAccessors } from '#core/shared/reflection.library.js';
 import { getContext, CONTEXT } from '#core/shared/utility.library.js';
 import { asInteger, isNumeric, ifNumeric } from '#core/shared/number.library.js';
 import { asString, pad, singular, toProperCase, trimAll } from '#core/shared/string.library.js';
@@ -15,7 +15,7 @@ import type { IntRange, Property, Type } from '#core/shared/type.library.js';
 
 import * as enums from '#core/shared/tempo.config/tempo.enum.js';
 import terms from '#core/shared/tempo.config/plugins/term.import.js';
-import { Default, Match, Sym, Component, Layout, Event, Period } from '#core/shared/tempo.config/tempo.config.js';
+import { Default, Match, Token, Snippet, Layout, Event, Period } from '#core/shared/tempo.config/tempo.config.js';
 
 import '#core/shared/prototype.library.js';									// patch prototype
 
@@ -86,53 +86,44 @@ export class Tempo {
 	// #region Static private properties~~~~~~~~~~~~~~~~~~~~~~
 	static #dbg = new Logify('Tempo', { debug: Default.debug, catch: Default.catch });
 
-	static #global = {} as unknown as Internal.Shape
-	// 	/** prefer month-day over day-month */									isMonthDay: false,
-	// 	/** current defaults for all Tempo instantiations */		config: {} as Tempo.Config,
-	// 	/** global parse rules */																parse: {
-	// 	/** Tempo Symbol registry */															symbol: Sym,
-	// 	/** Tempo components to aid in parsing */									component: Component,
-	// 	/** Tempo in-built layouts */															layout: Layout,
-	// 	/** configured Events */																	event: Event,
-	// 	/** configured Periods */																	period: Period,
-	// 	/** regex-patterns Map to match against input-strings */	pattern: new Map() as Internal.RegexpMap,
-	// 	}
-	// } as Internal.Shape
+	static #global = {} as Internal.Shape
 
 	// #endregion
 
 	// #region Static private methods~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/**
-	 * {dt} is a layout that combines date-related {components} (dd, mm -or- evt) into a pattern against which a string can be tested.  
+	 * {dt} is a layout that combines date-related {snippets} (dd, mm -or- evt) into a pattern against which a string can be tested.  
 	 * because it will also include a list of events (e.g. 'new_years' | 'xmas'), we need to rebuild {dt} if the user adds a new event
 	 */
 	static #makeEvent(shape: Internal.Shape) {
 		const events = ownEntries(shape.parse.event)
 			.map(([pat, _], idx) => `(?<evt${idx}>${pat})`)				// assign a number to the pattern
 			.join('|')																						// make an 'Or' pattern for the event-keys
-		shape.parse.component[Sym.evt] = new RegExp(events);		// set the component's 'event' patterns
+		if (events) {
+			Object.assign(shape.parse.snippet, { [Token.evt]: new RegExp(events) });			// set the snippet's 'event' patterns
 
-		const date = shape.isMonthDay														// set the {dt} layout (based on if we have a {timeZone} which prefers {mdy})
-			? Tempo.regexp('{mm}{sep}?{dd}({sep}?{yy})?|{mod}?({evt})')
-			: Tempo.regexp('{dd}{sep}?{mm}({sep}?{yy})?|{mod}?({evt})')
-		shape.parse.layout[Sym.dt] = date.source.slice(1, -1);	// set the {dt} layout (without anchors)
+			Object.assign(shape.parse.layout, shape.isMonthDay									// if we have a {timeZone} which prefers {mdy}, reset the {dt} layout
+				? { [Token.dt]: '{mm}{sep}?{dd}({sep}?{yy})?|{mod}?({evt})' }
+				: { [Token.dt]: '{dd}{sep}?{mm}({sep}?{yy})?|{mod}?({evt})' })
+		}
 	}
 
 	/**
-	 * {tm} is a layout that combines time-related components (hh, mi, ss, ff, mer -or- per) into a pattern against which a string can be tested.  
+	 * {tm} is a layout that combines time-related snippets (hh, mi, ss, ff, mer -or- per) into a pattern against which a string can be tested.  
 	 * because it will also include a list of periods (e.g. 'midnight' | 'afternoon' ), we need to rebuild {tm} if the user adds a new period
 	*/
 	static #makePeriod(shape: Internal.Shape) {
 		const periods = ownEntries(shape.parse.period)
 			.map(([pat, _], idx) => `(?<per${idx}>${pat})`)				// {pattern} is the 1st element of the tuple
 			.join('|')																						// make an 'or' pattern for the period-keys
-		shape.parse.component[Sym.per] = new RegExp(periods);		// set the components 'period' patterns
+		if (periods)
+			Object.assign(shape.parse.snippet, { [Token.per]: new RegExp(periods) });			// set the snippet's 'period' patterns
 
-		const time = Tempo.regexp('{hh}{mi}?{ss}?{ff}?{mer}?|{per}')
-			.source.slice(1, -1);																	// set the {tm} layout (without anchors)
-		shape.parse.layout[Sym.tm] = `(${time})`;								// set the {tm} component
-		shape.parse.layout[Sym.tzd] = `(?<tzd>[+-]${time}|Z)`;	// TODO
+		// const time = Tempo.regexp('{hh}{mi}?{ss}?{ff}?{mer}?|{per}')
+		// 	.source.slice(1, -1);																	// set the {tm} layout (without anchors)
+		// shape.parse.layout[Sym.tm] = `(${time})`;								// set the {tm} layout
+		// shape.parse.layout[Sym.tzd] = `(?<tzd>[+-]${time}|Z)`;	// TODO
 	}
 
 	/** determine if we have a {timeZone} which prefers {mdy} date-order */
@@ -215,14 +206,14 @@ export class Tempo {
 	}
 
 	/**
-	 * conform input of Component / Layout / Event / Period options  
+	 * conform input of Snippet / Layout / Event / Period options  
 	 * This is needed because we allow the user to flexibly provide detail as {[key]:val} or {[key]:val}[] or [key,val][]  
 	 * for example:  
 	 ```  
-	 Tempo.init({ component: {'yy': /20\d{2}/, 'mm': /[0-9|1|2]\d/ } })  
+	 Tempo.init({ snippet: {'yy': /20\d{2}/, 'mm': /[0-9|1|2]\d/ } })  
 	 Tempo.init({ layout: {'ddmm': '{dd}{sep}?{mm}'} })  
 	 Tempo.init({ layout: '{wkd}' })													(can be a single string)  
-	 Tempo.init({ layout: '({wkd})? {tm}' })									(or a string combination of components)  
+	 Tempo.init({ layout: '({wkd})? {tm}' })									(or a string combination of snippets)  
 	 Tempo.init({ layout: new Map([['name1', '{wkd} {yy}']], ['name2', '{mm}{sep}{dd}']]]) }) 
 	 Tempo.init({ layout: [ {name1: '{wkd} {yy}'}, {name2: '{mm}{sep}{dd}'} ]
 	 
@@ -241,9 +232,9 @@ export class Tempo {
 					const arg = asType(optVal);
 
 					switch (optKey) {
-						case 'component':
-							shape.parse["component"] ??= {};
-							Object.assign(shape.parse["component"], arg.value);
+						case 'snippet':
+							shape.parse["snippet"] ??= {};
+							Object.assign(shape.parse["snippet"], arg.value);
 							break;
 
 						case 'layout':
@@ -253,15 +244,15 @@ export class Tempo {
 							switch (arg.type) {
 								case 'Object':															// add key-value pairs to Layout
 									ownEntries(arg.value as Layout)
-										.forEach(([key, val]) => lay[Tempo.getSymbol(shape, key)] = val);
+										.forEach(([key, val]) => Object.assign(lay, { [Tempo.getSymbol(shape, key)]: val }));
 									break;
 
 								case 'String':															// add string with unique key to Layout
-									lay[Tempo.getSymbol(shape)] = arg.value;
+									Object.assign(lay, { [Tempo.getSymbol(shape)]: arg.value });
 									break;
 
 								case 'RegExp':															// add pattern with unique key to Layout
-									lay[Tempo.getSymbol(shape)] = arg.value.source;
+									Object.assign(lay, { [Tempo.getSymbol(shape)]: arg.value.source });
 									break;
 
 								case 'Array':
@@ -271,13 +262,13 @@ export class Tempo {
 											switch (itm.type) {
 												case 'Object':
 													ownEntries(itm.value as Layout)
-														.forEach(([key, val]) => lay[Tempo.getSymbol(shape, key)] = val);
+														.forEach(([key, val]) => Object.assign(lay, { [Tempo.getSymbol(shape, key)]: val }));
 													break;
 												case 'String':
-													lay[Tempo.getSymbol(shape)] = itm.value;
+													Object.assign(lay, { [Tempo.getSymbol(shape)]: itm.value });
 													break;
 												case 'RegExp':
-													lay[Tempo.getSymbol(shape)] = itm.value.toString();
+													Object.assign(lay, { [Tempo.getSymbol(shape)]: itm.value.toString() });
 													break;
 											}
 										})
@@ -291,13 +282,13 @@ export class Tempo {
 
 						case 'event':
 						case 'period':
-						case 'symbol':
-							shape.parse[optKey] ??= {};										// ensure the parse object exists
-							const rule = shape.parse[optKey];
+						case 'token':
+							shape.parse[optKey] ??= {} as any;								// ensure the parse object exists
+							const rule = shape.parse[optKey] as Property<any>;	// reference to the parse object
 
 							asArray(arg.value)
 								.forEach(elm => {
-									ownEntries(elm as Event)
+									ownEntries(elm as Property<any>)
 										.forEach(([key, val]) => rule[key] = val);
 								})
 							break;
@@ -333,7 +324,7 @@ export class Tempo {
 		shape.parse.pattern.clear();														// reset {pattern} Map
 
 		for (const [sym, layouts] of ownEntries(shape.parse.layout))
-			shape.parse.pattern.set(sym, Tempo.regexp(shape.parse.component, ...asArray(layouts)));
+			shape.parse.pattern.set(sym, Tempo.regexp(shape.parse.snippet, ...asArray(layouts)));
 	}
 
 	// #endregion Static private methods
@@ -354,7 +345,13 @@ export class Tempo {
 	static init(options: Tempo.Options = {}) {
 		if (isEmpty(options)) {																	// if no options supplied, reset all
 			Tempo.#global.config = {} as Tempo.Config;						// remove previous config
-			Tempo.#global.parse = {} as Internal.Parse;						// remove previous parsing rules
+			Tempo.#global.parse = {
+				token: {} as Token,
+				snippet: {} as Snippet,
+				layout: {} as Layout,
+				event: {} as Event,
+				period: {} as Period,
+			} as Internal.Parse;																	// remove previous parsing rules
 
 			const dateTime = Intl.DateTimeFormat().resolvedOptions();
 			Object.assign(Tempo.#global.config, {									// some global locale-specific defaults
@@ -405,33 +402,32 @@ export class Tempo {
 	 * @param key - The description for which to retrieve/create a symbol.
 	 */
 	static getSymbol(shape: Internal.Shape, key?: string | symbol) {
-		shape.parse["symbol"] ??= {} as Sym;
-		const userKeys = ownKeys(shape.parse.symbol)
-			.filter(key => key.startsWith('usr'))
-			.map(key => parseInt(key.substring(3)))
+		shape.parse["token"] ??= {} as Token;
+		const userKeys = ownKeys(shape.parse.token)
+			.filter(usr => usr.startsWith('usr'))
+			.map(usr => parseInt(usr.substring(3)))
 			.concat(0)
 		const max = `usr${Math.max(...userKeys) + 1}`;
 
-		if (isUndefined(key)) {
-			return shape.parse.symbol[max] = Symbol(max);					// allocate a new 'user' key
-		}
+		if (isUndefined(key))
+			return key = Symbol(max);															// allocate a new 'user' key
 
 		if (isSymbol(key)) {
 			const description = key.description ?? max;						// get Symbol description, else allocate next 'user' key
-			if (isUndefined(shape.parse.symbol[description]))
-				shape.parse.symbol[description] = key;							// add to Symbol register
+			if (isUndefined(shape.parse.token[description]))
+				shape.parse.token[description] = key;							// add to Symbol register
 			return key;
 		}
 
 		const [sym, description = key] = key										// for example, 'key = zdc.zodiac'
 			.split(Match.separators)
 			.filter(s => !isEmpty(s));
-		const idx = ownEntries(shape.parse.symbol)
+		const idx = ownEntries(shape.parse.token)
 			.find(([symKey, symVal]) => symKey === sym || symVal.description === description);
 
 		return idx
-			? shape.parse.symbol[idx[0]]													// identified Symbol
-			: shape.parse.symbol[sym] = Symbol(description)				// else allocate and assign a new Symbol
+			? shape.parse.token[idx[0]]													// identified Symbol
+			: shape.parse.token[sym] = Symbol(description)				// else allocate and assign a new Symbol
 	}
 
 	/**
@@ -440,14 +436,14 @@ export class Tempo {
 	 * Supports placeholder expansion using the internal pattern registry (e.g., `{yy}`, `{mm}`).
 	 * 
 	 * @param patterns - Optional pattern registry to use.
-	 * @param layouts - The layout components to combine.
+	 * @param layouts - The layout snippets to combine.
 	 */
 	static regexp(...layouts: Internal.StringPattern[]): RegExp;
 	static regexp(patterns: Internal.Regexp, ...layouts: Internal.StringPattern[]): RegExp;
 	static regexp(patterns: Internal.Regexp | Internal.StringPattern, ...layouts: Internal.StringPattern[]) {
 		if (!isObject(patterns)) {
 			layouts.splice(0, 0, patterns);												// stash 1st argument into {regs} array
-			patterns = Tempo.#global.parse.component;							// set patterns to static value
+			patterns = Tempo.#global.parse.snippet;								// set patterns to static value
 		}
 
 		const names: Record<string, boolean> = {};							// to detect if multiple instances of the same named-group
@@ -462,15 +458,15 @@ export class Tempo {
 				for (const pat of it) {
 					const { ["1"]: unit } = pat;											// {pattern} is the code between the {}
 
-					let reg = (patterns as any)[unit] ?? (patterns as any)[Sym[unit as keyof typeof Sym]];
+					let reg = (patterns as any)[unit] ?? (patterns as any)[Token[unit as keyof typeof Token]];
 
 					if (isNullish(reg))
 						continue;																				// if not a {unit}, pass back as-is
 
-					const inner = (reg as RegExp).source.matchAll(Match.braces);	// {component} might contain "{.*}" as well
+					const inner = (reg as RegExp).source.matchAll(Match.braces);	// {snippet} might contain "{.*}" as well
 					for (const sub of inner) {
 						const { ["1"]: word } = sub;
-						let lkp = (patterns as any)[word] ?? (patterns as any)[Sym[word as keyof typeof Sym]];
+						let lkp = (patterns as any)[word] ?? (patterns as any)[Token[word as keyof typeof Token]];
 
 						if (isNullish(lkp))
 							continue;
@@ -479,7 +475,7 @@ export class Tempo {
 					}
 
 					if (names[unit])																	// if this named-group already used...
-						reg = new RegExp(`(\\k<${unit}>)`);							// use \k backreference to previous named-group {component}
+						reg = new RegExp(`(\\k<${unit}>)`);							// use \k backreference to previous named-group {snippet}
 					names[unit] = true;																// mark this named-group as 'used'
 
 					layout = layout.replace(`{${unit}}`, (reg as RegExp).source)// rebuild the {layout}
@@ -593,12 +589,14 @@ export class Tempo {
 	/** instance values to complement static values */				#local = {
 		/** instance configuration */															config: {} as Tempo.Config,
 		/** instance parse rules */																parse: {
-		/** instance Symbols */																			symbol: {} as Internal.Symbol,
+		/** instance Symbols */																			token: {} as Token,
 		/** instance parse match result */													result: {} as Internal.Match,
-		/** instance pattern */																			component: {} as Internal.Regexp,
+		/** instance pattern */																			snippet: {} as Snippet,
 		/** instance Layouts */																			layout: {} as Layout,
+		/** instance Events */																			event: {} as Event,
+		/** instance Periods */																			period: {} as Period,
 		/** instance patterns */																		pattern: new Map() as Internal.RegexpMap,
-		}
+		} as Internal.Parse
 	} as Internal.Shape
 
 	// #endregion Instance properties
@@ -1569,11 +1567,9 @@ export class Tempo {
 
 // #region Tempo types / interfaces / enums ~~~~~~~~~~~~~~~~
 export namespace Tempo {
-	/** the object that Tempo will use to interpret date-time components */
-	// export type XX = Partial<Record<[keyof Tempo.Add], unknown>>
 	/** the value that Tempo will attempt to interpret as a valid ISO date / time */
 	export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | Temporal.ZonedDateTimeLike | undefined | null
-	/** the Options Object found in a json-file, or passed to a call to Tempo.Init({}) or 'new Tempo({}) */
+	/** the Options object found in a json-file, or passed to a call to Tempo.Init({}) or 'new Tempo({}) */
 	export type Options = Partial<{														// allowable settings to override configuration
 		/** localStorage key */																	store: string;
 		/** additional console.log for tracking */							debug: boolean | undefined;
@@ -1586,17 +1582,17 @@ export namespace Tempo {
 		/** granularity of timestamps (ms | ns) */							timeStamp: Tempo.TimeStamp;
 		/** locale-names that prefer 'mm-dd-yy' date order */		monthDay: string | string[];
 		/** swap parse-order of layouts */											swap: Internal.StringTuple[];
-		/** date-time components to help compose a Layout */		component: Component;
+		/** date-time snippets to help compose a Layout */			snippet: Snippet;
 		/** patterns to help parse value */											layout: Layout;
 		/** custom date aliases (events). */										event: Event;
 		/** custom time aliases (periods). */										period: Period;
-		/** internal Symbols */																	symbol: Sym;
+		/** internal Symbols */																	token: Token;
 		/** supplied value to parse */													value: Tempo.DateTime;
 		/** semantic version */																	version: string;
 	}>
 
 	/** drop the setup-only Options */
-	type OptionsKeep = Omit<Options, "value" | "monthDay" | "component" | "layout" | "event" | "period">
+	type OptionsKeep = Omit<Options, "value" | "monthDay" | "snippet" | "layout" | "event" | "period">
 	/**
 	 * the Config that Tempo will use to interpret a Tempo.DateTime  
 	 * derived from user-supplied options, else json-stored options, else reasonable-default options
@@ -1690,7 +1686,7 @@ namespace Internal {
 
 	export type InputFormat<T> = Record<string, T | T[]> | Record<string, T | T[]>[] | Map<string | symbol, T | T[]>
 
-	export type Symbol = Record<string, symbol>
+	// export type Symbol = Record<string, symbol>
 	export type Regexp = Record<string, RegExp>
 
 	export type GroupWkd = { wkd?: Tempo.WEEKDAY; mod?: Tempo.Modifier; cnt?: string; sfx?: Tempo.Relative; hh?: string; mi?: string; ss?: string; ms?: string; us?: string; ns?: string; ff?: string; mer?: string; }
@@ -1705,12 +1701,12 @@ namespace Internal {
 
 	/** Parsing rules */
 	export interface Parse {
-		/** Symbol registry */																	symbol: Internal.Symbol;
-		/** Tempo components to aid in parsing */								component: Component;
+		/** Symbol registry */																	token: Token;
+		/** Tempo snippets to aid in parsing */									snippet: Snippet;
 		/** Tempo layout strings */															layout: Layout;
 		/** Map of regex-patterns to match input-string */			pattern: Internal.RegexpMap;
-		/** configured Events */																event: Internal.StringRecord;
-		/** configured Periods */																period: Internal.StringRecord;
+		/** configured Events */																event: Event;
+		/** configured Periods */																period: Period;
 		/** parsing match result */															result?: Internal.Match;
 	}
 
