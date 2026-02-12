@@ -1,6 +1,6 @@
 import { ownKeys, ownEntries } from '#core/shared/reflection.library.js';
 import { isObject, isArray, isReference, isFunction, isDefined, isEmpty, isNullish } from '#core/shared/type.library.js';
-import type { Property } from '#core/shared/type.library.js';
+import type { Extend, Property } from '#core/shared/type.library.js';
 
 /** Get nested value */
 export function extract<T>(obj: any, path: string | number, dflt?: T): T {
@@ -103,3 +103,28 @@ export const extend = <T extends {}, U>(obj: T, ...objs: U[]) =>
 
 export const countProperties = (obj = {}) =>
 	ownKeys(obj).length
+
+/** 
+ * helper to define objects with fixed literal properties  
+ * and a loose index signature for further extensions.  
+ * @example
+ * ```
+ * const obj = looseIndex<string,string>()({ foo: 'bar', bar: 'foo' });
+ * type obj = typeof obj
+ * ```
+ */
+export function looseIndex<K extends PropertyKey = string, V = any>(): <const T extends object>(obj: T | (() => T)) => Extend<T, K, V>;
+export function looseIndex<const T extends object>(obj: T | (() => T)): Extend<T, string, any>;
+export function looseIndex(arg?: any): any {
+	if (isDefined(arg)) return isFunction(arg) ? arg() : arg;
+	return (obj: any) => isFunction(obj) ? obj() : obj;
+}
+
+/** loose object with symbols values */
+looseIndex.stringSymbol = looseIndex<string, symbol>();
+/** loose object with symbol keys and RegExp values */
+looseIndex.symbolRegExp = looseIndex<symbol, RegExp>();
+/** loose object with symbol keys and string values */
+looseIndex.symbolString = looseIndex<symbol, string>();
+/** loose object with string keys and string values */
+looseIndex.stringString = looseIndex<string, string>();

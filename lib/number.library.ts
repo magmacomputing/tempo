@@ -1,3 +1,4 @@
+import { asArray } from '#core/shared/array.library.js';
 import { patBigInt } from '#core/shared/pattern.library.js';
 import { asType, isInteger, isString } from '#core/shared/type.library.js';
 import type { TValues } from '#core/shared/type.library.js';
@@ -64,7 +65,7 @@ export const ifNumeric = (str?: string | number | bigint, stripZero = false) => 
 
 /** show Hex value of a number */
 export const toHex = (num: TValues<number> = [], len = 64) =>
-	Array.of(num)																							// ensure array
+	asArray(num)																							// ensure array
 		.flat(1000000)																					// flatten any arrays to arbitrary depth
 		.filter(Number.isInteger)																// ensure integers	
 		.map(val => (val + 0x100).toString(16).slice(-2))
