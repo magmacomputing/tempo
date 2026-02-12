@@ -51,7 +51,7 @@ export const isDigit = <T>(obj?: T): obj is Extract<T, number | bigint> => isTyp
 export const isBoolean = <T>(obj?: T): obj is Extract<T, boolean> => isType(obj, 'Boolean');
 export const isArray = <T>(obj: unknown): obj is T[] => isType(obj, 'Array');
 export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => protoType(obj) === 'Object' && 'length' in obj && Object.keys(obj).every(key => key === 'length' || !isNaN(Number(key)));
-export const isObject = <T>(obj?: T): obj is Extract<T, Record<any, any>> => isType(obj, 'Object');
+export const isObject = <T>(obj?: T): obj is Extract<T, object> => isType(obj, 'Object');
 export const isDate = <T>(obj?: T): obj is Extract<T, Date> => isType(obj, 'Date');
 export const isRegExp = <T>(obj?: T): obj is Extract<T, RegExp> => isType(obj, 'RegExp');
 export const isSymbol = <T>(obj?: T): obj is Extract<T, symbol> => isType(obj, 'Symbol');
@@ -367,10 +367,9 @@ type LooseProperty = (PropertyKey & {})
 /** Loose union */
 export type LooseUnion<T extends string> = T | LooseString
 /** Loose property key */
-export type LooseKey<T extends PropertyKey> = T | LooseProperty
-/** Loose auto-complete */
-export type LooseRecord<T extends Property<any>> = Partial<T> & Record<PropertyKey, any>
-/** Generic Index Signature */
-type Signature<K extends PropertyKey = string, V = any> = { [P in K]: V }
-/** Extend an object with a signature */
+export type LooseKey<K extends PropertyKey = string> = K | LooseProperty
+// /** Loose auto-complete */
+// export type LooseRecord<T extends Property<any>> = Partial<T> & Record<PropertyKey, any>
+
+/** Extend an object with a generic-signature */
 export type Extend<T, K extends PropertyKey = string, V = any> = T & { [P in K]: V }

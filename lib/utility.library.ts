@@ -62,7 +62,7 @@ export const getContext = (): Context => {
 	return { global, type: CONTEXT.Unknown };
 }
 
-// Useful for those times when a full Enumify object is not needed, but still lock the Object from mutations
+// useful for those times when a full Enumify object is not needed, but still lock the Object from mutations
 /** deep-freeze an Array | Object to make it immutable */
 export function secure<const T extends Obj>(obj: T) {
 	if (isReference(obj))																			// skip primitive values

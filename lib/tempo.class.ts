@@ -4,6 +4,7 @@ import { Logify } from '#core/shared/logify.class.js';
 import { ifDefined } from '#core/shared/object.library.js';
 import { secure } from '#core/shared/utility.library.js';
 import { Immutable, Serializable } from '#core/shared/class.library.js';
+import { Cipher } from '#core/shared/cipher.class.js';
 import { asArray } from '#core/shared/array.library.js';
 import { getStorage, setStorage } from '#core/shared/storage.library.js';
 import { ownKeys, ownEntries, getAccessors } from '#core/shared/reflection.library.js';
@@ -101,11 +102,10 @@ export class Tempo {
 			.map(([pat, _], idx) => `(?<evt${idx}>${pat})`)				// assign a number to the pattern
 			.join('|')																						// make an 'Or' pattern for the event-keys
 		if (events) {
-			Object.assign(shape.parse.snippet, { [Token.evt]: new RegExp(events) });			// set the snippet's 'event' patterns
-
-			Object.assign(shape.parse.layout, shape.isMonthDay									// if we have a {timeZone} which prefers {mdy}, reset the {dt} layout
-				? { [Token.dt]: '{mm}{sep}?{dd}({sep}?{yy})?|{mod}?({evt})' }
-				: { [Token.dt]: '{dd}{sep}?{mm}({sep}?{yy})?|{mod}?({evt})' })
+			shape.parse.snippet[Token.evt] = new RegExp(events);	// set the snippet's {event} pattern
+			shape.parse.layout[Token.dt] = shape.isMonthDay
+				? '{mm}{sep}?{dd}({sep}?{yy})?|{mod}?({evt})' as typeof shape.parse.layout[typeof Token.dt]
+				: '{dd}{sep}?{mm}({sep}?{yy})?|{mod}?({evt})';
 		}
 	}
 
@@ -118,12 +118,7 @@ export class Tempo {
 			.map(([pat, _], idx) => `(?<per${idx}>${pat})`)				// {pattern} is the 1st element of the tuple
 			.join('|')																						// make an 'or' pattern for the period-keys
 		if (periods)
-			Object.assign(shape.parse.snippet, { [Token.per]: new RegExp(periods) });			// set the snippet's 'period' patterns
-
-		// const time = Tempo.regexp('{hh}{mi}?{ss}?{ff}?{mer}?|{per}')
-		// 	.source.slice(1, -1);																	// set the {tm} layout (without anchors)
-		// shape.parse.layout[Sym.tm] = `(${time})`;								// set the {tm} layout
-		// shape.parse.layout[Sym.tzd] = `(?<tzd>[+-]${time}|Z)`;	// TODO
+			shape.parse.snippet[Token.per] = new RegExp(periods);	// set the snippet's {period} pattern
 	}
 
 	/** determine if we have a {timeZone} which prefers {mdy} date-order */
@@ -162,7 +157,7 @@ export class Tempo {
 			})
 
 		if (chg)
-			shape.parse.layout = Object.fromEntries(layouts);			// rebuild Layout in new parse order
+			shape.parse.layout = Object.fromEntries(layouts) as Layout;			// rebuild Layout in new parse order
 	}
 
 	/** properCase week-day / calendar-month */
@@ -234,7 +229,38 @@ export class Tempo {
 					switch (optKey) {
 						case 'snippet':
 							shape.parse["snippet"] ??= {};
-							Object.assign(shape.parse["snippet"], arg.value);
+							const snip = shape.parse["snippet"];
+
+							switch (arg.type) {
+								case 'Object':
+									ownEntries(arg.value as Snippet)
+										.forEach(([key, val]) => snip[Tempo.getSymbol(key)] = val);
+									break;
+								case 'String':
+									snip[Tempo.getSymbol()] = new RegExp(arg.value);
+									break;
+								case 'RegExp':
+									snip[Tempo.getSymbol()] = arg.value;
+									break;
+								case 'Array':
+									(arg.value as any[])
+										.forEach(elm => {
+											const itm = asType(elm);
+											switch (itm.type) {
+												case 'Object':
+													ownEntries(itm.value as Snippet)
+														.forEach(([key, val]) => snip[Tempo.getSymbol(key)] = val);
+													break;
+												case 'String':
+													snip[Tempo.getSymbol()] = new RegExp(itm.value);
+													break;
+												case 'RegExp':
+													snip[Tempo.getSymbol()] = itm.value;
+													break;
+											}
+										})
+									break;
+							}
 							break;
 
 						case 'layout':
@@ -244,15 +270,15 @@ export class Tempo {
 							switch (arg.type) {
 								case 'Object':															// add key-value pairs to Layout
 									ownEntries(arg.value as Layout)
-										.forEach(([key, val]) => Object.assign(lay, { [Tempo.getSymbol(shape, key)]: val }));
+										.forEach(([key, val]) => Object.assign(lay, { [Tempo.getSymbol(key)]: val }));
 									break;
 
 								case 'String':															// add string with unique key to Layout
-									Object.assign(lay, { [Tempo.getSymbol(shape)]: arg.value });
+									Object.assign(lay, { [Tempo.getSymbol()]: arg.value });
 									break;
 
 								case 'RegExp':															// add pattern with unique key to Layout
-									Object.assign(lay, { [Tempo.getSymbol(shape)]: arg.value.source });
+									Object.assign(lay, { [Tempo.getSymbol()]: arg.value.source });
 									break;
 
 								case 'Array':
@@ -262,13 +288,13 @@ export class Tempo {
 											switch (itm.type) {
 												case 'Object':
 													ownEntries(itm.value as Layout)
-														.forEach(([key, val]) => Object.assign(lay, { [Tempo.getSymbol(shape, key)]: val }));
+														.forEach(([key, val]) => Object.assign(lay, { [Tempo.getSymbol(key)]: val }));
 													break;
 												case 'String':
-													Object.assign(lay, { [Tempo.getSymbol(shape)]: itm.value });
+													Object.assign(lay, { [Tempo.getSymbol()]: itm.value });
 													break;
 												case 'RegExp':
-													Object.assign(lay, { [Tempo.getSymbol(shape)]: itm.value.toString() });
+													Object.assign(lay, { [Tempo.getSymbol()]: itm.value.toString() });
 													break;
 											}
 										})
@@ -282,13 +308,12 @@ export class Tempo {
 
 						case 'event':
 						case 'period':
-						case 'token':
-							shape.parse[optKey] ??= {} as any;								// ensure the parse object exists
-							const rule = shape.parse[optKey] as Property<any>;	// reference to the parse object
+							shape.parse[optKey] ??= {} as any;						// ensure the parse object exists
+							const rule = shape.parse[optKey];							// reference to the parse object
 
-							asArray(arg.value)
+							asArray(arg.value as Event | Period)
 								.forEach(elm => {
-									ownEntries(elm as Property<any>)
+									ownEntries(elm)
 										.forEach(([key, val]) => rule[key] = val);
 								})
 							break;
@@ -311,20 +336,26 @@ export class Tempo {
 
 		if (isDefined(shape.config.swap))
 			Tempo.#swapLayout(shape, asArray(shape.config.swap));
+
 		if (isDefined(shape.parse.event))
 			Tempo.#makeEvent(shape);															// setup special Date {layout} (before patterns!)
 		if (isDefined(shape.parse.period))
 			Tempo.#makePeriod(shape);															// setup special Time {layout} (before patterns!)
+
 		Tempo.#makePattern(shape);															// setup Regex DateTime patterns
 	}
 
 	/** build RegExp patterns */
 	static #makePattern(shape: Internal.Shape) {
+		const snippet = Tempo.#global.parse.snippet;						// start with global {snippet}
+		if (shape.config.level === 'local' && !isEmpty(shape.parse.snippet))
+			Object.assign(snippet, shape.parse.snippet);					// merge local {snippet}	
+
 		shape.parse.pattern ??= new Map();
 		shape.parse.pattern.clear();														// reset {pattern} Map
 
-		for (const [sym, layouts] of ownEntries(shape.parse.layout))
-			shape.parse.pattern.set(sym, Tempo.regexp(shape.parse.snippet, ...asArray(layouts)));
+		for (const [sym, layout] of ownEntries(shape.parse.layout))
+			shape.parse.pattern.set(sym, Tempo.regexp(layout, snippet));
 	}
 
 	// #endregion Static private methods
@@ -336,7 +367,7 @@ export class Tempo {
 	 * 
 	 * Settings are inherited in this priority:
 	 * 1. Reasonable library defaults (defined in tempo.config.js)
-	 * 2. Persistent storage (e.g. localStorage, if available).
+	 * 2. Persistent storage (e.g. localStorage), if available.
 	 * 3. `options` provided to this method.
 	 * 
 	 * @param options - Configuration overrides to apply globally.
@@ -346,7 +377,6 @@ export class Tempo {
 		if (isEmpty(options)) {																	// if no options supplied, reset all
 			Tempo.#global.config = {} as Tempo.Config;						// remove previous config
 			Tempo.#global.parse = {
-				token: {} as Token,
 				snippet: {} as Snippet,
 				layout: {} as Layout,
 				event: {} as Event,
@@ -398,94 +428,117 @@ export class Tempo {
 	 * Looks-up or registers a `Symbol` for a given key.  
 	 * Used for internal consistency.  
 	 * 
-	 * @param shape - The internal state container.
 	 * @param key - The description for which to retrieve/create a symbol.
 	 */
-	static getSymbol(shape: Internal.Shape, key?: string | symbol) {
-		shape.parse["token"] ??= {} as Token;
-		const userKeys = ownKeys(shape.parse.token)
-			.filter(usr => usr.startsWith('usr'))
-			.map(usr => parseInt(usr.substring(3)))
-			.concat(0)
-		const max = `usr${Math.max(...userKeys) + 1}`;
+	static getSymbol(key?: string | symbol) {
+		if (isUndefined(key)) {
+			const userKeys = ownKeys(Token)
+				.filter(usr => usr.startsWith('usr'))
+				.map(usr => parseInt(usr.substring(3)))
+				.concat(0)
+			const max = `usr${Math.max(...userKeys) + 1}`;
 
-		if (isUndefined(key))
 			return key = Symbol(max);															// allocate a new 'user' key
+		}
 
 		if (isSymbol(key)) {
-			const description = key.description ?? max;						// get Symbol description, else allocate next 'user' key
-			if (isUndefined(shape.parse.token[description]))
-				shape.parse.token[description] = key;							// add to Symbol register
+			const description = key.description ?? Cipher.randomKey();	// get Symbol description, else allocate random string
+			if (isUndefined(Token[description]))
+				Token[description] = key;														// add to Symbol register
 			return key;
 		}
 
 		const [sym, description = key] = key										// for example, 'key = zdc.zodiac'
 			.split(Match.separators)
 			.filter(s => !isEmpty(s));
-		const idx = ownEntries(shape.parse.token)
-			.find(([symKey, symVal]) => symKey === sym || symVal.description === description);
 
-		return idx
-			? shape.parse.token[idx[0]]													// identified Symbol
-			: shape.parse.token[sym] = Symbol(description)				// else allocate and assign a new Symbol
+		if (isUndefined(Token[sym]))
+			Token[sym] = Symbol(description);											// add to Symbol register
+
+		return Token[sym];
+	}
+
+	static getRegExp(reg: string | RegExp, ...layouts: Internal.StringPattern[]) {
+		return (isRegExp(reg))
+			? reg
+			: new RegExp(reg)
 	}
 
 	/**
-	 * Combines an array of strings or RegExps into an anchored, case-insensitive RegExp.
-	 * 
-	 * Supports placeholder expansion using the internal pattern registry (e.g., `{yy}`, `{mm}`).
-	 * 
-	 * @param patterns - Optional pattern registry to use.
-	 * @param layouts - The layout snippets to combine.
+	 * translates a {layout} string into an anchored, case-insensitive regular expression.  
+	 * supports placeholder expansion using the {snippet} registry (e.g., `{yy}`, `{mm}`).
 	 */
-	static regexp(...layouts: Internal.StringPattern[]): RegExp;
-	static regexp(patterns: Internal.Regexp, ...layouts: Internal.StringPattern[]): RegExp;
-	static regexp(patterns: Internal.Regexp | Internal.StringPattern, ...layouts: Internal.StringPattern[]) {
-		if (!isObject(patterns)) {
-			layouts.splice(0, 0, patterns);												// stash 1st argument into {regs} array
-			patterns = Tempo.#global.parse.snippet;								// set patterns to static value
+	static regexp(layout: string | RegExp, snippet: Snippet = Tempo.#global.parse.snippet) {
+		const names = new Set<string>();												// tracked regex named-groups
+
+		function matcher(str: string | RegExp): string {				// recursive function
+			if (isRegExp(str))																		// already a RegExp
+				str = str.source;																		// get the source	
+			if (isDefined(str.match(Match.regexp)))								// string that looks like a RegExp
+				str = str.substring(1, -1);													// remove the leading/trailing "/"
+
+			for (const pat of str.matchAll(Match.braces)) {				// iterator to match all "{}" patterns in a string
+				const { ["0"]: match, ["1"]: name } = pat;					// extract matched pattern and name
+				const token = Token[name];													// get the symbol for this {unit}
+				const reg = names.has(name)
+					? new RegExp(`(\\k<${name}>)`)										// use \k backreference to previous named-group {snippet}
+					: snippet[token];																	// lookup the {snippet} for this {token}
+
+				if (isNullish(reg))																	// cannot find a definition for this {token}
+					continue;
+				names.add(name);																		// add to the list of named-groups
+
+				const snip = matcher(reg.source);										// {snippet} might contain "{}" braces as well
+				str = str.replace(`${match}`, snip);								// rebuild the str source
+			}
+
+			return str;
 		}
 
-		const names: Record<string, boolean> = {};							// to detect if multiple instances of the same named-group
-		const pattern = layouts
-			.map(layout => {																			// for each {layout} in the arguments
-				if (isRegExp(layout))
-					layout = layout.source;
-				if (layout.match(Match.regexp))											// string that looks like a RegExp
-					layout = layout.substring(1, -1);
+		layout = matcher(layout);
 
-				const it = layout.matchAll(Match.braces);						// iterator to match all "{}" patterns in a {layout}
-				for (const pat of it) {
-					const { ["1"]: unit } = pat;											// {pattern} is the code between the {}
-
-					let reg = (patterns as any)[unit] ?? (patterns as any)[Token[unit as keyof typeof Token]];
-
-					if (isNullish(reg))
-						continue;																				// if not a {unit}, pass back as-is
-
-					const inner = (reg as RegExp).source.matchAll(Match.braces);	// {snippet} might contain "{.*}" as well
-					for (const sub of inner) {
-						const { ["1"]: word } = sub;
-						let lkp = (patterns as any)[word] ?? (patterns as any)[Token[word as keyof typeof Token]];
-
-						if (isNullish(lkp))
-							continue;
-
-						reg = new RegExp((reg as RegExp).source.replace(`{${word}}`, (lkp as RegExp).source));
-					}
-
-					if (names[unit])																	// if this named-group already used...
-						reg = new RegExp(`(\\k<${unit}>)`);							// use \k backreference to previous named-group {snippet}
-					names[unit] = true;																// mark this named-group as 'used'
-
-					layout = layout.replace(`{${unit}}`, (reg as RegExp).source)// rebuild the {layout}
-				}
-
-				return layout;
-			})
-
-		return new RegExp('^(' + pattern.join('') + ')$', 'i');
+		return new RegExp(`^(${layout})$`, 'i');								// translate the source into a regex
 	}
+
+	// const pattern = layouts
+	// 	.map(layout => {																			// for each {layout} in the arguments
+	// 		if (isRegExp(layout))
+	// 			layout = layout.source;
+	// 		if (layout.match(Match.regexp))											// string that looks like a RegExp
+	// 			layout = layout.substring(1, -1);
+
+	// 		const it = layout.matchAll(Match.braces);						// iterator to match all "{}" patterns in a {layout}
+	// 		for (const pat of it) {
+	// 			const { ["1"]: unit } = pat;											// {unit} is the code between the "{}"
+
+	// 			let reg = (patterns as any)[unit] ?? (patterns as any)[Token[unit as keyof typeof Token]];
+
+	// 			if (isNullish(reg))
+	// 				continue;																				// if not a {unit}, pass back as-is
+
+	// 			const inner = (reg as RegExp).source.matchAll(Match.braces);	// {snippet} might contain "{.*}" as well
+	// 			for (const sub of inner) {
+	// 				const { ["1"]: word } = sub;
+	// 				let lkp = (patterns as any)[word] ?? (patterns as any)[Token[word as keyof typeof Token]];
+
+	// 				if (isNullish(lkp))
+	// 					continue;
+
+	// 				reg = new RegExp((reg as RegExp).source.replace(`{${word}}`, (lkp as RegExp).source));
+	// 			}
+
+	// 			if (names[unit])																	// if this named-group already used...
+	// 				reg = new RegExp(`(\\k<${unit}>)`);							// use \k backreference to previous named-group {snippet}
+	// 			names[unit] = true;																// mark this named-group as 'used'
+
+	// 			layout = layout.replace(`{${unit}}`, (reg as RegExp).source)// rebuild the {layout}
+	// 		}
+
+	// 		return layout;
+	// 	})
+
+	// return `^(${pattern.join('')})$`;
+	// }
 
 	/**
 	 * Compares two `Tempo` instances or date-time values.
@@ -589,7 +642,6 @@ export class Tempo {
 	/** instance values to complement static values */				#local = {
 		/** instance configuration */															config: {} as Tempo.Config,
 		/** instance parse rules */																parse: {
-		/** instance Symbols */																			token: {} as Token,
 		/** instance parse match result */													result: {} as Internal.Match,
 		/** instance pattern */																			snippet: {} as Snippet,
 		/** instance Layouts */																			layout: {} as Layout,
@@ -1181,8 +1233,8 @@ export class Tempo {
 			: ['dmy', 'mdy', 'ymd'] as const											// else try {dmy} before {mdy}
 
 		pats.find(pat => {
-			const reg = this.#local.parse.pattern.get(Tempo.getSymbol(this.#local, pat))
-				?? Tempo.#global.parse.pattern.get(Tempo.getSymbol(Tempo.#global, pat));// get the RegExp for the date-pattern
+			const reg = this.#local.parse.pattern.get(Tempo.getSymbol(pat))
+				?? Tempo.#global.parse.pattern.get(Tempo.getSymbol(pat));// get the RegExp for the date-pattern
 
 			if (isUndefined(reg)) {
 				Tempo.#dbg.catch(this.#local.config, `Cannot find pattern: "${pat}"`);
@@ -1199,8 +1251,8 @@ export class Tempo {
 	/** look for a match with standard {clock} or {period} patterns */
 	#parsePeriod(per: string) {
 		const groups: Internal.StringRecord = {};
-		const tm = this.#local.parse.pattern.get(Tempo.getSymbol(this.#local, 'tm'))
-			?? Tempo.#global.parse.pattern.get(Tempo.getSymbol(Tempo.#global, 'tm'));	// get the RegExp for the time-pattern
+		const tm = this.#local.parse.pattern.get(Tempo.getSymbol('tm'))
+			?? Tempo.#global.parse.pattern.get(Tempo.getSymbol('tm'));	// get the RegExp for the time-pattern
 
 		if (isUndefined(tm)) {
 			Tempo.#dbg.catch(this.#local.config, `Cannot find pattern "tm"`);
@@ -1586,7 +1638,6 @@ export namespace Tempo {
 		/** patterns to help parse value */											layout: Layout;
 		/** custom date aliases (events). */										event: Event;
 		/** custom time aliases (periods). */										period: Period;
-		/** internal Symbols */																	token: Token;
 		/** supplied value to parse */													value: Tempo.DateTime;
 		/** semantic version */																	version: string;
 	}>

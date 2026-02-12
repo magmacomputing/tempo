@@ -26,6 +26,9 @@ export class Cipher {
 		hash: { name: keys.Algorithm },
 	}, false, ['sign', 'verify']);
 
+	/** random UUID */
+	static randomKey = () => crypto.randomUUID().split('-')[0];
+
 	/** decode base64 back into object */
 	static decodeBase64 = <T>(buf = ''): T => {
 		const uint8 = base64DecToArr(buf);											// first, convert to UInt8Array
