@@ -37,7 +37,7 @@
     "@types/jest": "^30.0.0",
     "@vitest/ui": "^4.0.18",
     "tsc-alias": "^1.8.16",
-    "vite-tsconfig-paths": "^6.1.0",
+    "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.0.18"
   }
 }

@@ -1,4 +1,4 @@
-import { asType, getType, isEmpty, isFunction, isPrimitive, isReference, isType } from '#core/shared/type.library.js';
+import { asType, getType, isEmpty, isFunction, isPrimitive, isType } from '#core/shared/type.library.js';
 import type { Obj, ValueOf, EntryOf, Primitives } from '#core/shared/type.library.js';
 
 /** mutate Object | Array by excluding values with specified primitive 'types' */

@@ -1,5 +1,5 @@
 import { asArray } from '#core/shared/array.library.js';
-import { patBigInt } from '#core/shared/pattern.library.js';
+import { patBigInt } from '#core/shared/regexp.library.js';
 import { asType, isInteger, isString } from '#core/shared/type.library.js';
 import type { TValues } from '#core/shared/type.library.js';
 

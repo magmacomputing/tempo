@@ -118,12 +118,10 @@ function toSymbol(value: PropertyKey) {
 /**
  * For items which are not currently serializable via standard JSON.stringify (Undefined, BigInt, Set, Map, Symbol, etc.)  
  * this creates a stringified, single key:value Object to represent the value; for example  '{ "$BigInt": 123 }'  
- * I would have preferred to use something more robust than strings for the key  (considered a Symbol? but that doesn't fit in well with serializing to a String),  
- * as this single key:value Object is open to user-manipulation.  But the risk is acceptable within the scope of small projects.  
  * 
  * Drawbacks:  
  * no support Function / WeakMap / WeakSet / WeakRef  
- * limited support for user-defined Classes (must be specifically registered)
+ * limited support for user-defined Classes (must be specifically registered with @Serialize() decorator)
  */
 
 /**
