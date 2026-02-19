@@ -12,7 +12,7 @@ export function Immutable<T extends Constructor>(value: T, { kind, name, addInit
 	switch (kind) {
 		case 'class':
 			addInitializer(() => {																// wait for construction to complete
-				Object.freeze(value);																// freeze the class itself
+				Object.freeze(value);																// freeze the class instance
 				Object.freeze(value.prototype);											// freeze the class prototype
 			})
 
