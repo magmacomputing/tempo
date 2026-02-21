@@ -2,9 +2,6 @@ import { enumify } from '#core/shared/enumerate.library.js';
 import { secure } from '#core/shared/utility.library.js';
 import type { KeyOf, ValueOf } from '#core/shared/type.library.js';
 
-/** TODO: remove this when Temporal proposal is supported in JavaScript runtimes */
-import { Temporal } from '@js-temporal/polyfill';
-
 /**
  * Various enumerations used throughout Tempo library.  
  * These are exported and added as static getters of the Tempo class.  

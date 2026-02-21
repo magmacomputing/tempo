@@ -1,4 +1,4 @@
-import { Tempo } from '../lib/tempo.class.js';
+import { Tempo } from '#core/shared/tempo.class.js';
 
 const label = 'event:';
 const year = 2020;

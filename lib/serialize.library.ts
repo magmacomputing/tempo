@@ -13,7 +13,7 @@ export const Registry = new Map<string, Function>();
 // and JSON.stringify() does not
 
 /** make a deep-copy, using standard browser or JSON functions */
-export function clone<T>(obj: T, opts?: StructuredSerializeOptions) {
+export function clone<T>(obj: T, opts?: { transfer: any[] }) {
 	try {
 		return globalThis.structuredClone(obj, opts);
 	} catch {

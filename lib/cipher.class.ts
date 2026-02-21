@@ -45,7 +45,25 @@ export class Cipher {
 		return base64EncArr(uint8);															// convert to string
 	}
 
-	static hash = async (source: string | Object, len = 64, alg = 'SHA-256') => {
+	static hmac = async (source: string | Object, secret: string, alg = 'SHA-512', len?: number) => {
+		const encoder = new TextEncoder();
+		const keyData = encoder.encode(secret);
+		const messageData = encoder.encode(asString(source));
+
+		const key = await subtle.importKey(
+			'raw',
+			keyData,
+			{ name: 'HMAC', hash: { name: alg } },
+			false,
+			['sign']
+		);
+
+		const signature = await subtle.sign('HMAC', key, messageData);
+
+		return toHex(Array.from(new Uint8Array(signature)), len);
+	}
+
+	static hash = async (source: string | Object, len?: number, alg = 'SHA-256') => {
 		const buffer = Cipher.encodeBuffer(asString(source));
 		const hash = await subtle.digest(alg, buffer);
 

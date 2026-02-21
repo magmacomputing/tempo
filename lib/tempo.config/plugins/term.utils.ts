@@ -1,6 +1,5 @@
 import { isDefined } from '#core/shared/type.library.js';
 import type { Tempo } from '#core/shared/tempo.class.js';
-import type { Temporal } from '@js-temporal/polyfill';
 
 /** Tempo.Terms lets us know where a DateTime fits within pre-defined Ranges */
 /** use this type to define a Range with a DateTime qualifier */
@@ -25,7 +24,7 @@ const SCHEMA = [
 	['millisecond', 'ms'],
 	['microsecond', 'us'],
 	['nanosecond', 'ns']
-] as [Temporal.DateTimeUnit, keyof Tempo][];
+] as [Temporal.DateUnit | Temporal.TimeUnit, keyof Tempo][];
 
 /**
  * find where a Tempo fits within a range of DateTime
