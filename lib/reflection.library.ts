@@ -1,5 +1,5 @@
 import { asType, getType, isEmpty, isFunction, isPrimitive, isType } from '#core/shared/type.library.js';
-import type { Obj, ValueOf, EntryOf, Primitives } from '#core/shared/type.library.js';
+import type { Obj, KeyOf, ValueOf, EntryOf, Primitives } from '#core/shared/type.library.js';
 
 /** mutate Object | Array by excluding values with specified primitive 'types' */
 export function exclude<T extends Obj>(obj: T, ...types: (Primitives | Lowercase<Primitives>)[]) {
@@ -8,9 +8,9 @@ export function exclude<T extends Obj>(obj: T, ...types: (Primitives | Lowercase
 		.distinct() as typeof types
 
 	if (isType(obj, 'Object', 'Array')) {											// only works on Objects and Arrays
-		const keys = [] as (keyof T)[];
+		const keys = [] as KeyOf<T>[];
 
-		(ownEntries(obj) as [keyof T, Obj][])
+		(ownEntries(obj) as [KeyOf<T>, Obj][])
 			.forEach(([key, value]) => {
 				const type = getType(value);
 
@@ -30,8 +30,8 @@ export function exclude<T extends Obj>(obj: T, ...types: (Primitives | Lowercase
 
 /** mutate Object | Array reference with properties removed */
 export function omit<T extends Obj>(obj: T): T							// TODO: consider including Map and Set objects ??
-export function omit<T extends Obj>(obj: T, ...keys: (keyof T)[]): T
-export function omit<T extends Obj>(obj: T, ...keys: (keyof T)[]) {
+export function omit<T extends Obj>(obj: T, ...keys: KeyOf<T>[]): T
+export function omit<T extends Obj>(obj: T, ...keys: KeyOf<T>[]) {
 	const { type, value } = asType(obj);
 
 	switch (type) {
@@ -69,7 +69,7 @@ export function reset<T extends Obj>(orig: T, obj?: T) {
 
 /** array of all enumerable PropertyKeys */
 export function ownKeys<T extends Obj>(json: T) {
-	return ownEntries(json).map(([key]) => key as keyof T);
+	return ownEntries(json).map(([key]) => key as KeyOf<T>);
 }
 
 /** array of all enumerable object values */
@@ -79,8 +79,8 @@ export function ownValues<T extends Obj>(json: T) {
 
 /** tuple of enumerable entries with string | symbol keys */
 export function ownEntries<T extends Obj>(json: T) {
-	return (Reflect.ownKeys(json) as (keyof T)[])							// get all Own keys
-		.map(name => [name, Reflect.getOwnPropertyDescriptor(json, name)] as [keyof T, PropertyDescriptor])
+	return (Reflect.ownKeys(json) as KeyOf<T>[])							// get all Own keys
+		.map(name => [name, Reflect.getOwnPropertyDescriptor(json, name)] as [KeyOf<T>, PropertyDescriptor])
 		.filter(([_, prop]) => prop.enumerable)									// with enumerable property
 		.map(([name, prop]) => [name, prop.value] as EntryOf<T>)// cast as array of [key, value] tuples
 }
