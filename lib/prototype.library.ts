@@ -1,6 +1,5 @@
 import { trimAll, toProperCase } from '#core/shared/string.library.js';
 import { asArray, byKey, byLkp, sortKey, type SortBy } from '#core/shared/array.library.js';
-// import { CONTEXT, getContext } from '#core/shared/utility.library.js';
 import type { Property } from '#core/shared/type.library.js';
 
 // Prototype extensions
@@ -10,7 +9,7 @@ import type { Property } from '#core/shared/type.library.js';
 /**
  * extend an Object's prototype to include new method, if no clash
  */
-export const patch = <T extends Record<'prototype' | 'name', any>>(proto: T, property: string, method: Function /**| Temporal */) => {
+export const patch = <T extends Record<'prototype' | 'name', any>>(proto: T, property: string, method: Function) => {
 	if (proto.prototype.hasOwnProperty(property)) {						// if already defined,
 		if (trimAll(method.toString()) !== trimAll(proto.prototype?.[property]?.toString()))
 			console.warn(`${proto.name}.${property} already defined`);	// show warning if different method definition
@@ -23,22 +22,6 @@ export const patch = <T extends Record<'prototype' | 'name', any>>(proto: T, pro
 		})
 	}
 }
-
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// extend Global prototype
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-/** TODO: THIS SECTION CAN TO BE REMOVED ONCE TEMPORAL IS SUPPORTED IN JAVASCRIPT RUNTIME */
-// import { Temporal } from '@js-temporal/polyfill';
-// type Temporal = typeof Temporal
-
-// declare global {
-// 	interface Window {
-// 		Temporal: Temporal,
-// 	}
-// }
-
-// if (getContext().type === CONTEXT.Browser && !('Temporal' in globalThis))
-// 	patch((globalThis as any), 'Temporal', Temporal);					// make Temporal available globally in browser context
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // extend String prototype
@@ -54,12 +37,12 @@ declare global {
 patch(String, 'trimAll', function (this: string, pat?: RegExp) { return trimAll(this, pat); });
 patch(String, 'toProperCase', function (this: string) { return toProperCase(this) });
 
-type GroupFn<T extends Property<any>> = (value: T, index?: number) => PropertyKey	// function to return a key for grouping
-type SortFn<T> = (left: T, right: T) => -1 | 0 | 1					// function to sort an array of objects
-
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // extend Array prototype
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+type GroupFn<T extends Property<any>> = (value: T, index?: number) => PropertyKey	// function to return a key for grouping
+type SortFn<T> = (left: T, right: T) => -1 | 0 | 1					// function to sort an array of objects
+
 declare global {
 	interface Array<T> {
 		/** reduce Array to a keyed Object[] */									keyedBy(...keys: (keyof T)[]): Record<PropertyKey, T[]>;
@@ -75,7 +58,7 @@ declare global {
 		/** return new Array with no repeated elements */				distinct(): T[];
 		/** return mapped Array with no repeated elements */		distinct<S>(mapfn: (value: T, index: number, array: T[]) => S, thisArg?: any): S[];
 
-		/** clear down an Array */															truncate(): T[];
+		/** clear down an Array */															clear(): T[];
 
 		/** return cartesian-product of Array of Arrays */			cartesian(): T;
 		/** return cartesian-product of Array of Arrays */			cartesian(...args: T[][]): T[];
@@ -98,7 +81,7 @@ patch(Array, 'tap', function (this: any[], fn: Function) {
 	return this;																							// then return the original array
 })
 
-patch(Array, 'truncate', function (this: any[]) {
+patch(Array, 'clear', function (this: any[]) {
 	this.fill(null).length = 0;																// wipe the contents, then set the 'length' to zero
 	return this;
 })

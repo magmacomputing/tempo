@@ -33,7 +33,6 @@
   },
   "homepage": "https://github.com/magmacomputing/tempo#readme",
   "devDependencies": {
-    "@js-temporal/polyfill": "^0.5.1",
     "@types/jest": "^30.0.0",
     "@vitest/ui": "^4.0.18",
     "tsc-alias": "^1.8.16",

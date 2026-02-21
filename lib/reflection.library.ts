@@ -37,7 +37,7 @@ export function omit<T extends Obj>(obj: T, ...keys: (keyof T)[]) {
 	switch (type) {
 		case 'Array':
 			if (isEmpty(keys)) {
-				value.truncate();																		// clear entire Array
+				value.clear();																			// clear entire Array
 				break;
 			}
 			keys

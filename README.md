@@ -18,13 +18,13 @@ Working with dates in JavaScript has historically been painful. The new `Tempora
 ## 📦 Installation
 
 ```bash
-npm install @js-temporal/polyfill
+npm install @magmacomputing/tempo
 ```
 
 ## 🛠️ Quick Start
 
 ```javascript
-import { Tempo } from './tempo.class.js';
+import { Tempo } from '@magmacomputing/tempo';
 
 // Instantiate 
 const now = new Tempo(); 

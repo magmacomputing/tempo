@@ -1,4 +1,4 @@
-import { Tempo } from '../lib/tempo.class.js';
+import { Tempo } from '#core/shared/tempo.class.js';
 
 const label = 'pattern.weekday:';
 const Wed = Tempo.WEEKDAY.Wed, Sun = Tempo.WEEKDAY.Sun;
@@ -23,7 +23,7 @@ describe(`${label}`, () => {
 
     date.setDate(date.getDate() - (date.getDay() || Sun) + Wed);
 
-    expect(tempo.parse.result.match)
+    expect(tempo.parse.result?.match)
       .toBe('weekDay');
     expect(tempo.fmt.yearMonthDay)
       .toBe(formatDate(date));
@@ -35,7 +35,7 @@ describe(`${label}`, () => {
 
     date.setDate(date.getDate() - (date.getDay() || Sun) + 7 + Wed);
 
-    expect(tempo.parse.result.match)
+    expect(tempo.parse.result?.match)
       .toBe('weekDay');
     expect(tempo.fmt.yearMonthDay)
       .toBe(formatDate(date));

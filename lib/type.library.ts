@@ -2,9 +2,6 @@ import { Tempo } from '#core/shared/tempo.class.js';
 import { Pledge } from '#core/shared/pledge.class.js';
 import type { Enum } from '#core/shared/enumerate.library.js';
 
-// TODO:  remove this after Temporal reaches Stage-4
-import { Temporal } from '@js-temporal/polyfill';
-
 /** the primitive type reported by toStringTag() */
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
 
@@ -122,6 +119,8 @@ export type EntryOf<T extends Obj> = Entry<OwnOf<T>>
 
 /** mark some fields as Optional */
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>
+/** Remove 'optional' on keys as well as 'undefined' on values */
+export type NonOptional<T> = { [K in keyof T]-?: Exclude<T[K], undefined> }
 
 /** Record with only one-key */
 export type OneKey<K extends keyof any, V, KK extends keyof any = K> =

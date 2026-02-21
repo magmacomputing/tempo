@@ -4,11 +4,11 @@ import { stringify } from '#core/shared/serialize.library.js';
 import { memoizeMethod } from '#core/shared/function.library.js';
 import { ownKeys, ownValues, ownEntries } from '#core/shared/reflection.library.js';
 import { asType, isArray } from '#core/shared/type.library.js';
-import type { Index, Prettify, Entry, Invert, Property, OwnOf, CountOf, KeyOf, ValueOf, EntryOf, LooseKey, Secure, Obj } from '#core/shared/type.library.js';
+import type { Index, Prettify, Entry, Invert, Property, OwnOf, CountOf, KeyOf, ValueOf, EntryOf, LooseKey } from '#core/shared/type.library.js';
 
 /** used to identify the Enumify type */										const tag = 'Enumify' as const;
 
-/** This is the prototype signature for an Enum object. */	type Proto<T extends Property<any>> = {
+/** This is the prototype signature for an Enum object. */	type Proto<T extends Property<any>> = Readonly<{
 	/** count of Enum keys */																	count(): CountOf<keyof T>;
 	/** array of Enum keys */																	keys(): KeyOf<T>[];
 	/** array of Enum values */																values(): ValueOf<T>[];
@@ -26,7 +26,7 @@ import type { Index, Prettify, Entry, Invert, Property, OwnOf, CountOf, KeyOf, V
 
 	/** iterator for Enum */[Symbol.iterator](): Iterator<Entry<T extends {} ? T : never>, EntryOf<T>>;
 	/** string tag */[Symbol.toStringTag](): typeof tag;
-}
+}>
 
 /**
  * This is the prototype implementation for an Enum object.  
@@ -121,7 +121,7 @@ export function enumify<T>(list: T) {
 
 /** create an entry in the Serialization Registry to describe how to rebuild an Enum */
 @Serializable
-class Enumify {
+export class Enumify {
 	constructor(list: Property<any>) {
 		return enumify(list);
 	}
