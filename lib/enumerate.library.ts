@@ -25,7 +25,7 @@ import type { Index, Prettify, Entry, Invert, Property, OwnOf, CountOf, KeyOf, V
 	/** map of Enum entries */																map<U>(fn: (entry: EntryOf<T>, index: number, enumify: Enum.wrap<T>) => [PropertyKey, U] | U, thisArg?: any): Enum.wrap<Property<any>>;
 
 	/** iterator for Enum */[Symbol.iterator](): Iterator<Entry<T extends {} ? T : never>, EntryOf<T>>;
-	/** string tag */[Symbol.toStringTag](): typeof tag;
+	/** string tag */[Symbol.toStringTag]: typeof tag;
 }>
 
 /**

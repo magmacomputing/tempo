@@ -1,6 +1,6 @@
 import { Tempo } from '#core/shared/tempo.class.js';
 import { Pledge } from '#core/shared/pledge.class.js';
-import type { Enum } from '#core/shared/enumerate.library.js';
+import type { Enum, Enumify } from '#core/shared/enumerate.library.js';
 
 /** the primitive type reported by toStringTag() */
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
@@ -108,13 +108,20 @@ export type Property<T> = Record<PropertyKey, T>
 /** Generic Record or Array */
 export type Obj = Property<any> | Array<any> //| Enumify<any>
 
+type WellKnownSymbols = { [K in keyof SymbolConstructor]: SymbolConstructor[K] extends symbol ? SymbolConstructor[K] : never }[keyof SymbolConstructor]
+
 /** Own properties of an Array, Object, Map or Enum */
-type IsFunction<T> = T extends Function ? true : false
 export type CountOf<T> = UnionToTuple<T>["length"]
-// export type OwnOf<T extends Obj> = Omit<T, keyof Array<T> | keyof Enumify<T>>
-export type OwnOf<T extends Obj> = { [K in keyof T as IsFunction<T[K]> extends true ? never : K]: T[K]; }
-export type KeyOf<T extends Obj> = keyof OwnOf<T>
-export type ValueOf<T extends Obj> = Prettify<T[KeyOf<T>]>	// TODO: we need Prettify?
+export type OwnOf<T extends Obj> = {
+	[K in keyof T as
+	T[K] extends Function ? never :
+	K extends WellKnownSymbols ? never :
+	T extends Array<any> ? (K extends number ? `${K}` : never) :
+	K extends number ? `${K}` : K
+	]: T[K];
+}
+export type KeyOf<T extends Obj> = Extract<keyof OwnOf<T>, string | symbol>
+export type ValueOf<T extends Obj> = OwnOf<T>[KeyOf<T>]
 export type EntryOf<T extends Obj> = Entry<OwnOf<T>>
 
 /** mark some fields as Optional */
