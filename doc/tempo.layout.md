@@ -20,9 +20,11 @@ Components are placeholders wrapped in curly braces `{}`. They represent specifi
 | `{ss}` | Second (prefixed by `:`) | `:[0-5]\d` |
 | `{ff}` | Fraction (prefixed by `.`) | `\.\d{1,9}` |
 | `{www}` | Weekday (Mon-Sun, Monday-Sunday) | Name strings |
+| `{tzd}` | Time zone offset | `Z` or `±hh:mm` |
 | `{mer}` | Meridiem (AM/PM) | `am` or `pm` |
 | `{sep}` | Separator character | `/`, `-`, `.`, `,`, or ` ` |
 | `{mod}` | Modifier and optional count | `+`, `-`, `<`, `>`, `next`, `prev`, etc. |
+| `{afx}` | Affix modifier | `ago` or `hence` |
 | `{sfx}` | Time suffix | Matches `T` or a space followed by a time pattern |
 
 ### Composite Components
@@ -39,7 +41,7 @@ Some components are built from others:
 | :--- | :--- | :--- |
 | `dt` | `{dt}` | Calendar or event |
 | `tm` | `{tm}` | Clock or period |
-| `www` | `{mod}?{www}{sfx}?` | Weekday name |
+| `wkd` | `{mod}?{www}{sfx}?` | Weekday name |
 | `dtm` | `({dt}){sfx}?` | Calendar/event and clock/period |
 | `dmy` | `{www}?{dd}{sep}?{mm}({sep}{yy})?{sfx}?` | Day-month(-year) |
 | `mdy` | `{www}?{mm}{sep}?{dd}({sep}{yy})?{sfx}?` | Month-day(-year) |
