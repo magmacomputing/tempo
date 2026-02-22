@@ -9,7 +9,7 @@ import type { Index, Prettify, Entry, Invert, Property, OwnOf, CountOf, KeyOf, V
 /** used to identify the Enumify type */										const tag = 'Enumify' as const;
 
 /** This is the prototype signature for an Enum object. */	type Proto<T extends Property<any>> = Readonly<{
-	/** count of Enum keys */																	count(): CountOf<keyof T>;
+	/** count of Enum keys */																	count(): CountOf<KeyOf<T>>;
 	/** array of Enum keys */																	keys(): KeyOf<T>[];
 	/** array of Enum values */																values(): ValueOf<T>[];
 	/** tuple of Enum entries */															entries(): EntryOf<T>[];
@@ -126,4 +126,3 @@ export class Enumify {
 		return enumify(list);
 	}
 }
-

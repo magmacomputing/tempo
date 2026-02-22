@@ -30,8 +30,8 @@ export function exclude<T extends Obj>(obj: T, ...types: (Primitives | Lowercase
 
 /** mutate Object | Array reference with properties removed */
 export function omit<T extends Obj>(obj: T): T							// TODO: consider including Map and Set objects ??
-export function omit<T extends Obj>(obj: T, ...keys: KeyOf<T>[]): T
-export function omit<T extends Obj>(obj: T, ...keys: KeyOf<T>[]) {
+export function omit<T extends Obj>(obj: T, ...keys: PropertyKey[]): T
+export function omit<T extends Obj>(obj: T, ...keys: PropertyKey[]) {
 	const { type, value } = asType(obj);
 
 	switch (type) {
