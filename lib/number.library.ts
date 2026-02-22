@@ -66,7 +66,7 @@ export const ifNumeric = (str?: string | number | bigint, stripZero = false) => 
 /** show Hex value of a number */
 export const toHex = (num: TValues<number> = [], len?: number) =>
 	asArray(num)																							// ensure array
-		.flat(1_000_000)																					// flatten any arrays to arbitrary depth
+		.flat(1_000_000)																				// flatten any arrays to arbitrary depth
 		.filter(Number.isInteger)																// ensure integers	
 		.map(val => (val + 0x100).toString(16).slice(-2))
 		.join('')

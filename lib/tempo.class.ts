@@ -6,7 +6,7 @@ import { secure } from '#core/shared/utility.library.js';
 import { Immutable, Serializable } from '#core/shared/class.library.js';
 import { Cipher } from '#core/shared/cipher.class.js';
 import { asArray } from '#core/shared/array.library.js';
-import { cleanify } from '#core/shared/serialize.library.js';
+import { cleanify, stringify } from '#core/shared/serialize.library.js';
 import { getStorage, setStorage } from '#core/shared/storage.library.js';
 import { ownKeys, ownEntries, getAccessors } from '#core/shared/reflection.library.js';
 import { getContext, CONTEXT } from '#core/shared/utility.library.js';
@@ -678,10 +678,8 @@ export class Tempo {
 
 			terms																									// add the plug-in getters for the pre-defined Terms to the instance
 				.forEach(({ key, scope, define }) => {							// under 'Tempo.term' getter
-					if (isDefined(define)) {
-						isDefined(key) && this.#setTerm(this, key, true, define);
-						isDefined(scope) && this.#setTerm(this, scope, false, define);
-					}
+					this.#setTerm(this, key, true, define);						// add a getter which returns the key-field only
+					this.#setTerm(this, scope, false, define);				// add a getter which returns a object
 				})
 		} catch (err) {
 			Tempo.#dbg.catch(this.config, `Cannot create Tempo: ${(err as Error).message}\n${(err as Error).stack}`);
@@ -691,8 +689,8 @@ export class Tempo {
 
 	// This function has be defined within the Tempo class (and not imported from another module) because it references a private-variable
 	/** this will add the self-updating {getter} on the Tempo.term object */
-	#setTerm(self: Tempo, name: PropertyKey, key = true, define: (this: any, key?: boolean) => any) {
-		if (isDefined(name)) {
+	#setTerm(self: Tempo, name: PropertyKey, keyOnly = true, define: (this: any, key?: boolean) => any) {
+		if (isDefined(name) && isDefined(define)) {
 			Object.defineProperty(self.#term, name, {
 				configurable: false,
 				enumerable: false,
@@ -705,7 +703,7 @@ export class Tempo {
 								Object.defineProperty(self.#term, prop, desc);
 						})
 
-					const value = define.call(self, key);							// evaluate the term range-lookup
+					const value = define.call(self, keyOnly);					// evaluate the term range-lookup
 					Object.defineProperty(self.#term, name, {					// re-add the property as a value instead of a getter
 						value,
 						configurable: false,
@@ -1530,6 +1528,7 @@ export class Tempo {
 					.replace(/wkd/g, this.wkd)
 					.replace(/day/g, this.day.toString())
 					.replace(/dow/g, this.dow.toString())
+					.replace(/#\{(\w+)\}/g, (_, p1) => stringify(this.term[p1]))
 		}
 	}
 
