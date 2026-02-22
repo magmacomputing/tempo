@@ -1,6 +1,6 @@
 import { Tempo } from '#core/shared/tempo.class.js';
 import { Pledge } from '#core/shared/pledge.class.js';
-import type { Enum, Enumify } from '#core/shared/enumerate.library.js';
+import type { Enum } from '#core/shared/enumerate.library.js';
 
 /** the primitive type reported by toStringTag() */
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
