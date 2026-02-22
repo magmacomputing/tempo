@@ -60,7 +60,7 @@ export function memoizeFunction<F extends (...args: any[]) => any>(fn: F) {
 
 const wm = new WeakMap<object, Property<any>>();
 
-/** define a Descriptor for an Object's memoized-methods */
+/** define a Descriptor for an Object's memoized-method */
 export function memoizeMethod<T>(name: PropertyKey, fn: (this: Property<any>, ...args: any[]) => T) {
 	return {
 		enumerable: true,

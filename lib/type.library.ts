@@ -106,11 +106,11 @@ export type Nullish = null | undefined | void
 /** Generic Record */
 export type Property<T> = Record<PropertyKey, T>
 /** Generic Record or Array */
-export type Obj = Property<any> | Array<any> //| Enumify<any>
+export type Obj = Property<any> | Array<any>
 
 type WellKnownSymbols = { [K in keyof SymbolConstructor]: SymbolConstructor[K] extends symbol ? SymbolConstructor[K] : never }[keyof SymbolConstructor]
 type SafeCount<T, Acc extends any[] = [], Last = LastInUnion<T>> =
-	Acc['length'] extends 48 ? number :
+	Acc['length'] extends 48 ? number :												// limit of recursive depth
 	[T] extends [never] ? Acc['length'] :
 	SafeCount<Exclude<T, Last>, [...Acc, any]>
 
@@ -351,7 +351,8 @@ type LastInUnion<U> = UnionToIntersection<U extends unknown ? (x: U) => 0 : neve
 	? L
 	: never
 
-// UnionToTuple<A | B> = [A, B]
+// Note:  Avoid using this type in production code, if the Union is >50 elements
+// Usage: UnionToTuple<A | B> = [A, B]
 type UnionToTuple<T, Last = LastInUnion<T>> = [T] extends [never]
 	? []
 	: [...UnionToTuple<Exclude<T, Last>>, Last]

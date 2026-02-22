@@ -1,5 +1,4 @@
 import { curry } from '#core/shared/function.library.js';
-import { isNumeric } from '#core/shared/number.library.js';
 import { ownKeys, ownValues, ownEntries } from '#core/shared/reflection.library.js';
 
 import { isType, asType, isEmpty, isDefined, isUndefined, isNullish, isString, isObject, isArray, isFunction, isSymbolFor, isSymbol } from '#core/shared/type.library.js';
@@ -143,11 +142,11 @@ function stringize<T>(obj: T, recurse = true): string {			// hide the second par
 
 	switch (arg.type) {
 		case 'String':
-			if (!recurse) {
-				recurse = arg.value === 'true'											// these words are stringified to preserve their type when objectified
-					|| arg.value === 'false'
+			if (!recurse) {																				// if a top-level string (e.g. 'true' or '1234')
+				recurse = arg.value === 'true'											// ensure true|false|null|1234 are quoted by JSON.stringify
+					|| arg.value === 'false'													// so they will be correctly identified during objectify()
 					|| arg.value === 'null'
-					|| isNumeric(arg.value)
+					|| parseFloat(arg.value).toString() === arg.value
 			}
 
 			return recurse
