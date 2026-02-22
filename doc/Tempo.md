@@ -47,18 +47,27 @@ Formatting uses a placeholder syntax similar to many template engines:
 
 | Placeholder | Description | Example |
 | :--- | :--- | :--- |
-| `{yy}` | 4-digit year | `2024` |
-| `{mm}` | 2-digit month | `05` |
-| `{dd}` | 2-digit day | `20` |
-| `{mon}` | Long month name | `May` |
-| `{mmm}` | Short month name | `May` |
-| `{www}` | Short weekday name | `Mon` |
-| `{wkd}` | Full weekday name | `Monday` |
-| `{hh}` | 24-hour hour | `14` |
-| `{mi}` | Minutes | `05` |
-| `{ss}` | Seconds | `05` |
-| `{ff}` | Fraction of a second | `05` |
-| `{mer}` | Meridiem (AM/PM) | `AM` |
+| `yyyy` | 4-digit year | `2024` |
+| `yy` | 2-digit year (alias for `yyyy`) | `24` |
+| `mm` | 2-digit month | `05` |
+| `mon` | Long month name | `May` |
+| `mmm` | Short month name | `May` |
+| `dd` | 2-digit day | `20` |
+| `day` | Day of month (numeric) | `20` |
+| `www` | Short weekday name | `Mon` |
+| `wkd` | Full weekday name | `Monday` |
+| `dow` | Day of week (1-7) | `1` |
+| `ww` | Week of year | `21` |
+| `hh` | 24-hour hour | `14` |
+| `HH` | 12-hour hour (with Meridiem) | `02PM` |
+| `mi` | Minutes | `05` |
+| `ss` | Seconds | `05` |
+| `ms` | Milliseconds | `005` |
+| `us` | Microseconds | `000` |
+| `ns` | Nanoseconds | `000` |
+| `ff` | Fractional seconds (9-digits) | `005000000` |
+| `f2` | Fractional seconds (alias) | `005000000` |
+| `ts` | Unix timestamp | `1716163200000` |
 
 Example:
 ```typescript
@@ -83,6 +92,25 @@ Sets the instance to a specific point or relative position.
 ```typescript
 t.set({ hour: 0 }); // Midnight
 t.set({ start: 'month' }); // Start of the current month
+```
+
+### `until(dateTime, unit?)`
+Calculates the duration until another date-time.
+```typescript
+t.until('2024-12-25', 'days'); // Returns number of days
+t.until('2024-12-25'); // Returns Temporal.Duration object
+```
+
+### `since(dateTime, unit?)`
+Calculates the elapsed time since another date-time (returns a human-readable string).
+```typescript
+t.since('yesterday'); // "1 day ago"
+```
+
+### `compare(t1, t2)`
+Static method to compare two `Tempo` instances.
+```typescript
+Tempo.compare(t1, t2); // -1, 0, or 1
 ```
 
 ---
