@@ -109,19 +109,23 @@ export type Property<T> = Record<PropertyKey, T>
 export type Obj = Property<any> | Array<any> //| Enumify<any>
 
 type WellKnownSymbols = { [K in keyof SymbolConstructor]: SymbolConstructor[K] extends symbol ? SymbolConstructor[K] : never }[keyof SymbolConstructor]
+type SafeCount<T, Acc extends any[] = [], Last = LastInUnion<T>> =
+	Acc['length'] extends 48 ? number :
+	[T] extends [never] ? Acc['length'] :
+	SafeCount<Exclude<T, Last>, [...Acc, any]>
 
 /** Own properties of an Array, Object, Map or Enum */
-export type CountOf<T> = UnionToTuple<T>["length"]
+export type CountOf<T> = SafeCount<T>
 export type OwnOf<T extends Obj> = {
 	[K in keyof T as
-	T[K] extends Function ? never :
-	K extends WellKnownSymbols ? never :
-	T extends Array<any> ? (K extends number ? `${K}` : never) :
-	K extends number ? `${K}` : K
-	]: T[K];
+	K extends WellKnownSymbols ? never :																	// exclude WellKnownSymbols
+	K extends number ? `${K}` :																						// stringify numeric keys
+	T[K] extends Function ? (0 extends (1 & T[K]) ? K : never) : K				// exclude real functions, keep 'any'
+	]: T[K] extends Function ? (0 extends (1 & T[K]) ? T[K] : never) :		// value: exclude real functions
+	(T extends Array<any> ? (K extends number ? T[K] : never) : T[K]);		// array: only numeric keys
 }
 export type KeyOf<T extends Obj> = Extract<keyof OwnOf<T>, string | symbol>
-export type ValueOf<T extends Obj> = OwnOf<T>[KeyOf<T>]
+export type ValueOf<T extends Obj> = Prettify<OwnOf<T>[KeyOf<T>]>
 export type EntryOf<T extends Obj> = Entry<OwnOf<T>>
 
 /** mark some fields as Optional */
@@ -156,7 +160,8 @@ export type Primitives = toName<Primitive>
 /** Generic constructor type */
 export type Constructor<T = any> = new (...args: any[]) => T;
 type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling issues)
-export type Temporals = Exclude<keyof typeof Temporal, 'Now'>
+declare const Temporal: any;
+export type Temporals = typeof Temporal extends { Now: any } ? Exclude<keyof typeof Temporal, 'Now'> : never;
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 export type Type =
@@ -240,7 +245,7 @@ type TupleEntry<T extends readonly unknown[], I extends unknown[] = [], R = neve
 
 type ObjectEntry<T extends Property<any>> =
 	T extends object
-	? { [K in keyof T]: [K, Required<T>[K]] }[keyof T] extends infer E
+	? { [K in keyof T]: [T[K]] extends [never] ? never : [K, Required<T>[K]] }[keyof T] extends infer E
 	? E extends [infer K extends string | number, infer V]
 	? [`${K}`, V]
 	: E extends [infer K extends symbol, infer V]

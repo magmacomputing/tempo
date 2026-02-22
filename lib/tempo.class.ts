@@ -360,10 +360,13 @@ export class Tempo {
 	}
 
 	/** setup mdy TimeZones, using Intl.Locale */
+	// The google-apps-script types package provides its own Intl.Locale interface that doesn't include getTimeZones(),
+	// and it takes priority over the ESNext.Intl augmentation in tsconfig.
+	// The "(mdy as any).getTimeZones?.()" can be replaced with "mdy.getTimeZones()" after google-apps-script is corrected
 	static #mdyLocales(value: Tempo.Options["mdyLocales"]) {
 		return asArray(value)
 			.map(mdy => new Intl.Locale(mdy))
-			.map(mdy => ({ locale: mdy.baseName, timeZones: mdy.getTimeZones() ?? [] }))
+			.map(mdy => ({ locale: mdy.baseName, timeZones: (mdy as any).getTimeZones?.() ?? [] }))
 	}
 
 	/** build RegExp patterns */
