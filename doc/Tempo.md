@@ -2,6 +2,9 @@
 
 `Tempo` is a modern JavaScript utility class designed to simplify work with dates and times by wrapping the `Temporal` API.
 
+This project came about due to the need for a simple, yet powerful, way to parse (and manipulate) dates and times in JavaScript.
+`Date.parse()` is not a good solution, as it is not locale-aware, does not handle relative strings well, does not handle time zones well, and is not implemented in a standard way across all JavaScript runtimes.
+
 ## Table of Contents
 1. [Installation](#installation)
 2. [Parsing](#parsing)
@@ -34,6 +37,9 @@ npm install @js-temporal/polyfill
 - **Relative Strings**: `next Monday`, `last Friday`, `2 days ago`
 - **Numbers/BigInt**: Unix timestamps in milliseconds or nanoseconds
 - **Temporal Objects**: `ZonedDateTime`, `PlainDate`, etc.
+
+This project came about due to the need for a simple, yet powerful, way to parse and manipulate dates and times in JavaScript.
+`Date.parse()` is not a good solution, as it is not locale-aware, does not handle relative strings well, does not handle time zones well, and is not implemented in a standard way across all JavaScript runtimes.
 
 ### Snippets & Layouts
 The parsing engine uses a library of RegEx patterns.

@@ -1,8 +1,7 @@
-import { patBigInt } from '#core/shared/regexp.library.js';
 import { clone, stringify } from '#core/shared/serialize.library.js';
-import { isArrayLike, isDefined, isInteger, isIterable, isNullish, isString, isUndefined, asType } from '#core/shared/type.library.js';
+import { isIntegerLike, isArrayLike, isDefined, isInteger, isIterable, isNullish, isString, isUndefined, asType } from '#core/shared/type.library.js';
 
-/** Coerce {value} into {Array<value>} ( if not already Array<> ), with optional {fill} Object */
+/** Coerce {value} into {value[]} ( if not already ), with optional {fill} Object */
 export function asArray<T>(arr: Exclude<ArrayLike<T>, string> | undefined): T[];
 export function asArray<T>(arr: T | Exclude<Iterable<T> | undefined, string>): NonNullable<T>[];
 export function asArray<T, K>(arr: Iterable<T> | ArrayLike<T>, fill: K): K[];
@@ -46,7 +45,7 @@ export function asInteger<T extends string | number | bigint>(str?: T) {
     case 'Number':
       return BigInt(Math.trunc(arg.value));									// cast as BigInt
     case 'String':
-      return patBigInt.test(arg.value)											// String representation of a BigInt
+      return isIntegerLike(arg.value)											  // String representation of a BigInt
         ? BigInt(arg.value.slice(0, -1))										// get rid of trailing 'n'
         : BigInt(arg.value);
     default:
@@ -64,7 +63,7 @@ export function isNumeric(str?: string | number | bigint) {
       return true;
 
     case 'String':
-      return patBigInt.test(arg.value)
+      return isIntegerLike(arg.value)
         ? true																							// is Number | BigInt
         : !isNaN(asNumber(str)) && isFinite(str as number)	// test if Number
 
@@ -79,7 +78,7 @@ export const ifNumeric = (str?: string | number | bigint, stripZero = false) => 
     case isInteger(str):																		// bigint
       return str;
 
-    case isString(str) && /^[0-9]+n$/.test(str):						// string representation of a BigInt
+    case isString(str) && isIntegerLike(str):						    // string representation of a BigInt
       return asInteger(str);
 
     case isNumeric(str) && (!str?.toString().startsWith('0') || stripZero):
