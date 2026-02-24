@@ -36,8 +36,8 @@ Keywords can be used for more natural language-like inputs.
 | `prev` | Previous week | `prev Fri` |
 | `last` | Last week | `last Sunday` |
 
-### 4. Indexed Modifiers
-You can specify a number of weeks to jump by adding a digit before or after the modifier.
+### 4. Count Modifiers
+You can specify a number of weeks to jump by adding a count after the modifier.
 - `-3Wed`: Three Wednesdays ago
 - `+2Mon`: Two Mondays from now
 

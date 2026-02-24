@@ -44,7 +44,8 @@ You can extend these patterns globally via `Tempo.init()` or per instance.
 ```typescript
 Tempo.init({
   event: {
-    birthday: function() { return '20-May'; }
+    'birthday': '20 May',
+    'tomorrow': () => Temporal.Now.plainDateISO().add({ days: 1 }),
   }
 });
 ```
@@ -60,26 +61,26 @@ Formatting uses a placeholder syntax similar to many template engines:
 | Placeholder | Description | Example |
 | :--- | :--- | :--- |
 | `yyyy` | 4-digit year | `2024` |
-| `yy` | 2-digit year (alias for `yyyy`) | `24` |
+| `yy` | 2-digit year | `24` |
 | `mm` | 2-digit month | `05` |
-| `mon` | Long month name | `May` |
-| `mmm` | Short month name | `May` |
+| `mon` | Full month name | `June` |
+| `mmm` | Short month name | `Jun` |
 | `dd` | 2-digit day | `20` |
 | `day` | Day of month (numeric) | `20` |
-| `www` | Short weekday name | `Mon` |
 | `wkd` | Full weekday name | `Monday` |
+| `www` | Short weekday name | `Mon` |
 | `dow` | Day of week (1-7) | `1` |
 | `ww` | Week of year | `21` |
 | `hh` | 24-hour hour | `14` |
-| `HH` | 12-hour hour (with Meridiem) | `02PM` |
+| `HH` | 12-hour hour (with meridiem) | `02pm` |
 | `mi` | Minutes | `05` |
 | `ss` | Seconds | `05` |
 | `ms` | Milliseconds | `005` |
 | `us` | Microseconds | `000` |
 | `ns` | Nanoseconds | `000` |
 | `ff` | Fractional seconds (9-digits) | `005000000` |
-| `f2` | Fractional seconds (alias) | `005000000` |
 | `ts` | Unix timestamp | `1716163200000` |
+| `#{term}` | Term value | eg. #{qtr} returns the current quarter as Q1, Q2, Q3 or Q4 |
 
 Example:
 ```typescript
@@ -120,7 +121,7 @@ t.since('yesterday'); // "1 day ago"
 ```
 
 ### `compare(t1, t2)`
-Static method to compare a `Tempo` instance as before, or same-as, or after a second `Tempo` instance
+Static method to compare a `Tempo` instance as "before" (-1), "same-as" (0), or "after" (1) a second `Tempo` instance
 ```typescript
 Tempo.compare(t1, t2); // -1, 0, or 1
 ```
