@@ -1,10 +1,14 @@
-# Custom Layout Patterns
+# Custom Patterns
 
-`Tempo` uses a powerful, template-based parsing engine. While it comes with several built-in layouts for standard date and time formats, you can easily define your own to support custom string patterns.
+`Tempo` will create a Regular Expression from a **Layout** string.  It will use these patterns to attempt to match and extract date-time values from an input-string.
+
+## What is a Snippet?
+
+A **Snippet** is a pre-defined regexp pattern that can be combined with other snippets to create a **Layout**.
 
 ## What is a Layout?
 
-A **Layout** is a string that combines pre-defined **Snippets** and strings into a pattern. When you provide a layout to `Tempo`, it is translated into an anchored, case-insensitive Regular Expression used to match and extract date-time values.
+A **Layout** is a string that combines pre-defined **Snippets** and strings. When you provide a layout to `Tempo`, it is translated into an anchored, case-insensitive Regular Expression used to match and extract date-time values.
 
 ## Available Snippets
 
@@ -66,11 +70,12 @@ If you have a string like `20240520`, your layout could be:
 
 ### Example: `MMM-DD-YYYY`
 For a string like `May-20-2024`, your layout could be:
-`{mm}{sep}?{dd}{sep}?{yy}`
+`{mm}{sep}?{dd}{sep}?{yy}`  or `{dd}{sep}?{mm}{sep}?{yy}`
+Either layout will match the string, as Tempo is timeZone-aware and will attempt to use whichever pattern returns a result.
 
 ## Using Custom Layouts
 
-You can register custom layouts globally or use them for a specific instance.
+You can register custom layouts globally or use them just for a specific instance.
 
 ### Global Registration
 
@@ -80,8 +85,6 @@ Use `Tempo.init()` to add layouts that should be available to all new instances.
 > It is used internally-only to identify the layout when parsing a string.
 
 ```typescript
-import { Tempo } from '@magmacomputing/tempo';
-
 Tempo.init({
   layout: {
     'myCustomFormat': '{dd}{sep}?{mm}{sep}?{yy}'
