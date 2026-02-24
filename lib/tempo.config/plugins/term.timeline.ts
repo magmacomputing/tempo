@@ -8,7 +8,7 @@ const ranges = [
   { key: 'morning', hour: 8 },
   { key: 'midmorning', hour: 10 },
   { key: 'midday', hour: 12 },
-  { key: 'afternoon', hour: 15 },
+  { key: 'afternoon', hour: 15, minute: 30 },
   { key: 'evening', hour: 18 },
   { key: 'night', hour: 20 },
 ] as Range[]

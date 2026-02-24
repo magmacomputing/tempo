@@ -1,67 +1,9 @@
-import { asArray } from '#core/shared/array.library.js';
-import { patBigInt } from '#core/shared/regexp.library.js';
-import { asType, isInteger, isString } from '#core/shared/type.library.js';
+import { asArray, asNumber, ifNumeric } from '#core/shared/coercion.library.js';
 import type { TValues } from '#core/shared/type.library.js';
 
 
 /** convert String | Number | BigInt to Number */
-export function asNumber(str?: string | number | bigint) {
-	return parseFloat(str?.toString() ?? 'NaN');
-}
-
-/** convert String | Number to BigInt */
-export function asInteger<T extends string | number | bigint>(str?: T) {
-	const arg = asType(str);
-
-	switch (arg.type) {
-		case 'BigInt':
-			return arg.value;																			// already a BigInt
-		case 'Number':
-			return BigInt(Math.trunc(arg.value));									// cast as BigInt
-		case 'String':
-			return patBigInt.test(arg.value)											// String representation of a BigInt
-				? BigInt(arg.value.slice(0, -1))										// get rid of trailing 'n'
-				: BigInt(arg.value);
-		default:
-			return str as Exclude<T, string | number>;
-	}
-}
-
-/** test if can convert String to Numeric */
-export function isNumeric(str?: string | number | bigint) {
-	const arg = asType(str);
-
-	switch (arg.type) {
-		case 'Number':
-		case 'BigInt':
-			return true;
-
-		case 'String':
-			return patBigInt.test(arg.value)
-				? true																							// is Number | BigInt
-				: !isNaN(asNumber(str)) && isFinite(str as number)	// test if Number
-
-		default:
-			return false;
-	}
-}
-
-/** return as Number if possible, else String */
-export const ifNumeric = (str?: string | number | bigint, stripZero = false) => {
-	switch (true) {
-		case isInteger(str):																		// bigint
-			return str;
-
-		case isString(str) && /^[0-9]+n$/.test(str):						// string representation of a BigInt
-			return asInteger(str);
-
-		case isNumeric(str) && (!str?.toString().startsWith('0') || stripZero):
-			return asNumber(str);
-
-		default:
-			return str;
-	}
-}
+export { asNumber, asInteger, isNumeric, ifNumeric } from '#core/shared/coercion.library.js';
 
 /** show Hex value of a number */
 export const toHex = (num: TValues<number> = [], len?: number) =>

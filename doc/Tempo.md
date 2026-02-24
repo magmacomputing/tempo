@@ -15,12 +15,13 @@
 ## Installation
 
 ```bash
-npm install @js-temporal/polyfill
-npm install @magma/tempo
+npm install @magmacomputing/tempo
 ```
 
 `Tempo` requires a `Temporal` polyfill if your environment does not yet support it natively.
-
+```bash
+npm install @js-temporal/polyfill
+```
 ---
 
 ## Parsing
@@ -30,14 +31,25 @@ npm install @magma/tempo
 - **ISO Strings**: `2024-05-20T10:00:00Z`
 - **Short Dates**: `20-May`, `May 20` (locale-aware)
 - **Relative Strings**: `next Monday`, `last Friday`
+- **Relative Strings**: `next Monday`, `last Friday`, `2 days ago`
 - **Numbers/BigInt**: Unix timestamps in milliseconds or nanoseconds
 - **Temporal Objects**: `ZonedDateTime`, `PlainDate`, etc.
 
-### Patterns & Layouts
-The parsing engine uses a library of RegEx patterns. You can extend these patterns globally via `Tempo.init()` or per instance.
+### Snippets & Layouts
+The parsing engine uses a library of RegEx patterns.
+You can extend these patterns globally via `Tempo.init()` or per instance.
 
-- [Layout Patterns Guide](file:///home/michael/Project/tempo/doc/tempo.layout.md): Details on creating custom parsing patterns.
-- [Weekday Parsing Guide](file:///home/michael/Project/tempo/doc/tempo.weekday.md): Details on how relative weekday strings are interpreted.
+`Tempo` also supports **Event** and **Period** aliases. These can be simple strings or functions that return a value to be parsed. When using functions, ensure you use the `function` keyword to maintain proper `this` binding to the `Tempo` instance.
+
+```typescript
+Tempo.init({
+  event: {
+    birthday: function() { return '20-May'; }
+  }
+});
+```
+
+- [Layout Patterns Guide](file:///home/michael/Project/tempo/doc/tempo.layout.md): Details on creating custom parsing patterns and using relative units.
 
 ---
 
@@ -108,7 +120,7 @@ t.since('yesterday'); // "1 day ago"
 ```
 
 ### `compare(t1, t2)`
-Static method to compare two `Tempo` instances.
+Static method to compare a `Tempo` instance as before, or same-as, or after a second `Tempo` instance
 ```typescript
 Tempo.compare(t1, t2); // -1, 0, or 1
 ```

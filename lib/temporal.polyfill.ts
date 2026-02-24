@@ -2,7 +2,7 @@
  * This file is used to polyfill the Temporal API for environments that do not support it.
  * It is not needed in environments that support the Temporal API.
  * 
- * The polyfill import is only needed in the 'whiteLibrary' and 'whiteSheet' projects.
+ * The polyfill import is only needed in the 'coinSpot' and 'whiteSheet' projects.
  * 
  * node example:  npx tsx --import ./lib/temporal.polyfill.ts --env-file=.env ./src/wallet.ts
  */

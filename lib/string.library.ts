@@ -1,6 +1,6 @@
+import { asNumber, asString, isNumeric } from '#core/shared/coercion.library.js';
 import { stringify } from '#core/shared/serialize.library.js';
-import { asNumber, isNumeric } from '#core/shared/number.library.js';
-import { isString, isObject, isNullish, assertCondition, assertString, nullToValue, isInteger } from '#core/shared/type.library.js';
+import { isString, isObject, assertCondition, assertString, nullToValue } from '#core/shared/type.library.js';
 
 // General <string> functions
 
@@ -101,7 +101,8 @@ export const makeTemplate = (templateString: Object) =>
 		new Function(`{${Object.keys(templateData).join(',')}}`, 'return `' + templateString + '`')(templateData);
 
 /** stringify if not nullish */
-export function asString<T>(str?: T) { return isNullish(str) ? '' : isInteger(str) ? str.toString() + 'n' : stringify(str); }
+export { asString } from '#core/shared/coercion.library.js';
+
 export const toLower = <T>(str: T) => isString(str) ? asString(str).toLowerCase().trim() : str;
 export const toUpper = <T>(str: T) => isString(str) ? asString(str).toUpperCase().trim() : str;
 
