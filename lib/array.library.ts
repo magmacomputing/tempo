@@ -5,7 +5,7 @@ import { stringify } from '#core/shared/serialize.library.js';
 import { isNumber, isDate, isTempo, isObject, isDefined, isUndefined, isFunction, nullToValue } from '#core/shared/type.library.js';
 import type { Property } from '#core/shared/type.library.js';
 
-/** Coerce {value} into {Array\<value>} ( if not already Array<> ), with optional {fill} Object */
+/** Coerce {value} into {value[]} ( if not already ), with optional {fill} Object */
 export { asArray } from '#core/shared/coercion.library.js';
 
 // adapted from https://jsbin.com/insert/4/edit?js,output

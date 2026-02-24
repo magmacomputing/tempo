@@ -44,6 +44,7 @@ export const isIterable = <T>(obj: unknown): obj is Iterable<T> => Symbol.iterat
 export const isString = <T>(obj?: T): obj is Extract<T, string> => isType(obj, 'String');
 export const isNumber = <T>(obj?: T): obj is Extract<T, number> => isType(obj, 'Number');
 export const isInteger = <T>(obj?: T): obj is Extract<T, bigint> => isType(obj, 'BigInt');
+export const isIntegerLike = <T>(obj?: T): obj is Extract<T, string> => isType(obj, 'String') && /^-?\d+$/.test(obj as string);
 export const isDigit = <T>(obj?: T): obj is Extract<T, number | bigint> => isType(obj, 'Number', 'BigInt');
 export const isBoolean = <T>(obj?: T): obj is Extract<T, boolean> => isType(obj, 'Boolean');
 export const isArray = <T>(obj: unknown): obj is T[] => isType(obj, 'Array');
@@ -51,6 +52,7 @@ export const isArrayLike = <T>(obj: any): obj is ArrayLike<T> => protoType(obj) 
 export const isObject = <T>(obj?: T): obj is Extract<T, object> => isType(obj, 'Object');
 export const isDate = <T>(obj?: T): obj is Extract<T, Date> => isType(obj, 'Date');
 export const isRegExp = <T>(obj?: T): obj is Extract<T, RegExp> => isType(obj, 'RegExp');
+export const isRegExpLike = <T>(obj?: T): obj is Extract<T, string> => isType(obj, 'String') && /^\/.*\/$/.test(obj as string);
 export const isSymbol = <T>(obj?: T): obj is Extract<T, symbol> => isType(obj, 'Symbol');
 export const isSymbolFor = <T>(obj?: T): obj is Extract<T, symbol> => isType<symbol>(obj, 'Symbol') && Symbol.keyFor(obj) !== void 0;
 export const isPropertyKey = (obj?: unknown): obj is PropertyKey => isType<PropertyKey>(obj, 'String', 'Number', 'Symbol');
@@ -109,8 +111,9 @@ export type Property<T> = Record<PropertyKey, T>
 export type Obj = Property<any> | Array<any>
 
 type WellKnownSymbols = { [K in keyof SymbolConstructor]: SymbolConstructor[K] extends symbol ? SymbolConstructor[K] : never }[keyof SymbolConstructor]
+
 type SafeCount<T, Acc extends any[] = [], Last = LastInUnion<T>> =
-	Acc['length'] extends 48 ? number :												// limit of recursive depth
+	Acc['length'] extends 1000 ? number :											// limit of recursive depth
 	[T] extends [never] ? Acc['length'] :
 	SafeCount<Exclude<T, Last>, [...Acc, any]>
 
@@ -351,11 +354,14 @@ type LastInUnion<U> = UnionToIntersection<U extends unknown ? (x: U) => 0 : neve
 	? L
 	: never
 
-// Note:  Avoid using this type in production code, if the Union is >50 elements
-// Usage: UnionToTuple<A | B> = [A, B]
-type UnionToTuple<T, Last = LastInUnion<T>> = [T] extends [never]
-	? []
-	: [...UnionToTuple<Exclude<T, Last>>, Last]
+/**
+ * convert a Union to a Tuple.  
+ * usage: UnionToTuple<A | B> = [A, B]
+ */
+export type UnionToTuple<T, Acc extends any[] = [], Last = LastInUnion<T>> =
+	Acc['length'] extends 1000 ? T[] :												// limit of recursive depth
+	[T] extends [never] ? Acc :
+	UnionToTuple<Exclude<T, Last>, [Last, ...Acc]>
 
 /** Deep Readonly object for type safety */
 export type Secure<T> = T extends (infer R)[]

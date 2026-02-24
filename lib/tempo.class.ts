@@ -11,8 +11,8 @@ import { getStorage, setStorage } from '#core/shared/storage.library.js';
 import { ownKeys, ownEntries, getAccessors } from '#core/shared/reflection.library.js';
 import { getContext, CONTEXT } from '#core/shared/utility.library.js';
 import { asInteger, isNumeric, ifNumeric } from '#core/shared/number.library.js';
-import { asString, pad, singular, toProperCase, trimAll } from '#core/shared/string.library.js';
-import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isSymbol, isFunction } from '#core/shared/type.library.js';
+import { pad, singular, toProperCase, trimAll } from '#core/shared/string.library.js';
+import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction } from '#core/shared/type.library.js';
 import type { IntRange, NonOptional, Property, Type } from '#core/shared/type.library.js';
 
 import * as enums from '#core/shared/tempo.config/tempo.enum.js';
@@ -508,7 +508,7 @@ export class Tempo {
 		function matcher(str: string | RegExp): string {
 			let source = isRegExp(str) ? str.source : str;
 
-			if (isDefined(source.match(Match.regexp)))						// string that looks like a RegExp
+			if (isRegExpLike(source))															// string that looks like a RegExp
 				source = source.substring(1, source.length - 1);		// remove the leading/trailing "/"
 			if (source.startsWith('^') && source.endsWith('$'))
 				source = source.substring(1, source.length - 1);		// remove the leading/trailing anchors (^ $)
@@ -948,7 +948,7 @@ export class Tempo {
 				this.#local.parse.result.match = 'Empty';						// matched an empty-String
 				return Object.assign(arg, { type: 'Empty' });
 			}
-			if (value.match(Match.bigint)) {											// if string representation of BigInt literal
+			if (isIntegerLike(value)) {														// if string representation of BigInt literal
 				this.#local.parse.result.match = 'BigInt';					// matched a bigint-String
 				return Object.assign(arg, { type: 'BigInt', value: asInteger(value) });
 			}

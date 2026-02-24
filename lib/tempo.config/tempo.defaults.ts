@@ -1,4 +1,3 @@
-import { patBigInt, patRegExp } from '#core/shared/regexp.library.js';
 import { looseIndex } from '#core/shared/object.library.js';
 import type { Tempo } from '#core/shared/tempo.class.js';
 
@@ -6,8 +5,6 @@ import type { Tempo } from '#core/shared/tempo.class.js';
 
 /** common RegExp patterns */
 export const Match = {
-	/** string that looks like a BigInt */										bigint: patBigInt,
-	/** string that looks like a RegExp */										regexp: patRegExp,
 	/** match all {} pairs, if they start with a letter */		braces: /{([a-zA-Z][\w]*)}/g,
 	/** named capture-group, if it starts with a letter */		captures: /\(\?<([a-zA-Z][\w]*)>(.*?)(?<!\\)\)/g,
 	/** event */																							event: /^(g|l)evt[0-9]+$/,

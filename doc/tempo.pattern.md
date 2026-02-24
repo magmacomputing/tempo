@@ -1,6 +1,6 @@
 # Custom Patterns
 
-`Tempo` will create a Regular Expression from a **Layout** string.  It will use these patterns to attempt to match and extract date-time values from an input-string.
+`Tempo` will create a Regular Expressions from **Layout** strings.  It will use these patterns to attempt to match and extract date-time values from an input-string.
 
 ## What is a Snippet?
 
