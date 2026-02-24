@@ -35,7 +35,6 @@ Keywords can be used for more natural language-like inputs.
 | `next` | Next week | `next Monday` |
 | `prev` | Previous week | `prev Fri` |
 | `last` | Last week | `last Sunday` |
-| `first` | First occurrence | `first Mon` |
 
 ### 4. Indexed Modifiers
 You can specify a number of weeks to jump by adding a digit before or after the modifier.

@@ -30,10 +30,6 @@ export default [																						// export to Tempo class
  *   
  * 2) a function which determines where a Tempo instance fits within the above range array.  
  * this function is assigned to a getter on the 'term' property for each new Tempo instance.  
- * 
- * I did consider using 'import()', but that would introduce a Promise-based set of plugins  
- * that would require a .then() to access the values.  
- * But, I would prefer to keep this synchronous, and lazy-loaded.  
  *   
  * The 'export default' is an object that stashes the plugin definitions.
  * Tempo will use this object to define getter properties on each instance (under the 'term' property).  

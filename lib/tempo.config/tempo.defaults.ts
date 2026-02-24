@@ -8,15 +8,16 @@ import type { Tempo } from '#core/shared/tempo.class.js';
 export const Match = {
 	/** string that looks like a BigInt */										bigint: patBigInt,
 	/** string that looks like a RegExp */										regexp: patRegExp,
-	/** match all {} pairs */																	braces: /{([\w]+)}/g,
-	/** named capture-group */																captures: /\(\?<([\w]+)>(.*?)(?<!\\)\)/g,
+	/** match all {} pairs, if they start with a letter */		braces: /{([a-zA-Z][\w]*)}/g,
+	/** named capture-group, if it starts with a letter */		captures: /\(\?<([a-zA-Z][\w]*)>(.*?)(?<!\\)\)/g,
 	/** event */																							event: /^(g|l)evt[0-9]+$/,
 	/** period */																							period: /^(g|l)per[0-9]+$/,
 	/** two digit year */																			twoDigit: /^[0-9]{2}$/,
 	/** hour-minute-second with no separator */								hhmiss: /(hh)(m[i|m])(ss)?/i,
 	/** separator characters (/ - . ,) */											separator: /[\/\-\.\s,]/,
-	/** modifier characters (+-<>=) */												modifier: /[\+\-\<\>][\=]?|this|next|prev|first|last/,
-	/** post offset keywords (ago|hence) */										offset: /ago|hence/,
+	/** modifier characters (+-<>=) */												modifier: /[\+\-\<\>][\=]?|this|next|prev|last/,
+	/** offset post keywords (ago|hence) */										affix: /ago|hence/,
+	/** recent dates */																				recent: /(now|today|yesterday|tomorrow)/,
 } as const
 
 /** Tempo Symbol registry */
@@ -31,13 +32,15 @@ export const Token = looseIndex<string, symbol>()({
 	/** fraction */																						ff: Symbol('ff'),
 	/** meridiem */																						mer: Symbol('mer'),
 	/** short weekday name */																	www: Symbol('www'),
-	/** weekday-suffix */																			afx: Symbol('afx'),
+	/** relative-suffix */																		afx: Symbol('afx'),
 	/** time-suffix */																				sfx: Symbol('sfx'),
+	/** time unit */																					unt: Symbol('unt'),
 	/** separator */																					sep: Symbol('sep'),
 	/** modifier */																						mod: Symbol('mod'),
-	/** time zone offset */																		tzd: Symbol('tzd'),
+	/** generic number */																			nbr: Symbol('nbr'),
 	/** Tempo event */																				evt: Symbol('evt'),
 	/** Tempo period */																				per: Symbol('per'),
+	/** time zone offset */																		tzd: Symbol('tzd'),
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Layout Symbols
 	/** date */																								dt: Symbol('date'),
 	/** time */																								tm: Symbol('time'),
@@ -46,6 +49,8 @@ export const Token = looseIndex<string, symbol>()({
 	/** month-day-year */																			mdy: Symbol('monthDayYear'),
 	/** year-month-day */																			ymd: Symbol('yearMonthDay'),
 	/** weekDay */																						wkd: Symbol('weekDay'),
+	/** recent date (yesterday, tomorrow, today)*/						rdt: Symbol('recentDate'),
+	/** relative offset (years, days, hours, etc) */					rel: Symbol('relativeOffset'),
 })
 export type Token = typeof Token
 
@@ -60,7 +65,7 @@ export type Token = typeof Token
 /**
  * a {snippet} is a simple, reusable regex pattern for a component of a date-time string (e.g. 'hh' or 'yy')  
  */
-// Note: computed Components ('dt', 'tm', 'evt', 'per') are added during 'Tempo.init()' (for static) and/or 'new Tempo()' (per instance)
+// Note: computed Components ('evt', 'per') are added during 'Tempo.init()' (for static) and/or 'new Tempo()' (per instance)
 export const Snippet = looseIndex<symbol, RegExp>()({
 	[Token.yy]: /(?<yy>([0-9]{2})?[0-9]{2})/,									// arbitrary upper-limit of yy=9999
 	[Token.mm]: /(?<mm>[0\s]?[1-9]|1[0-2]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/,	// month-name (abbrev or full) or month-number 01-12
@@ -70,12 +75,14 @@ export const Snippet = looseIndex<symbol, RegExp>()({
 	[Token.ss]: /(\:(?<ss>[0-5][0-9]))/,											// seconds-number 00-59
 	[Token.ff]: /(\.(?<ff>[0-9]{1,9}))/,											// fractional-seconds up-to 9-digits
 	[Token.mer]: /(\s*(?<mer>am|pm))/,												// meridiem suffix (am,pm)
-	[Token.sfx]: /((?:{sep}+|T)({tm}))/,											// time-pattern suffix 'T {tm}'
+	[Token.sfx]: /((?:{sep}+|T)({tm}){tzd}?)/,											// time-pattern suffix 'T {tm} Z'
 	[Token.wkd]: /(?<wkd>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)/,	// day-name (abbrev or full)
 	[Token.tzd]: /(?<tzd>Z|(?:\+(?:(?:0[0-9]|1[0-3]):?[0-5][0-9]|14:00)|-(?:(?:0[0-9]|1[0-1]):?[0-5][0-9]|12:00)))/,// time-zone offset	+14:00 to -12:00
-	[Token.afx]: new RegExp(`((s)? (?<afx>${Match.offset.source}))?{sep}?`),														// affix optional plural 's' and (ago|hence)
-	[Token.mod]: new RegExp(`((?<mod>${Match.modifier.source})?(?<cnt>[0-9]*) *)`),											// modifier (+,-,<,<=,>,>=) plus optional offset-count
+	[Token.nbr]: /(?<nbr>[0-9]*)/,														// modifier count
+	[Token.afx]: new RegExp(`((s)? (?<afx>${Match.affix.source}))?{sep}?`),	// affix optional plural 's' and (ago|hence)
+	[Token.mod]: new RegExp(`((?<mod>${Match.modifier.source})?{nbr} *)`),		// modifier (+,-,<,<=,>,>=) plus optional offset-count
 	[Token.sep]: new RegExp(`(?:${Match.separator.source})`),	// date-input separator character "/\\-., " (non-capture group)
+	[Token.unt]: /(?<unt>year|month|week|day|hour|minute|second|millisecond)(?:s)?/,	// useful for '2 days ago' etc
 })
 export type Snippet = typeof Snippet
 
@@ -90,14 +97,19 @@ export const Layout = looseIndex<symbol, string>()({
 	[Token.dmy]: '({wkd}{sep}+)?{dd}{sep}?{mm}({sep}?{yy})?{sfx}?',		// day-month(-year)
 	[Token.mdy]: '({wkd}{sep}+)?{mm}{sep}?{dd}({sep}?{yy})?{sfx}?',		// month-day(-year)
 	[Token.ymd]: '({wkd}{sep}+)?{yy}{sep}?{mm}({sep}?{dd})?{sfx}?',		// year-month(-day)
-	[Token.evt]: '{evt}',																			// event component only
-	[Token.per]: '{per}',																			// period component only
 	[Token.wkd]: '{mod}?{wkd}{afx}?{sfx}?',										// special layout (no {dt}!) used for weekday calcs (only one that requires {wkd} pattern)
+	[Token.rdt]: '(?<rdt>yesterday|tomorrow|today){sfx}?',		// recent date (no {dt}!) used for recent date calcs (only one that requires {rdt} pattern)
+	[Token.off]: '{mod}?{dd}{afx}?',													// day of month
+	[Token.rel]: '{nbr}{sep}?{unt}{sep}?{afx}',								// relative duration (e.g. 2 days ago)
 })
 export type Layout = typeof Layout
 
-/** an {event} is a Record of regex-pattern-like keys that describe pre-defined Date strings */
-export const Event = looseIndex<string, string>()({
+/** 
+ * an {event} is a Record of regex-pattern-like-string keys that describe Date strings.
+ * values can be a string or a function. 
+ * if using a function, use regular 'function()' syntax to allow for 'this' binding.
+ */
+export const Event = looseIndex<string, string | Function>()({
 	'new.?years? ?eve': '31 Dec',
 	'nye': '31 Dec',
 	'new.?years?( ?day)?': '01 Jan',
@@ -106,11 +118,19 @@ export const Event = looseIndex<string, string>()({
 	'christmas': '25 Dec',
 	'xmas ?eve': '24 Dec',
 	'xmas': '25 Dec',
+	'now': () => Temporal.Now.instant(),
+	'today': () => Temporal.Now.plainDateISO(),
+	'tomorrow': () => Temporal.Now.plainDateISO().add({ days: 1 }),
+	'yesterday': () => Temporal.Now.plainDateISO().add({ days: -1 }),
 })
 export type Event = typeof Event
 
-/** a {period} is a Record of regex-pattern-like keys that describe pre-defined Time strings */
-export const Period = looseIndex<string, string>()({
+/** 
+ * a {period} is a Record of regex-pattern-like keys that describe pre-defined Time strings.
+ * values can be a string or a function.
+ * if using a function, use regular 'function()' syntax to allow for 'this' binding.
+ */
+export const Period = looseIndex<string, string | Function>()({
 	'mid[ -]?night': '24:00',
 	'morning': '8:00',
 	'mid[ -]?morning': '10:00',

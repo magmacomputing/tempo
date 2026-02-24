@@ -1,29 +1,12 @@
-import { asString } from '#core/shared/string.library.js';
+import { asString } from '#core/shared/coercion.library.js';
 import { extract } from '#core/shared/object.library.js';
 import { ownEntries } from '#core/shared/reflection.library.js';
-import { clone, stringify } from '#core/shared/serialize.library.js';
-import { isNumber, isDate, isTempo, isIterable, isString, isObject, isDefined, isUndefined, isArrayLike, isFunction, nullToValue } from '#core/shared/type.library.js';
+import { stringify } from '#core/shared/serialize.library.js';
+import { isNumber, isDate, isTempo, isObject, isDefined, isUndefined, isFunction, nullToValue } from '#core/shared/type.library.js';
 import type { Property } from '#core/shared/type.library.js';
 
 /** Coerce {value} into {Array\<value>} ( if not already Array<> ), with optional {fill} Object */
-export function asArray<T>(arr: Exclude<ArrayLike<T>, string> | undefined): T[];
-export function asArray<T>(arr: T | Exclude<Iterable<T> | undefined, string>): NonNullable<T>[];
-export function asArray<T, K>(arr: Iterable<T> | ArrayLike<T>, fill: K): K[];
-export function asArray<T, K>(arr: T | Iterable<T> | ArrayLike<T> = [], fill?: K): (T | K)[] {
-	switch (true) {
-		case isArrayLike<T>(arr):																// allow for {length:nn} objects
-		case isIterable<T>(arr) && !isString(arr):							// dont iterate Strings
-
-			return Array.from<T, K>(arr, val => {
-				return isUndefined(fill) || isDefined(val)
-					? val as unknown as K															// if no {fill}, then use {val}
-					: clone(fill)																			// clone {fill} to create new Objects
-			});
-
-		default:
-			return Array.of(arr);
-	}
-}
+export { asArray } from '#core/shared/coercion.library.js';
 
 // adapted from https://jsbin.com/insert/4/edit?js,output
 /** insert a value into an Array by its sorted position */

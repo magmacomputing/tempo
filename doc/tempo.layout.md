@@ -24,6 +24,8 @@ Components are placeholders wrapped in curly braces `{}`. They represent specifi
 | `{mer}` | Meridiem (AM/PM) | `am` or `pm` |
 | `{sep}` | Separator character | `/`, `-`, `.`, `,`, or ` ` |
 | `{mod}` | Modifier and optional count | `+`, `-`, `<`, `>`, `next`, `prev`, etc. |
+| `{nbr}` | Generic number (e.g., for counts) | `\d*` |
+| `{unt}` | Time units (year, month, week, etc.) | `year(s)`, `day(s)`, etc. |
 | `{afx}` | Affix modifier | `ago` or `hence` |
 | `{sfx}` | Time suffix | Matches `T` or a space followed by a time pattern |
 
@@ -46,6 +48,8 @@ Some components are built from others:
 | `dmy` | `{www}?{dd}{sep}?{mm}({sep}{yy})?{sfx}?` | Day-month(-year) |
 | `mdy` | `{www}?{mm}{sep}?{dd}({sep}{yy})?{sfx}?` | Month-day(-year) |
 | `ymd` | `{www}?{yy}{sep}?{mm}({sep}{dd})?{sfx}?` | Year-month(-day) |
+| `rdt` | `yesterday`, `tomorrow`, `today` | Recent date |
+| `unt` | `{nbr}{sep}?{unt}{sep}?{afx}` | Relative duration |
 | `evt` | `{evt}` | Event only |
 | `per` | `{per}` | Period only |
 
