@@ -20,6 +20,7 @@ import terms from '#core/shared/tempo.config/plugins/term.import.js';
 import { Match, Token, Snippet, Layout, Event, Period, Default } from '#core/shared/tempo.config/tempo.defaults.js';
 
 import '#core/shared/prototype.library.js';									// patch prototype
+import { define } from './tempo.config/plugins/term.quarter.js';
 
 // #endregion
 
@@ -678,8 +679,8 @@ export class Tempo {
 
 			terms																									// add the plug-in getters for the pre-defined Terms to the instance
 				.forEach(({ key, scope, define }) => {							// under 'Tempo.term' getter
-					this.#setTerm(this, key, true, define);						// add a getter which returns the key-field only
-					this.#setTerm(this, scope, false, define);				// add a getter which returns a object
+					this.#setTerm(this, key, define, true);						// add a getter which returns the key-field only
+					this.#setTerm(this, scope, define, false);				// add a getter which returns a range-object
 				})
 		} catch (err) {
 			Tempo.#dbg.catch(this.config, `Cannot create Tempo: ${(err as Error).message}\n${(err as Error).stack}`);
@@ -689,7 +690,7 @@ export class Tempo {
 
 	// This function has be defined within the Tempo class (and not imported from another module) because it references a private-variable
 	/** this will add the self-updating {getter} on the Tempo.term object */
-	#setTerm(self: Tempo, name: PropertyKey, keyOnly = true, define: (this: any, key?: boolean) => any) {
+	#setTerm(self: Tempo, name: PropertyKey, define: (this: any, key?: boolean) => any, isKeyOnly: boolean) {
 		if (isDefined(name) && isDefined(define)) {
 			Object.defineProperty(self.#term, name, {
 				configurable: false,
@@ -703,7 +704,7 @@ export class Tempo {
 								Object.defineProperty(self.#term, prop, desc);
 						})
 
-					const value = define.call(self, keyOnly);					// evaluate the term range-lookup
+					const value = define.call(self, isKeyOnly);				// evaluate the term range-lookup
 					Object.defineProperty(self.#term, name, {					// re-add the property as a value instead of a getter
 						value,
 						configurable: false,
@@ -911,6 +912,7 @@ export class Tempo {
 
 		// we include {value} to allow for Tempo instances
 		return ownKeys(tempo)
+			.filter(isString)
 			.every(key => ['value', 'timeZoneId', 'calendarId', 'year', 'month', 'monthCode', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond', 'offset'].includes(key))							// if every key in tempo-object is included in this array
 	}
 
