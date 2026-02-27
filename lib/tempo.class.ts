@@ -232,130 +232,74 @@ export class Tempo {
 		shape.config ??= {} as Tempo.Config;
 		shape.parse ??= {} as Internal.Parse;
 
-		options
-			.forEach(option => {
-				if (!option) return;
-				ownEntries(option)
-					.forEach(([optKey, optVal]) => {
-						const arg = asType(optVal);
+		options.forEach(option => {
+			if (!option) return;
+			ownEntries(option).forEach(([optKey, optVal]) => {
+				const arg = asType(optVal);
 
-						switch (optKey) {
-							case 'snippet':
-								shape.parse["snippet"] ??= {};
-								const snip = shape.parse["snippet"];
+				/** helper to normalize snippet/layout options into the target object */
+				const collect = (target: Property<any>, value: any, convert: (v: any) => any) => {
+					const itm = asType(value);
+					target ??= {}
 
-								switch (arg.type) {
-									case 'Object':
-										ownEntries(arg.value as Snippet)
-											.forEach(([key, val]) => snip[Tempo.getSymbol(key)] = val);
-										break;
-									case 'String':
-										snip[Tempo.getSymbol()] = new RegExp(arg.value);
-										break;
-									case 'RegExp':
-										snip[Tempo.getSymbol()] = arg.value;
-										break;
-									case 'Array':
-										(arg.value as any[])
-											.forEach(elm => {
-												const itm = asType(elm);
-												switch (itm.type) {
-													case 'Object':
-														ownEntries(itm.value as Snippet)
-															.forEach(([key, val]) => snip[Tempo.getSymbol(key)] = val);
-														break;
-													case 'String':
-														snip[Tempo.getSymbol()] = new RegExp(itm.value);
-														break;
-													case 'RegExp':
-														snip[Tempo.getSymbol()] = itm.value;
-														break;
-												}
-											})
-										break;
-								}
-								break;
+					switch (itm.type) {
+						case 'Object':
+							ownEntries(itm.value as Property<any>)
+								.forEach(([k, v]) => target[Tempo.getSymbol(k)] = convert(v));
+							break;
+						case 'String':
+						case 'RegExp':
+							target[Tempo.getSymbol()] = convert(itm.value);
+							break;
+						case 'Array':
+							(itm.value as any[]).forEach(elm => collect(target, elm, convert));
+							break;
+					}
+				}
 
-							case 'layout':
-								shape.parse["layout"] ??= {};
-								const lay = shape.parse["layout"];						// reference to the layout-record
+				switch (optKey) {
+					case 'snippet':
+						collect(shape.parse.snippet, arg.value, v => isRegExp(v) ? v : new RegExp(v));
+						break;
 
-								switch (arg.type) {
-									case 'Object':															// add key-value pairs to Layout
-										ownEntries(arg.value as Layout)
-											.forEach(([key, val]) => Object.assign(lay, { [Tempo.getSymbol(key)]: val }));
-										break;
+					case 'layout':
+						collect(shape.parse.layout, arg.value, v => isRegExp(v) ? v.source : v);
+						break;
 
-									case 'String':															// add string with unique key to Layout
-										Object.assign(lay, { [Tempo.getSymbol()]: arg.value });
-										break;
+					case 'event':
+					case 'period':
+						shape.parse[optKey] ??= {} as any;
+						const rule = shape.parse[optKey];
 
-									case 'RegExp':															// add pattern with unique key to Layout
-										Object.assign(lay, { [Tempo.getSymbol()]: arg.value.source });
-										break;
+						asArray(arg.value as Event | Period)
+							.forEach(elm => ownEntries(elm).forEach(([key, val]) => rule[key] = val))
+						break;
 
-									case 'Array':
-										(arg.value as any[])											// could be Array of Object, String, RegExp
-											.forEach(elm => {
-												const itm = asType(elm);
-												switch (itm.type) {
-													case 'Object':
-														ownEntries(itm.value as Layout)
-															.forEach(([key, val]) => Object.assign(lay, { [Tempo.getSymbol(key)]: val }));
-														break;
-													case 'String':
-														Object.assign(lay, { [Tempo.getSymbol()]: itm.value });
-														break;
-													case 'RegExp':
-														Object.assign(lay, { [Tempo.getSymbol()]: itm.value.toString() });
-														break;
-												}
-											})
-										break;
+					case 'mdyLocales':
+						shape.parse[optKey] = Tempo.#mdyLocales(arg.value as NonNullable<Tempo.Options["mdyLocales"]>);
+						break;
 
-									default:
-										Tempo.#dbg.catch(shape.config, 'Unexpected type for "layout": ', arg.type);
-										break;
-								}
-								break;
+					case 'mdyLayouts':
+						shape.parse[optKey] = asArray(arg.value as NonNullable<Tempo.Options["mdyLayouts"]>);
+						break;
 
-							case 'event':
-							case 'period':
-								shape.parse[optKey] ??= {} as any;					// ensure the parse object exists
-								const rule = shape.parse[optKey];						// reference to the parse object
-
-								asArray(arg.value as Event | Period)
-									.forEach(elm => {
-										ownEntries(elm)
-											.forEach(([key, val]) => rule[key] = val);
-									})
-								break;
-
-							case 'mdyLocales':														// stash locales that prefer 'mm-dd-yy' date order	
-								shape.parse[optKey] = Tempo.#mdyLocales(arg.value as NonNullable<Tempo.Options["mdyLocales"]>)
-								break;
-
-							case 'mdyLayouts':														// stash layout names that need to swap to 'mm-dd-yy' date order
-								shape.parse[optKey] = asArray(arg.value as NonNullable<Tempo.Options["mdyLayouts"]>)
-								break;
-
-							default:
-								Object.assign(shape.config, { [optKey]: optVal });	// just move the option to the config
-								break;
-						}
-					})
+					default:
+						Object.assign(shape.config, { [optKey]: optVal });
+						break;
+				}
 			})
+		})
 
-		shape.parse.isMonthDay = Tempo.#isMonthDay(shape);			// locale and/or timeZone or mdyLocales may have changed
-		shape.config.sphere = Tempo.#setSphere(shape);					// setup hemisphere
+		shape.parse.isMonthDay = Tempo.#isMonthDay(shape);
+		shape.config.sphere = Tempo.#setSphere(shape);
 
-		if (isDefined(shape.parse.mdyLayouts))
-			Tempo.#swapLayout(shape);															// swap parse-order of layouts, if mdyLayouts are present
+		// Ensure snippet and layout are mutable copies (to avoid 'read only' errors if previously secured)
+		if (shape.parse.snippet) shape.parse.snippet = { ...shape.parse.snippet };
+		if (shape.parse.layout) shape.parse.layout = { ...shape.parse.layout };
 
-		if (isDefined(shape.parse.event))
-			Tempo.#setEvents(shape);															// setup special Date {layout} (before patterns!)
-		if (isDefined(shape.parse.period))
-			Tempo.#setPeriods(shape);															// setup special Time {layout} (before patterns!)
+		if (isDefined(shape.parse.mdyLayouts)) Tempo.#swapLayout(shape);
+		if (isDefined(shape.parse.event)) Tempo.#setEvents(shape);
+		if (isDefined(shape.parse.period)) Tempo.#setPeriods(shape);
 
 		Tempo.#setPatterns(shape);															// setup Regex DateTime patterns
 	}
@@ -636,14 +580,7 @@ export class Tempo {
 	/** instance term plugins */															#term = {} as Property<any>;
 	/** instance values to complement static values */				#local = {
 		/** instance configuration */															config: {} as Tempo.Config,
-		/** instance parse rules */																parse: {
-		/** instance parse match result */													result: {} as Internal.Match,
-		/** instance pattern */																			snippet: {} as Snippet,
-		/** instance Layouts */																			layout: {} as Layout,
-		/** instance Events */																			event: {} as Event,
-		/** instance Periods */																			period: {} as Period,
-		/** instance patterns */																		pattern: new Map() as Internal.RegexpMap,
-		} as Internal.Parse
+		/** instance parse rules */																parse: { ...Tempo.#global.parse } as Internal.Parse
 	} as Internal.Shape
 
 	// #endregion Instance properties
@@ -660,11 +597,12 @@ export class Tempo {
 	constructor(tempo?: Tempo.DateTime | Tempo.Options, options: Tempo.Options = {}) {
 		this.#now = Temporal.Now.instant();											// stash current Instant
 
-		[this.#tempo, this.#options] = this.#isZonedDateTimeLike(tempo)
-			? [(tempo as Tempo.Options)?.value, tempo as Tempo.Options]	// swap arguments, if arg1=Options
-			: [tempo as Tempo.DateTime, { ...options }]						// stash original values
+		// swap arguments around, if arg1=Options or Temporal-like
+		[this.#tempo, this.#options] = (this.#isOptions(tempo) || this.#isZonedDateTimeLike(tempo))
+			? [(tempo as Tempo.Options)?.value, tempo as Tempo.Options]
+			: [tempo as Tempo.DateTime, { ...options }]
 
-		// parse the 'Tempo.Options' looking for overrides to Tempo.#global.config
+		// parse the local options looking for overrides to Tempo.#global.config
 		this.#setLocal(this.#options);
 
 		// we now have all the info we need to instantiate a new Tempo
@@ -791,6 +729,18 @@ export class Tempo {
 		const { mdyLocales, mdyLayouts, ...config } = Tempo.#global.config as Tempo.Options;
 		Object.assign(this.#local.config, config, { level: 'local' });
 
+		// copy down global parse rules (they will be shallow-copied/mutated within #setConfig)
+		this.#local.parse = {
+			...Tempo.#global.parse,
+			snippet: { ...Tempo.#global.parse.snippet },
+			layout: { ...Tempo.#global.parse.layout },
+			event: { ...Tempo.#global.parse.event },
+			period: { ...Tempo.#global.parse.period },
+			mdyLocales: Tempo.#global.parse.mdyLocales ? [...Tempo.#global.parse.mdyLocales] : void 0,
+			mdyLayouts: Tempo.#global.parse.mdyLayouts ? [...Tempo.#global.parse.mdyLayouts] : void 0,
+			pattern: new Map(Tempo.#global.parse.pattern),
+		} as Internal.Parse;
+
 		Tempo.#setConfig(this.#local, options);									// set #local config
 
 		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -905,15 +855,26 @@ export class Tempo {
 		}
 	}
 
+	/** check if we've been given a Tempo Options object */
+	#isOptions(arg: any): arg is Tempo.Options {
+		return isObject(arg) && ownKeys(arg)
+			.some(key => ['snippet', 'layout', 'event', 'period', 'mdyLocales', 'mdyLayouts', 'debug', 'catch', 'store', 'pivot'].includes(key as string));
+	}
+
 	/** check if we've been given a ZonedDateTimeLike object */
 	#isZonedDateTimeLike(tempo: Tempo.DateTime | Tempo.Options | undefined): tempo is Temporal.ZonedDateTimeLikeObject & { value?: any } {
 		if (!isObject(tempo) || isEmpty(tempo))
 			return false;
 
+		// if it contains any 'options' keys, it's not a ZonedDateTime
+		const keys = ownKeys(tempo);
+		if (keys.some(key => ['snippet', 'layout', 'event', 'period', 'mdyLocales', 'mdyLayouts', 'debug', 'catch', 'store', 'pivot'].includes(key as string)))
+			return false;
+
 		// we include {value} to allow for Tempo instances
-		return ownKeys(tempo)
+		return keys
 			.filter(isString)
-			.every(key => ['value', 'timeZoneId', 'calendarId', 'year', 'month', 'monthCode', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond', 'offset'].includes(key))							// if every key in tempo-object is included in this array
+			.every(key => ['value', 'timeZoneId', 'calendarId', 'year', 'month', 'monthCode', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond', 'offset', 'timeZone'].includes(key))							// if every key in tempo-object is included in this array
 	}
 
 	/** evaluate 'string | number' input against known patterns */
