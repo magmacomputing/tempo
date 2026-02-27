@@ -34,7 +34,7 @@ export const suffix = (idx: number) => {
 /** split a value into an array */
 export function split<T extends number>(nbr: T, chr?: string, zero?: boolean): number[];
 export function split<T extends string>(nbr: T, chr?: string, zero?: boolean): (string | number)[];
-export function split<T extends string | number>(nbr?: T, chr: string = '.', zero: boolean = true) {
+export function split<T extends string | number>(nbr?: T, chr: string = '.', zero: boolean = true): any[] {
 	return nbr?.toString().split(chr).map(val => ifNumeric(val, zero))
 		|| []
 };

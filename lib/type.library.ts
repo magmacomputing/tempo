@@ -44,7 +44,7 @@ export const isIterable = <T>(obj: unknown): obj is Iterable<T> => Symbol.iterat
 export const isString = <T>(obj?: T): obj is Extract<T, string> => isType(obj, 'String');
 export const isNumber = <T>(obj?: T): obj is Extract<T, number> => isType(obj, 'Number');
 export const isInteger = <T>(obj?: T): obj is Extract<T, bigint> => isType(obj, 'BigInt');
-export const isIntegerLike = <T>(obj?: T): obj is Extract<T, string> => isType(obj, 'String') && /^-?\d+$/.test(obj as string);
+export const isIntegerLike = <T>(obj?: T): obj is Extract<T, string> => isType(obj, 'String') && /^-?[0-9]+n$/.test(obj as string);
 export const isDigit = <T>(obj?: T): obj is Extract<T, number | bigint> => isType(obj, 'Number', 'BigInt');
 export const isBoolean = <T>(obj?: T): obj is Extract<T, boolean> => isType(obj, 'Boolean');
 export const isArray = <T>(obj: unknown): obj is T[] => isType(obj, 'Array');

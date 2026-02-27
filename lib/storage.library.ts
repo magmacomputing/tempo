@@ -1,6 +1,6 @@
 import { objectify, stringify } from '#core/shared/serialize.library.js';
 import { CONTEXT, getContext } from '#core/shared/utility.library.js';
-import { isDefined, isString } from '#core/shared/type.library.js';
+import { isDefined, isUndefined, isString } from '#core/shared/type.library.js';
 
 const context = getContext();
 let storage = context.type === CONTEXT.Browser
@@ -15,10 +15,14 @@ export function selStorage(store: 'local' | 'session' = 'local') {
 }
 
 /** get storage */
-export function getStorage<T>(key: string, dflt: T): T;
+export function getStorage<T>(): T;
 export function getStorage<T>(key: string): T | undefined;
-export function getStorage<T>(key: string, dflt?: T) {
+export function getStorage<T>(key: string | undefined, dflt?: T): T;
+export function getStorage<T>(key?: string, dflt?: T): T | undefined {
 	let store: string | undefined | null;
+
+	if (isUndefined(key))
+		return dflt ?? {} as T;
 
 	switch (context.type) {
 		case CONTEXT.Browser:
@@ -34,12 +38,12 @@ export function getStorage<T>(key: string, dflt?: T) {
 			break;
 
 		default:
-			throw new Error(`Cannot determine Javascript context: ${context.type}`)
+			throw new Error(`Cannot determine Javascript context: ${context.type}`);
 	}
 
 	return isString(store)
 		? objectify<T>(store)																		// rebuild object from its stringified representation
-		: dflt
+		: dflt;
 }
 
 /** set / delete storage */
