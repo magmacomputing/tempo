@@ -4,19 +4,8 @@ import { Token } from '#core/shared/tempo.config/tempo.defaults.js';
 describe('Tempo.regexp', () => {
   test('should expand snippets and handle nested named capture groups', () => {
     // Use existing tokens or check if we can add new ones
-    const innerSym = Symbol('inner_test');
-    const outerSym = Symbol('outer_test');
-
-    // If Token is read-only, this might still fail, 
-    // but Tempo.getSymbol should be used if possible.
-    try {
-      Token['inner_test'] = innerSym;
-      Token['outer_test'] = outerSym;
-    } catch (e) {
-      // Fallback to Tempo.getSymbol if Token is frozen
-      Tempo.getSymbol(innerSym);
-      Tempo.getSymbol(outerSym);
-    }
+    const innerSym = Tempo.getSymbol('inner_test');
+    const outerSym = Tempo.getSymbol('outer_test');
 
     const snippet = {
       [innerSym]: /(?<inner_test>bar)/,
@@ -24,14 +13,12 @@ describe('Tempo.regexp', () => {
     } as any;
 
     const reg = Tempo.regexp('{outer_test}', snippet);
-
     expect(reg.source).toBe('^((?<outer_test>foo(?<inner_test>bar)baz))$');
     expect(reg.flags).toContain('i');
   });
 
   test('should handle multiple named capture groups in one snippet', () => {
-    const multiSym = Symbol('multi_test');
-    try { Token['multi_test'] = multiSym; } catch (e) { Tempo.getSymbol(multiSym); }
+    const multiSym = Tempo.getSymbol('multi_test');
 
     const snippet = {
       [multiSym]: /(?<A>a)(?<B>b)/,
@@ -42,8 +29,7 @@ describe('Tempo.regexp', () => {
   });
 
   test('should handle complex nested groups with alternatives', () => {
-    const tzdSym = Symbol('tzd_test');
-    try { Token['tzd_test'] = tzdSym; } catch (e) { Tempo.getSymbol(tzdSym); }
+    const tzdSym = Tempo.getSymbol('tzd_test');
 
     const snippet = {
       [tzdSym]: /(?<tzd_test>Z|(?<offset>(?:\+(?:(?:0\d|1[0-3]):?[0-5]\d|14:00)|-(?:(?:0\d|1[0-1]):?[0-5]\d|12:00))))/,

@@ -59,20 +59,20 @@ export const TIMES = enumify({
 });
 /** pre-defined Format code short-cuts */
 export const FORMAT = enumify({
-		/** useful for standard date display */									display: 'www, dd mmm yyyy',
-		/** useful for standard datestamps */										wkdDate: 'www, yyyy-mmm-dd',
-		/** useful for standard timestamps */										wkdTime: 'www, yyyy-mmm-dd hh:mi:ss',
-		/** useful for standard full timestamps */							wkdStamp: 'www, yyyy-mmm-dd hh:mi:ss.ff',
-		/** useful for readable month and day */								dayMonth: 'dd-mmm',
-		/** useful for Date */																	dayDate: 'dd-mmm-yyyy',
-		/** display with Time */																dayTime: 'dd-mmm-yyyy hh:mi:ss',
-		/** useful for stamping logs */													logStamp: 'yyyymmdd.hhmiss.ff',
-		/** useful for sorting display-strings */								sortTime: 'yyyy-mm-dd hh:mi:ss',
+		/** useful for standard date display */									display: '{www}, {dd} {mmm} {yyyy}',
+		/** useful for standard datestamps */										wkdDate: '{www}, {yyyy}-{mmm}-{dd}',
+		/** useful for standard timestamps */										wkdTime: '{www}, {yyyy}-{mmm}-{dd} {hh}:{mi}:{ss}',
+		/** useful for standard full timestamps */							wkdStamp: '{www}, {yyyy}-{mmm}-{dd} {hh}:{mi}:{ss}.{ff}',
+		/** useful for readable month and day */								dayMonth: '{dd}-{mmm}',
+		/** useful for Date */																	dayDate: '{dd}-{mmm}-{yyyy}',
+		/** display with Time */																dayTime: '{dd}-{mmm}-{yyyy} {hh}:{mi}:{ss}',
+		/** useful for stamping logs */													logStamp: '{yyyy}{mm}{dd}.{hhmiss}.{ff}',
+		/** useful for sorting display-strings */								sortTime: '{yyyy}-{mm}-{dd} {hh}:{mi}:{ss}',
 		/** useful for sorting week order */										yearWeek: 'yyyyww',
 		/** useful for sorting month order */										yearMonth: 'yyyymm',
 		/** useful for sorting date order */										yearMonthDay: 'yyyymmdd',
-		/** just Date portion */																date: 'yyyy-mmm-dd',
-		/** just Time portion */																time: 'hh:mi:ss',
+		/** just Date portion */																date: '{yyyy}-{mm}-{dd}',
+		/** just Time portion */																time: '{hh}:{mi}:{ss}',
 });
 export type FORMAT = ValueOf<typeof FORMAT>
 

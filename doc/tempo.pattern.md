@@ -105,7 +105,7 @@ const t1 = new Tempo('20240520', { layout: '{yy}{mm}{dd}' });
 // Using an array for a multiple layouts to try against a dateTime string
 const t2 = new Tempo('Monday, 20 May 2024', { 
   layout: ['{wkd}{sep}?{dd}{sep}?{mm}{sep}?{yy}', '{dd}{sep}?{mm}{sep}?{yy}'] 
-});
+})
 ```
 
 ## Advanced: Regex Layouts
@@ -115,7 +115,34 @@ If the built-in snippets aren't enough, you can provide a raw Regular Expression
 ```typescript
 const t = new Tempo('Year 2024 Day 20', { 
   layout: 'Year {yy}, Day {dd}' 
-});
+})
+```
+
+To aid in designing a new Layout, use the static `Tempo.regexp()` method.
+It will return a Regular Expression that can be used to test the layout against a string.
+
+```typescript
+let regex = Tempo.regexp('{yy}{sep}?{mm}{sep}?{dd}');
+let match = regex.exec('20240520')?.groups;
+// { yy: '2024', mm: '05', dd: '20' }
+```
+
+To aid in designing a new Snippet, use the static `Tempo.regexp()` method, with the snippet as the second argument.
+```typescript
+// first create Symbols for the snippet keys
+const innerSym = Tempo.getSymbol('inner_test');
+const outerSym = Tempo.getSymbol('outer_test');
+
+// create the snippet
+const snippet = {
+  [innerSym]: /(?<inner>bar)/,
+  [outerSym]: /(?<outer>foo{inner_test}baz)/,
+}
+
+// create the regex
+let regex = Tempo.regexp('{outer_test}', snippet);
+let match = regex.exec('foobarbaz')?.groups;
+// { outer: 'foobarbaz', inner: 'bar' }
 ```
 
 > [!NOTE]
