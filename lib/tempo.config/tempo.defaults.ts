@@ -1,8 +1,6 @@
 import { looseIndex } from '#core/shared/object.library.js';
 import type { Tempo } from '#core/shared/tempo.class.js';
 
-// #region local const variables ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 /** common RegExp patterns */
 export const Match = {
 	/** match all {} pairs, if they start with a letter */		braces: /{([a-zA-Z][\w]*)}/g,
@@ -14,7 +12,6 @@ export const Match = {
 	/** separator characters (/ - . ,) */											separator: /[\/\-\.\s,]/,
 	/** modifier characters (+-<>=) */												modifier: /[\+\-\<\>][\=]?|this|next|prev|last/,
 	/** offset post keywords (ago|hence) */										affix: /ago|hence/,
-	/** recent dates */																				recent: /(now|today|yesterday|tomorrow)/,
 } as const
 
 /** Tempo Symbol registry */
@@ -45,8 +42,8 @@ export const Token = looseIndex<string, symbol>()({
 	/** day-month-year */																			dmy: Symbol('dayMonthYear'),
 	/** month-day-year */																			mdy: Symbol('monthDayYear'),
 	/** year-month-day */																			ymd: Symbol('yearMonthDay'),
+	/** day of month offset */																off: Symbol('offset'),
 	/** weekDay */																						wkd: Symbol('weekDay'),
-	/** recent date (yesterday, tomorrow, today)*/						rdt: Symbol('recentDate'),
 	/** relative offset (years, days, hours, etc) */					rel: Symbol('relativeOffset'),
 })
 export type Token = typeof Token
@@ -72,12 +69,12 @@ export const Snippet = looseIndex<symbol, RegExp>()({
 	[Token.ss]: /(\:(?<ss>[0-5][0-9]))/,											// seconds-number 00-59
 	[Token.ff]: /(\.(?<ff>[0-9]{1,9}))/,											// fractional-seconds up-to 9-digits
 	[Token.mer]: /(\s*(?<mer>am|pm))/,												// meridiem suffix (am,pm)
-	[Token.sfx]: /((?:{sep}+|T)({tm}){tzd}?)/,											// time-pattern suffix 'T {tm} Z'
+	[Token.sfx]: /((?:{sep}+|T)({tm}){tzd}?)/,								// time-pattern suffix 'T {tm} Z'
 	[Token.wkd]: /(?<wkd>Mon(?:day)?|Tue(?:sday)?|Wed(?:nesday)?|Thu(?:rsday)?|Fri(?:day)?|Sat(?:urday)?|Sun(?:day)?)/,	// day-name (abbrev or full)
 	[Token.tzd]: /(?<tzd>Z|(?:\+(?:(?:0[0-9]|1[0-3]):?[0-5][0-9]|14:00)|-(?:(?:0[0-9]|1[0-1]):?[0-5][0-9]|12:00)))/,// time-zone offset	+14:00 to -12:00
 	[Token.nbr]: /(?<nbr>[0-9]*)/,														// modifier count
 	[Token.afx]: new RegExp(`((s)? (?<afx>${Match.affix.source}))?{sep}?`),	// affix optional plural 's' and (ago|hence)
-	[Token.mod]: new RegExp(`((?<mod>${Match.modifier.source})?{nbr} *)`),		// modifier (+,-,<,<=,>,>=) plus optional offset-count
+	[Token.mod]: new RegExp(`((?<mod>${Match.modifier.source})?{nbr} *)`),	// modifier (+,-,<,<=,>,>=) plus optional offset-count
 	[Token.sep]: new RegExp(`(?:${Match.separator.source})`),	// date-input separator character "/\\-., " (non-capture group)
 	[Token.unt]: /(?<unt>year|month|week|day|hour|minute|second|millisecond)(?:s)?/,	// useful for '2 days ago' etc
 })
@@ -95,8 +92,7 @@ export const Layout = looseIndex<symbol, string>()({
 	[Token.mdy]: '({wkd}{sep}+)?{mm}{sep}?{dd}({sep}?{yy})?{sfx}?',		// month-day(-year)
 	[Token.ymd]: '({wkd}{sep}+)?{yy}{sep}?{mm}({sep}?{dd})?{sfx}?',		// year-month(-day)
 	[Token.wkd]: '{mod}?{wkd}{afx}?{sfx}?',										// special layout (no {dt}!) used for weekday calcs (only one that requires {wkd} pattern)
-	[Token.rdt]: '(?<rdt>yesterday|tomorrow|today){sfx}?',		// recent date (no {dt}!) used for recent date calcs (only one that requires {rdt} pattern)
-	[Token.off]: '{mod}?{dd}{afx}?',													// day of month
+	[Token.off]: '{mod}?{dd}{afx}?',													// day of month, with optional offset
 	[Token.rel]: '{nbr}{sep}?{unt}{sep}?{afx}',								// relative duration (e.g. 2 days ago)
 })
 export type Layout = typeof Layout
@@ -151,5 +147,3 @@ export const Default = {
 	/** locales that prefer month-day order */								mdyLocales: ['en-US', 'en-AS'],	/** @link https://en.wikipedia.org/wiki/Date_format_by_country */
 	/** layouts that need to swap parse-order */							mdyLayouts: [['dayMonthYear', 'monthDayYear']],
 } as Tempo.Options
-
-// #endregion

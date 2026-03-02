@@ -19,8 +19,7 @@ import * as enums from '#core/shared/tempo.config/tempo.enum.js';
 import terms from '#core/shared/tempo.config/plugins/term.import.js';
 import { Match, Token, Snippet, Layout, Event, Period, Default } from '#core/shared/tempo.config/tempo.defaults.js';
 
-import '#core/shared/prototype.library.js';									// patch prototype
-import { define } from './tempo.config/plugins/term.quarter.js';
+import '#core/shared/prototype.library.js';									// patch prototypes
 
 // #endregion
 
@@ -111,8 +110,6 @@ export class Tempo {
 
 		if (shape.parse.isMonthDay)															// override the {dt} layout if {isMonthDay}
 			shape.parse.layout[Token.dt] = '{mm}{sep}?{dd}({sep}?{yy})?|{mod}?({evt})' as typeof shape.parse.layout[typeof Token.dt];
-		// else
-		// 	shape.parse.layout[Token.dt] = '{dd}{sep}?{mm}({sep}?{yy})?|{mod}?({evt})';
 	}
 
 	/**
@@ -237,7 +234,7 @@ export class Tempo {
 			ownEntries(option).forEach(([optKey, optVal]) => {
 				const arg = asType(optVal);
 
-				/** helper to normalize snippet/layout options into the target object */
+				/** helper to normalize snippet/layout Options into the target Config */
 				const collect = (target: Property<any>, value: any, convert: (v: any) => any) => {
 					const itm = asType(value);
 					target ??= {}
@@ -252,18 +249,19 @@ export class Tempo {
 							target[Tempo.getSymbol()] = convert(itm.value);
 							break;
 						case 'Array':
-							(itm.value as any[]).forEach(elm => collect(target, elm, convert));
+							itm.value.forEach(elm => collect(target, elm, convert));
 							break;
 					}
 				}
 
 				switch (optKey) {
 					case 'snippet':
-						collect(shape.parse.snippet, arg.value, v => isRegExp(v) ? v : new RegExp(v));
-						break;
-
 					case 'layout':
-						collect(shape.parse.layout, arg.value, v => isRegExp(v) ? v.source : v);
+						collect(shape.parse[optKey], arg.value, v =>
+							optKey === 'snippet'
+								? isRegExp(v) ? v : new RegExp(v)
+								: isRegExp(v) ? v.source : v
+						)
 						break;
 
 					case 'event':
@@ -276,14 +274,14 @@ export class Tempo {
 						break;
 
 					case 'mdyLocales':
-						shape.parse[optKey] = Tempo.#mdyLocales(arg.value as NonNullable<Tempo.Options["mdyLocales"]>);
+						shape.parse[optKey] = Tempo.#mdyLocales(arg.value as NonNullable<Tempo.Options[typeof optKey]>);
 						break;
 
 					case 'mdyLayouts':
-						shape.parse[optKey] = asArray(arg.value as NonNullable<Tempo.Options["mdyLayouts"]>);
+						shape.parse[optKey] = asArray(arg.value as NonNullable<Tempo.Options[typeof optKey]>);
 						break;
 
-					default:
+					default:																					// else just add to config
 						Object.assign(shape.config, { [optKey]: optVal });
 						break;
 				}
@@ -394,10 +392,10 @@ export class Tempo {
 	}
 
 	/**
-	 * Looks-up or registers a `Symbol` for a given key.  
-	 * Used for internal consistency.  
+	 * looks-up or registers a new `Symbol` for a given key.  
+	 * auto-maintains the `Token` registry for internal consistency.  
 	 * 
-	 * @param key - The description for which to retrieve/create a symbol.
+	 * @param key - The description for which to retrieve/create a Symbol.
 	 */
 	static getSymbol(key?: string | symbol) {
 		if (isUndefined(key)) {
@@ -405,32 +403,21 @@ export class Tempo {
 				.filter(usr => usr.startsWith('usr'))
 				.map(usr => parseInt(usr.substring(3)))
 				.concat(0)
-			const max = `usr${Math.max(...userKeys) + 1}`;
+			const max = `usr${Math.max(...userKeys) + 1}`;				// allocate a new 'user' key
 
-			return key = Symbol(max);															// allocate a new 'user' key
+			return Token[max] = Symbol(max);											// add to Symbol register
 		}
 
 		if (isSymbol(key)) {
-			const description = key.description ?? Cipher.randomKey();	// get Symbol description, else allocate random string
-			if (isUndefined(Token[description]))
-				Token[description] = key;														// add to Symbol register
-			return key;
+			const name = key.description ?? Cipher.randomKey();		// get Symbol description, else allocate random string
+			return Token[name] ??= key;
 		}
 
-		const [sym, description = key] = key										// for example, 'key = zdc.zodiac'
+		const [name, description = key] = key										// for example, 'key = zdc.zodiac'
 			.split(Match.separator)
 			.filter(s => !isEmpty(s));
 
-		if (isUndefined(Token[sym]))
-			Token[sym] = Symbol(description);											// add to Symbol register
-
-		return Token[sym];
-	}
-
-	static getRegExp(reg: string | RegExp, ...layouts: Internal.StringPattern[]) {
-		return (isRegExp(reg))
-			? reg
-			: new RegExp(reg)
+		return Token[name] ??= Symbol(description);							// add to Symbol register, if undefined
 	}
 
 	/**
@@ -457,7 +444,7 @@ export class Tempo {
 				source = source.substring(1, source.length - 1);		// remove the leading/trailing anchors (^ $)
 
 			return source.replace(Match.braces, (match, name) => {// iterate over "{}" pairs in the source string
-				const token = Token[name];													// get the symbol for this {name}
+				const token = Tempo.getSymbol(name);								// get the symbol for this {name}
 				const snip = snippet?.[token]?.source								// get the snippet source (custom)
 					?? Snippet[token]?.source													// else get the snippet source (global)
 					?? Layout[token];																	// else get the layout source
@@ -708,7 +695,7 @@ export class Tempo {
 
 	/** `true` if the underlying date-time is valid. */				isValid() { return !isEmpty(this) }
 	/** the underlying `Temporal.ZonedDateTime` object. */		toDateTime() { return this.#zdt }
-	/** the date-time as a `Temporal.Instant`. */							toInstant() { return this.#zdt.toInstant() }
+	/** the date-time as a `Temporal.Instant`. */							toInstant() { return this.#now }
 	/** the date-time as a standard `Date` object. */					toDate() { return new Date(this.#zdt.round({ smallestUnit: 'millisecond' }).epochMilliseconds) }
 	/** the ISO8601 string representation of the date-time. */toString() { return this.#zdt.toString() }
 	/** Custom JSON serialization for `JSON.stringify`. */		toJSON() { return { ...this.#local.config, value: this.toString() } }
@@ -740,32 +727,6 @@ export class Tempo {
 		} as Internal.Parse;
 
 		Tempo.#setConfig(this.#local, options);									// set #local config
-
-		/** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-		// if a timeZone provided but no hemisphere, try to infer hemisphere based on daylight-savings  
-		if (options.timeZone !== Tempo.#global.config.timeZone && isUndefined(options.sphere))
-			Tempo.#setSphere(this.#local);
-
-		// // change of Locale, swap 'dmy' pattern with 'mdy' parse-order?
-		// if (this.#local.config.locale !== Tempo.#global.config.locale) {
-		// 	const locale = Tempo.#swapLayout(this.#local);
-
-		// if (isEmpty(this.#local.config.locale))
-		// 	this.#local.config.locale = locale || Tempo.#global.config.locale;
-		// this.#local.config.locale = Tempo.#locale(this.#local.config.locale);
-		// }
-
-		// // user-specified date-events to use when parsing this instance
-		// if (isDefined(this.#parse.event))
-		// 	Tempo.#setEvents(this.#local);												// set instance 'evt' and 'dt' {patterns}
-
-		// // user-specified time-periods to use when parsing this instance
-		// if (isDefined(this.#parse.period))
-		// 	Tempo.#setPeriods(this.#local);												// set instance 'per' and 'tm' {patterns}
-
-		// user-specified patterns to use when parsing this instance
-		// if (isDefined(this.#parse.layout))
-		// 	Tempo.#setPatterns(this.#local);											// set instance {patterns}
 	}
 
 	/**
@@ -1497,56 +1458,48 @@ export class Tempo {
 				return +`${this.yy}${pad(this.mm)}${pad(this.dd)}`;
 
 			default:
-				const mer = sTemplate.includes('HH')								// if 'twelve-hour' (uppercase 'HH') is present in fmtString,
-					? this.hh >= 12 ? 'pm' : 'am'											// 	then noon or later is considered 'pm'
-					: ''																							//	else no meridiem am/pm suffix needed
-
-				// single-pass replacement to avoid recursive token replacements
-				const tokens = /:m{2}|m{2}:|y{4}|y{2}|m{3}|m{2}|d{3}|w{3}|d{2}|h{2}|H{2}$|H{2}|:mi$|:mi|^mi|:s{2}$|:s{2}|^ss|ts|ms|us|ns|f{2}|w{2}|mon|wkd|day|dow|hhmiss|#\{(\w+)\}/gi;
-				return sTemplate
-					.replace(tokens, (match: string, p1: string) => {
-						switch (match.toLowerCase()) {
-							case ':mm': return ':mi';												// special: intercept ':mm' which should properly be ':mi'
-							case 'mm:': return 'mi:';
-							case 'yyyy': return pad(this.yy);
-							case 'yy': return pad(this.yy);
-							case 'mmm': return this.mmm;
-							case 'mm': return pad(this.mm);
-							case 'ddd':
-							case 'www': return this.www;
-							case 'dd': return pad(this.dd);
-							case 'hh': return pad(this.hh);
-							case 'hhmiss':
-								return pad(this.hh) + pad(this.mi) + pad(this.ss);
-							case 'ts': return this.ts.toString();
-							case 'ms': return pad(this.ms, 3);
-							case 'us': return pad(this.us, 3);
-							case 'ns': return pad(this.ns, 3);
-							case 'ff': return `${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`;
-							case 'ww': return pad(this.ww);
-							case 'mon': return this.mon;
-							case 'wkd': return this.wkd;
-							case 'day': return this.day.toString();
-							case 'dow': return this.dow.toString();
+				return sTemplate.replace(/{(\w+(?:\.\w+)*)}/g, (match, token) => {
+					switch (token) {
+						case 'yyyy': return pad(this.yy, 4);
+						case 'yy': return pad(this.yy % 100);
+						case 'mon': return this.mon;
+						case 'mmm': return this.mmm;
+						case 'mm': return pad(this.mm);
+						case 'dd': return pad(this.dd);
+						case 'day': return this.day.toString();
+						case 'dow': return this.dow.toString();
+						case 'wkd': return this.wkd;
+						case 'www': return this.www;
+						case 'ww': return pad(this.ww);
+						case 'hh': return pad(this.hh);
+						case 'HH': return pad(this.hh > 12 ? this.hh % 12 : this.hh || 12);
+						case 'mer': return this.hh >= 12 ? 'pm' : 'am';
+						case 'MER': return this.hh >= 12 ? 'PM' : 'AM';
+						case 'mi': return pad(this.mi);
+						case 'ss': return pad(this.ss);
+						case 'ms': return pad(this.ms, 3);
+						case 'us': return pad(this.us, 3);
+						case 'ns': return pad(this.ns, 3);
+						case 'ff': return `${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`;
+						case 'hhmiss': return pad(this.hh) + pad(this.mi) + pad(this.ss);
+						case 'ts': return this.ts.toString();
+						case 'nano': return this.nano.toString();
+						case 'tz': return this.tz;
+						default: {
+							return token.startsWith('term.')
+								? stringify(this.term[token.slice(5)])
+								: `{${token}}`;															// unknown format-code, return as-is
 						}
-
-						// handle special cases with suffixes or case-sensitive logic
-						if (match.endsWith('HH')) return (pad(this.hh >= 13 ? this.hh % 12 : this.hh) + mer);
-						if (match.startsWith('HH')) return pad(this.hh >= 13 ? this.hh % 12 : this.hh);
-						if (match.endsWith('mi')) return (':' + pad(this.mi) + mer);
-						if (match.includes('mi')) return (match.startsWith(':') ? ':' : '') + pad(this.mi);
-						if (match.endsWith('ss')) return (':' + pad(this.ss) + mer);
-						if (match.includes('ss')) return (match.startsWith(':') ? ':' : '') + pad(this.ss);
-						if (match.startsWith('#{')) return stringify(this.term[p1]);
-
-						return match;
-					})
+					}
+				});
 		}
 	}
 
 	/** calculate the difference between two Tempos  
-	 * (past is positive, future is negative)  
-	*/
+	 * if the 'until' argument is a unit, then the result is a number, otherwise it is a Tempo.Duration object  
+	 * if the offset Tempo is in a different time zone, then the result is in hours
+	 * if the offset Tempo is in the past, the result is negative; if it is in the future, the result is positive
+	 */
 	// Note: 'since' is a hidden argument used only when invoking #until() via #since()
 	#until(arg?: Tempo.DateTime | Tempo.Until | Tempo.Options, until?: Tempo.Options | Tempo.Until, since?: false): number
 	#until(arg?: Tempo.DateTime | Tempo.Until | Tempo.Options, until?: Tempo.Options | Tempo.Until, since?: true): Tempo.Duration
@@ -1559,7 +1512,9 @@ export class Tempo {
 				break;
 			case isString(arg):																		// assume 'arg' is a dateTime string
 				value = arg;																				// e.g. tempo.until('20-May-1957', {unit: 'years'})
-				({ unit, ...opts } = until as Exclude<Tempo.Until, Tempo.Unit>)
+				if (isObject(until))
+					({ unit, ...opts } = until as Exclude<Tempo.Until, Tempo.Unit>)
+				else unit = until as Tempo.Unit;										// assume the 'until' arg is a 'unit' string
 				break;
 			case isObject(arg) && isString(until):								// assume 'until' is a Unit
 				unit = until;																				// e.g. tempo.until({value:'20-May-1957}, 'years'})
@@ -1580,19 +1535,18 @@ export class Tempo {
 				value = arg as Tempo.DateTime;											// assume 'arg' is a DateTime
 		}
 
-		const offset = new Tempo(value, opts);
-		const duration = this.#zdt.until(offset.#zdt, { largestUnit: unit ?? 'years' });
+		const offset = new Tempo(value, opts);									// create the offset Tempo
+		const diffZone = this.#zdt.timeZoneId !== offset.#zdt.timeZoneId;
+		const duration = this.#zdt.until(offset.#zdt, { largestUnit: diffZone ? 'hours' : (unit ?? 'years') });
 
 		if (isDefined(unit))
 			unit = `${singular(unit)}s` as Tempo.Unit;						// coerce to plural
 
-		if (isUndefined(unit) || since) {												// if no 'unit' provided, or if called via #since()
-			return getAccessors(duration)
+		return (isUndefined(unit) || since)											// if no 'unit' provided, or if called via #since()
+			? getAccessors(duration)															// return an Object with all the duration accessors
 				.reduce((acc, dur) => Object.assign(acc, { [dur]: duration[dur as keyof Temporal.Duration] }),
 					ifDefined({ iso: duration.toString(), unit } as Tempo.Duration))
-		}
-
-		return duration.total({ relativeTo: this.#zdt, unit });	// sum-up the duration components
+			: duration.total({ relativeTo: this.#zdt, unit });		// sum-up the duration components
 	}
 
 	/** format the elapsed time between two Tempos (to nanosecond) */
@@ -1600,7 +1554,9 @@ export class Tempo {
 		const dur = this.#until(arg, until, true);							// get a Tempo.Duration object
 		const date = [dur.years, dur.months, dur.days] as const;
 		const time = [dur.hours, dur.minutes, dur.seconds] as const;
-		const fraction = [dur.milliseconds, dur.microseconds, dur.nanoseconds] as const;
+		const fraction = [dur.milliseconds, dur.microseconds, dur.nanoseconds]
+			.map(nbr => nbr.toString().padStart(3, '0'))
+			.join('')
 
 		const rtf = new Intl.RelativeTimeFormat(this.#getConfig('locale'), { style: 'narrow' });
 

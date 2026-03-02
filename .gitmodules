@@ -1,3 +1,0 @@
-[submodule "vendor/whiteLibrary"]
-	path = vendor/whiteLibrary
-	url = git@github.com:magmacomputing/whiteLibrary.git
