@@ -1,4 +1,4 @@
-import { asType, getType, isEmpty, isFunction, isPrimitive, isType } from '#core/shared/type.library.js';
+import { asType, getType, isArray, isEmpty, isFunction, isObject, isPrimitive, isType } from '#core/shared/type.library.js';
 import type { Obj, KeyOf, ValueOf, EntryOf, Primitives } from '#core/shared/type.library.js';
 
 /** mutate Object | Array by excluding values with specified primitive 'types' */
@@ -7,7 +7,7 @@ export function exclude<T extends Obj>(obj: T, ...types: (Primitives | Lowercase
 		.map(item => item.toLowerCase())												// cast Primitives as Lowercase<Primitives> to aid in matching
 		.distinct() as typeof types
 
-	if (isType(obj, 'Object', 'Array')) {											// only works on Objects and Arrays
+	if (obj && typeof obj === 'object') {																			// only works on Objects and Arrays
 		const keys = [] as KeyOf<T>[];
 
 		(ownEntries(obj) as [KeyOf<T>, Obj][])
@@ -78,11 +78,30 @@ export function ownValues<T extends Obj>(json: T) {
 }
 
 /** tuple of enumerable entries with string | symbol keys */
-export function ownEntries<T extends Obj>(json: T) {
-	return (Reflect.ownKeys(json) as KeyOf<T>[])							// get all Own keys
-		.map(name => [name, Reflect.getOwnPropertyDescriptor(json, name)] as [KeyOf<T>, PropertyDescriptor])
-		.filter(([_, prop]) => prop.enumerable)									// with enumerable property
-		.map(([name, prop]) => [name, prop.value] as EntryOf<T>)// cast as array of [key, value] tuples
+export function ownEntries<T extends Obj>(json: T, all = false) {
+	if (!json || typeof json !== 'object')
+		return [] as EntryOf<T>[];
+
+	const entries = new Map<PropertyKey, any>();
+	const limit = all ? 10 : 1;																// limit depth of 10 down the prototype chain to prevent infinite loops
+	let depth = 0;
+	let proto: any = json;
+
+	do {
+		Reflect
+			.ownKeys(proto)
+			.filter(key => !entries.has(key))											// filter out if already tracking this key
+			.forEach(key => {
+				const desc = Object.getOwnPropertyDescriptor(proto, key);
+
+				if (desc?.enumerable)																// only track enumerable properties
+					entries.set(key, desc.value);
+			})
+
+		proto = Object.getPrototypeOf(proto);
+	} while (proto && proto !== Object.prototype && ++depth < limit);
+
+	return [...entries.entries()] as EntryOf<T>[];
 }
 
 /** get a string-array of 'getter' names for an object */

@@ -60,9 +60,9 @@ export const TIMES = enumify({
 /** pre-defined Format code short-cuts */
 export const FORMAT = enumify({
 		/** useful for standard date display */									display: '{www}, {dd} {mmm} {yyyy}',
-		/** useful for standard datestamps */										wkdDate: '{www}, {yyyy}-{mmm}-{dd}',
-		/** useful for standard timestamps */										wkdTime: '{www}, {yyyy}-{mmm}-{dd} {hh}:{mi}:{ss}',
-		/** useful for standard full timestamps */							wkdStamp: '{www}, {yyyy}-{mmm}-{dd} {hh}:{mi}:{ss}.{ff}',
+		/** useful for standard datestamps */										plainDate: '{www}, {yyyy}-{mmm}-{dd}',
+		/** useful for standard timestamps */										plainTime: '{www}, {yyyy}-{mmm}-{dd} {hh}:{mi}:{ss}',
+		/** useful for standard full timestamps */							plainStamp: '{www}, {yyyy}-{mmm}-{dd} {hh}:{mi}:{ss}.{ff}',
 		/** useful for readable month and day */								dayMonth: '{dd}-{mmm}',
 		/** useful for Date */																	dayDate: '{dd}-{mmm}-{yyyy}',
 		/** display with Time */																dayTime: '{dd}-{mmm}-{yyyy} {hh}:{mi}:{ss}',
