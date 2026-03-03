@@ -99,27 +99,45 @@ export class Tempo {
 	 */
 	// TODO:  check all Layouts which reference "{evt}" and update them
 	static #setEvents(shape: Internal.Shape) {
-		const src = shape.config.level.substring(0, 1);					// 'g'lobal or 'l'ocal
-		const events = ownEntries(shape.parse.event, true)
+		const level = shape.config.level;
+		const events = ownEntries(shape.parse.event, true);
+		if (level === 'local' && !Object.hasOwn(shape.parse, 'event') && !Object.hasOwn(shape.parse, 'isMonthDay'))
+			return;																						// no local change needed
+
+		const src = level.substring(0, 1);								// 'g'lobal or 'l'ocal
+		const groups = events
 			.map(([pat, _], idx) => `(?<${src}evt${idx}>${pat})`)	// assign a number to the pattern
 			.join('|')																						// make an 'Or' pattern for the event-keys
 
-		if (events) {
-			Object.defineProperty(shape.parse.snippet, Token.evt, {
-				value: new RegExp(events),
-				enumerable: true,
-				writable: true,
-				configurable: true
-			});
+		if (groups) {
+			const globalEvt = Tempo.#global.parse.snippet[Token.evt]?.source;
+			if (level === 'global' || groups !== globalEvt) {
+				if (level === 'local' && !Object.hasOwn(shape.parse, 'snippet'))
+					shape.parse.snippet = Object.create(Tempo.#global.parse.snippet);
+
+				Object.defineProperty(shape.parse.snippet, Token.evt, {
+					value: new RegExp(groups),
+					enumerable: true,
+					writable: true,
+					configurable: true
+				});
+			}
 		}
 
 		if (shape.parse.isMonthDay) {
-			Object.defineProperty(shape.parse.layout, Token.dt, {
-				value: '{mm}{sep}?{dd}({sep}?{yy})?|{mod}?({evt})',
-				enumerable: true,
-				writable: true,
-				configurable: true
-			});
+			const globalDt = Tempo.#global.parse.layout[Token.dt] as string;
+			const localDt = '{mm}{sep}?{dd}({sep}?{yy})?|{mod}?({evt})';
+			if (level === 'global' || localDt !== globalDt) {
+				if (level === 'local' && !Object.hasOwn(shape.parse, 'layout'))
+					shape.parse.layout = Object.create(Tempo.#global.parse.layout);
+
+				Object.defineProperty(shape.parse.layout, Token.dt, {
+					value: localDt,
+					enumerable: true,
+					writable: true,
+					configurable: true
+				});
+			}
 		}
 	}
 
@@ -129,18 +147,29 @@ export class Tempo {
 	*/
 	// TODO:  check all Layouts which reference "{per}" and update them
 	static #setPeriods(shape: Internal.Shape) {
-		const src = shape.config.level.substring(0, 1);					// 'g'lobal or 'l'ocal
-		const periods = ownEntries(shape.parse.period, true)
+		const level = shape.config.level;
+		const periods = ownEntries(shape.parse.period, true);
+		if (level === 'local' && !Object.hasOwn(shape.parse, 'period'))
+			return;																						// no local change needed
+
+		const src = level.substring(0, 1);								// 'g'lobal or 'l'ocal
+		const groups = periods
 			.map(([pat, _], idx) => `(?<${src}per${idx}>${pat})`)	// {pattern} is the 1st element of the tuple
 			.join('|')																						// make an 'or' pattern for the period-keys
 
-		if (periods) {
-			Object.defineProperty(shape.parse.snippet, Token.per, {
-				value: new RegExp(periods),
-				enumerable: true,
-				writable: true,
-				configurable: true
-			});
+		if (groups) {
+			const globalPer = Tempo.#global.parse.snippet[Token.per]?.source;
+			if (level === 'global' || groups !== globalPer) {
+				if (level === 'local' && !Object.hasOwn(shape.parse, 'snippet'))
+					shape.parse.snippet = Object.create(Tempo.#global.parse.snippet);
+
+				Object.defineProperty(shape.parse.snippet, Token.per, {
+					value: new RegExp(groups),
+					enumerable: true,
+					writable: true,
+					configurable: true
+				});
+			}
 		}
 	}
 
@@ -243,48 +272,51 @@ export class Tempo {
 	 ```
 	 */
 	static #setConfig(shape: Internal.Shape, ...options: Tempo.Options[]) {
+		/** helper to normalize snippet/layout Options into the target Config */
+		const collect = (target: Property<any>, value: any, convert: (v: any) => any) => {
+			const itm = asType(value);
+			target ??= {}
+
+			switch (itm.type) {
+				case 'Object':
+					ownEntries(itm.value as Property<any>)
+						.forEach(([k, v]) => target[Tempo.getSymbol(k)] = convert(v));
+					break;
+				case 'String':
+				case 'RegExp':
+					target[Tempo.getSymbol()] = convert(itm.value);
+					break;
+				case 'Array':
+					itm.value.forEach(elm => collect(target, elm, convert));
+					break;
+			}
+		}
+
 		options.forEach(option => {
 			if (!option) return;
 			ownEntries(option).forEach(([optKey, optVal]) => {
 				const arg = asType(optVal);
 
-				/** helper to normalize snippet/layout Options into the target Config */
-				const collect = (target: Property<any>, value: any, convert: (v: any) => any) => {
-					const itm = asType(value);
-					target ??= {}
-
-					switch (itm.type) {
-						case 'Object':
-							ownEntries(itm.value as Property<any>)
-								.forEach(([k, v]) => target[Tempo.getSymbol(k)] = convert(v));
-							break;
-						case 'String':
-						case 'RegExp':
-							target[Tempo.getSymbol()] = convert(itm.value);
-							break;
-						case 'Array':
-							itm.value.forEach(elm => collect(target, elm, convert));
-							break;
-					}
-				}
-
 				switch (optKey) {
 					case 'snippet':
 					case 'layout':
-						collect(shape.parse[optKey], arg.value, v =>
-							optKey === 'snippet'
-								? isRegExp(v) ? v : new RegExp(v)
-								: isRegExp(v) ? v.source : v
-						)
-						break;
-
 					case 'event':
 					case 'period':
-						shape.parse[optKey] ??= {} as any;
-						const rule = shape.parse[optKey];
+						// lazy-shadowing: only create local object if it doesn't already exist on local shape
+						if (!Object.hasOwn(shape.parse, optKey))
+							shape.parse[optKey] = Object.create(Tempo.#global.parse[optKey]);
 
-						asArray(arg.value as Event | Period)
-							.forEach(elm => ownEntries(elm).forEach(([key, val]) => rule[key] = val))
+						const rule = shape.parse[optKey];
+						if (['snippet', 'layout'].includes(optKey)) {
+							collect(rule, arg.value, v =>
+								optKey === 'snippet'
+									? isRegExp(v) ? v : new RegExp(v)
+									: isRegExp(v) ? v.source : v
+							)
+						} else {
+							asArray(arg.value as Event | Period)
+								.forEach(elm => ownEntries(elm).forEach(([key, val]) => (rule as any)[key] = val))
+						}
 						break;
 
 					case 'mdyLocales':
@@ -302,7 +334,10 @@ export class Tempo {
 			})
 		})
 
-		shape.parse.isMonthDay = Tempo.#isMonthDay(shape);
+		const isMonthDay = Tempo.#isMonthDay(shape);
+		if (shape.config.level === 'global' || isMonthDay !== Tempo.#global.parse.isMonthDay)
+			shape.parse.isMonthDay = isMonthDay;
+
 		shape.config.sphere = Tempo.#setSphere(shape);
 
 		if (isDefined(shape.parse.mdyLayouts)) Tempo.#swapLayout(shape);
@@ -327,8 +362,8 @@ export class Tempo {
 		const isLocal = shape.config.level === 'local';
 		const snippet = shape.parse.snippet;
 
-		// if local and no snippet overrides, we can just use the prototype's patterns
-		if (isLocal && isEmpty(ownKeys(snippet)))
+		// if local and no snippet or layout overrides, we can just use the prototype's patterns
+		if (isLocal && !Object.hasOwn(shape.parse, 'snippet') && !Object.hasOwn(shape.parse, 'layout'))
 			return;
 
 		// ensure we have our own Map to mutate (shadow if local)
@@ -531,7 +566,15 @@ export class Tempo {
 
 	/** array of regex patterns used when parsing Tempo.DateTime argument */
 	static get parse() {
-		return secure(Tempo.#global.parse);
+		const parse = Tempo.#global.parse;
+		return secure({
+			...parse,
+			snippet: { ...parse.snippet },
+			layout: { ...parse.layout },
+			event: { ...parse.event },
+			period: { ...parse.period },
+			token: { ...parse.token },
+		});
 	}
 
 	/** iterate over Tempo properties */
@@ -613,7 +656,7 @@ export class Tempo {
 			this.#zdt = this.#parse(this.#tempo);									// attempt to interpret the DateTime arg
 
 			if (['iso8601', 'gregory'].includes(this.#config['calendar'])) {
-				const formats = ownEntries(Tempo.FORMAT, true);
+				const formats = ownEntries(Tempo.FORMAT);
 				for (const [key, val] of formats) {
 					// @ts-ignore
 					this.#fmt[key] = this.format(val);
@@ -626,6 +669,9 @@ export class Tempo {
 					this.#setTerm(this, key, define, true);						// add a getter which returns the key-field only
 					this.#setTerm(this, scope, define, false);				// add a getter which returns a range-object
 				})
+
+			secure(this.#local.config);
+			secure(this.#local.parse);
 		} catch (err) {
 			Tempo.#dbg.catch(this.config, `Cannot create Tempo: ${(err as Error).message}\n${(err as Error).stack}`);
 			return {} as Tempo;																		// return empty Object
@@ -685,10 +731,10 @@ export class Tempo {
 	/** Full weekday name (e.g., 'Monday') */									get wkd() { return Tempo.WEEKDAYS.keyOf(this.#zdt.dayOfWeek as Tempo.Weekday) }
 	/** ISO weekday number: Mon=1, Sun=7 */										get dow() { return this.#zdt.dayOfWeek as Tempo.Weekday }
 	/** Nanoseconds since Unix epoch (BigInt) */							get nano() { return this.#zdt.epochNanoseconds }
-	/** Instance-specific configuration settings */						get config() { return secure({ ...this.#local.config }) }
-	/** Instance-specific parse rules (merged with global) */	get parse() { return secure({ ...Tempo.#global.parse, ...this.#local.parse }) }
+	/** Instance-specific configuration settings */						get config() { return this.#local.config }
+	/** Instance-specific parse rules (merged with global) */	get parse() { return this.#local.parse }
 	/** Object containing results from all term plugins */		get term() { return this.#term }
-	/** Formatted results for all pre-defined format codes */	get fmt() { return secure({ ...this.#fmt }) }
+	/** Formatted results for all pre-defined format codes */	get fmt() { return this.#fmt }
 	/** units since epoch */																	get epoch() {
 		return secure({
 			/** seconds since epoch */														ss: Math.trunc(this.#zdt.epochMilliseconds / 1_000),
@@ -727,12 +773,15 @@ export class Tempo {
 
 	// #endregion Instance public methods
 
-
 	// #region Instance private methods~~~~~~~~~~~~~~~~~~~~~~~
 	/**
 	 * setup local Shape instance, which will contain all the configuration and state for this instance.  
 	 * we copy down the current global config to the local instance, then apply any options provided.  
 	 * in this way, we preserve immutability of this instance, in case the user later changes the global config.
+	 * 
+	 * we do not copy down the current global parse rules, but instead create a new parse object
+	 * that prototypes the global parse object.  this way, we can add new parse rules to the local
+	 * parse object without affecting the global parse object.
 	 */
 	#setLocal(options: Tempo.Options) {
 		// copy down current global config to local instance
@@ -741,13 +790,7 @@ export class Tempo {
 
 		// setup effective parse rules for this instance (prototype-link to global)
 		this.#local.parse = Object.create(Tempo.#global.parse);
-		this.#local.parse.result = { type: 'Undefined' as Type, value: undefined }; // shadow result to avoid global mutation
-
-		// Use prototype inheritance for all sub-objects to ensure local isolation
-		this.#local.parse.snippet = Object.create(Tempo.#global.parse.snippet);
-		this.#local.parse.layout = Object.create(Tempo.#global.parse.layout);
-		this.#local.parse.event = Object.create(Tempo.#global.parse.event);
-		this.#local.parse.period = Object.create(Tempo.#global.parse.period);
+		this.#local.parse.result = { type: 'Undefined' as Type, value: undefined };
 
 		Tempo.#setConfig(this.#local, options);									// set #local config
 	}
@@ -1739,7 +1782,7 @@ namespace Internal {
 	export interface Parse {
 		/** Locales which prefer 'mm-dd-yyyy' date-order */			mdyLocales: { locale: string, timeZones: string[] }[];
 		/** Layout names that are switched to mdy */						mdyLayouts: Internal.StringTuple[];
-		/** is a timeZone that prefers 'mmddyyyy' date order */	isMonthDay: boolean;
+		/** is a timeZone that prefers 'mmddyyyy' date order */	isMonthDay?: boolean;
 		/** Symbol registry */																	token: Token;
 		/** Tempo snippets to aid in parsing */									snippet: Snippet;
 		/** Tempo layout strings */															layout: Layout;

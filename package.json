@@ -15,7 +15,8 @@
   },
   "scripts": {
     "test": "vitest run",
-    "build": "tsc --build"
+    "build": "tsc --build",
+    "repl": "tsx -i --import ./repl.ts"
   },
   "files": [
     "dist"
@@ -37,6 +38,7 @@
     "@types/jest": "^30.0.0",
     "@vitest/ui": "^4.0.18",
     "tsc-alias": "^1.8.16",
+    "tsx": "^4.21.0",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.0.18"
   }
