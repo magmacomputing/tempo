@@ -4,7 +4,7 @@
 
 ## What is a Snippet?
 
-A **Snippet** is a pre-defined regexp pattern that can be combined with other snippets to create a **Layout**.
+A **Snippet** is a pre-defined regex pattern that can be combined with other snippets to create a **Layout**.
 
 ## What is a Layout?
 
@@ -16,26 +16,26 @@ Snippets are simple regex patterns that can be composed into a layout.  They rep
 
 | Snippet | Description | Regex Match (approx) |
 | :--- | :--- | :--- |
-| `{yy}` | Year (2 or 4 digits) | `(\d{2})?\d{2}` |
+| `{yy}` | Year (2 or 4 digits) | `([0-9]{2})?[0-9]{2}` |
 | `{mm}` | Month (01-12, Jan-Dec, January-December) | `01-12` or names |
 | `{dd}` | Day (01-31) | `01-31` |
 | `{hh}` | Hour (00-24) | `00-24` |
-| `{mi}` | Minute (prefixed by `:`) | `:[0-5]\d` |
-| `{ss}` | Second (prefixed by `:`) | `:[0-5]\d` |
-| `{ff}` | Fraction (prefixed by `.`) | `\.\d{1,9}` |
+| `{mi}` | Minute (prefixed by `:`) | `:[0-5][0-9]` |
+| `{ss}` | Second (prefixed by `:`) | `:[0-5][0-9]` |
+| `{ff}` | Fraction (prefixed by `.`) | `\.[0-9]{1,9}` |
 | `{www}` | Weekday (Mon-Sun, Monday-Sunday) | Name strings |
 | `{tzd}` | Time zone offset | `Z` or `±hh:mm` |
 | `{mer}` | Meridiem (AM/PM) | `am` or `pm` |
 | `{sep}` | Separator character | `/`, `-`, `.`, `,`, or ` ` |
 | `{mod}` | Modifier and optional count | `+`, `-`, `<`, `>`, `next`, `prev`, etc. |
-| `{nbr}` | Generic number (e.g., for counts) | `\d*` |
+| `{nbr}` | Generic number (e.g., for counts) | `[0-9]*` |
 | `{unt}` | Time units (year, month, week, etc.) | `year(s)`, `day(s)`, etc. |
 | `{afx}` | Affix modifier | `ago` or `hence` |
 | `{sfx}` | Time suffix | Matches `T` or a space followed by a time pattern |
 
 ### Composite Snippets
 
-Some snippets are built from others:
+Some snippets are auto-built from others:
 
 - `{evt}`: Matches any defined **Event** alias (e.g., `xmas`, `nye`).
 - `{per}`: Matches any defined **Period** alias (e.g., `midnight`, `noon`).
@@ -55,7 +55,6 @@ Snippets are wrapped in curly braces `{}` and can be combined to create a layout
 | `dmy` | `{www}?{dd}{sep}?{mm}({sep}{yy})?{sfx}?` | Day-month(-year) |
 | `mdy` | `{www}?{mm}{sep}?{dd}({sep}{yy})?{sfx}?` | Month-day(-year) |
 | `ymd` | `{www}?{yy}{sep}?{mm}({sep}{dd})?{sfx}?` | Year-month(-day) |
-| `rdt` | `yesterday`, `tomorrow`, `today` | Recent date |
 | `unt` | `{nbr}{sep}?{unt}{sep}?{afx}` | Relative duration |
 | `evt` | `{evt}` | Event only |
 | `per` | `{per}` | Period only |
@@ -102,7 +101,7 @@ Pass a layout directly to the `Tempo` constructor.
 // Using a string
 const t1 = new Tempo('20240520', { layout: '{yy}{mm}{dd}' });
 
-// Using an array for a multiple layouts to try against a dateTime string
+// Using an array for a multiple layouts to match against a dateTime string
 const t2 = new Tempo('Monday, 20 May 2024', { 
   layout: ['{wkd}{sep}?{dd}{sep}?{mm}{sep}?{yy}', '{dd}{sep}?{mm}{sep}?{yy}'] 
 })
@@ -119,7 +118,7 @@ const t = new Tempo('Year 2024 Day 20', {
 ```
 
 To aid in designing a new Layout, use the static `Tempo.regexp()` method.
-It will return a Regular Expression that can be used to test the layout against a string.
+It will return a Regular Expression that can be used to debug the layout against a string.
 
 ```typescript
 let regex = Tempo.regexp('{yy}{sep}?{mm}{sep}?{dd}');

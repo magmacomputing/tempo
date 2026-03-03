@@ -7,7 +7,7 @@ Tempo provides a flexible way to parse Weekday inputs, allowing you to specify d
 Weekday inputs typically consist of a **modifier** (optional), a **count** (optional), and the **Weekday name**.
 
 ### 1. Simple Weekday Names
-You can provide the short or long name of a Weekday.
+You can provide the short or full name of a Weekday.
 - `Mon`, `Monday`
 - `Wed`, `Wednesday`
 - `Sun`, `Sunday`
@@ -38,8 +38,8 @@ Keywords can be used for more natural language-like inputs.
 
 ### 4. Count Modifiers
 You can specify a number of weeks to jump by adding a count after the modifier.
-- `-3Wed`: Three Wednesdays ago
-- `+2Mon`: Two Mondays from now
+- `-3 Wed`: Three Wednesdays ago
+- `+2 Mon`: Two Mondays from now
 
 ## Time Suffixes
 You can append time information to a Weekday string. Tempo will parse the Weekday first and then apply the time to that specific date.
