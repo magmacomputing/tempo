@@ -38,12 +38,9 @@ npm install @js-temporal/polyfill
 - **Numbers/BigInt**: Unix timestamps in milliseconds or nanoseconds
 - **Temporal Objects**: `ZonedDateTime`, `PlainDate`, etc.
 
-This project came about due to the need for a simple, yet powerful, way to parse and manipulate dates and times in JavaScript.
-`Date.parse()` is not a good solution, as it is not locale-aware, does not handle relative strings well, does not handle time zones well, and is not implemented in a standard way across all JavaScript runtimes.
-
 ### Snippets & Layouts
 The parsing engine uses a library of RegEx patterns.
-You can extend these patterns globally via `Tempo.init()` or per instance.
+You can extend these patterns a) globally (via `Tempo.init()`) or b) per instance (via options to `new Tempo`.
 
 `Tempo` also supports **Event** and **Period** aliases. These can be simple strings or functions that return a value to be parsed. When using functions, ensure you use the `function` keyword to maintain proper `this` binding to the `Tempo` instance.
 
@@ -51,7 +48,7 @@ You can extend these patterns globally via `Tempo.init()` or per instance.
 Tempo.init({
   event: {
     'birthday': '20 May',
-    'tomorrow': () => Temporal.Now.plainDateISO().add({ days: 1 }),
+    'tomorrow': function () { return Temporal.Now.plainDateISO().add({ days: 1 }) },
   }
 });
 ```
@@ -66,32 +63,32 @@ Formatting uses a placeholder syntax similar to many template engines:
 
 | Placeholder | Description | Example |
 | :--- | :--- | :--- |
-| `yyyy` | 4-digit year | `2024` |
-| `yy` | 2-digit year | `24` |
-| `mm` | 2-digit month | `05` |
-| `mon` | Full month name | `June` |
-| `mmm` | Short month name | `Jun` |
-| `dd` | 2-digit day | `20` |
-| `day` | Day of month (numeric) | `20` |
-| `wkd` | Full weekday name | `Monday` |
-| `www` | Short weekday name | `Mon` |
-| `dow` | Day of week (1-7) | `1` |
-| `ww` | Week of year | `21` |
-| `hh` | 24-hour hour | `14` |
-| `HH` | 12-hour hour (with meridiem) | `02pm` |
-| `mi` | Minutes | `05` |
-| `ss` | Seconds | `05` |
-| `ms` | Milliseconds | `005` |
-| `us` | Microseconds | `000` |
-| `ns` | Nanoseconds | `000` |
-| `ff` | Fractional seconds (9-digits) | `005000000` |
-| `ts` | Unix timestamp | `1716163200000` |
-| `#{term}` | Term value | eg. #{qtr} returns the current quarter as Q1, Q2, Q3 or Q4 |
+| `{yyyy}` | 4-digit year | `2024` |
+| `{yy}` | 2-digit year | `24` |
+| `{mm}` | 2-digit month | `05` |
+| `{mon}` | Full month name | `June` |
+| `{mmm}` | 3-character month name | `Jun` |
+| `{dd}` | 2-digit day | `20` |
+| `{day}` | Day of month (numeric) | `20` |
+| `{wkd}` | Full weekday name | `Monday` |
+| `{www}` | 3-character weekday name | `Mon` |
+| `{dow}` | Day of week (1-7) | `1` |
+| `{ww}` | Week of year | `21` |
+| `{hh}` | 24-hour hour | `14` |
+| `{HH}` | 12-hour hour (with meridiem) | `02pm` |
+| `{mi}` | 2-digit minutes | `05` |
+| `{ss}` | 2-digit seconds | `05` |
+| `{ms}` | 3-digit milliseconds | `005` |
+| `{us}` | 3-digit microseconds | `000` |
+| `{ns}` | 3-digit nanoseconds | `000` |
+| `{ff}` | 9-digit fractional seconds | `005000000` |
+| `{ts}` | Unix timestamp | `1716163200000` |
+| `{term.name}` | Term value | eg. `{term.qtr}` returns the current quarter as Q1, Q2, Q3 or Q4 |
 
 Example:
 ```typescript
 const t = new Tempo();
-t.format('dd mon yyyy'); // "24 January 2026"
+t.format('{dd} {mon} {yyyy}'); // "24 January 2026"
 ```
 
 ---
@@ -140,13 +137,14 @@ Tempo.compare(t1, t2); // -1, 0, or 1
 
 Common terms include:
 - `t.term.quarter`: Returns the current calendar quarter.
-- `t.term.season`: Returns the current season (North/South hemisphere aware).
+- `t.term.season`: Returns the current season (North/South hemisphere-aware).
 
 ---
 
 ## Context & Configuration
 
-Global settings can be configured using `Tempo.init()`:
+Global settings can be configured using `Tempo.init()`.
+This will affect any new Tempo instances created (but not affect any existing instances).
 
 ```typescript
 Tempo.init({
