@@ -55,6 +55,27 @@ Tempo.init({
 
 - [Layout Patterns Guide](file:///home/michael/Project/tempo/doc/tempo.layout.md): Details on creating custom parsing patterns and using relative units.
 
+### US-Style Dates (Ambiguous Digits)
+When parsing dates comprised entirely of digits (e.g., `04012026`), the input can be visually ambiguous: Is it `04-Jan-2026` (Day-Month-Year) or `Apr-01-2026` (Month-Day-Year)?
+
+Tempo solves this elegantly using **reasonable defaults and TimeZone awareness**:
+1. **TimeZone Detection**: 
+   Tempo will (if not provided) will infer the timeZone from the runtime environment.
+   Tempo checks the `timeZone` configuration option for an IANA timezone identifier.
+   If the timeZone is associated with one of the `mdyLocales` (which defaults to `en-US`), it assumes the input is US-style  (Tempo.parse.mdyLocales)
+2. **Prioritized Parsing**:
+   - If the timeZone favors US-style, Tempo tries the inbuilt **Month-Day-Year (`mdy`)** parsing layout *first*.
+   - If the timeZone favors the rest of the world, Tempo tries the inbuilt **Day-Month-Year (`dmy`)** parsing layout *first*.
+3. **Automatic Fallback**:
+   If the first layout fails (for example, reading `15012026` as `mdy` fails because there is no 15th month), Tempo will automatically "re-try" using the alternate layout.
+
+You can configure what timeZone or specific layouts trigger this behavior in the configuration options:
+```typescript
+const usDate = new Tempo('04012026', { timeZone: 'America/New_York' }); // Parsed as Apr-01-2026
+const ukDate = new Tempo('04012026', { timeZone: 'Europe/London' });    // Parsed as 04-Jan-2026
+```
+*(Note: This logic only applies to **parsing**. Formatting US-style dates remains dependent on the `{mm}{dd}{yyyy}` layout string you choose to output.)*
+
 ---
 
 ## Formatting
