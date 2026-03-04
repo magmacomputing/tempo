@@ -789,7 +789,7 @@ export class Tempo {
 
 		// setup effective parse rules for this instance (prototype-link to global)
 		this.#local.parse = Object.create(Tempo.#global.parse);	// set prototype to global parse
-		this.#local.parse.result = { type: 'Undefined' as Type, value: undefined };
+		this.#local.parse.result = { type: 'Undefined' as Type, value: void 0 };
 
 		Tempo.#setConfig(this.#local, options);									// set #local config
 	}
