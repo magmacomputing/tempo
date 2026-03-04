@@ -17,7 +17,7 @@ import type { IntRange, NonOptional, Property, Type } from '#core/shared/type.li
 
 import * as enums from '#core/shared/tempo.config/tempo.enum.js';
 import terms from '#core/shared/tempo.config/plugins/term.import.js';
-import { Match, Token, Snippet, Layout, Event, Period, Default } from '#core/shared/tempo.config/tempo.defaults.js';
+import { Match, Token, Snippet, Layout, Event, Period, Default } from '#core/shared/tempo.config/tempo.default.js';
 
 import '#core/shared/prototype.library.js';									// patch prototypes
 
@@ -56,11 +56,11 @@ const Context = getContext();																// get current execution context
  * const t4 = new Tempo('birthday', { 
  *   event: [['birthday', '20 May']],
  *   period: [['tea-time', '15:30']] 
- * });
+ * })
  * ```
  */
-@Immutable
 @Serializable
+@Immutable
 export class Tempo {
 // #region Static enum properties~~~~~~~~~~~~~~~~~~~~~~~~~
 	/** Weekday names (short-form) */													static get WEEKDAY() { return enums.WEEKDAY }
@@ -88,6 +88,7 @@ export class Tempo {
 	})
 
 	static #global = {} as Internal.Shape
+	static #usrCount = 0;																			// cache for next-available 'usr' Token key
 
 	// #endregion
 
@@ -199,7 +200,7 @@ export class Tempo {
 		const monthDay = asArray(Tempo.#global.parse.mdyLocales);
 
 		if (shape.config.level === 'local' && isDefined(shape.parse.mdyLocales))
-			monthDay.concat(shape.parse.mdyLocales)
+			monthDay.push(...shape.parse.mdyLocales);							// append local mdyLocales (not overwrite global)
 
 		return monthDay.some(mdy => mdy.timeZones?.includes(shapeZone));
 	}
@@ -335,7 +336,7 @@ export class Tempo {
 		})
 
 		const isMonthDay = Tempo.#isMonthDay(shape);
-		if (shape.config.level === 'global' || isMonthDay !== Tempo.#global.parse.isMonthDay)
+		if (isMonthDay !== Tempo.#global.parse.isMonthDay)			// this will always set on 'global' and conditionally on 'local'
 			shape.parse.isMonthDay = isMonthDay;
 
 		shape.config.sphere = Tempo.#setSphere(shape);
@@ -399,8 +400,8 @@ export class Tempo {
 				layout: { ...Layout } as Layout,
 				event: { ...Event } as Event,
 				period: { ...Period } as Period,
-				mdyLocales: Tempo.#mdyLocales(Default.mdyLocales),
-				mdyLayouts: asArray(Default.mdyLayouts),
+				mdyLocales: Tempo.#mdyLocales(Default.mdyLocales as Tempo.Options['mdyLocales']),
+				mdyLayouts: asArray(Default.mdyLayouts as Tempo.Options['mdyLayouts']),
 			} as Internal.Parse;																	// remove previous parsing rules
 
 			const dateTime = Intl.DateTimeFormat().resolvedOptions();
@@ -452,12 +453,7 @@ export class Tempo {
 	 */
 	static getSymbol(key?: string | symbol) {
 		if (isUndefined(key)) {
-			const userKeys = ownKeys(Token)
-				.filter(usr => usr.startsWith('usr'))
-				.map(usr => parseInt(usr.substring(3)))
-				.concat(0)
-			const max = `usr${Math.max(...userKeys) + 1}`;				// allocate a new 'user' key
-
+			const max = `usr${++Tempo.#usrCount}`;								// allocate a new 'user' key
 			return Token[max] = Symbol(max);											// add to Symbol register
 		}
 
@@ -466,11 +462,9 @@ export class Tempo {
 			return Token[name] ??= key;
 		}
 
-		const [name, description = key] = key										// for example, 'key = zdc.zodiac'
-			.split(Match.separator)
-			.filter(s => !isEmpty(s));
+		const description = key.split(Match.separator).filter(s => !isEmpty(s)).pop() || key;
 
-		return Token[name] ??= Symbol(description);							// add to Symbol register, if undefined
+		return Token[key] ??= Symbol(description);							// add to Symbol register, if undefined
 	}
 
 	/**
@@ -478,16 +472,7 @@ export class Tempo {
 	 * supports placeholder expansion using the {snippet} registry (e.g., `{yy}`, `{mm}`).
 	 */
 	static regexp(layout: string | RegExp, snippet?: Snippet) {
-		const names = new Set<string>();												// track the regex named capture-groups
-
-		function checker(source: string) {											// check for named capture-groups, and intercept duplicates
-			return source.replace(Match.captures, (match, name) => {
-				if (names.has(name)) return `(\\k<${name}>)`;				// replace with a back-reference to the {name}
-				names.add(name);																		// add {name} to the set of names
-				return match;
-			})
-		}
-
+		// helper function to replace {name} placeholders with their corresponding snippets
 		function matcher(str: string | RegExp): string {
 			let source = isRegExp(str) ? str.source : str;
 
@@ -498,9 +483,22 @@ export class Tempo {
 
 			return source.replace(Match.braces, (match, name) => {// iterate over "{}" pairs in the source string
 				const token = Tempo.getSymbol(name);								// get the symbol for this {name}
-				const snip = snippet?.[token]?.source								// get the snippet source (custom)
+				let snip = snippet?.[token]?.source									// get the snippet source (custom)
 					?? Snippet[token]?.source													// else get the snippet source (global)
 					?? Layout[token];																	// else get the layout source
+
+				if (isNullish(snip) && name.includes('.')) {				// if no definition found, try fallback
+					const prefix = name.split('.')[0];								// get the base token name
+					const pToken = Tempo.getSymbol(prefix);
+					snip = snippet?.[pToken]?.source
+						?? Snippet[pToken]?.source
+						?? Layout[pToken];
+
+					if (snip) {
+						const safeName = name.replace(/\./g, '_');			// e.g. aaa.bbb -> aaa_bbb
+						snip = `(?<${safeName}>${snip.replace(Match.captures, '(?:$2)')})`;
+					}
+				}
 
 				return (isNullish(snip) || snip === match)					// if no definition found,
 					? match																						// return the original match
@@ -508,8 +506,19 @@ export class Tempo {
 			})
 		}
 
+		// helper to check for duplicate named capture-groups
+		function checker(source: string) {
+			names.clear();																				// clear the set of names
+
+			return source.replace(Match.captures, (match, name) => {
+				if (names.has(name)) return `(\\k<${name}>)`;				// replace with a back-reference to the {name}
+				names.add(name);																		// add {name} to the set of names
+				return match;
+			})
+		}
+
+		const names = new Set<string>();												// track the regex named capture-groups
 		layout = matcher(layout);																// initiate the layout-parse
-		names.clear();																					// clear the set of names
 		layout = checker(layout);																// check for named capture-groups
 
 		return new RegExp(`^(${layout})$`, 'i');								// translate the source into a regex
@@ -564,7 +573,9 @@ export class Tempo {
 		return secure(Default);
 	}
 
-	/** array of regex patterns used when parsing Tempo.DateTime argument */
+	/** 
+	 * configuration governing the static 'rules' used when parsing Tempo.DateTime argument
+	 */
 	static get parse() {
 		const parse = Tempo.#global.parse;
 		return secure({
@@ -573,17 +584,13 @@ export class Tempo {
 			layout: { ...parse.layout },
 			event: { ...parse.event },
 			period: { ...parse.period },
-			token: { ...parse.token },
-		});
+			// token: { ...parse.token },													// I don't believe the Token needs to be exposed
+		})
 	}
 
 	/** iterate over Tempo properties */
 	static [Symbol.iterator]() {
-		const props = Tempo.properties[Symbol.iterator]();			// static Iterator over array of 'getters'
-
-		return {
-			next: () => props.next(),
-		}
+		return Tempo.properties[Symbol.iterator]();							// static Iterator over array of 'getters'
 	}
 
 	// #endregion Static public methods
@@ -598,16 +605,7 @@ export class Tempo {
 
 	/** iterate over instance formats */
 	[Symbol.iterator]() {
-		const props = ownEntries(this.#fmt)[Symbol.iterator]();	// instance Iterator over tuple of FormatType[]
-
-		return {
-			next: () => props.next(),															// tuple of [fmtCode, value]
-		}
-	}
-
-	/** release any Tempo resources */
-	[Symbol.dispose]() {
-		Tempo.#dbg.info('release Tempo resources');							// TODO: what do we want to do here?
+		return ownEntries(this.#fmt)[Symbol.iterator]();				// instance Iterator over tuple of FormatType[]
 	}
 
 	get [Symbol.toStringTag]() {															// default string description
@@ -655,7 +653,7 @@ export class Tempo {
 		try {
 			this.#zdt = this.#parse(this.#tempo);									// attempt to interpret the DateTime arg
 
-			if (['iso8601', 'gregory'].includes(this.#config['calendar'])) {
+			if (['iso8601', 'gregory'].includes(this.#local.config['calendar'])) {
 				const formats = ownEntries(Tempo.FORMAT);
 				for (const [key, val] of formats) {
 					// @ts-ignore
@@ -724,7 +722,7 @@ export class Tempo {
 	/** Nanoseconds of the microsecond (0-999) */							get ns() { return this.#zdt.nanosecond as Tempo.ns }
 	/** Fractional seconds (e.g., 0.123456789) */							get ff() { return +(`0.${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`) }
 	/** IANA Time Zone ID (e.g., 'Australia/Sydney') */				get tz() { return this.#zdt.timeZoneId }
-	/** Unix timestamp (defaults to milliseconds) */					get ts() { return this.epoch[this.#config['timeStamp']] }
+	/** Unix timestamp (defaults to milliseconds) */					get ts() { return this.epoch[this.#local.config['timeStamp']] }
 	/** Short month name (e.g., 'Jan') */											get mmm() { return Tempo.MONTH.keyOf(this.#zdt.month as Tempo.Month) }
 	/** Full month name (e.g., 'January') */									get mon() { return Tempo.MONTHS.keyOf(this.#zdt.month as Tempo.Month) }
 	/** Short weekday name (e.g., 'Mon') */										get www() { return Tempo.WEEKDAY.keyOf(this.#zdt.dayOfWeek as Tempo.Weekday) }
@@ -746,7 +744,7 @@ export class Tempo {
 	// #endregion Instance public accessors
 	// #region Instance private accessors
 
-	/** effective configuration: local overrides, else global */get #config() { return isEmpty(this.#local.config) ? Tempo.#global.config : this.#local.config }
+	// /** effective configuration: local overrides, else global */get #config() { return isEmpty(this.#local.config) ? Tempo.#global.config : this.#local.config }
 	// #endregion Instance private accessors
 
 	// #region Instance public methods~~~~~~~~~~~~~~~~~~~~~~~~
@@ -775,7 +773,7 @@ export class Tempo {
 
 	// #region Instance private methods~~~~~~~~~~~~~~~~~~~~~~~
 	/**
-	 * setup local Shape instance, which will contain all the configuration and state for this instance.  
+	 * setup local 'config' and 'parse' rules (with prototype set to global)
 	 * we copy down the current global config to the local instance, then apply any options provided.  
 	 * in this way, we preserve immutability of this instance, in case the user later changes the global config.
 	 * 
@@ -785,11 +783,12 @@ export class Tempo {
 	 */
 	#setLocal(options: Tempo.Options) {
 		// copy down current global config to local instance
+		this.#local.config = Object.create(Tempo.#global.config);// set prototype to global config
 		const { mdyLocales, mdyLayouts, ...config } = Tempo.#global.config as Tempo.Options;
 		Object.assign(this.#local.config, config, { level: 'local' });
 
 		// setup effective parse rules for this instance (prototype-link to global)
-		this.#local.parse = Object.create(Tempo.#global.parse);
+		this.#local.parse = Object.create(Tempo.#global.parse);	// set prototype to global parse
 		this.#local.parse.result = { type: 'Undefined' as Type, value: undefined };
 
 		Tempo.#setConfig(this.#local, options);									// set #local config
@@ -797,9 +796,9 @@ export class Tempo {
 
 	/** parse DateTime input */
 	#parse(tempo?: Tempo.DateTime, dateTime?: Temporal.ZonedDateTime) {
-		const timeZone = this.#config['timeZone'];
-		const calendar = this.#config['calendar'];
-		const today = dateTime ?? this.#now											// cast instantiation to current timeZone
+		const timeZone = this.#local.config['timeZone'];
+		const calendar = this.#local.config['calendar'];
+		const today = dateTime ?? this.#now											// use provided ZonedDateTime, else cast instantiation to current timeZone
 			.toZonedDateTimeISO(timeZone);
 		const arg = this.#conform(tempo, today);								// if String or Number, conform the input against known patterns
 
@@ -812,11 +811,11 @@ export class Tempo {
 			case 'Undefined':
 				return today;
 
-			case 'String':
+			case 'String':																				// String which didn't conform to a Tempo.pattern
 			case 'Temporal.ZonedDateTime':
 				try {
-					return Temporal.ZonedDateTime.from(arg.value);		// attempt to parse value
-				} catch {
+					return Temporal.ZonedDateTime.from(arg.value);		// see if Temporal can parse value
+				} catch {																						// else see if Date.parse can parse value
 					this.#local.parse.result = { match: 'Date.parse', value: arg.value, type: arg.type }																					// fallback to browser's Date.parse() method
 					Tempo.#dbg.warn(this.#local.config, 'Cannot detect DateTime; fallback to Date.parse');
 					return Temporal.ZonedDateTime
@@ -852,7 +851,7 @@ export class Tempo {
 
 			case 'Tempo':
 				return arg.value
-					.toDateTime();																		// clone current Tempo
+					.toDateTime();																		// clone provided Tempo
 
 			case 'Date':
 				return new Temporal.ZonedDateTime(BigInt(arg.value.getTime() * 1_000_000), timeZone, calendar);
@@ -1183,7 +1182,7 @@ export class Tempo {
 		 */
 		if (year.toString().match(Match.twoDigit)) {						// if {year} match just-two digits
 			const pivot = dateTime
-				.subtract({ years: this.#config['pivot'] })					// pivot cutoff to determine century
+				.subtract({ years: this.#local.config['pivot'] })		// pivot cutoff to determine century
 				.year % 100																					// remainder 
 			const century = Math.trunc(dateTime.year / 100);			// current century
 			year += (century - Number(year >= pivot)) * 100;			// now a four-digit year
@@ -1514,7 +1513,7 @@ export class Tempo {
 				return +`${this.yy}${pad(this.mm)}${pad(this.dd)}`;
 
 			default:
-				return sTemplate.replace(/{(\w+(?:\.\w+)*)}/g, (match, token) => {
+				return sTemplate.replace(Match.braces, (_match, token) => {
 					switch (token) {
 						case 'yyyy': return pad(this.yy, 4);
 						case 'yy': return pad(this.yy % 100);
@@ -1614,7 +1613,7 @@ export class Tempo {
 			.map(nbr => nbr.toString().padStart(3, '0'))
 			.join('')
 
-		const rtf = new Intl.RelativeTimeFormat(this.#config['locale'], { style: 'narrow' });
+		const rtf = new Intl.RelativeTimeFormat(this.#local.config['locale'], { style: 'narrow' });
 
 		switch (dur.unit) {
 			case void 0:
@@ -1697,12 +1696,12 @@ export namespace Tempo {
 	export interface Format {
 		/** www, dd mmm yyyy */[Tempo.FORMAT.display]: string;
 		/** www, dd mmm yyyy */display: string;
-		/** www, yyyy-mmm-dd */[Tempo.FORMAT.plainDate]: string;
-		/** www, yyyy-mmm-dd */wkdDate: string;
-		/** www, yyyy-mmm-dd hh:mi.ss */[Tempo.FORMAT.plainTime]: string;
-		/** www, yyyy-mmm-dd hh:mi.ss */wkdTime: string;
-		/** www, yyyy-mmm-dd hh:mi:ss.ff */[Tempo.FORMAT.plainStamp]: string;
-		/** www, yyyy-mmm-dd hh:mi:ss.ff */wkdStamp: string;
+		/** www, yyyy-mmm-dd */[Tempo.FORMAT.weekDate]: string;
+		/** www, yyyy-mmm-dd */weekDate: string;
+		/** www, yyyy-mmm-dd hh:mi.ss */[Tempo.FORMAT.weekTime]: string;
+		/** www, yyyy-mmm-dd hh:mi.ss */weekTime: string;
+		/** www, yyyy-mmm-dd hh:mi:ss.ff */[Tempo.FORMAT.weekStamp]: string;
+		/** www, yyyy-mmm-dd hh:mi:ss.ff */weekStamp: string;
 		/** dd-mmm */[Tempo.FORMAT.dayMonth]: string;
 		/** dd-mmm */dayMonth: string;
 		/** dd-mmm-yyyy */[Tempo.FORMAT.dayDate]: string;

@@ -1,9 +1,10 @@
 import { looseIndex } from '#core/shared/object.library.js';
+import { secure } from '#core/shared/utility.library.js';
 import type { Tempo } from '#core/shared/tempo.class.js';
 
 /** common RegExp patterns */
 export const Match = {
-	/** match all {} pairs, if they start with a letter */		braces: /{([a-zA-Z][\w]*)}/g,
+	/** match all {} pairs, if they start with a word char */	braces: /{([\w]+(?:\.[\w]+)*)}/g,
 	/** named capture-group, if it starts with a letter */		captures: /\(\?<([a-zA-Z][\w]*)>(.*?)(?<!\\)\)/g,
 	/** event */																							event: /^(g|l)evt[0-9]+$/,
 	/** period */																							period: /^(g|l)per[0-9]+$/,
@@ -138,7 +139,7 @@ export type Period = typeof Period
 
 /** Reasonable default options for initial Tempo config */
 export const Options = ['value', 'mdyLocales', 'mdyLayouts', 'store', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period'] as const;
-export const Default = {
+export const Default = secure({
 	/** log to console */																			debug: false,
 	/** catch or throw Errors */															catch: false,
 	/** used to parse two-digit years*/												pivot: 75,										/** @link https://en.wikipedia.org/wiki/Date_windowing */
@@ -146,4 +147,4 @@ export const Default = {
 	/** calendaring system */																	calendar: 'iso8601',
 	/** locales that prefer month-day order */								mdyLocales: ['en-US', 'en-AS'],	/** @link https://en.wikipedia.org/wiki/Date_format_by_country */
 	/** layouts that need to swap parse-order */							mdyLayouts: [['dayMonthYear', 'monthDayYear']],
-} as Tempo.Options
+} as Tempo.Options)

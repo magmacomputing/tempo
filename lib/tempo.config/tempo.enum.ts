@@ -44,7 +44,7 @@ export const TIME = enumify({
 		/** number of seconds in a millisecond */								millisecond: .001,
 		/** number of seconds in a microsecond */								microsecond: .000_001,
 		/** number of seconds in a nanosecond */								nanosecond: .000_000_001,
-});
+})
 export const TIMES = enumify({
 		/** approx number of milliseconds in a year */					years: TIME.year * 1_000,
 		/** approx number of milliseconds in a month */					months: TIME.month * 1_000,
@@ -56,30 +56,30 @@ export const TIMES = enumify({
 		/** one millisecond */																	milliseconds: TIME.millisecond * 1_000,
 		/** number of milliseconds in a microsecond */					microseconds: TIME.microsecond * 1_000,
 		/** number of milliseconds in a nanosecond */						nanoseconds: Number((TIME.nanosecond * 1_000).toPrecision(6)),
-});
+})
 /** pre-defined Format code short-cuts */
 export const FORMAT = enumify({
 		/** useful for standard date display */									display: '{www}, {dd} {mmm} {yyyy}',
-		/** useful for standard datestamps */										plainDate: '{www}, {yyyy}-{mmm}-{dd}',
-		/** useful for standard timestamps */										plainTime: '{www}, {yyyy}-{mmm}-{dd} {hh}:{mi}:{ss}',
-		/** useful for standard full timestamps */							plainStamp: '{www}, {yyyy}-{mmm}-{dd} {hh}:{mi}:{ss}.{ff}',
+		/** useful for standard datestamps */										weekDate: '{www}, {yyyy}-{mmm}-{dd}',
+		/** useful for standard timestamps */										weekTime: '{www}, {yyyy}-{mmm}-{dd} {hh}:{mi}:{ss}',
+		/** useful for standard full timestamps */							weekStamp: '{www}, {yyyy}-{mmm}-{dd} {hh}:{mi}:{ss}.{ff}',
 		/** useful for readable month and day */								dayMonth: '{dd}-{mmm}',
 		/** useful for Date */																	dayDate: '{dd}-{mmm}-{yyyy}',
 		/** display with Time */																dayTime: '{dd}-{mmm}-{yyyy} {hh}:{mi}:{ss}',
-		/** useful for stamping logs */													logStamp: '{yyyy}{mm}{dd}.{hhmiss}.{ff}',
+		/** useful for stamping logs */													logStamp: '{yyyy}{mm}{dd}T{hhmiss}.{ff}',
 		/** useful for sorting display-strings */								sortTime: '{yyyy}-{mm}-{dd} {hh}:{mi}:{ss}',
 		/** useful for sorting week order */										yearWeek: 'yyyyww',
 		/** useful for sorting month order */										yearMonth: 'yyyymm',
 		/** useful for sorting date order */										yearMonthDay: 'yyyymmdd',
 		/** just Date portion */																date: '{yyyy}-{mm}-{dd}',
 		/** just Time portion */																time: '{hh}:{mi}:{ss}',
-});
+})
 export type FORMAT = ValueOf<typeof FORMAT>
 
 export const LIMIT = secure({
 		/** Tempo(31-Dec-9999.23:59:59).ns */										maxTempo: Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds,
 		/** Tempo(01-Jan-1000.00:00:00).ns */										minTempo: Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds,
-});
+})
 
 export const ELEMENT = enumify({
 	yy: 'year',
@@ -92,6 +92,6 @@ export const ELEMENT = enumify({
 	ms: 'millisecond',
 	us: 'microsecond',
 	ns: 'nanosecond',
-});
+})
 export type ELEMENT = ValueOf<typeof ELEMENT>
 export type Element = KeyOf<typeof ELEMENT>
