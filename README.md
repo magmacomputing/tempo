@@ -48,6 +48,14 @@ For detailed technical guides, please refer to:
 - [Formatting Specs](./doc/Tempo.md#formatting)
 - [Plugin System (Terms)](./doc/Tempo.md#plugins-terms)
 
+## 💬 Contact & Support
+
+If you have a question, find a bug, or want to suggest a new feature:
+
+1. **Bug Reports & Features**: Please open an [Issue](https://github.com/magmacomputing/tempo/issues).
+2. **Questions & Ideas**: Start a thread in [Discussions](https://github.com/magmacomputing/tempo/discussions).
+3. **Direct Contact**: You can reach me at `hello@magmacomputing.com`.
+
 ## ⚖️ License
 
 Distributed under the MIT License. See `LICENSE` for more information.

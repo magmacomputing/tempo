@@ -60,7 +60,7 @@ When parsing dates comprised entirely of digits (e.g., `04012026`), the input ca
 
 Tempo solves this elegantly using **reasonable defaults and TimeZone awareness**:
 1. **TimeZone Detection**: 
-   Tempo will (if not provided) will infer the timeZone from the runtime environment.
+   Tempo will (if not provided) infer the timeZone from the runtime environment.
    Tempo checks the `timeZone` configuration option for an IANA timezone identifier.
    If the timeZone is associated with one of the `mdyLocales` (which defaults to `en-US`), it assumes the input is US-style  (Tempo.parse.mdyLocales)
 2. **Prioritized Parsing**:
@@ -74,7 +74,7 @@ You can configure what timeZone or specific layouts trigger this behavior in the
 const usDate = new Tempo('04012026', { timeZone: 'America/New_York' }); // Parsed as Apr-01-2026
 const ukDate = new Tempo('04012026', { timeZone: 'Europe/London' });    // Parsed as 04-Jan-2026
 ```
-*(Note: This logic only applies to **parsing**. Formatting US-style dates remains dependent on the `{mm}{dd}{yyyy}` layout string you choose to output.)*
+*(Note: This logic only applies to **parsing** digits-only input. Formatting US-style dates remains dependent on the `{mm}{dd}{yyyy}` layout string you choose to output.)*
 
 ---
 
