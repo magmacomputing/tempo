@@ -137,6 +137,29 @@ export const Period = looseIndex<string, string | Function>()({
 })
 export type Period = typeof Period
 
+/** 
+ * a {timeZone} alias dictionary mapping common abbreviations to IANA strings.
+ * Tempo will check this registry to convert abbreviations before passing them to Temporal.
+ */
+export const TimeZone = looseIndex<string, string>()({
+	'utc': 'UTC',
+	'gmt': 'Europe/London',
+	'est': 'America/New_York',
+	'cst': 'America/Chicago',
+	'mst': 'America/Denver',
+	'pst': 'America/Los_Angeles',
+	'aest': 'Australia/Sydney',
+	'acst': 'Australia/Adelaide',
+	'awst': 'Australia/Perth',
+	'nzt': 'Pacific/Auckland',
+	'cet': 'Europe/Paris',
+	'eet': 'Europe/Helsinki',
+	'ist': 'Asia/Kolkata',
+	'npt': 'Asia/Kathmandu',
+	'jst': 'Asia/Tokyo',
+})
+export type TimeZone = typeof TimeZone
+
 /** Reasonable default options for initial Tempo config */
 export const Options = ['value', 'mdyLocales', 'mdyLayouts', 'store', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period'] as const;
 export const Default = secure({

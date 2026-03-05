@@ -23,17 +23,17 @@ export type MONTH = KeyOf<typeof MONTH>
 export type MONTHS = KeyOf<typeof MONTHS>
 export type Month = ValueOf<typeof MONTH>
 
-export const DURATION = enumify(['year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond']);
-export const DURATIONS = enumify(['years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds', 'nanoseconds']);
-export type DURATION = KeyOf<typeof DURATION>
-export type DURATIONS = KeyOf<typeof DURATIONS>
+/** DURATION is now an alias for TIME */
+// export const DURATION = enumify(['year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond']);
+// export const DURATIONS = enumify(['years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds', 'nanoseconds']);
 
 export const SEASON = enumify({ Summer: 'summer', Autumn: 'autumn', Winter: 'winter', Spring: 'spring' });
 export const COMPASS = enumify({ North: 'north', East: 'east', South: 'south', West: 'west' });
 export type SEASON = ValueOf<typeof SEASON>
 export type COMPASS = ValueOf<typeof COMPASS>
 
-export const TIME = enumify({
+/** number of seconds in a time unit */
+export const DURATION = enumify({
 		/** approx number of seconds in a year */								year: 31_536_000,
 		/** approx number of seconds in a month */							month: 2_628_000,
 		/** number of seconds in a week */											week: 604_800,
@@ -45,18 +45,22 @@ export const TIME = enumify({
 		/** number of seconds in a microsecond */								microsecond: .000_001,
 		/** number of seconds in a nanosecond */								nanosecond: .000_000_001,
 })
-export const TIMES = enumify({
-		/** approx number of milliseconds in a year */					years: TIME.year * 1_000,
-		/** approx number of milliseconds in a month */					months: TIME.month * 1_000,
-		/** number of milliseconds in a week */									weeks: TIME.week * 1_000,
-		/** number of milliseconds in a day */									days: TIME.day * 1_000,
-		/** number of milliseconds in an hour */								hours: TIME.hour * 1_000,
-		/** number of milliseconds in a minute */								minutes: TIME.minute * 1_000,
-		/** number of milliseconds in a second */								seconds: TIME.second * 1_000,
-		/** one millisecond */																	milliseconds: TIME.millisecond * 1_000,
-		/** number of milliseconds in a microsecond */					microseconds: TIME.microsecond * 1_000,
-		/** number of milliseconds in a nanosecond */						nanoseconds: Number((TIME.nanosecond * 1_000).toPrecision(6)),
+/** number of milliseconds in a time unit */
+export const DURATIONS = enumify({
+		/** approx number of milliseconds in a year */					years: DURATION.year * 1_000,
+		/** approx number of milliseconds in a month */					months: DURATION.month * 1_000,
+		/** number of milliseconds in a week */									weeks: DURATION.week * 1_000,
+		/** number of milliseconds in a day */									days: DURATION.day * 1_000,
+		/** number of milliseconds in an hour */								hours: DURATION.hour * 1_000,
+		/** number of milliseconds in a minute */								minutes: DURATION.minute * 1_000,
+		/** number of milliseconds in a second */								seconds: DURATION.second * 1_000,
+		/** one millisecond */																	milliseconds: DURATION.millisecond * 1_000,
+		/** number of milliseconds in a microsecond */					microseconds: DURATION.microsecond * 1_000,
+		/** number of milliseconds in a nanosecond */						nanoseconds: Number((DURATION.nanosecond * 1_000).toPrecision(6)),
 })
+export type DURATION = KeyOf<typeof DURATION>
+export type DURATIONS = KeyOf<typeof DURATIONS>
+
 /** pre-defined Format code short-cuts */
 export const FORMAT = enumify({
 		/** useful for standard date display */									display: '{www}, {dd} {mmm} {yyyy}',
