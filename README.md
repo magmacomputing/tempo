@@ -36,8 +36,8 @@ const later = now.add({ days: 3, hours: 2 });
 const startOfMonth = now.set({ start: 'month' });
 
 // Format
-console.log(now.format('dd mmm yyyy')); // "24 Jan 2026"
-console.log(now.fmt.date); // "2026-01-24"
+console.log(now.format('{dd} {mmm} {yyyy}')); // using custom format with tokens: "24 Jan 2026"
+console.log(now.fmt.date);                    // using pre-built formats: "2026-01-24"
 ```
 
 ## 📚 Documentation

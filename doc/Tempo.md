@@ -3,7 +3,7 @@
 `Tempo` is a modern JavaScript utility class designed to simplify work with dates and times by wrapping the `Temporal` API.
 
 This project came about due to the need for a simple, yet powerful, way to parse (and manipulate) dates and times in JavaScript.
-`Date.parse()` is not a good solution, as it is not locale-aware, does not handle relative strings well, does not handle time zones well, and is not implemented in a standard way across all JavaScript runtimes.
+`Date.parse()` was not a good solution, as it is not locale-aware, does not handle relative strings well, does not handle time zones well, and is not implemented in a standard way across all JavaScript runtimes.
 
 ## Table of Contents
 1. [Installation](#installation)
@@ -61,7 +61,7 @@ When parsing dates comprised entirely of digits (e.g., `04012026`), the input ca
 Tempo solves this elegantly using **reasonable defaults and TimeZone awareness**:
 1. **TimeZone Detection**: 
    Tempo will (if not provided) infer the timeZone from the runtime environment.
-   Tempo checks the `timeZone` configuration option for an IANA timezone identifier.
+   If you do provide a `timeZone` it should be an IANA timezone identifier or an "±hh:mm" offset.
    If the timeZone is associated with one of the `mdyLocales` (which defaults to `en-US`), it assumes the input is US-style  (Tempo.parse.mdyLocales)
 2. **Prioritized Parsing**:
    - If the timeZone favors US-style, Tempo tries the inbuilt **Month-Day-Year (`mdy`)** parsing layout *first*.
@@ -174,7 +174,19 @@ Tempo.init({
 });
 ```
 
+### TimeZone Aliases
+For convenience, `timeZone` configurations accept both strict IANA identifiers (e.g., `Australia/Sydney`) as well as common abbreviations.
+Tempo will automatically translate these abbreviations before passing them to the underlying engine:
+- `utc` -> `UTC`
+- `gmt` -> `Europe/London`
+- `est` -> `America/New_York`
+- `cst` -> `America/Chicago`
+- `mst` -> `America/Denver`
+- `pst` -> `America/Los_Angeles`
+- `aest` -> `Australia/Sydney`
+- *(...and several others. See `tempo.default.ts` for the complete `TimeZone` registry.)*
+
 Instances can also be created with specific options:
 ```typescript
-new Tempo('2024-05-20', { debug: true });
+new Tempo('2024-05-20', { timeZone: 'AEST', debug: true });
 ```
