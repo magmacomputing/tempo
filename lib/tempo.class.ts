@@ -86,7 +86,7 @@ export class Tempo {
 	})
 
 	static #global = {} as Internal.Shape
-	static #pending: Internal.Match[] = [];										// collect the parse rule-match results
+	static #pending? = void 0 as Internal.Match[] | undefined;// collect the parse rule-match results
 	static #usrCount = 0;																			// cache for next-available 'usr' Token key
 
 	// #endregion
@@ -674,8 +674,6 @@ export class Tempo {
 		// parse the local options looking for overrides to Tempo.#global.config
 		this.#setLocal(this.#options);
 
-		this.#local.parse.result = [...Tempo.#pending];	// init with cumulative results
-
 		// we now have all the info we need to instantiate a new Tempo
 		try {
 			this.#zdt = this.#parse(this.#tempo);									// attempt to interpret the DateTime arg
@@ -691,6 +689,11 @@ export class Tempo {
 					this.#setTerm(this, key, define, true);						// add a getter which returns the key-field only
 					this.#setTerm(this, scope, define, false);				// add a getter which returns a range-object
 				})
+
+			if (isDefined(Tempo.#pending)) {											// are we mutating with 'set()' ?
+				this.#local.parse.result = Tempo.#pending;					// stash collected parse-matches
+				Tempo.#pending = void 0;														// and reset mutating-flag
+			}
 
 			secure(this.#fmt);																		// prevent mutations
 			secure(this.#local.config);
@@ -814,8 +817,7 @@ export class Tempo {
 
 		// setup effective parse rules for this instance (prototype-link to global)
 		this.#local.parse = Object.create(Tempo.#global.parse);	// set prototype to global parse
-		this.#local.parse.result = [...Tempo.#pending];
-		Tempo.#pending = [];																		// reset the pending array
+		this.#local.parse.result = [];													// start with empty result
 
 		Tempo.#setConfig(this.#local, options);									// set #local config
 	}
@@ -826,11 +828,13 @@ export class Tempo {
 		const calendar = this.#local.config['calendar'];
 		const today = dateTime ?? this.#now											// use provided ZonedDateTime, else cast instantiation to current timeZone
 			.toZonedDateTimeISO(timeZone);
-		const arg = this.#conform(tempo, today);								// if String or Number, conform the input against known patterns
+		const { type, value } = this.#conform(tempo, today);		// if String or Number, conform the input against known patterns
 
-		Tempo.#dbg.info(this.#local.config, 'parse', `{type: ${arg.type}, value: ${arg.value}}`);					// show what we're parsing
+		if (isEmpty(this.#local.parse.result))									// #conform() didn't find any matches
+			this.#local.parse.result = [{ type, value }];
+		Tempo.#dbg.info(this.#local.config, 'parse', `{type: ${type}, value: ${value}}`);					// show what we're parsing
 
-		switch (arg.type) {
+		switch (type) {
 			case 'Null':
 			case 'Void':
 			case 'Empty':
@@ -840,60 +844,60 @@ export class Tempo {
 			case 'String':																				// String which didn't conform to a Tempo.pattern
 			case 'Temporal.ZonedDateTime':
 				try {
-					return Temporal.ZonedDateTime.from(arg.value);		// see if Temporal can parse value
+					return Temporal.ZonedDateTime.from(value);				// see if Temporal can parse value
 				} catch {																						// else see if Date.parse can parse value
 					const fallback: Partial<Internal.Match> = { match: 'Date.parse' };
-					this.#result(arg, fallback);
+					this.#result({ type, value }, fallback);
 					Tempo.#dbg.warn(this.#local.config, 'Cannot detect DateTime; fallback to Date.parse');
 					return Temporal.ZonedDateTime
-						.from(`${new Date(arg.value.toString()).toISOString()}[${timeZone}]`)
+						.from(`${new Date(value.toString()).toISOString()}[${timeZone}]`)
 						.withCalendar(calendar)
 				}
 
 			case 'Temporal.PlainDate':
 			case 'Temporal.PlainDateTime':
-				return arg.value
+				return value
 					.toZonedDateTime(timeZone)
 					.withCalendar(calendar);
 
 			case 'Temporal.PlainTime':
-				return today.withPlainTime(arg.value);
+				return today.withPlainTime(value);
 
 			case 'Temporal.PlainYearMonth':												// assume current day, else end-of-month
-				return arg.value
-					.toPlainDate({ day: Math.min(today.day, arg.value.daysInMonth) })
+				return value
+					.toPlainDate({ day: Math.min(today.day, value.daysInMonth) })
 					.toZonedDateTime(timeZone)
 					.withCalendar(calendar)
 
 			case 'Temporal.PlainMonthDay':												// assume current year
-				return arg.value
+				return value
 					.toPlainDate({ year: today.year })
 					.toZonedDateTime(timeZone)
 					.withCalendar(calendar)
 
 			case 'Temporal.Instant':
-				return arg.value
+				return value
 					.toZonedDateTimeISO(timeZone)
 					.withCalendar(calendar)
 
 			case 'Tempo':
-				return arg.value
+				return value
 					.toDateTime();																		// clone provided Tempo
 
 			case 'Date':
-				return new Temporal.ZonedDateTime(BigInt(arg.value.getTime() * 1_000_000), timeZone, calendar);
+				return new Temporal.ZonedDateTime(BigInt(value.getTime() * 1_000_000), timeZone, calendar);
 
 			case 'Number':																				// Number which didn't conform to a Tempo.pattern
-				const [seconds = BigInt(0), suffix = BigInt(0)] = arg.value.toString().split('.').map(BigInt);
+				const [seconds = BigInt(0), suffix = BigInt(0)] = value.toString().split('.').map(BigInt);
 				const nano = BigInt(suffix.toString().substring(0, 9).padEnd(9, '0'));
 
 				return new Temporal.ZonedDateTime(seconds * BigInt(1_000_000_000) + nano, timeZone, calendar);
 
 			case 'BigInt':																				// BigInt is not conformed against a Tempo.pattern
-				return new Temporal.ZonedDateTime(arg.value, timeZone, calendar);
+				return new Temporal.ZonedDateTime(value, timeZone, calendar);
 
 			default:
-				Tempo.#dbg.catch(this.#local.config, `Unexpected Tempo parameter type: ${arg.type}, ${String(arg.value)}`);
+				Tempo.#dbg.catch(this.#local.config, `Unexpected Tempo parameter type: ${type}, ${String(value)}`);
 				return today;
 		}
 	}
@@ -921,8 +925,9 @@ export class Tempo {
 	}
 
 	/** trace the initial instance pattern-match */
-	#result(arg: any, ...obj: Partial<Internal.Match>[]) {
-		this.#local.parse.result.push(Object.assign({}, arg, ...obj));
+	#result(base: Partial<Internal.Match>, ...rest: Partial<Internal.Match>[]) {
+		(Tempo.#pending ?? this.#local.parse.result)
+			.push(Object.assign({}, base, ...rest) as Internal.Match);
 	}
 
 	/** evaluate 'string | number' input against known patterns */
@@ -951,7 +956,7 @@ export class Tempo {
 		if (!isType<string | number>(arg.value, 'String', 'Number'))
 			return arg;																						// only conform String or Number (not BigInt, etc) against known patterns
 
-		const value = trimAll(arg.value, /\(|\)/g);							// cast as String, remove \( \) and control-characters
+		const value = trimAll(arg.value, Match.strips);					// cast as String, remove \( \) and control-characters
 
 		if (isString(arg.value)) {															// if original value is String
 			if (isEmpty(value)) {																	// don't conform empty string
@@ -973,15 +978,14 @@ export class Tempo {
 		if (isUndefined(this.#zdt))															// if first pass
 			dateTime = dateTime.withPlainTime('00:00:00');				// strip out all time-components
 
-
 		const map = this.#local.parse.pattern;
 		for (const [sym, pat] of map) {
 			const groups = this.#parseMatch(pat, value);					// determine pattern-match groups
-			if (isEmpty(groups))
-				continue;																						// no match, so skip this iteration
+			if (isEmpty(groups)) continue;												// no match, so skip this iteration
 
 			this.#result(arg, { match: sym.description, groups: cleanify(groups) });	// stash the {key} of the pattern that was matched
 			this.#parseGroups(groups);														// mutate the {groups} object
+
 			dateTime = this.#parseWeekday(groups, dateTime);			// if {weekDay} pattern, calculate a calendar value
 			dateTime = this.#parseDate(groups, dateTime);					// if {calendar}|{event} pattern, translate to date value
 			dateTime = this.#parseTime(groups, dateTime);					// if {clock}|{period} pattern, translate to a time value
@@ -1370,6 +1374,8 @@ export class Tempo {
 
 	/** create a new Tempo with {adjust} property */
 	#set = (args: (Tempo.Add | Tempo.Set)) => {
+		Tempo.#pending ??= [...this.#local.parse.result];				// collected parse-results so-far
+
 		const zdt = ownEntries(args)														// loop through each mutation
 			.reduce((zdt, [key, adjust]) => {											// apply each mutation to preceding one
 				const { mutate, offset, single } = ((key) => {
