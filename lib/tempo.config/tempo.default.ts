@@ -13,6 +13,7 @@ export const Match = {
 	/** separator characters (/ - . ,) */											separator: /[\/\-\.\s,]/,
 	/** modifier characters (+-<>=) */												modifier: /[\+\-\<\>][\=]?|this|next|prev|last/,
 	/** offset post keywords (ago|hence) */										affix: /ago|hence/,
+	/** strip out these characters from a string */						strips: /\(|\)/g,
 } as const
 
 /** Tempo Symbol registry */
