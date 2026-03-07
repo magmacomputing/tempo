@@ -1,6 +1,6 @@
 import { enumify } from '#core/shared/enumerate.library.js';
 import { secure } from '#core/shared/utility.library.js';
-import type { KeyOf, ValueOf } from '#core/shared/type.library.js';
+import type { KeyOf, LooseUnion, ValueOf } from '#core/shared/type.library.js';
 
 /**
  * Various enumerations used throughout Tempo library.  
@@ -72,13 +72,14 @@ export const FORMAT = enumify({
 		/** display with Time */																dayTime: '{dd}-{mmm}-{yyyy} {hh}:{mi}:{ss}',
 		/** useful for stamping logs */													logStamp: '{yyyy}{mm}{dd}T{hhmiss}.{ff}',
 		/** useful for sorting display-strings */								sortTime: '{yyyy}-{mm}-{dd} {hh}:{mi}:{ss}',
-		/** useful for sorting week order */										yearWeek: 'yyyyww',
-		/** useful for sorting month order */										yearMonth: 'yyyymm',
-		/** useful for sorting date order */										yearMonthDay: 'yyyymmdd',
+		/** useful for sorting week order */										yearWeek: '{yyyy}{ww}',
+		/** useful for sorting month order */										yearMonth: '{yyyy}{mm}',
+		/** useful for sorting date order */										yearMonthDay: '{yyyy}{mm}{dd}',
 		/** just Date portion */																date: '{yyyy}-{mm}-{dd}',
 		/** just Time portion */																time: '{hh}:{mi}:{ss}',
 })
 export type FORMAT = ValueOf<typeof FORMAT>
+export type Format = LooseUnion<KeyOf<typeof FORMAT>>
 
 export const LIMIT = secure({
 		/** Tempo(31-Dec-9999.23:59:59).ns */										maxTempo: Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds,

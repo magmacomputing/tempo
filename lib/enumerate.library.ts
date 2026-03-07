@@ -4,7 +4,7 @@ import { stringify } from '#core/shared/serialize.library.js';
 import { memoizeMethod } from '#core/shared/function.library.js';
 import { ownKeys, ownValues, ownEntries } from '#core/shared/reflection.library.js';
 import { asType, isArray } from '#core/shared/type.library.js';
-import type { Index, Prettify, Entry, Invert, Property, OwnOf, CountOf, KeyOf, ValueOf, EntryOf, LooseKey } from '#core/shared/type.library.js';
+import type { Index, Prettify, Entry, Invert, Property, CountOf, KeyOf, ValueOf, EntryOf, LooseKey, WellKnownSymbols } from '#core/shared/type.library.js';
 
 /** used to identify the Enumify type */										const tag = 'Enumify' as const;
 
@@ -21,8 +21,8 @@ import type { Index, Prettify, Entry, Invert, Property, OwnOf, CountOf, KeyOf, V
 	/** reverse lookup of Enum key by value */								keyOf<V extends ValueOf<T>>(value: V): Invert<T>[V];
 
 	/** loop over Enum entries */															forEach(fn: (entry: EntryOf<T>, index: number, enumify: Enum.wrap<T>) => void, thisArg?: any): void;
-	/** subset of Enum entries */															filter(fn: (entry: EntryOf<T>, index: number, enumify: Enum.wrap<T>) => boolean, thisArg?: any): Enum.wrap<Property<any>>;
-	/** map of Enum entries */																map<U>(fn: (entry: EntryOf<T>, index: number, enumify: Enum.wrap<T>) => [PropertyKey, U] | U, thisArg?: any): Enum.wrap<Property<any>>;
+	/** subset of Enum entries */															filter(fn: (entry: EntryOf<T>, index: number, enumify: Enum.wrap<T>) => boolean, thisArg?: any): Enum.wrap<T>;
+	/** map of Enum entries */																map<U>(fn: (entry: EntryOf<T>, index: number, enumify: Enum.wrap<T>) => [PropertyKey, U] | U, thisArg?: any): any;
 
 	/** iterator for Enum */[Symbol.iterator](): Iterator<Entry<T extends {} ? T : never>, EntryOf<T>>;
 	/** string tag */[Symbol.toStringTag]: typeof tag;
@@ -44,9 +44,9 @@ const ENUM = secure(Object.create(null, {
 	includes: value(function (this: Property<any> & Proto<any>, search: any) { return this.values().includes(search) }),
 	keyOf: value(function (this: Property<any> & Proto<any>, search: any) { return this.invert()[search] }),
 
-	forEach: value(function (this: Property<any> & Proto<any>, fn: (entry: [PropertyKey, any], index: number, enumify: any) => void, thisArg?: any) { this.entries().forEach((entry, index) => fn.call(thisArg, entry, index, this)) }),
-	filter: value(function (this: Property<any> & Proto<any>, fn: (entry: [PropertyKey, any], index: number, enumify: any) => boolean, thisArg?: any) { return enumify(this.entries().reduce((acc: ObjectArg, entry, index) => (fn.call(thisArg, entry, index, this) ? Object.assign(acc, { [entry[0]]: entry[1] }) : acc), {} as ObjectArg)) }),
-	map: value(function (this: Property<any> & Proto<any>, fn: (entry: [PropertyKey, any], index: number, enumify: any) => any, thisArg?: any) { return enumify(this.entries().reduce((acc: ObjectArg, entry, index) => { const res = fn.call(thisArg, entry, index, this); return Object.assign(acc, isArray(res) && res.length === 2 ? { [res[0] as any]: res[1] } : { [entry[0]]: res }) }, {} as ObjectArg)) }),
+	forEach: value(function (this: Enum.wrap<any>, fn: (entry: [PropertyKey, any], index: number, enumify: Enum.wrap<any>) => void, thisArg?: any) { this.entries().forEach((entry, index) => fn.call(thisArg, entry, index, this)) }),
+	filter: value(function (this: Enum.wrap<any>, fn: (entry: [PropertyKey, any], index: number, enumify: Enum.wrap<any>) => boolean, thisArg?: any) { return enumify(this.entries().reduce((acc: ObjectArg, entry, index) => (fn.call(thisArg, entry, index, this) ? Object.assign(acc, { [entry[0]]: entry[1] }) : acc), {} as ObjectArg)) }),
+	map: value(function (this: Enum.wrap<any>, fn: (entry: [PropertyKey, any], index: number, enumify: Enum.wrap<any>) => any, thisArg?: any) { return enumify(this.entries().reduce((acc: ObjectArg, entry, index) => { const res = fn.call(thisArg, entry, index, this); return Object.assign(acc, isArray(res) && res.length === 2 ? { [res[0] as any]: res[1] } : { [entry[0]]: res }) }, {} as ObjectArg)) }),
 
 	[Symbol.iterator]: value(function (this: Property<any> & Proto<any>) { return this.entries()[Symbol.iterator](); }),
 	[Symbol.toStringTag]: value(tag),
@@ -58,9 +58,11 @@ function value<T>(value: T): PropertyDescriptor {
 }
 
 /** namespace for Enum type-helpers */
+type Methods<T extends Property<any> = any> = Omit<Proto<T>, WellKnownSymbols>
 export namespace Enum {
-	/** Enum own properties */																export type props<T extends Property<any>> = Readonly<OwnOf<T>>;
-	/** Enum properties & methods */													export type wrap<T extends Property<any>> = Prettify<Enum.props<T> & Proto<T>>;
+	/** Enum properties & methods */													export type wrap<T extends Property<any>> = props<T> & Methods<T>;
+	/** Enum methods (filtered) */														export type methods<T extends Property<any> = any> = keyof Methods<T>;
+	/** Enum own properties */																export type props<T extends Property<any>> = Readonly<T>;
 }
 
 /** Argument can be an array of PropertyKeys */							type ArrayArg = ReadonlyArray<PropertyKey>

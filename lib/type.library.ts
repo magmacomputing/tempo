@@ -96,40 +96,32 @@ export function assertCondition(condition: boolean, message?: string): asserts c
 export function assertString(str: unknown): asserts str is string { assertCondition(isString(str), `Invalid string: ${str}`) };
 export function assertNever(val: never): asserts val is never { throw new Error(`Unexpected object: ${val}`) };
 
-/** infer T of a <T | T[]> */
-export type TValue<T> = T extends Array<infer A> ? A : NonNullable<T>
-/** cast <T | undefined> as <T | T[]> */
-export type TValues<T> = TValue<T> | Array<TValue<T>> | Extract<T, undefined>
-/** cast <T | T[]> as T[] */
-export type TArray<T> = Array<TValue<T>>
+/** infer T of a <T | T[]> */																export type TValue<T> = T extends Array<infer A> ? A : NonNullable<T>;
+/** cast <T | undefined> as <T | T[]> */										export type TValues<T> = TValue<T> | Array<TValue<T>> | Extract<T, undefined>;
+/** cast <T | T[]> as T[] */																export type TArray<T> = Array<TValue<T>>;
 
-/** bottom value */
-export type Nullish = null | undefined | void
-/** Generic Record */
-export type Property<T> = Record<PropertyKey, T>
-/** Generic Record or Array */
-export type Obj = Property<any> | Array<any>
+/** bottom value */																					export type Nullish = null | undefined | void;
+/** Generic Record */																				export type Property<T> = Record<PropertyKey, T>;
+/** Generic Record or Array */															export type Obj = Property<any> | Array<any>
 
-type WellKnownSymbols = { [K in keyof SymbolConstructor]: SymbolConstructor[K] extends symbol ? SymbolConstructor[K] : never }[keyof SymbolConstructor]
+export type WellKnownSymbols = { [K in keyof SymbolConstructor]: SymbolConstructor[K] extends symbol ? SymbolConstructor[K] : never }[keyof SymbolConstructor]
 
 type SafeCount<T, Acc extends any[] = [], Last = LastInUnion<T>> =
 	Acc['length'] extends 1000 ? number :											// limit of recursive depth
+	0 extends (1 & T) ? number :															// detect 'any'
 	[T] extends [never] ? Acc['length'] :
 	SafeCount<Exclude<T, Last>, [...Acc, any]>
 
 /** Own properties of an Array, Object, Map or Enum */
+type IgnoreOf = WellKnownSymbols | Enum.methods
 export type CountOf<T> = SafeCount<T>
-export type OwnOf<T extends Obj> = {
-	[K in keyof T as
-	K extends WellKnownSymbols ? never :																	// exclude WellKnownSymbols
-	K extends number ? `${K}` :																						// stringify numeric keys
-	T[K] extends Function ? (0 extends (1 & T[K]) ? K : never) : K				// exclude real functions, keep 'any'
-	]: T[K] extends Function ? (0 extends (1 & T[K]) ? T[K] : never) :		// value: exclude real functions
-	(T extends Array<any> ? (K extends number ? T[K] : never) : T[K]);		// array: only numeric keys
-}
-export type KeyOf<T extends Obj> = Extract<keyof OwnOf<T>, string | symbol>
-export type ValueOf<T extends Obj> = Prettify<OwnOf<T>[KeyOf<T>]>
-export type EntryOf<T extends Obj> = Entry<OwnOf<T>>
+export type OwnOf<T extends Obj> = T extends Array<any> ? { [K in number]: T[number] } : Omit<T, IgnoreOf>
+export type KeyOf<T extends Obj> = T extends Array<any> ? number : Exclude<Extract<keyof T, PropertyKey>, IgnoreOf>
+export type ValueOf<T extends Obj> = T extends Array<any> ? T[number] : T[KeyOf<T>]
+export type EntryOf<T extends Obj> = [KeyOf<T>, ValueOf<T>]
+
+/** extracts only the Literal string keys (not index signatures) from an object/interface */
+export type LiteralKey<T> = { [K in keyof T]: string extends K ? never : K }[keyof T] & string
 
 /** mark some fields as Optional */
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>
