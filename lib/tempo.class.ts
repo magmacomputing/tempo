@@ -13,7 +13,7 @@ import { getContext, CONTEXT } from '#core/shared/utility.library.js';
 import { asInteger, isNumeric, ifNumeric } from '#core/shared/number.library.js';
 import { pad, singular, toProperCase, trimAll } from '#core/shared/string.library.js';
 import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction } from '#core/shared/type.library.js';
-import type { IntRange, NonOptional, Property, Type } from '#core/shared/type.library.js';
+import type { IntRange, LiteralKey, LooseUnion, NonOptional, Property, Type } from '#core/shared/type.library.js';
 
 import * as enums from '#core/shared/tempo.config/tempo.enum.js';
 import terms from '#core/shared/tempo.config/plugins/term.import.js';
@@ -86,6 +86,7 @@ export class Tempo {
 	})
 
 	static #global = {} as Internal.Shape
+	static #pending: Internal.Match[] = [];										// collect the parse rule-match results
 	static #usrCount = 0;																			// cache for next-available 'usr' Token key
 
 	// #endregion
@@ -95,6 +96,7 @@ export class Tempo {
 	//** prototype handlers */
 	/** return the Prototype parent of an object */						static #proto(obj: object) { return Object.getPrototypeOf(obj) }
 	/** test object has own property with the given key */		static #hasOwn(obj: object, key: string) { return Object.hasOwn(obj, key) }
+	/** test object is Frozen */															static #isFrozen(obj?: object) { return isDefined(obj) && Object.isFrozen(obj) }
 	/** return whether the shape is 'local' or 'global' */		static #isLocal(shape: Internal.Shape) { return shape.config.scope === 'local' }
 	/** create an object based on a prototype */							static #create(obj: object, name: string) { return Object.create(Tempo.#proto(obj)[name]) }
 
@@ -219,8 +221,8 @@ export class Tempo {
 
 		swap
 			.forEach(([dmy, mdy]) => {														// loop over each swap-tuple
-				const idx1 = layouts.findIndex(([key]) => key.description === dmy);	// 1st swap element exists in {layouts}
-				const idx2 = layouts.findIndex(([key]) => key.description === mdy);	// 2nd swap element exists in {layouts}
+				const idx1 = layouts.findIndex(([key]) => (key as symbol).description === dmy);	// 1st swap element exists in {layouts}
+				const idx2 = layouts.findIndex(([key]) => (key as symbol).description === mdy);	// 2nd swap element exists in {layouts}
 
 				if (idx1 === -1 || idx2 === -1)
 					return;																						// no pair to swap
@@ -285,7 +287,7 @@ export class Tempo {
 			switch (itm.type) {
 				case 'Object':
 					ownEntries(itm.value as Property<any>)
-						.forEach(([k, v]) => target[Tempo.getSymbol(k)] = convert(v));
+						.forEach(([k, v]) => target[Tempo.getSymbol(k as string)] = convert(v));
 					break;
 				case 'String':
 				case 'RegExp':
@@ -413,6 +415,11 @@ export class Tempo {
 				mdyLayouts: asArray(Default.mdyLayouts as Tempo.Options['mdyLayouts']),
 			} as Internal.Parse;																	// remove previous parsing rules
 
+			for (const key of Object.keys(Token))								// purge user-allocated Tokens
+				if (key.startsWith('usr.'))													// only remove 'usr.' prefixed keys
+					delete Token[key];
+			Tempo.#usrCount = 0;																	// reset user-key counter
+
 			const dateTime = Intl.DateTimeFormat().resolvedOptions();
 			Object.assign(Tempo.#global.config, {									// some global locale-specific defaults
 				calendar: dateTime.calendar,
@@ -462,8 +469,8 @@ export class Tempo {
 	 */
 	static getSymbol(key?: string | symbol) {
 		if (isUndefined(key)) {
-			const max = `usr${++Tempo.#usrCount}`;								// allocate a new 'user' key
-			return Token[max] = Symbol(max);											// add to Symbol register
+			const usr = `usr.${++Tempo.#usrCount}`;								// allocate a prefixed 'user' key
+			return Token[usr] = Symbol(usr);											// add to Symbol register
 		}
 
 		if (isSymbol(key)) {
@@ -471,9 +478,18 @@ export class Tempo {
 			return Token[name] ??= key;
 		}
 
-		const description = key.split(Match.separator).filter(s => !isEmpty(s)).pop() || key;
+		if (isDefined(Token[key]))															// already registered (internal)
+			return Token[key];																		// return existing Symbol
 
-		return Token[key] ??= Symbol(description);							// add to Symbol register, if undefined
+		const usr = `usr.${key}`;
+		if (isDefined(Token[usr]))															// already registered (user)
+			return Token[usr];																		// return existing Symbol
+
+		const description = key
+			.split(Match.separator)
+			.filter(s => !isEmpty(s)).pop() || key;
+
+		return Token[usr] = Symbol(description);								// add to Symbol register
 	}
 
 	/**
@@ -629,7 +645,7 @@ export class Tempo {
 	/** constructor options */																#options = {} as Tempo.Options;
 	/** instantiation Temporal Instant */											#now: Temporal.Instant;
 	/** underlying Temporal ZonedDateTime */									#zdt!: Temporal.ZonedDateTime;
-	/** prebuilt formats, for convenience */									#fmt = {} as Tempo.Format;
+	/** prebuilt formats, for convenience */									#fmt = {} as { [K in enums.Format]: Tempo.FormatType<K> };
 	/** instance term plugins */															#term = {} as Property<any>;
 	/** instance values to complement static values */				#local = {
 		/** instance configuration */															config: {} as Tempo.Config,
@@ -658,18 +674,17 @@ export class Tempo {
 		// parse the local options looking for overrides to Tempo.#global.config
 		this.#setLocal(this.#options);
 
+		this.#local.parse.result = [...Tempo.#pending];	// init with cumulative results
+
 		// we now have all the info we need to instantiate a new Tempo
 		try {
 			this.#zdt = this.#parse(this.#tempo);									// attempt to interpret the DateTime arg
 
 			if (['iso8601', 'gregory'].includes(this.#local.config['calendar'])) {
 				const formats = ownEntries(Tempo.FORMAT);
-				for (const [key, val] of formats) {
-					// @ts-ignore
+				for (const [key, val] of formats)
 					this.#fmt[key] = this.format(val);
-				}
 			}
-			secure(this.#fmt);																		// and prevent mutations
 
 			terms																									// add the plug-in getters for the pre-defined Terms to the instance
 				.forEach(({ key, scope, define }) => {							// under 'Tempo.term' getter
@@ -677,6 +692,7 @@ export class Tempo {
 					this.#setTerm(this, scope, define, false);				// add a getter which returns a range-object
 				})
 
+			secure(this.#fmt);																		// prevent mutations
 			secure(this.#local.config);
 			secure(this.#local.parse);
 		} catch (err) {
@@ -767,7 +783,7 @@ export class Tempo {
 	/** time elapsed since (without unit) */									since(dateTimeOrOpts?: Tempo.DateTime | Tempo.Options, opts?: Tempo.Options): string;
 	/** time elapsed since another date-time */								since(optsOrDate?: Tempo.DateTime | Tempo.Until | Tempo.Options, optsOrUntil?: Tempo.Options | Tempo.Until): string { return this.#since(optsOrDate, optsOrUntil) }
 
-	/** applies a format to the current `Tempo` instance. */	format<K extends Tempo.Formats>(fmt: K) { return this.#format(fmt) }
+	/** applies a format to the current `Tempo` instance. */	format<K extends enums.Format>(fmt: K) { return this.#format(fmt) }
 	/** returns a new `Tempo` with specific duration added. */add(mutate: Tempo.Add) { return this.#add(mutate) }
 	/** returns a new `Tempo` with specific offsets. */				set(offset: Tempo.Set | Tempo.Add) { return this.#set(offset) }
 
@@ -792,13 +808,14 @@ export class Tempo {
 	 */
 	#setLocal(options: Tempo.Options) {
 		// copy down current global config to local instance
-		this.#local.config = Object.create(Tempo.#global.config);// set prototype to global config
+		this.#local.config = Object.create(Tempo.#global.config);// set prototype-;ink to global config
 		const { mdyLocales, mdyLayouts, ...config } = Tempo.#global.config as Tempo.Options;
 		Object.assign(this.#local.config, config, { level: 'local' });
 
 		// setup effective parse rules for this instance (prototype-link to global)
 		this.#local.parse = Object.create(Tempo.#global.parse);	// set prototype to global parse
-		this.#local.parse.result = { type: 'Undefined' as Type, value: void 0 };
+		this.#local.parse.result = [...Tempo.#pending];
+		Tempo.#pending = [];																		// reset the pending array
 
 		Tempo.#setConfig(this.#local, options);									// set #local config
 	}
@@ -825,7 +842,8 @@ export class Tempo {
 				try {
 					return Temporal.ZonedDateTime.from(arg.value);		// see if Temporal can parse value
 				} catch {																						// else see if Date.parse can parse value
-					this.#local.parse.result = { match: 'Date.parse', value: arg.value, type: arg.type }																					// fallback to browser's Date.parse() method
+					const fallback: Partial<Internal.Match> = { match: 'Date.parse' };
+					this.#result(arg, fallback);
 					Tempo.#dbg.warn(this.#local.config, 'Cannot detect DateTime; fallback to Date.parse');
 					return Temporal.ZonedDateTime
 						.from(`${new Date(arg.value.toString()).toISOString()}[${timeZone}]`)
@@ -902,10 +920,14 @@ export class Tempo {
 			.every(key => ['value', 'timeZoneId', 'calendarId', 'year', 'month', 'monthCode', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond', 'offset', 'timeZone'].includes(key))							// if every key in tempo-object is included in this array
 	}
 
+	/** trace the initial instance pattern-match */
+	#result(arg: any, ...obj: Partial<Internal.Match>[]) {
+		this.#local.parse.result.push(Object.assign({}, arg, ...obj));
+	}
+
 	/** evaluate 'string | number' input against known patterns */
 	#conform(tempo: Tempo.DateTime | undefined, dateTime: Temporal.ZonedDateTime) {
 		const arg = asType(tempo);
-		this.#local.parse.result = { ...arg };									// for debugging (always on local)
 
 		if (this.#isZonedDateTimeLike(tempo)) {									// tempo is ZonedDateTime-ish object (throw away 'value' property)
 			const { timeZone, calendar, value, ...options } = tempo;
@@ -918,7 +940,7 @@ export class Tempo {
 			if (calendar)
 				zdt = zdt.withCalendar(calendar);										// optionally set calendar
 
-			this.#local.parse.result.match = 'Temporal.ZonedDateTimeLike';
+			this.#result({ type: 'Temporal.ZonedDateTimeLike', value: zdt, match: 'Temporal.ZonedDateTimeLike' });
 
 			return Object.assign(arg, {
 				type: 'Temporal.ZonedDateTime',											// override {arg.type}
@@ -933,14 +955,15 @@ export class Tempo {
 
 		if (isString(arg.value)) {															// if original value is String
 			if (isEmpty(value)) {																	// don't conform empty string
-				this.#local.parse.result.match = 'Empty';						// matched an empty-String
+				this.#result(arg, { match: 'Empty' });
 				return Object.assign(arg, { type: 'Empty' });
 			}
 			if (isIntegerLike(value)) {														// if string representation of BigInt literal
-				this.#local.parse.result.match = 'BigInt';					// matched a bigint-String
+				this.#result(arg, { match: 'BigInt' });
 				return Object.assign(arg, { type: 'BigInt', value: asInteger(value) });
 			}
-		} else {																								// else it is a Number
+		}
+		else {																								// else it is a Number
 			if (value.length <= 7) {         											// cannot reliably interpret small numbers:  might be {ss} or {yymmdd} or {dmmyyyy}
 				Tempo.#dbg.catch(this.#local.config, 'Cannot safely interpret number with less than 8-digits: use string instead');
 				return arg;
@@ -957,7 +980,7 @@ export class Tempo {
 			if (isEmpty(groups))
 				continue;																						// no match, so skip this iteration
 
-			Object.assign(this.#local.parse.result, { match: sym.description, groups: cleanify(groups) });// stash the {key} of the pattern that was matched								
+			this.#result(arg, { match: sym.description, groups: cleanify(groups) });	// stash the {key} of the pattern that was matched
 			this.#parseGroups(groups);														// mutate the {groups} object
 			dateTime = this.#parseWeekday(groups, dateTime);			// if {weekDay} pattern, calculate a calendar value
 			dateTime = this.#parseDate(groups, dateTime);					// if {calendar}|{event} pattern, translate to date value
@@ -998,9 +1021,9 @@ export class Tempo {
 		// fix {event}
 		const event = ownKeys(groups).find(key => key.match(Match.event));
 		if (event) {
-			const idx = +event.substring(4);														// number index of the {event}
+			const idx = +event.substring(4);											// number index of the {event}
 			const src = event.startsWith('g') ? Tempo.#global.parse.event : this.#local.parse.event;
-			const [_key, evt] = ownEntries(src, true)[idx];							// fetch the indexed tuple's value
+			const [_key, evt] = ownEntries(src, true)[idx];				// fetch the indexed tuple's value
 			Object.assign(groups, this.#parseEvent(evt));					// determine the date-values for the {event}
 			delete groups[event];
 
@@ -1012,9 +1035,9 @@ export class Tempo {
 		// fix {period}
 		const period = ownKeys(groups).find(key => key.match(Match.period));
 		if (period) {
-			const idx = +period.substring(4);														// number index of the {period}
+			const idx = +period.substring(4);											// number index of the {period}
 			const src = period.startsWith('g') ? Tempo.#global.parse.period : this.#local.parse.period;
-			const [_key, per] = ownEntries(src, true)[idx];							// fetch the indexed tuple's value
+			const [_key, per] = ownEntries(src, true)[idx];				// fetch the indexed tuple's value
 
 			Object.assign(groups, this.#parsePeriod(per));				// determine the time-values for the {period}
 			delete groups[period];
@@ -1265,7 +1288,10 @@ export class Tempo {
 			if (isUndefined(reg)) {
 				Tempo.#dbg.catch(this.#local.config, `Cannot find pattern: "${pat}"`);
 			} else {
-				Object.assign(groups, this.#parseMatch(reg, val));
+				const match = this.#parseMatch(reg, val);
+				if (!isEmpty(match))
+					this.#result({ type: 'Event', value: val, match: pat, groups: cleanify(match) });
+				Object.assign(groups, match);
 			}
 
 			if (!isEmpty(groups)) break;													// return on the first matched pattern
@@ -1291,7 +1317,11 @@ export class Tempo {
 			? per.bind(this)().toString()
 			: per;
 
-		Object.assign(groups, this.#parseMatch(tm, val));
+		const match = this.#parseMatch(tm, val);
+		if (!isEmpty(match))
+			this.#result({ type: 'Period', value: val, match: 'tm', groups: cleanify(match) });
+
+		Object.assign(groups, match);
 
 		return groups;
 	}
@@ -1347,7 +1377,7 @@ export class Tempo {
 						case 'start':
 						case 'mid':
 						case 'end':
-							return { mutate: key, offset: 0, single: singular(adjust.toString()) }
+							return { mutate: key, offset: 0, single: singular(adjust?.toString() ?? '') }
 
 						default:
 							return { mutate: 'set', offset: adjust, single: singular(key) }
@@ -1361,7 +1391,7 @@ export class Tempo {
 					case 'set.event':
 					case 'set.dow':																		// set day-of-week by number
 					case 'set.wkd':																		// set day-of-week by name
-						return this.#parse(offset, zdt);
+						return this.#parse(offset as any, zdt);
 
 					case 'set.year':
 					case 'set.month':
@@ -1499,9 +1529,9 @@ export class Tempo {
 		return new Tempo(zdt, this.#options);
 	}
 
-	#format = <K extends Tempo.Formats>(fmt: K): Tempo.Format[K] => {
+	#format = <K extends enums.Format>(fmt: K): Tempo.FormatType<K> => {
 		if (isNull(this.#tempo))
-			return void 0 as unknown as string;										// don't format <null> dates
+			return void 0 as unknown as Tempo.FormatType<K>;					// don't format <null> dates
 
 		const obj = Tempo.FORMAT;
 		const template = isString(fmt) && Tempo.#hasOwn(obj, fmt)
@@ -1513,13 +1543,13 @@ export class Tempo {
 		switch (sTemplate) {
 			case obj.yearWeek:
 				const offset = this.ww === 1 && this.mm === Tempo.MONTH.Dec;			// if late-Dec, add 1 to yy
-				return +`${this.yy + +offset}${pad(this.ww)}`;
+				return +`${this.yy + +offset}${pad(this.ww)}` as Tempo.FormatType<K>;
 
 			case obj.yearMonth:
-				return +`${this.yy}${pad(this.mm)}`;
+				return +`${this.yy}${pad(this.mm)}` as Tempo.FormatType<K>;
 
 			case obj.yearMonthDay:
-				return +`${this.yy}${pad(this.mm)}${pad(this.dd)}`;
+				return +`${this.yy}${pad(this.mm)}${pad(this.dd)}` as Tempo.FormatType<K>;
 
 			default:
 				return sTemplate.replace(Match.braces, (_match, token) => {
@@ -1555,7 +1585,7 @@ export class Tempo {
 								: `{${token}}`;															// unknown format-code, return as-is
 						}
 					}
-				})
+				}) as Tempo.FormatType<K>;
 		}
 	}
 
@@ -1677,6 +1707,7 @@ export namespace Tempo {
 		/** patterns to help parse value */											layout: Layout | Internal.PatternOption<string | RegExp>;
 		/** custom date aliases (events). */										event: Event | Internal.PatternOption<string | Function>;
 		/** custom time aliases (periods). */										period: Period | Internal.PatternOption<string | Function>;
+		// /** parsing match result */													result?: Internal.Match[];
 		/** supplied value to parse */													value: Tempo.DateTime;
 	}>
 
@@ -1735,7 +1766,8 @@ export namespace Tempo {
 		/** hh:mi:ss */time: string;
 		/** generic format */[key: string]: string | number;
 	}
-	export type Formats = keyof Tempo.Format
+
+	export type FormatType<K extends string> = K extends LiteralKey<Format> ? Format[K] : string
 
 	export type Modifier = '=' | '-' | '+' | '<' | '<=' | '-=' | '>' | '>=' | '+=' | 'this' | 'next' | 'prev' | 'last' | 'first' | undefined
 	export type Relative = 'ago' | 'hence' | 'prior'
@@ -1797,13 +1829,14 @@ namespace Internal {
 		/** Map of regex-patterns to match input-string */			pattern: Internal.RegexpMap;
 		/** configured Events */																event: Event;
 		/** configured Periods */																period: Period;
-		/** parsing match result */															result?: Internal.Match;
+		/** parsing match result */															result: Internal.Match[];
 	}
 
 	/** debug a Tempo instantiation */
 	export interface Match {
-		/** pattern which matched the input */									match?: string;
-		/** the type of the original input */										type: Type;
+		/** pattern which matched the input */									match?: string | undefined;
+		/** groups from the pattern match */										groups?: Internal.StringRecord;
+		/** the type of the original input */										type: LooseUnion<Type>;
 		/** the value of the original input */									value: any;
 	}
 
@@ -1821,8 +1854,8 @@ export type Params<T> = {																		// Type for consistency in expected a
 }
 
 type Fmt = {																								// used for the fmtTempo() shortcut
-	<F extends keyof Tempo.Format>(fmt: F, tempo?: Tempo.DateTime, options?: Tempo.Options): Tempo.Format[F];
-	<F extends keyof Tempo.Format>(fmt: F, options: Tempo.Options): Tempo.Format[F];
+	<F extends enums.Format>(fmt: F, tempo?: Tempo.DateTime, options?: Tempo.Options): Tempo.FormatType<F>;
+	<F extends enums.Format>(fmt: F, options: Tempo.Options): Tempo.FormatType<F>;
 }
 
 // shortcut functions to common Tempo properties / methods
