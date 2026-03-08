@@ -23,7 +23,7 @@ Snippets are simple regex patterns that can be composed into a layout.  They rep
 | `{mi}` | Minute (prefixed by `:`) | `:[0-5][0-9]` |
 | `{ss}` | Second (prefixed by `:`) | `:[0-5][0-9]` |
 | `{ff}` | Fraction (prefixed by `.`) | `\.[0-9]{1,9}` |
-| `{www}` | Weekday (Mon-Sun, Monday-Sunday) | Name strings |
+| `{wkd}` | Weekday (Mon-Sun, Monday-Sunday) | Name strings |
 | `{tzd}` | Time zone offset | `Z` or `±hh:mm` |
 | `{mer}` | Meridiem (AM/PM) | `am` or `pm` |
 | `{sep}` | Separator character | `/`, `-`, `.`, `,`, or ` ` |
@@ -50,7 +50,7 @@ Snippets are wrapped in curly braces `{}` and can be combined to create a layout
 | :--- | :--- | :--- |
 | `dt` | `{dt}` | Calendar or event |
 | `tm` | `{tm}` | Clock or period |
-| `wkd` | `{mod}?{www}{sfx}?` | Weekday name |
+| `wkd` | `'{mod}?{wkd}{afx}?{sfx}?'` | Weekday name |
 | `dtm` | `({dt}){sfx}?` | Calendar/event and clock/period |
 | `dmy` | `{www}?{dd}{sep}?{mm}({sep}{yy})?{sfx}?` | Day-month(-year) |
 | `mdy` | `{www}?{mm}{sep}?{dd}({sep}{yy})?{sfx}?` | Month-day(-year) |

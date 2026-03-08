@@ -6,7 +6,7 @@ describe(`${label} since method`, () => {
 	test('calculates time elapsed from a past date', () => {
 		const t1 = new Tempo('2024-01-01T12:00:00');
 		const t2 = new Tempo('2024-01-01T14:30:00');
-		
+
 		expect(t2.since(t1, 'hours')).toMatch(/2h ago/i);
 	});
 
@@ -18,10 +18,10 @@ describe(`${label} since method`, () => {
 	test('returns string description when no unit is specified', () => {
 		const t1 = new Tempo('2024-01-01T12:00:00');
 		const t2 = new Tempo('2024-01-02T14:30:00');
-		
+
 		const desc = t2.since(t1);
 		expect(typeof desc).toBe('string');
-		expect(desc).toBe('0.0.-1T-2:-30:0.000000000');
+		expect(desc).toBe('-P1DT2H30M');
 	});
 
 	test('handles future dates correctly', () => {
