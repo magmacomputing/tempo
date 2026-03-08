@@ -196,7 +196,7 @@ export class Tempo {
 			case 0:
 				return void 0;																			// timeZone does not observe DST
 			default:
-				return Default.sphere ?? this.COMPASS.North;				// timeZone does not observe DST
+				return Default.sphere ?? Tempo.COMPASS.North;				// timeZone does not observe DST
 		}
 	}
 
@@ -415,7 +415,7 @@ export class Tempo {
 				mdyLayouts: asArray(Default.mdyLayouts as Tempo.Options['mdyLayouts']),
 			} as Internal.Parse;																	// remove previous parsing rules
 
-			for (const key of Object.keys(Token))								// purge user-allocated Tokens
+			for (const key of Object.keys(Token))									// purge user-allocated Tokens
 				if (key.startsWith('usr.'))													// only remove 'usr.' prefixed keys
 					delete Token[key];
 			Tempo.#usrCount = 0;																	// reset user-key counter
@@ -571,7 +571,7 @@ export class Tempo {
 	/** Creates a new `Tempo` instance. */
 	static from(options?: Tempo.Options): Tempo;
 	static from(tempo: Tempo.DateTime | undefined, options?: Tempo.Options): Tempo;
-	static from(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return new Tempo(tempo as NonNullable<Tempo.DateTime>, options); }
+	static from(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return new this(tempo as NonNullable<Tempo.DateTime>, options); }
 
 	/** Returns current time as epoch nanoseconds (BigInt). */
 	static now() { return Temporal.Now.instant().epochNanoseconds; }
@@ -772,7 +772,14 @@ export class Tempo {
 	// #endregion Instance public accessors
 	// #region Instance private accessors
 
-	// /** effective configuration: local overrides, else global */get #config() { return isEmpty(this.#local.config) ? Tempo.#global.config : this.#local.config }
+	/**
+	 * @Immutable class decorators wrap the class but leave internal lexical bindings pointing to the original, undecorated class.  
+	 * To ensure new instances returned by instance methods are properly frozen,  
+	 * we must instantiate internally from the decorated wrapper (which is bound to `this.constructor`)  
+	 * rather than using `new Tempo(..)`.  
+	 */
+	get #Tempo() { return this.constructor as typeof Tempo; }
+
 	// #endregion Instance private accessors
 
 	// #region Instance public methods~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1342,6 +1349,8 @@ export class Tempo {
 
 	/** create new Tempo with {offset} property */
 	#add = (arg: Tempo.Add) => {
+		Tempo.#pending ??= [...this.#local.parse.result];				// collected parse-results so-far
+
 		const mutate = 'add';
 		const zdt = ownEntries(arg)															// loop through each mutation
 			.reduce((zdt, [unit, offset]) => {										// apply each mutation to preceding one
@@ -1369,7 +1378,7 @@ export class Tempo {
 
 			}, this.#zdt)
 
-		return new Tempo(zdt, this.#options);
+		return new this.#Tempo(zdt, this.#options);
 	}
 
 	/** create a new Tempo with {adjust} property */
@@ -1532,7 +1541,7 @@ export class Tempo {
 				}
 			}, this.#zdt)																					// start reduce with the Tempo zonedDateTime
 
-		return new Tempo(zdt, this.#options);
+		return new this.#Tempo(zdt, this.#options);
 	}
 
 	#format = <K extends enums.Format>(fmt: K): Tempo.FormatType<K> => {
@@ -1635,7 +1644,7 @@ export class Tempo {
 				value = arg as Tempo.DateTime;											// assume 'arg' is a DateTime
 		}
 
-		const offset = new Tempo(value, opts);									// create the offset Tempo
+		const offset = new this.#Tempo(value, opts);									// create the offset Tempo
 		const diffZone = this.#zdt.timeZoneId !== offset.#zdt.timeZoneId;
 		const duration = this.#zdt.until(offset.#zdt, { largestUnit: diffZone ? 'hours' : (unit ?? 'years') });
 

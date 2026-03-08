@@ -104,8 +104,6 @@ export function assertNever(val: never): asserts val is never { throw new Error(
 /** Generic Record */																				export type Property<T> = Record<PropertyKey, T>;
 /** Generic Record or Array */															export type Obj = Property<any> | Array<any>
 
-export type WellKnownSymbols = { [K in keyof SymbolConstructor]: SymbolConstructor[K] extends symbol ? SymbolConstructor[K] : never }[keyof SymbolConstructor]
-
 type SafeCount<T, Acc extends any[] = [], Last = LastInUnion<T>> =
 	Acc['length'] extends 1000 ? number :											// limit of recursive depth
 	0 extends (1 & T) ? number :															// detect 'any'
@@ -113,7 +111,9 @@ type SafeCount<T, Acc extends any[] = [], Last = LastInUnion<T>> =
 	SafeCount<Exclude<T, Last>, [...Acc, any]>
 
 /** Own properties of an Array, Object, Map or Enum */
+export type WellKnownSymbols = { [K in keyof SymbolConstructor]: SymbolConstructor[K] extends symbol ? SymbolConstructor[K] : never }[keyof SymbolConstructor]
 type IgnoreOf = WellKnownSymbols | Enum.methods
+
 export type CountOf<T> = SafeCount<T>
 export type OwnOf<T extends Obj> = T extends Array<any> ? { [K in number]: T[number] } : Omit<T, IgnoreOf>
 export type KeyOf<T extends Obj> = T extends Array<any> ? number : Exclude<Extract<keyof T, PropertyKey>, IgnoreOf>

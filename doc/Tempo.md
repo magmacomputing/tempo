@@ -12,6 +12,7 @@ This project came about due to the need for a simple, yet powerful, way to parse
 4. [Manipulation](#manipulation)
 5. [Plugins (Terms)](#plugins-terms)
 6. [Context & Configuration](#context--configuration)
+7. [Enumerators](#enumerators)
 
 ---
 
@@ -190,3 +191,11 @@ Instances can also be created with specific options:
 ```typescript
 new Tempo('2024-05-20', { timeZone: 'AEST', debug: true });
 ```
+
+---
+
+## Enumerators
+
+Tempo uses a custom `enumify` utility to define robust, iterable enumerations rather than relying on native TypeScript enums.
+
+- [Tempo Enumerators Guide](./tempo.enumerators.md): Details on how enumerators are defined, used, and how they compare against standard TypeScript enums.
