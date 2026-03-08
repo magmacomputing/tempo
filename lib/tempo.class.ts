@@ -1644,7 +1644,7 @@ export class Tempo {
 				value = arg as Tempo.DateTime;											// assume 'arg' is a DateTime
 		}
 
-		const offset = new this.#Tempo(value, opts);									// create the offset Tempo
+		const offset = new this.#Tempo(value, opts);						// create the offset Tempo
 		const diffZone = this.#zdt.timeZoneId !== offset.#zdt.timeZoneId;
 		const duration = this.#zdt.until(offset.#zdt, { largestUnit: diffZone ? 'hours' : (unit ?? 'years') });
 
@@ -1664,14 +1664,13 @@ export class Tempo {
 		const date = [dur.years, dur.months, dur.days] as const;
 		const time = [dur.hours, dur.minutes, dur.seconds] as const;
 		const fraction = [dur.milliseconds, dur.microseconds, dur.nanoseconds]
+			.map(Math.abs)
 			.map(nbr => nbr.toString().padStart(3, '0'))
 			.join('')
 
 		const rtf = new Intl.RelativeTimeFormat(this.#local.config['locale'], { style: 'narrow' });
 
 		switch (dur.unit) {
-			case void 0:
-				return `${date.join('.')}T${time.join(':')}.${fraction}`;
 			case 'years':
 				return rtf.format(date[0], 'years');
 			case 'months':
@@ -1740,7 +1739,7 @@ export namespace Tempo {
 	export type TimeStamp = 'ss' | 'ms' | 'us' | 'ns'
 
 	/** Configuration to use for #until() and #since() argument */
-	export type Unit = Temporal.DateUnit | Temporal.TimeUnit
+	export type Unit = Temporal.DateUnit | Temporal.TimeUnit | Temporal.PluralizeUnit<Temporal.DateUnit | Temporal.TimeUnit>
 	export type Until = (Tempo.Options & { unit?: Tempo.Unit }) | Tempo.Unit
 	export type Mutate = 'start' | 'mid' | 'end'
 	export type Set = Partial<Record<Tempo.Mutate, Tempo.Unit> &

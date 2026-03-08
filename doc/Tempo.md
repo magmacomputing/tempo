@@ -136,19 +136,30 @@ t.set({ start: 'month' }); // Start of the current month
 Calculates the duration until another date-time.
 ```typescript
 t.until('2024-12-25', 'days'); // Returns number of days
-t.until('2024-12-25'); // Returns Temporal.Duration object
+t.until('2024-12-25'); // Returns Temporal.Duration object, with an 'iso' property (ISO 8601 duration format)
 ```
 
 ### `since(dateTime, unit?)`
 Calculates the elapsed time since another date-time (returns a human-readable string).
 ```typescript
-t.since('yesterday'); // "1 day ago"
+t.since('yesterday', 'days'); // "1d ago"
+t.add({days:-2}).set({period:'afternoon'}).since(); // Returns ISO 8601 duration format (e.g. 'P1DT20H59M49.290589287S')
 ```
 
 ### `compare(t1, t2)`
-Static method to compare a `Tempo` instance as "before" (-1), "same-as" (0), or "after" (1) a second `Tempo` instance
+Static method which can be used to sort Tempo's across different timeZones
 ```typescript
-Tempo.compare(t1, t2); // -1, 0, or 1
+const t1 = new Tempo('2024-05-20', { timeZone: 'America/New_York' });
+const t2 = new Tempo('2024-05-20', { timeZone: 'Europe/London' });
+[t1,t2].sort(Tempo.compare).forEach(t => console.log('timeZone: ', t.config.timeZone));
+// timeZone:  Europe/London
+// timeZone:  America/New_York
+```
+or to compare `Tempo` instances as "before" (-1), "same-as" (0), or "after" (1)
+```typescript
+const t1 = new Tempo('2024-05-20', { timeZone: 'America/New_York' });
+const t2 = new Tempo('2024-05-20', { timeZone: 'Europe/London' });
+Tempo.compare(t1, t2); // 1, meaning t1 is 'later than' t2
 ```
 
 ---
@@ -158,8 +169,8 @@ Tempo.compare(t1, t2); // -1, 0, or 1
 `Tempo` can be extended with "terms" – plugins that calculate complex date ranges. These are accessible via the `t.term` getter.
 
 Common terms include:
-- `t.term.quarter`: Returns the current calendar quarter.
-- `t.term.season`: Returns the current season (North/South hemisphere-aware).
+- `t.term.qtr`: Returns the current calendar quarter.
+- `t.term.szn`: Returns the current season (North/South hemisphere-aware).
 
 ---
 
