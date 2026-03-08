@@ -13,7 +13,7 @@ import { getContext, CONTEXT } from '#core/shared/utility.library.js';
 import { asInteger, isNumeric, ifNumeric } from '#core/shared/number.library.js';
 import { pad, singular, toProperCase, trimAll } from '#core/shared/string.library.js';
 import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction } from '#core/shared/type.library.js';
-import type { IntRange, LiteralKey, LooseUnion, NonOptional, Property, Type } from '#core/shared/type.library.js';
+import type { IntRange, LiteralKey, LooseUnion, NonOptional, Property, TPlural, Type } from '#core/shared/type.library.js';
 
 import * as enums from '#core/shared/tempo.config/tempo.enum.js';
 import terms from '#core/shared/tempo.config/plugins/term.import.js';
@@ -1721,7 +1721,6 @@ export namespace Tempo {
 		/** patterns to help parse value */											layout: Layout | Internal.PatternOption<string | RegExp>;
 		/** custom date aliases (events). */										event: Event | Internal.PatternOption<string | Function>;
 		/** custom time aliases (periods). */										period: Period | Internal.PatternOption<string | Function>;
-		// /** parsing match result */													result?: Internal.Match[];
 		/** supplied value to parse */													value: Tempo.DateTime;
 	}>
 
@@ -1739,7 +1738,7 @@ export namespace Tempo {
 	export type TimeStamp = 'ss' | 'ms' | 'us' | 'ns'
 
 	/** Configuration to use for #until() and #since() argument */
-	export type Unit = Temporal.DateUnit | Temporal.TimeUnit | Temporal.PluralizeUnit<Temporal.DateUnit | Temporal.TimeUnit>
+	export type Unit = Temporal.DateUnit | Temporal.TimeUnit | TPlural<Temporal.DateUnit | Temporal.TimeUnit>
 	export type Until = (Tempo.Options & { unit?: Tempo.Unit }) | Tempo.Unit
 	export type Mutate = 'start' | 'mid' | 'end'
 	export type Set = Partial<Record<Tempo.Mutate, Tempo.Unit> &

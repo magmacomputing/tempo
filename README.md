@@ -17,9 +17,10 @@ Working with dates in JavaScript has historically been painful. The new `Tempora
 
 ## 🆚 Tempo vs. Native Temporal
 
-While `Temporal` provides an excellent, mathematically sound foundation for dates in JavaScript, it is designed to be highly explicit and strict. **Tempo** acts as a developer-friendly wrapper that eliminates boilerplate and makes common tasks effortless, while still giving you the rock-solid reliability of Temporal under the hood.
+While `Temporal` provides an excellent, mathematically sound foundation for dates in JavaScript, it is designed to be highly explicit and strict. **Tempo** is a lean, powerful, and developer-friendly wrapper that eliminates boilerplate and makes common tasks effortless.
 
-👉 **[See the full side-by-side comparison between Tempo and Native Temporal](./doc/tempo-vs-temporal.md)**.
+- [**Read our Vision & Why Tempo?**](./doc/vision.md)
+- [**Tempo vs. Native Temporal (Side-by-Side)**](./doc/tempo-vs-temporal.md)
 
 ## 📦 Installation
 
@@ -49,9 +50,11 @@ console.log(now.fmt.date);                    // using pre-built formats: "2026-
 ## 📚 Documentation
 
 For detailed technical guides, please refer to:
+- [Vision & Value Proposition](./doc/vision.md)
+- [Tempo vs. Native Temporal](./doc/tempo-vs-temporal.md)
 - [Tempo Class Documentation](./doc/Tempo.md)
 - [Parsing Engine](./doc/Tempo.md#parsing)
-- [Formatting Specs](./doc/Tempo.md#formatting)
+- [Formatting Tokens](./doc/Tempo.md#formatting)
 - [Plugin System (Terms)](./doc/Tempo.md#plugins-terms)
 
 ## 💬 Contact & Support
