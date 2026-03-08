@@ -3,10 +3,10 @@
 While `Temporal` provides an excellent, mathematically sound foundation for dates in JavaScript, it is designed to be highly explicit and strict. **Tempo** acts as a developer-friendly wrapper that eliminates boilerplate and makes common tasks effortless, while still giving you the rock-solid reliability of Temporal under the hood.
 
 To enhance (not replace) Temporal's strictness, Tempo adds:
-* flexibility (through its parsing engine and formatting outputs),
+* flexibility (through its parsing engine and output formatting),
 * convenience (through its many getters and methods),
-* extensibility (through its dynamic options (layouts, events, periods)),
-* business logic (through its plugin system (terms))
+* extensibility (through its dynamic options (events, periods)),
+* business logic (through its lazy-loaded   plugin system (terms))
 
 Here is a side-by-side comparison of how you achieve the same outcomes, as well as things Tempo can do that native Temporal cannot (without writing your own utility functions).
 
@@ -73,9 +73,9 @@ or
 const isWeekend = t.term.isWeekend (through plugins)
 
 // Built-in complex terms via plugins
-t.term.qtr; // returns calculated 'fiscal quarter' based on current instance (date and config.sphere) e.g., 'Q1'
-t.term.szn;  // returns calculated 'season' based on current instance (date and config.sphere) e.g., 'Summer'
+t.term.qtr; // returns calculated 'fiscal quarter' based on current instance (date and hemisphere) e.g., 'Q1'
+t.term.szn; // returns calculated 'season' based on current instance (date and hemisphere) e.g., 'Summer'
 
 // Time since/until (native Temporal only returns Duration objects, not strings)
-t.since('yesterday'); // "1 day ago"
+t.since('yesterday'); // "1d ago"
 ```

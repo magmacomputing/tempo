@@ -1,6 +1,6 @@
 {
   "name": "@magmacomputing/tempo",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A premium, high-performance wrapper around the JavaScript Temporal API.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,6 +17,7 @@
   "scripts": {
     "test": "vitest run",
     "build": "tsc && tsc-alias",
+    "publish": "npm run build && (npm whoami || npm login) && npm publish --access public",
     "repl": "tsx -i --import ./test/repl.ts"
   },
   "files": [
