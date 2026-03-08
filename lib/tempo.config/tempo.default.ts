@@ -2,6 +2,9 @@ import { looseIndex } from '#core/shared/object.library.js';
 import { secure } from '#core/shared/utility.library.js';
 import type { Tempo } from '#core/shared/tempo.class.js';
 
+// BE VERY CAREFUL NOT TO BREAK THE REGEXP PATTERNS BELOW
+// TEMPO functionality heavily depends on these patterns
+
 /** common RegExp patterns */
 export const Match = {
 	/** match all {} pairs, if they start with a word char */	braces: /{([\w]+(?:\.[\w]+)*)}/g,

@@ -1,13 +1,14 @@
 {
-  "name": "tempo",
-  "version": "0.5.0",
-  "description": "A Wrapper around the Javascript Temporal object",
-  "main": "dist/tempo.class.js",
-  "types": "dist/tempo.class.d.ts",
+  "name": "@magmacomputing/tempo",
+  "version": "1.0.3",
+  "description": "A premium, high-performance wrapper around the JavaScript Temporal API.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/tempo.class.js",
-      "types": "./dist/tempo.class.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     }
   },
   "directories": {
@@ -15,8 +16,8 @@
   },
   "scripts": {
     "test": "vitest run",
-    "build": "tsc --build",
-    "repl": "tsx -i --import ./repl.ts"
+    "build": "tsc && tsc-alias",
+    "repl": "tsx -i --import ./test/repl.ts"
   },
   "files": [
     "dist"
@@ -25,16 +26,25 @@
     "type": "git",
     "url": "git+https://github.com/magmacomputing/tempo.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "Temporal",
+    "Date",
+    "Time",
+    "Parsing",
+    "Formatting",
+    "Fluent API"
+  ],
+  "author": "Michael <hello@magmacomputing.com.au>",
+  "license": "MIT",
   "type": "module",
   "bugs": {
     "url": "https://github.com/magmacomputing/tempo/issues"
   },
   "homepage": "https://github.com/magmacomputing/tempo#readme",
+  "dependencies": {
+    "@js-temporal/polyfill": "^0.5.1"
+  },
   "devDependencies": {
-    "@js-temporal/polyfill": "^0.5.1",
     "@types/jest": "^30.0.0",
     "@vitest/ui": "^4.0.18",
     "tsc-alias": "^1.8.16",

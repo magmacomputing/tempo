@@ -1,12 +1,12 @@
 import { enumify } from '#core/shared/enumerate.library.js';
 import { secure } from '#core/shared/utility.library.js';
-import type { KeyOf, LooseUnion, ValueOf } from '#core/shared/type.library.js';
+import type { KeyOf, ValueOf, LooseUnion } from '#core/shared/type.library.js';
 
 /**
  * Various enumerations used throughout Tempo library.  
  * These are exported and added as static getters of the Tempo class.  
  * Usage example:	
- ```javascript
+ ```typescript
 			const dayNames = Tempo.WEEKDAY.keys();	// ['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
  */
 

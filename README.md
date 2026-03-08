@@ -15,6 +15,12 @@ Working with dates in JavaScript has historically been painful. The new `Tempora
 - **Built-in Plugins**: Access complex date ranges (Quarters, Seasons, Fiscal Years) easily.
 - **Immutable**: Every operation returns a new `Tempo` instance, ensuring thread safety and predictability.
 
+## 🆚 Tempo vs. Native Temporal
+
+While `Temporal` provides an excellent, mathematically sound foundation for dates in JavaScript, it is designed to be highly explicit and strict. **Tempo** acts as a developer-friendly wrapper that eliminates boilerplate and makes common tasks effortless, while still giving you the rock-solid reliability of Temporal under the hood.
+
+👉 **[See the full side-by-side comparison between Tempo and Native Temporal](./doc/tempo-vs-temporal.md)**.
+
 ## 📦 Installation
 
 ```bash
