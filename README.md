@@ -13,7 +13,7 @@ Working with dates in JavaScript has historically been painful. The new `Tempora
 - **Flexible Parsing**: Interprets almost any date string, including relative ones like "next Friday".
 - **Fluent API**: Chainable methods for adding, subtracting, and setting date-times.
 - **Built-in Plugins**: Access complex date ranges (Quarters, Seasons, Fiscal Years) easily.
-- **Immutable**: Every operation returns a new `Tempo` instance, ensuring thread safety and predictability.
+- **Immutable**: operations (like 'set', and 'add') return a new `Tempo` instance, ensuring thread safety and predictability.
 
 ## 🆚 Tempo vs. Native Temporal
 
