@@ -8,6 +8,7 @@ import type { KeyOf, ValueOf, LooseUnion } from '#core/shared/type.library.js';
  * Usage example:	
  ```typescript
 			const dayNames = Tempo.WEEKDAY.keys();	// ['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+ ```			
  */
 
 /** */
@@ -72,7 +73,7 @@ export const FORMAT = enumify({
 		/** display with Time */																dayTime: '{dd}-{mmm}-{yyyy} {hh}:{mi}:{ss}',
 		/** useful for stamping logs */													logStamp: '{yyyy}{mm}{dd}T{hhmiss}.{ff}',
 		/** useful for sorting display-strings */								sortTime: '{yyyy}-{mm}-{dd} {hh}:{mi}:{ss}',
-		/** useful for sorting week order */										yearWeek: '{yyyy}{ww}',
+		/** useful for sorting week order */										yearWeek: '{iy}{ww}',
 		/** useful for sorting month order */										yearMonth: '{yyyy}{mm}',
 		/** useful for sorting date order */										yearMonthDay: '{yyyy}{mm}{dd}',
 		/** just Date portion */																date: '{yyyy}-{mm}-{dd}',

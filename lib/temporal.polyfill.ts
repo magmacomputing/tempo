@@ -1,21 +1,19 @@
 /**
- * This file is used to polyfill the Temporal API for environments that do not support it.
- * It is not needed in environments that support the Temporal API.
- * 
- * The polyfill import is really only needed in 'NodeJS' and older 'browser' projects,  
- * but is imported in the ./lib/index.ts file for convenience.
- * 
- * node example:  node ./src/{file}.ts
+ * This file verifies native Temporal API support.
+ * Tempo requires an environment with native Temporal support or a user-provided polyfill.
  */
-
-import { Temporal as _Temporal } from '@js-temporal/polyfill';
 
 // @ts-ignore
 if (!globalThis.Temporal) {
-  Object.defineProperty(globalThis, 'Temporal', {
-    value: _Temporal,
-    writable: false,
-    enumerable: true,
-    configurable: false,
-  });
+  const message = `
+[Tempo] Temporal API not found.
+This library requires the ECMAScript Temporal API. Please ensure your environment 
+supports it natively (Node.js 20+, modern browsers) or provide your own polyfill.
+
+To add a polyfill to your project:
+1. Install: npm install @js-temporal/polyfill
+2. Import at your entry point: import '@js-temporal/polyfill';
+`;
+  console.error(message);
+  throw new Error('Temporal API not found.');
 }

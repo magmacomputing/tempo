@@ -68,7 +68,7 @@ export type Token = typeof Token
 export const Snippet = looseIndex<symbol, RegExp>()({
 	[Token.yy]: /(?<yy>([0-9]{2})?[0-9]{2})/,									// arbitrary upper-limit of yy=9999
 	[Token.mm]: /(?<mm>[0\s]?[1-9]|1[0-2]|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)/,	// month-name (abbrev or full) or month-number 01-12
-	[Token.dd]: /(?<dd>[0\s]?[1-9]|[12][0-9]|3[01])/,					// day-number 01-31
+	[Token.dd]: /(?<dd>[0\s]?[1-9]|[12][0-9]|3[01])(?:\s?(?:st|nd|rd|th))?/,					// day-number 01-31
 	[Token.hh]: /(?<hh>2[0-4]|[01]?[0-9])/,										// hour-number 00-24
 	[Token.mi]: /(\:(?<mi>[0-5][0-9]))/,											// minute-number 00-59
 	[Token.ss]: /(\:(?<ss>[0-5][0-9]))/,											// seconds-number 00-59

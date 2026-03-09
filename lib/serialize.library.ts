@@ -206,6 +206,9 @@ function stringize<T>(obj: T, recurse = true): string {			// hide the second par
 				case !isStringable(value):													// Object is not stringify-able
 					return void 0 as unknown as string;
 
+				case isFunction(value.toJSON):											// Object has its own toJSON method
+					return one(stringize(value.toJSON(), /** replacer */));
+
 				case isFunction(value.toString):										// Object has its own toString method
 					const str = value.toString();
 					return one(str.includes('"')											// TODO: improve detection of JSON vs non-JSON strings
@@ -214,9 +217,6 @@ function stringize<T>(obj: T, recurse = true): string {			// hide the second par
 
 				case isFunction(value.valueOf):											// Object has its own valueOf method		
 					return one(JSON.stringify(value.valueOf()));
-
-				case isFunction(value.toJSON):											// Object has its own toJSON method
-					return one(stringize(value.toJSON(), /** replacer */));
 
 				default:																						// else standard stringify
 					return one(JSON.stringify(value, replacer));

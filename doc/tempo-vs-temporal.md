@@ -64,12 +64,15 @@ const isWeekend = date.dayOfWeek === 6 || date.dayOfWeek === 7;
 ```
 
 **Tempo 🚀**
-```javascript
+This is a perfect example of where Tempo adds business logic (somethign that Temporal does not do).
+To add a 'term' that defines 'isWeekend' to Tempo, you would write a plugin that defines the term.  
+From that point, the plugin is available to new Tempo instances.
+
+See the section on [plugins](tempo.terms.md) for more information.
+
+
+```typescript
 const t = new Tempo();
-const isWeekend = ['Sat','Sun'].includes(t.www) // true/false
-or
-const isWeekend = t.dow >= Tempo.WEEKDAY.Sat
-or
 const isWeekend = t.term.isWeekend (through plugins)
 
 // Built-in complex terms via plugins
@@ -77,5 +80,11 @@ t.term.qtr; // returns calculated 'fiscal quarter' based on current instance (da
 t.term.szn; // returns calculated 'season' based on current instance (date and hemisphere) e.g., 'Summer'
 
 // Time since/until (native Temporal only returns Duration objects, not strings)
-t.since('yesterday'); // "1d ago"
+
+t.until('3pm','minutes'); // 5.046264992345"
+t.until('xmas', 'days'); // "289.58470466349036"
+t.until('xmas'); // if not 'unit' provided, then duration object "{years:0, months:9, ..., iso: 'P9M14DT14H1M0.656862748S'}"
+
+t.since('yesterday', 'days'); // unit-argument determines granularity "1d ago"
+t.since('yesterday afternoon'); //  if no 'unit' provided, then duration "-P1DT9H32M19.402536059S"
 ```
