@@ -122,6 +122,8 @@ export type EntryOf<T extends Obj> = [KeyOf<T>, ValueOf<T>]
 
 /** extracts only the Literal string keys (not index signatures) from an object/interface */
 export type LiteralKey<T> = { [K in keyof T]: string extends K ? never : K }[keyof T] & string
+/** remove readonly from all keys */
+export type Mutable<T> = { -readonly [K in keyof T]: T[K]; }
 
 /** mark some fields as Optional */
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>

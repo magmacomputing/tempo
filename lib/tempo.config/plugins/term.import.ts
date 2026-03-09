@@ -1,13 +1,13 @@
 /**
  * import of plugins
  */
-import * as qtr from '#core/shared/tempo.config/plugins/term.quarter.js';
+// import * as qtr from '#core/shared/tempo.config/plugins/term.quarter.js';
 import * as szn from '#core/shared/tempo.config/plugins/term.season.js';
 import * as zdc from '#core/shared/tempo.config/plugins/term.zodiac.js';
 import * as per from '#core/shared/tempo.config/plugins/term.timeline.js';
 
 export default [																						// export to Tempo class
-	{ key: qtr.key, scope: qtr.scope, description: qtr.description, define: qtr.define },
+	// { key: qtr.key, scope: qtr.scope, description: qtr.description, define: qtr.define },
 	{ key: szn.key, scope: szn.scope, description: szn.description, define: szn.define },
 	{ key: zdc.key, scope: zdc.scope, description: zdc.description, define: zdc.define },
 	{ key: per.key, scope: per.scope, description: per.description, define: per.define },
@@ -15,10 +15,10 @@ export default [																						// export to Tempo class
 
 /**
  * Usage:
- * show only the 'key' field from the pre-defined range
+ * to show only the 'key' field from the pre-defined range
  * new Tempo('20-May-1957').term.qtr		# range of Fiscal Quarters
  * 			> 'Q2'
- * show the 'range' object that relates to the Tempo instance
+ * to show the 'scope' object that relates to the Tempo instance
  * new Tempo('28-Aug-1968').term.quarter
  * 			> {key: 'Q2', day: 1, month: 4, fiscal: 1969}
  * 

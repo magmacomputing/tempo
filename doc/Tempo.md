@@ -22,9 +22,22 @@ This project came about due to the need for a simple, yet powerful, way to parse
 npm install @magmacomputing/tempo
 ```
 
-`Tempo` requires a `Temporal` polyfill if your environment does not yet support it natively.
+> [!IMPORTANT]
+> `Tempo` requires an environment with native `Temporal` support (Node.js 20+, modern browsers). 
+> If your environment is older, you must provide your own polyfill.
+
+### Polyfilling (if required)
+
+If you need to support older environments, we recommend `@js-temporal/polyfill`:
+
 ```bash
 npm install @js-temporal/polyfill
+```
+
+Then, import it at the very top of your application entry point:
+
+```typescript
+import '@js-temporal/polyfill';
 ```
 ---
 

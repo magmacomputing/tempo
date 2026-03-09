@@ -6,6 +6,6 @@ export default defineConfig({
   // root: '.',
   test: {
     globals: true,
-    setupFiles: ['./lib/temporal.polyfill.ts'],
+    setupFiles: ['./test/setup.ts'],
   }
 })

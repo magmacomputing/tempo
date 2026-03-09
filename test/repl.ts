@@ -1,4 +1,4 @@
-import '#core/shared/temporal.polyfill.js';
+import './setup.js';
 
 import { objectify, stringify } from '../lib/serialize.library.js';
 import { getType } from '../lib/type.library.js';
