@@ -208,7 +208,7 @@ describe(`${label} config`, () => {
 
   test('config changes are reflected after Tempo.init()', () => {
     Tempo.init({ pivot: 33 });
-    expect(Tempo.config.pivot).toBe(33);
+    expect(Tempo.parse.pivot).toBe(33);
   })
 
 })
