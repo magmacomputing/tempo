@@ -56,6 +56,7 @@ For detailed technical guides, please refer to:
 - [Parsing Engine](./doc/Tempo.md#parsing)
 - [Formatting Tokens](./doc/Tempo.md#formatting)
 - [Plugin System (Terms)](./doc/Tempo.md#plugins-terms)
+- [Commercial Support & Consulting](./doc/commercial.md)
 
 ## 💖 Support the Project
 
@@ -69,7 +70,7 @@ If you have a question, find a bug, or want to suggest a new feature:
 
 1. **Bug Reports & Features**: Please open an [Issue](https://github.com/magmacomputing/tempo/issues).
 2. **Questions & Ideas**: Start a thread in [Discussions](https://github.com/magmacomputing/tempo/discussions).
-3. **Direct Contact**: You can reach me at `hello@magmacomputing.com`.
+3. **Direct Contact**: You can reach me at `hello@magmacomputing.com.au`.
 
 ## ⚖️ License
 
