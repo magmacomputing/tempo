@@ -57,6 +57,12 @@ For detailed technical guides, please refer to:
 - [Formatting Tokens](./doc/Tempo.md#formatting)
 - [Plugin System (Terms)](./doc/Tempo.md#plugins-terms)
 
+## 💖 Support the Project
+
+If you find **Tempo** useful and want to support its development, please consider sponsoring me on GitHub! Your support helps keep the project active and premium.
+
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?style=for-the-badge&logo=github-sponsors)](https://github.com/sponsors/magmacomputing)
+
 ## 💬 Contact & Support
 
 If you have a question, find a bug, or want to suggest a new feature:
