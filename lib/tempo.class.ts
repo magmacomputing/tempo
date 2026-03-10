@@ -48,7 +48,7 @@ const Context = getContext();																// get current execution context
  * const t1 = new Tempo('2024-05-20');
  * 
  * // Using an event alias (pre-defined or custom)
- * const t2 = new Tempo('christmas'); // Dec 25th
+ * const t2 = new Tempo('christmas'); // Dec 25th, current year
  * 
  * // Using a period alias
  * const t3 = new Tempo('2024-05-20 midnight'); // 2024-05-20T00:00:00
@@ -98,6 +98,7 @@ export class Tempo {
 	//** prototype helpers */
 	/** return the Prototype parent of an object */						static #proto(obj: object) { return Object.getPrototypeOf(obj) }
 	/** test object has own property with the given key */		static #hasOwn(obj: object, key: string) { return Object.hasOwn(obj, key) }
+	/** set the value on an object, if not already exists */	static #setOwn(obj: object, key: string, value: unknown = {}) { if (!Tempo.#hasOwn(obj, key)) Tempo.#create(obj, key) }
 	/** test object is Frozen */															static #isFrozen(obj?: object) { return isDefined(obj) && Object.isFrozen(obj) }
 	/** return whether the shape is 'local' or 'global' */		static #isLocal(shape: Tempo.State) { return shape.config.scope === 'local' }
 	/** create an object based on a prototype */							static #create(obj: object, name: string) { return Object.create(Tempo.#proto(obj)[name]) }
@@ -266,19 +267,6 @@ export class Tempo {
 	/**
 	 * conform input of Snippet / Layout / Event / Period options  
 	 * This is needed because we allow the user to flexibly provide detail as {[key]:val} or {[key]:val}[] or [key,val][]  
-	 * for example:  
-	 ```  
-	 Tempo.init({ snippet: {'yy': /20\d{2}/, 'mm': /[0-9|1|2]\d/ } })  
-	 Tempo.init({ layout: {'ddmm': '{dd}{sep}?{mm}'} })  
-	 Tempo.init({ layout: '{wkd}' })													(can be a single string)  
-	 Tempo.init({ layout: '({wkd})? {tm}' })									(or a string combination of snippets)  
-	 Tempo.init({ layout: new Map([['name1', '{wkd} {yy}']], ['name2', '{mm}{sep}{dd}']]]) }) 
-	 Tempo.init({ layout: [ {name1: '{wkd} {yy}'}, {name2: '{mm}{sep}{dd}'} ]
-	 
-	 Tempo.init({event: {'canada ?day': '01-Jun', 'aus(tralia)? ?day': '26-Jan'} })  
-	 Tempo.init({period: [{'morning tea': '09:30' }, {'elevenses': '11:00' }]})  
-	 new Tempo('birthday', {event: [["birth(day)?", "20-May"], ["anniversary", "01-Jul"] ]})  
-	 ```
 	 */
 	static #setConfig(shape: Tempo.State, ...options: Tempo.Options[]) {
 		/** helper to normalize snippet/layout Options into the target Config */
@@ -597,9 +585,13 @@ export class Tempo {
 	 *
 	 * @param plugin - An object with `key`, `scope`, `description`, and a `define` function.
 	 */
-	static addTerm(plugin: Tempo.TermPlugin) {
-		if (!Tempo.#terms.some(t => t.key === plugin.key))			// check for duplicate key
-			Tempo.#terms.push(plugin);														// append; silently ignore duplicates
+	static addTerm(...plugin: Tempo.TermPlugin[]) {
+		asArray(plugin)
+			.flat(1)
+			.forEach(p => {
+				if (!Tempo.#terms.some(t => t.key === p.key))			// check for duplicate key
+					Tempo.#terms.push(p);														// append; silently ignore duplicates
+			})
 	}
 
 	/** static Tempo properties getter */
@@ -772,7 +764,7 @@ export class Tempo {
 	/** Nanoseconds of the microsecond (0-999) */							get ns() { return this.#zdt.nanosecond as Tempo.ns }
 	/** Fractional seconds (e.g., 0.123456789) */							get ff() { return +(`0.${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`) }
 	/** IANA Time Zone ID (e.g., 'Australia/Sydney') */				get tz() { return this.#zdt.timeZoneId }
-	/** Unix timestamp (defaults to milliseconds) */					get ts() { return this.epoch[this.#local.config['timeStamp']] }
+	/** Unix timestamp (defaults to milliseconds) */					get ts() { return this.epoch[this.#local.config["timeStamp"] as keyof typeof this.epoch] }
 	/** Short month name (e.g., 'Jan') */											get mmm() { return Tempo.MONTH.keyOf(this.#zdt.month as Tempo.Month) }
 	/** Full month name (e.g., 'January') */									get mon() { return Tempo.MONTHS.keyOf(this.#zdt.month as Tempo.Month) }
 	/** Short weekday name (e.g., 'Mon') */										get www() { return Tempo.WEEKDAY.keyOf(this.#zdt.dayOfWeek as Tempo.Weekday) }
@@ -840,7 +832,7 @@ export class Tempo {
 	 */
 	#setLocal(options: Tempo.Options) {
 		// copy down current global config to local instance
-		this.#local.config = Object.create(Tempo.#global.config);// set prototype-;ink to global config
+		this.#local.config = Object.create(Tempo.#global.config);// set prototype-link to global config
 		const { mdyLocales, mdyLayouts, ...config } = Tempo.#global.config as Tempo.Options;
 		Object.assign(this.#local.config, config, { scope: 'local' });
 
@@ -1727,8 +1719,8 @@ export namespace Tempo {
 	export type Registry = Map<symbol, RegExp>
 	export type PatternOption<T> = T | Record<string | symbol, T> | PatternOption<T>[]
 
-	/** the Options object found in a json-file, or passed to a call to Tempo.Init({}) or 'new Tempo({}) */
-	export type Options = Partial<{														// allowable settings to override configuration
+	/** the Options object found in a json-file, or passed to a call to Tempo.init({}) or 'new Tempo({})' */
+	export interface BaseOptions {
 		/** localStorage key */																	store: string;
 		/** additional console.log for tracking */							debug: boolean | undefined;
 		/** catch or throw Errors */														catch: boolean | undefined;
@@ -1745,11 +1737,16 @@ export namespace Tempo {
 		/** custom date aliases (events). */										event: Event | Tempo.PatternOption<Tempo.Logic>;
 		/** custom time aliases (periods). */										period: Period | Tempo.PatternOption<Tempo.Logic>;
 		/** supplied value to parse */													value: Tempo.DateTime;
-	}>
+	}
+
+	export type Options = Partial<BaseOptions> & { [key: string]: any };
 
 	/** define a new term plugin */
-	export type TermPlugin = { key: string; scope?: string; description: string; define: (this: Tempo, keyOnly?: boolean) => any }
-
+	export type TermPlugin = {
+		key: string; scope?: string;
+		description: string;
+		define: (this: Tempo, keyOnly?: boolean) => any
+	}
 
 	/** the encapsulated state of a Tempo instance */
 	export interface State {																	// 'global' and 'local' variables
@@ -1784,14 +1781,15 @@ export namespace Tempo {
 	}
 
 	/** drop the parse-only Options */
-	type OptionsKeep = Omit<Options, "mdyLocales" | "mdyLayouts" | "pivot" | "snippet" | "layout" | "event" | "period" | "value">
+	type OptionsKeep = Omit<BaseOptions, "mdyLocales" | "mdyLayouts" | "pivot" | "snippet" | "layout" | "event" | "period" | "value">
 
 	/**
 	 * the Config that Tempo will use to interpret a Tempo.DateTime  
 	 * derived from user-supplied options, else json-stored options, else reasonable-default options
 	 */
 	export interface Config extends Required<OptionsKeep> {
-		/** configuration (global | local) */										scope: 'global' | 'local',
+		/** configuration (global | local) */										scope: 'global' | 'local';
+		[key: string]: any;
 	}
 
 	/** Timestamp precision */
@@ -1846,6 +1844,11 @@ export namespace Tempo {
 	export type Weekday = enums.Weekday
 	export type Month = enums.Month
 	export type Element = enums.Element
+	/** Type for consistency in expected arguments for helper functions */
+	export type Params<T> = {
+		(tempo?: Tempo.DateTime, options?: Tempo.Options): T;		// parse Tempo.DateTime, default to Temporal.Instance.now()
+		(options: Tempo.Options): T;														// provide just the Tempo.Options (use {value:'XXX'} for specific Tempo.DateTime)
+	}
 }
 // #endregion Tempo types / interfaces / enums
 
@@ -1861,11 +1864,6 @@ namespace Internal {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Tempo.init();																								// initialize default global configuration
 
-export type Params<T> = {																		// Type for consistency in expected arguments
-	(tempo?: Tempo.DateTime, options?: Tempo.Options): T;			// parse Tempo.DateTime, default to Temporal.Instant.now()
-	(options: Tempo.Options): T;															// provide just Tempo.Options (use {value:'XXX'} for specific Tempo.DateTime)
-}
-
 type Fmt = {																								// used for the fmtTempo() shortcut
 	<F extends enums.Format>(fmt: F, tempo?: Tempo.DateTime, options?: Tempo.Options): Tempo.FormatType<F>;
 	<F extends enums.Format>(fmt: F, options: Tempo.Options): Tempo.FormatType<F>;
@@ -1873,6 +1871,6 @@ type Fmt = {																								// used for the fmtTempo() shortcut
 
 // shortcut functions to common Tempo properties / methods
 /** check valid Tempo */			export const isTempo = (tempo?: unknown) => isType<Tempo>(tempo, 'Tempo');
-/** current timestamp (ts) */	export const getStamp = ((tempo, options) => new Tempo(tempo, options).ts) as Params<number | bigint>;
-/** create new Tempo */				export const getTempo = ((tempo, options) => new Tempo(tempo, options)) as Params<Tempo>;
+/** current timestamp (ts) */	export const getStamp = ((tempo, options) => new Tempo(tempo, options).ts) as Tempo.Params<number | bigint>;
+/** create new Tempo */				export const getTempo = ((tempo, options) => new Tempo(tempo, options)) as Tempo.Params<Tempo>;
 /** format a Tempo */					export const fmtTempo = ((fmt, tempo, options) => new Tempo(tempo, options).format(fmt)) as Fmt;

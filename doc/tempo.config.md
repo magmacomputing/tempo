@@ -12,7 +12,7 @@ import { Tempo } from '@magmacomputing/tempo';
 Tempo.init({
   timeZone: 'Australia/Sydney', // Default timezone for all instances
   locale: 'en-AU',             // Default locale for formatting
-  pivot: 80,                   // Custom pivot for 2-digit years
+  pivot: 80,                   // Custom pivot for parsing 2-digit years
   debug: false                 // Enable/disable debug logging
 });
 ```
@@ -24,11 +24,14 @@ Tempo.init({
 | `timeZone` | `string` | System Zone | Default IANA time zone or alias (e.g., 'AEST'). |
 | `locale` | `string` | System Locale | Default BCP 47 language tag (e.g., 'en-US'). |
 | `calendar` | `string` | `'iso8601'` | Default calendar system. |
-| `pivot` | `number` | `75` | The "sliding window" cutoff for two-digit years. |
+| `pivot` | `number` | `75` | The "sliding window" cutoff for parsing two-digit years. |
 | `timeStamp`| `'ms' \| 'ns'` | `'ms'` | Precision for `.ts` and `.now()` (milliseconds or nanoseconds). |
 | `sphere` | `'north' \| 'south'`| Auto-detected | Used for seasonal/quarterly plugins. |
 | `debug` | `boolean` | `false` | Enables internal log tracking. |
 | `catch` | `boolean` | `false` | If true, invalid inputs return a "Void" Tempo instead of throwing. |
+
+> [!TIP]
+> **Non-standard options**: Any additional keys provided to `init()` or the constructor are preserved and accessible via `this.config` in instances and plugins.
 
 ## 2. Instance-Level Configuration
 
@@ -39,9 +42,9 @@ You can override any global setting for a specific instance by passing an option
 const t = new Tempo('now', { timeZone: 'UTC' });
 ```
 
-## 3. Persistent Configuration (Browser Only)
+## 3. Persistent Configuration (localStorage for Browser, process.env for NodeJS)
 
-If you are working in a browser environment, Tempo can automatically persist and reload its configuration using `localStorage`.
+If you are working in a browser environment, Tempo can automatically persist and reload its configuration using external storage.
 
 ```javascript
 // Write to localStorage under the key 'myAppConfig'

@@ -218,3 +218,31 @@ Tempo.addTerm({
 ```
 
 Every `Tempo` instance created after that point will have the dynamic term available.
+
+### Using Custom Configuration in Terms
+
+Since `Tempo` preserves non-standard configuration options in its internal `config` object, you can use `Tempo.init()` to provide values that your custom term plugins can later reference.
+
+```ts
+// 1. Initialize with a custom 'business' config option
+Tempo.init({ 
+  fiscalYearStart: 7 // e.g., July
+});
+
+// 2. Define a term that uses this custom option
+Tempo.addTerm({
+  key: 'cfy',
+  scope: 'fiscal',
+  description: 'Custom Fiscal Year',
+  define: function(this: Tempo, keyOnly?: boolean) {
+    const startMonth = this.config.fiscalYearStart ?? 1;
+    const isPastStart = this.mm >= startMonth;
+    const year = isPastStart ? this.yy : this.yy - 1;
+    
+    return keyOnly ? `FY${year}` : { key: `FY${year}`, year, startMonth };
+  }
+});
+
+const t = new Tempo('2025-02-15');
+console.log(t.term.fys); // → "FY2024" (because it's before July 2025)
+```

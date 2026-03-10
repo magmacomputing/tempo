@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Import Maps Support**: Added documentation for using Tempo in modern browsers without a build step via `<script type="importmap">`.
+- **Custom Configuration**: Added support for non-standard, custom configuration options in `Tempo.Options` that are preserved in the instance `config`.
+- **New Tests**: Added `test/custom-options.test.ts` to verify custom configuration and Term plugin integration.
+
+### Changed
+- **Type Architecture**: Refactored `Tempo.Options` and `Tempo.Config` using `BaseOptions` and intersections to prevent type shadowing of explicit properties like `timeStamp`.
+- **API Surface**: Updated `lib/index.ts` to use `export *`, ensuring all helper functions and types are available to library consumers.
+- **Type Organization**: Moved `Params` helper type into the `Tempo` namespace (`Tempo.Params`) for better organization.
+
+### Fixed
+- **Type Safety**: Fixed a TypeScript indexing error on line 779 caused by the new index signature in configuration objects.
+
 ## [1.0.5] - 2026-03-10
 
 ### Added
