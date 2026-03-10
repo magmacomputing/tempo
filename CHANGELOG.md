@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-03-10
+
 ### Added
 - **GitHub Sponsors**: Integrated `FUNDING.yml` and added sponsorship links to `README.md`.
 - **Commercial Support**: Added `doc/commercial.md` outlining consulting and priority support options.
