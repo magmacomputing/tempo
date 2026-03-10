@@ -47,7 +47,6 @@ import '@js-temporal/polyfill';
 
 - **ISO Strings**: `2024-05-20T10:00:00Z`
 - **Short Dates**: `20-May`, `May 20` (locale-aware)
-- **Relative Strings**: `next Monday`, `last Friday`
 - **Relative Strings**: `next Monday`, `last Friday`, `2 days ago`
 - **Numbers/BigInt**: Unix timestamps in milliseconds or nanoseconds
 - **Temporal Objects**: `ZonedDateTime`, `PlainDate`, etc.

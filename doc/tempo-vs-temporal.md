@@ -8,7 +8,7 @@ To enhance (not replace) Temporal's strictness, Tempo adds:
 * extensibility (through its dynamic options (events, periods)),
 * business logic (through its lazy-loaded   plugin system (terms))
 
-Here is a side-by-side comparison of how you achieve the same outcomes, as well as things Tempo can do that native Temporal cannot (without writing your own utility functions).
+Here is a side-by-side comparison of how you achieve the same outcomes, as well as things Tempo can do that native Temporal cannot easily.
 
 ### 1. Parsing: Strict vs. Flexible
 
@@ -64,7 +64,7 @@ const isWeekend = date.dayOfWeek === 6 || date.dayOfWeek === 7;
 ```
 
 **Tempo 🚀**
-This is a perfect example of where Tempo adds business logic (somethign that Temporal does not do).
+This is a perfect example of where Tempo adds business logic (something that Temporal does not do).
 To add a 'term' that defines 'isWeekend' to Tempo, you would write a plugin that defines the term.  
 From that point, the plugin is available to new Tempo instances.
 
@@ -86,5 +86,5 @@ t.until('xmas', 'days'); // "289.58470466349036"
 t.until('xmas'); // if not 'unit' provided, then duration object "{years:0, months:9, ..., iso: 'P9M14DT14H1M0.656862748S'}"
 
 t.since('yesterday', 'days'); // unit-argument determines granularity "1d ago"
-t.since('yesterday afternoon'); //  if no 'unit' provided, then duration "-P1DT9H32M19.402536059S"
+t.since('yesterday afternoon'); //  if no 'unit' provided, then duration string "-P1DT9H32M19.402536059S"
 ```
