@@ -28,6 +28,20 @@ While `Temporal` provides an excellent, mathematically sound foundation for date
 npm install @magmacomputing/tempo
 ```
 
+### 🌐 Browser (Import Maps)
+
+Tempo is an ESM-first library and can be used directly in modern browsers using [Import Maps](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap).
+
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "@magmacomputing/tempo": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo@1.0.5/dist/index.js"
+    }
+  }
+</script>
+```
+
 ## 🛠️ Quick Start
 
 ```javascript

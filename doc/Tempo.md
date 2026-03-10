@@ -39,6 +39,33 @@ Then, import it at the very top of your application entry point:
 ```typescript
 import '@js-temporal/polyfill';
 ```
+
+### 🌐 Browser (Import Maps)
+
+`Tempo` is an ESM-first library and can be used directly in modern browsers using [Import Maps](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap). This is a great way to use `Tempo` without a build step.
+
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "@magmacomputing/tempo": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo@1.0.5/dist/index.js",
+      "@js-temporal/polyfill": "https://cdn.jsdelivr.net/npm/@js-temporal/polyfill@0.4.4/dist/index.esm.min.js"
+    }
+  }
+</script>
+
+<script type="module">
+  // Optional: Import polyfill if not natively supported
+  if (!globalThis.Temporal) {
+    await import('@js-temporal/polyfill');
+  }
+
+  import { Tempo } from '@magmacomputing/tempo';
+
+  const t = new Tempo();
+  console.log(t.format('{dd} {mon} {yyyy}'));
+</script>
+```
 ---
 
 ## Parsing
