@@ -52,10 +52,12 @@ console.log(now.fmt.date);                    // using pre-built formats: "2026-
 For detailed technical guides, please refer to:
 - [Vision & Value Proposition](./doc/vision.md)
 - [Tempo vs. Native Temporal](./doc/tempo-vs-temporal.md)
+- [Tempo vs. The Competition](./doc/comparison.md)
 - [Tempo Class Documentation](./doc/Tempo.md)
 - [Parsing Engine](./doc/Tempo.md#parsing)
 - [Formatting Tokens](./doc/Tempo.md#formatting)
 - [Plugin System (Terms)](./doc/Tempo.md#plugins-terms)
+- [Configuration Guide](./doc/tempo.config.md)
 - [Commercial Support & Consulting](./doc/commercial.md)
 
 ## 💖 Support the Project
