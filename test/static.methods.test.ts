@@ -18,9 +18,9 @@ describe(`${label} init`, () => {
 
   test('reset to defaults when called with no args', () => {
     Tempo.init({ pivot: 99 });
-    expect(Tempo.config.pivot).toBe(99);
+    expect(Tempo.parse.pivot).toBe(99);
     Tempo.init();
-    expect(Tempo.config.pivot).toBe(Tempo.default.pivot);		// back to default
+    expect(Tempo.parse.pivot).toBe(Tempo.default.pivot);		// back to default
   })
 
   test('applies timeZone abbreviation alias', () => {
@@ -50,7 +50,7 @@ describe(`${label} init`, () => {
 
   test('applies custom pivot year', () => {
     Tempo.init({ pivot: 50 });
-    expect(Tempo.config.pivot).toBe(50);
+    expect(Tempo.parse.pivot).toBe(50);
   })
 
   test('mdyLocales are set after init with a locale', () => {

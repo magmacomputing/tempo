@@ -16,7 +16,8 @@ import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndef
 import type { IntRange, LooseUnion, Mutable, NonOptional, OwnOf, Property, TPlural, Type } from '#core/shared/type.library.js';
 
 import * as enums from '#core/shared/tempo.config/tempo.enum.js';
-import _terms from '#core/shared/tempo.config/plugins/term.import.js';
+import registerTerms from '#core/shared/tempo.config/plugins/term.import.js';
+
 import { Match, Token, Snippet, Layout, Event, Period, Default, TimeZone } from '#core/shared/tempo.config/tempo.default.js';
 
 import '#core/shared/prototype.library.js';									// patch prototypes
@@ -88,7 +89,7 @@ export class Tempo {
 	/** Tempo state for the global configuration */						static #global = {} as Tempo.State
 	/** a collection of parse rule-matches */									static #pending? = void 0 as Tempo.Match[] | undefined;
 	/** cache for next-available 'usr' Token key */						static #usrCount = 0;
-	/** mutable list of registered term plugins */						static #terms = [..._terms] as typeof _terms;
+	/** mutable list of registered term plugins */						static #terms = [] as Tempo.TermPlugin[];
 
 	// #endregion
 
@@ -337,6 +338,10 @@ export class Tempo {
 						shape.parse[optKey] = asArray(arg.value as NonNullable<Tempo.Options[typeof optKey]>);
 						break;
 
+					case 'pivot':
+						shape.parse["pivot"] = Number(arg.value);
+						break;
+
 					case 'timeZone':
 						const zone = String(arg.value).toLowerCase();
 						shape.config.timeZone = TimeZone[zone] ?? arg.value;
@@ -414,12 +419,14 @@ export class Tempo {
 				period: { ...Period } as Period,
 				mdyLocales: Tempo.#mdyLocales(Default.mdyLocales as Tempo.Options['mdyLocales']),
 				mdyLayouts: asArray(Default.mdyLayouts as Tempo.Options['mdyLayouts']) as Tempo.Pair[],
+				pivot: Default.pivot,
 			} as Tempo.Parse;																				// remove previous parsing rules
 
 			for (const key of Object.keys(Token))									// purge user-allocated Tokens
 				if (key.startsWith('usr.'))													// only remove 'usr.' prefixed keys
 					delete Token[key];
 			Tempo.#usrCount = 0;																	// reset user-key counter
+			Tempo.#terms = registerTerms();												// register built-in term plugins
 
 			const dateTime = Intl.DateTimeFormat().resolvedOptions();
 			Object.assign(Tempo.#global.config, {									// some global locale-specific defaults
@@ -590,9 +597,9 @@ export class Tempo {
 	 *
 	 * @param plugin - An object with `key`, `scope`, `description`, and a `define` function.
 	 */
-	static addTerm(plugin: { key: string; scope?: string; description: string; define: (this: Tempo, keyOnly?: boolean) => any }) {
+	static addTerm(plugin: Tempo.TermPlugin) {
 		if (!Tempo.#terms.some(t => t.key === plugin.key))			// check for duplicate key
-			Tempo.#terms.push(plugin as typeof _terms[number]);		// append; silently ignore duplicates
+			Tempo.#terms.push(plugin);														// append; silently ignore duplicates
 	}
 
 	/** static Tempo properties getter */
@@ -941,7 +948,7 @@ export class Tempo {
 
 		// if it contains any 'options' keys, it's not a ZonedDateTime
 		const keys = ownKeys(tempo);
-		if (keys.some(key => ['snippet', 'layout', 'event', 'period', 'mdyLocales', 'mdyLayouts', 'debug', 'catch', 'store', 'pivot'].includes(key as string)))
+		if (keys.some(key => ['snippet', 'layout', 'event', 'period', 'mdyLocales', 'mdyLayouts', 'debug', 'catch', 'store'].includes(key as string)))
 			return false;
 
 		// we include {value} to allow for Tempo instances
@@ -1244,7 +1251,7 @@ export class Tempo {
 		 */
 		if (year.toString().match(Match.twoDigit)) {						// if {year} match just-two digits
 			const pivot = dateTime
-				.subtract({ years: this.#local.config['pivot'] })		// pivot cutoff to determine century
+				.subtract({ years: this.#local.parse["pivot"] })		// pivot cutoff to determine century
 				.year % 100																					// remainder 
 			const century = Math.trunc(dateTime.year / 100);			// current century
 			year += (century - Number(year >= pivot)) * 100;			// now a four-digit year
@@ -1740,6 +1747,10 @@ export namespace Tempo {
 		/** supplied value to parse */													value: Tempo.DateTime;
 	}>
 
+	/** define a new term plugin */
+	export type TermPlugin = { key: string; scope?: string; description: string; define: (this: Tempo, keyOnly?: boolean) => any }
+
+
 	/** the encapsulated state of a Tempo instance */
 	export interface State {																	// 'global' and 'local' variables
 		/** current defaults for all Tempo instances */					config: Tempo.Config;
@@ -1760,6 +1771,7 @@ export namespace Tempo {
 		/** Map of regex-patterns to match input-string */			pattern: Tempo.Registry;
 		/** configured Events */																event: Event;
 		/** configured Periods */																period: Period;
+		/** pivot year for two-digit years */										pivot: number;
 		/** parsing match result */															result: Tempo.Match[];
 	}
 
@@ -1771,8 +1783,9 @@ export namespace Tempo {
 		/** the value of the original input */									value: any;
 	}
 
-	/** drop the setup-only Options */
-	type OptionsKeep = Omit<Options, "value" | "mdyLocales" | "mdyLayouts">
+	/** drop the parse-only Options */
+	type OptionsKeep = Omit<Options, "mdyLocales" | "mdyLayouts" | "pivot" | "snippet" | "layout" | "event" | "period" | "value">
+
 	/**
 	 * the Config that Tempo will use to interpret a Tempo.DateTime  
 	 * derived from user-supplied options, else json-stored options, else reasonable-default options
@@ -1842,6 +1855,7 @@ namespace Internal {
 	export type GroupDate = { mod?: Tempo.Modifier; nbr?: string; afx?: Tempo.Relative; unt?: string; yy?: string; mm?: string; dd?: string; }
 	export type GroupModifier = { mod?: Tempo.Modifier | Tempo.Relative, adjust: number, offset: number, period: number }
 }
+
 // #endregion Namespace
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -186,15 +186,35 @@ type Range = {
 
 ### Registering the plugin
 
-Add your plugin to `lib/tempo.config/plugins/term.import.ts`:
+To make your plugin persist within the library, add it to `tempo.config/plugins/term.import.ts` within the `registerTerms` function:
 
 ```ts
 import * as rng from './term.myrange.js';
 
-export default [
-  // ... existing plugins ...
-  { key: rng.key, scope: rng.scope, description: rng.description, define: rng.define },
-]
+export default function registerTerms() {
+  return [
+    // ... existing plugins ...
+    { key: rng.key, scope: rng.scope, description: rng.description, define: rng.define },
+  ]
+}
 ```
 
-Every `Tempo` instance created after that point will automatically have lazy-loaded `term.rng` and `term.range` getters available.
+Be aware that the above will only make your plugin available after Tempo has been initialized. See `Tempo.init()`.
+If you want it to also be available dynamically, you will need to register it at runtime using the static `Tempo.addTerm` method. See `On-the-fly registration` below.
+
+### On-the-fly registration
+
+You can also register a term plugin dynamically at runtime using the static `Tempo.addTerm` method. This is useful for ad-hoc business logic that doesn't need to be part of the core library configuration.
+
+```ts
+Tempo.addTerm({
+  key: 'era',
+  scope: 'era',
+  description: 'Historical Era',
+  define: function(this: Tempo, keyOnly?: boolean) {
+    return this.yy < 1000 ? 'Ancient' : this.yy < 1900 ? 'Medieval' : 'Modern';
+  }
+});
+```
+
+Every `Tempo` instance created after that point will have the dynamic term available.
