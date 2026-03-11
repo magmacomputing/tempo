@@ -16,6 +16,33 @@ This project came about due to the need for a simple, yet powerful, way to parse
 
 ---
 
+### Browser (Import Maps)
+
+Tempo is an ESM-first library. You can use it in the browser without a build step using an `importmap`:
+
+```html
+<script type="importmap">
+{
+  "imports": {
+    "@magmacomputing/tempo": "/path/to/tempo/dist/index.js"
+  }
+}
+</script>
+```
+
+### Browser (Script Tag)
+
+For legacy environments or simple prototypes, use the single-file bundle:
+
+```html
+<script src="/path/to/tempo/dist/tempo.bundle.js"></script>
+<script>
+  const t = new Tempo();
+</script>
+```
+
+---
+
 ## Installation
 
 ```bash
@@ -25,6 +52,10 @@ npm install @magmacomputing/tempo
 > [!IMPORTANT]
 > `Tempo` requires an environment with native `Temporal` support (Node.js 20+, modern browsers). 
 > If your environment is older, you must provide your own polyfill.
+
+### Build Target
+
+Tempo is compiled to **ES2022**. This target supports modern JavaScript features like **Private Class Fields** (`#property`) while maintaining compatibility with the vast majority of modern browsers and Node.js environments (Node 20+).
 
 ### Polyfilling (if required)
 
@@ -125,6 +156,7 @@ Formatting uses a placeholder syntax similar to many template engines:
 | Placeholder | Description | Example |
 | :--- | :--- | :--- |
 | `{yyyy}` | 4-digit year | `2024` |
+| `{isoy}` | 4-digit ISO Date year | `2024` |
 | `{yy}` | 2-digit year | `24` |
 | `{mm}` | 2-digit month | `05` |
 | `{mon}` | Full month name | `June` |
@@ -135,8 +167,8 @@ Formatting uses a placeholder syntax similar to many template engines:
 | `{www}` | 3-character weekday name | `Mon` |
 | `{dow}` | Day of week (1-7) | `1` |
 | `{ww}` | Week of year | `21` |
-| `{hh}` | 24-hour hour | `14` |
-| `{HH}` | 12-hour hour (with meridiem) | `02pm` |
+| `{hh}` | 24-clock hour | `14` |
+| `{HH}` | 12-clock hour (with meridiem) | `02pm` |
 | `{mi}` | 2-digit minutes | `05` |
 | `{ss}` | 2-digit seconds | `05` |
 | `{ms}` | 3-digit milliseconds | `005` |
@@ -145,6 +177,23 @@ Formatting uses a placeholder syntax similar to many template engines:
 | `{ff}` | 9-digit fractional seconds | `005000000` |
 | `{ts}` | Unix timestamp | `1716163200000` |
 | `{term.name}` | Term value | eg. `{term.qtr}` returns the current quarter as Q1, Q2, Q3 or Q4 |
+
+*(Note: `{isoy}` represents the ISO week year, which may differ from `{yyyy}` at the start or end of a calendar year if the current date belongs to an ISO week from the adjacent year.)*
+
+### ISO 8601 Week Dates
+
+Tempo supports the **ISO 8601 Week Date** system, which is commonly used in business and logistics for unambiguous weekly scheduling.
+
+- **`{ww}`**: Represents the ISO week number (01–53).
+- **`{isoy}`**: Represents the ISO week-numbering year.
+
+A week in this system always starts on a **Monday**. Week 01 is defined as the week with the year's first Thursday (or the week containing January 4th).
+
+To format a standard ISO week date (e.g., `2024-W21`), use both placeholders together:
+```typescript
+const t = new Tempo('2024-05-20');
+t.format('{isoy}-W{ww}'); // "2024-W21"
+```
 
 Example:
 ```typescript

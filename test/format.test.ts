@@ -25,9 +25,9 @@ describe('Tempo.format() refinements', () => {
     expect(typeof t2.format('{dd}')).toBe('string');
   })
 
-  it('should handle iy for ISO year', () => {
+  it('should handle isoy for ISO year', () => {
     const t3 = new Tempo('2024-12-30'); // Monday, Week 1 of 2025
-    expect(t3.format('{iy}{ww}')).toBe(202501);
-    expect(typeof t3.format('{iy}{ww}')).toBe('number');
+    expect(t3.format('{isoy}{ww}')).toBe(202501);
+    expect(typeof t3.format('{isoy}{ww}')).toBe('number');
   })
 })

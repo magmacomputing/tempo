@@ -8,17 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Import Maps Support**: Added documentation for using Tempo in modern browsers without a build step via `<script type="importmap">`.
-- **Custom Configuration**: Added support for non-standard, custom configuration options in `Tempo.Options` that are preserved in the instance `config`.
-- **New Tests**: Added `test/custom-options.test.ts` to verify custom configuration and Term plugin integration.
+- **Global Discovery**: Implemented secure global configuration discovery using `Symbol.for($Tempo)` to prevent namespace collisions.
+- **`$Tempo` Constant**: Exported `$Tempo` to serve as the single source of truth for storage keys and symbolic discovery.
+- **Config Observability**: Added trace logging to `Tempo.init()` (enabled via `debug: true`) to explicitly show configuration source paths (Discovery vs. Store vs. Init).
 
 ### Changed
-- **Type Architecture**: Refactored `Tempo.Options` and `Tempo.Config` using `BaseOptions` and intersections to prevent type shadowing of explicit properties like `timeStamp`.
-- **API Surface**: Updated `lib/index.ts` to use `export *`, ensuring all helper functions and types are available to library consumers.
-- **Type Organization**: Moved `Params` helper type into the `Tempo` namespace (`Tempo.Params`) for better organization.
+- **Deterministic Initialization**: Refactored hemisphere detection to use a fixed reference date instead of `Temporal.Now`, ensuring stable initialization in all environments.
+- **`Tempo.init` Refactor**: Improved configuration prioritization (Discovery > Storage > Init) while maintaining backward compatibility for `TempoOptions`.
+- **Documentation**: Updated `tempo.config.md` with an architectural overview of the four configuration tiers.
 
 ### Fixed
-- **Type Safety**: Fixed a TypeScript indexing error on line 779 caused by the new index signature in configuration objects.
+- **Initialization Hang**: Resolved a deadlock/hang during background/headless test runs caused by top-level system clock access.
+- **TypeScript Performance**: Fixed `tsc` hangs by removing recursive index signatures in `Tempo.Options` and `Tempo.Config` interfaces.
+- **TimeZone Normalization**: Enforced case-insensitive matching for custom timezone aliases provided via global discovery.
 
 ## [1.0.5] - 2026-03-10
 

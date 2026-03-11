@@ -10,7 +10,7 @@ import { cleanify, stringify } from '#core/shared/serialize.library.js';
 import { getStorage, setStorage } from '#core/shared/storage.library.js';
 import { ownKeys, ownEntries, getAccessors, omit } from '#core/shared/reflection.library.js';
 import { getContext, CONTEXT } from '#core/shared/utility.library.js';
-import { asInteger, isNumeric, ifNumeric } from '#core/shared/number.library.js';
+import { asNumber, asInteger, isNumeric, ifNumeric } from '#core/shared/number.library.js';
 import { pad, singular, toProperCase, trimAll } from '#core/shared/string.library.js';
 import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction } from '#core/shared/type.library.js';
 import type { IntRange, LooseUnion, Mutable, NonOptional, OwnOf, Property, TPlural, Type } from '#core/shared/type.library.js';
@@ -24,8 +24,10 @@ import '#core/shared/prototype.library.js';									// patch prototypes
 
 // #endregion
 
-const STORAGEKEY = '$Tempo';																// for stash in persistent storage
-const Context = getContext();																// get current execution context
+// #region Const variables
+
+/** key to use for storage / globalThis Symbol */						export const $Tempo = '$Tempo' as const;
+/** current execution context*/															const Context = getContext();
 
 // #endregion Const variables
 
@@ -98,8 +100,6 @@ export class Tempo {
 	//** prototype helpers */
 	/** return the Prototype parent of an object */						static #proto(obj: object) { return Object.getPrototypeOf(obj) }
 	/** test object has own property with the given key */		static #hasOwn(obj: object, key: string) { return Object.hasOwn(obj, key) }
-	/** set the value on an object, if not already exists */	static #setOwn(obj: object, key: string, value: unknown = {}) { if (!Tempo.#hasOwn(obj, key)) Tempo.#create(obj, key) }
-	/** test object is Frozen */															static #isFrozen(obj?: object) { return isDefined(obj) && Object.isFrozen(obj) }
 	/** return whether the shape is 'local' or 'global' */		static #isLocal(shape: Tempo.State) { return shape.config.scope === 'local' }
 	/** create an object based on a prototype */							static #create(obj: object, name: string) { return Object.create(Tempo.#proto(obj)[name]) }
 
@@ -186,7 +186,8 @@ export class Tempo {
 		if (isUndefined(shape.config.timeZone) || Tempo.#hasOwn(options, 'sphere'))
 			return shape.config.sphere;														// already specified or no timeZone to calculate from
 
-		const zdt = Temporal.Now.zonedDateTimeISO(shape.config.timeZone);
+		// use a fixed date (2024-01-01) to compare offsets for hemisphere detection
+		const zdt = new Temporal.ZonedDateTime(BigInt(1_704_067_200) * BigInt(1_000_000_000), shape.config.timeZone as any);
 		const jan = zdt.with({ day: 1, month: 1 }).offsetNanoseconds;
 		const jun = zdt.with({ day: 1, month: 6 }).offsetNanoseconds;
 		const dst = Math.sign(jan - jun);												// timeZone offset difference between Jan and Jun
@@ -197,9 +198,8 @@ export class Tempo {
 			case 1:
 				return Tempo.COMPASS.South;													// clock moves forward in Southern hemisphere
 			case 0:
-				return void 0;																			// timeZone does not observe DST
 			default:
-				return Default.sphere ?? Tempo.COMPASS.North;				// timeZone does not observe DST
+				return void 0;																			// timeZone does not observe DST
 		}
 	}
 
@@ -210,7 +210,7 @@ export class Tempo {
 		if (Tempo.#isLocal(shape) && Tempo.#hasOwn(shape.parse, 'mdyLocales'))
 			monthDay.push(...shape.parse.mdyLocales);							// append local mdyLocales (not overwrite global)
 
-		return monthDay.some(mdy => mdy.timeZones?.includes(shape.config.timeZone));
+		return monthDay.some(mdy => mdy.timeZones?.includes(shape.config.timeZone as any));
 	}
 
 	/**
@@ -424,15 +424,41 @@ export class Tempo {
 			})
 
 			Tempo.#setConfig(Tempo.#global,
-				{ store: STORAGEKEY, scope: 'global' } as Tempo.Options,
+				{ store: $Tempo, scope: 'global' } as Tempo.Options,
 				Default as Tempo.Options,														// set Tempo defaults
-				Tempo.readStore(STORAGEKEY),												// allow for storage-values to overwrite
-			)
+			);
+			const stored = Tempo.readStore($Tempo);
+			if (stored) {
+				Tempo.#setConfig(Tempo.#global, stored);							// allow for storage-values to overwrite
+			}
+
+			// support "Global Discovery" of user-options
+			const discovery = (globalThis as any)[Symbol.for($Tempo)] as Tempo.Discovery;
+
+			if (isObject(discovery)) {
+				// 1. Process TimeZones (normalize to lowercase for lookup)
+				const timeZones = discovery.timeZones ?? {};
+				for (const [key, value] of Object.entries(timeZones))
+					(TimeZone as any)[String(key).toLowerCase()] = value;
+
+				// 2. Process Terms
+				const terms = discovery.terms || {};
+				Tempo.addTerm(...asArray(terms as any));
+
+				// 3. Process Options
+				let opts = discovery.options || {};
+				opts = isFunction(opts) ? opts() : opts;
+				Tempo.#setConfig(Tempo.#global, opts);
+			}
 		}
 		else {
-			if (options.store && options.store !== STORAGEKEY)
-				Tempo.#setConfig(Tempo.#global, Tempo.readStore(options.store));	// user-defined local storage
-			Tempo.#setConfig(Tempo.#global, options);							// overload with init() argument (options)
+			if (options.store && options.store !== $Tempo) {
+				const stored = Tempo.readStore(options.store);
+				if (stored) {
+					Tempo.#setConfig(Tempo.#global, stored);
+				}
+			}
+			Tempo.#setConfig(Tempo.#global, options);					// overload with init() argument (options)
 		}
 
 		if (Context.type === CONTEXT.Browser || options.debug === true)
@@ -693,7 +719,7 @@ export class Tempo {
 		try {
 			this.#zdt = this.#parse(this.#tempo);									// attempt to interpret the DateTime arg
 
-			if (['iso8601', 'gregory'].includes(this.#local.config['calendar'])) {
+			if (['iso8601', 'gregory'].includes(this.#local.config['calendar'] as any)) {
 				for (const key of Tempo.FORMAT.keys())
 					Object.assign(this.#fmt, { [key]: this.format(key) });
 			}
@@ -882,8 +908,8 @@ export class Tempo {
 			case 'Temporal.PlainDate':
 			case 'Temporal.PlainDateTime':
 				return value
-					.toZonedDateTime(timeZone)
-					.withCalendar(calendar);
+					.toZonedDateTime(timeZone as any)
+					.withCalendar(calendar as any);
 
 			case 'Temporal.PlainTime':
 				return today.withPlainTime(value);
@@ -891,35 +917,35 @@ export class Tempo {
 			case 'Temporal.PlainYearMonth':												// assume current day, else end-of-month
 				return value
 					.toPlainDate({ day: Math.min(today.day, value.daysInMonth) })
-					.toZonedDateTime(timeZone)
-					.withCalendar(calendar)
+					.toZonedDateTime(timeZone as any)
+					.withCalendar(calendar as any)
 
 			case 'Temporal.PlainMonthDay':												// assume current year
 				return value
 					.toPlainDate({ year: today.year })
-					.toZonedDateTime(timeZone)
-					.withCalendar(calendar)
+					.toZonedDateTime(timeZone as any)
+					.withCalendar(calendar as any)
 
 			case 'Temporal.Instant':
 				return value
-					.toZonedDateTimeISO(timeZone)
-					.withCalendar(calendar)
+					.toZonedDateTimeISO(timeZone as any)
+					.withCalendar(calendar as any)
 
 			case 'Tempo':
 				return value
 					.toDateTime();																		// clone provided Tempo
 
 			case 'Date':
-				return new Temporal.ZonedDateTime(BigInt(value.getTime() * 1_000_000), timeZone, calendar);
+				return new Temporal.ZonedDateTime(BigInt(value.getTime() * 1_000_000), timeZone as any, calendar as any);
 
 			case 'Number':																				// Number which didn't conform to a Tempo.pattern
 				const [seconds = BigInt(0), suffix = BigInt(0)] = value.toString().split('.').map(BigInt);
 				const nano = BigInt(suffix.toString().substring(0, 9).padEnd(9, '0'));
 
-				return new Temporal.ZonedDateTime(seconds * BigInt(1_000_000_000) + nano, timeZone, calendar);
+				return new Temporal.ZonedDateTime(seconds * BigInt(1_000_000_000) + nano, timeZone as any, calendar as any);
 
 			case 'BigInt':																				// BigInt is not conformed against a Tempo.pattern
-				return new Temporal.ZonedDateTime(value, timeZone, calendar);
+				return new Temporal.ZonedDateTime(value, timeZone as any, calendar as any);
 
 			default:
 				Tempo.#dbg.catch(this.#local.config, `Unexpected Tempo parameter type: ${type}, ${String(value)}`);
@@ -960,7 +986,7 @@ export class Tempo {
 		const arg = asType(tempo);
 
 		if (this.#isZonedDateTimeLike(tempo)) {									// tempo is ZonedDateTime-ish object (throw away 'value' property)
-			const { timeZone, calendar, value, ...options } = tempo;
+			const { timeZone, calendar, value, ...options } = tempo as any;
 			let zdt = !isEmpty(options)
 				? dateTime.with({ ...options })
 				: dateTime;
@@ -1360,7 +1386,7 @@ export class Tempo {
 		return ownEntries(groups)
 			.reduce((acc, [key, val]) => {
 				if (isNumeric(val))
-					acc[key] = ifNumeric(val) as number;
+					acc[key] = asNumber(val);
 				return acc;
 			}, {} as Record<string, number>)
 	}
@@ -1573,7 +1599,7 @@ export class Tempo {
 
 		const result = String(template).replace(Match.braces, (_match, token) => {
 			switch (token) {
-				case 'iy': return pad(this.ww === 1 && this.mm === Tempo.MONTH.Dec ? this.yy + 1 : (this.ww >= 52 && this.mm === Tempo.MONTH.Jan ? this.yy - 1 : this.yy), 4);
+				case 'isoy': return pad(this.ww === 1 && this.mm === Tempo.MONTH.Dec ? this.yy + 1 : (this.ww >= 52 && this.mm === Tempo.MONTH.Jan ? this.yy - 1 : this.yy), 4);
 				case 'yyww': return pad(this.ww === 1 && this.mm === Tempo.MONTH.Dec ? this.yy + 1 : (this.ww >= 52 && this.mm === Tempo.MONTH.Jan ? this.yy - 1 : this.yy), 4) + pad(this.ww);
 				case 'yyyy': return pad(this.yy, 4);
 				case 'yy': return pad(this.yy % 100);
@@ -1608,7 +1634,7 @@ export class Tempo {
 			}
 		});
 
-		const isExplicitlyNumeric = ['{yyyy}{ww}', '{yyyy}{mm}', '{yyyy}{mm}{dd}', '{yyww}', '{iy}{ww}', '{iy}'].includes(template);
+		const isExplicitlyNumeric = ['{yyyy}{ww}', '{yyyy}{mm}', '{yyyy}{mm}{dd}', '{yyww}', '{isoy}{ww}', '{isoy}'].includes(template);
 		return (isExplicitlyNumeric ? ifNumeric(result) : result) as Tempo.FormatType<K>;
 	}
 
@@ -1661,7 +1687,7 @@ export class Tempo {
 
 		return (isUndefined(unit) || since)											// if no 'unit' provided, or if called via #since()
 			? getAccessors(duration)															// return an Object with all the duration accessors
-				.reduce((acc, dur) => Object.assign(acc, { [dur]: duration[dur as keyof Temporal.Duration] }),
+				.reduce((acc, dur) => Object.assign(acc, { [dur]: (duration as any)[dur] }),
 					ifDefined({ iso: duration.toString(), unit } as Tempo.Duration))
 			: duration.total({ relativeTo: this.#zdt, unit });		// sum-up the duration components
 	}
@@ -1724,8 +1750,8 @@ export namespace Tempo {
 		/** localStorage key */																	store: string;
 		/** additional console.log for tracking */							debug: boolean | undefined;
 		/** catch or throw Errors */														catch: boolean | undefined;
-		/** Temporal timeZone */																timeZone: string;
-		/** Temporal calendar */																calendar: string;
+		/** Temporal timeZone */																timeZone: Temporal.TimeZoneLike;
+		/** Temporal calendar */																calendar: Temporal.CalendarLike;
 		/** locale (e.g. en-AU) */															locale: string;
 		/** pivot year for two-digit years */										pivot: number;
 		/** hemisphere for term.qtr or term.szn */							sphere: Tempo.COMPASS | undefined;
@@ -1795,6 +1821,13 @@ export namespace Tempo {
 	/** Timestamp precision */
 	export type TimeStamp = 'ss' | 'ms' | 'us' | 'ns'
 
+	/** structured configuration for Global Discovery via Symbol.for('$Tempo') */
+	export interface Discovery {
+		/** pre-defined config options for Tempo.#global */			options?: Options | (() => Options);
+		/** term plugins to be registered via Tempo.addTerm() */terms?: TermPlugin | TermPlugin[];
+		/** aliases to merge in the TimeZone dictionary */			timeZones?: Record<string, string>;
+	}
+
 	/** Configuration to use for #until() and #since() argument */
 	export type Unit = Temporal.DateUnit | Temporal.TimeUnit | TPlural<Temporal.DateUnit | Temporal.TimeUnit>
 	export type Until = (Tempo.Options & { unit?: Tempo.Unit }) | Tempo.Unit
@@ -1812,7 +1845,7 @@ export namespace Tempo {
 	}
 
 	/** patterns that return a number */
-	export type NumericPattern = '{yyyy}{mm}' | '{yyyy}{mm}{dd}' | '{iy}{ww}' | '{iy}'
+	export type NumericPattern = '{yyyy}{mm}' | '{yyww}' | '{yyyy}{mm}{dd}' | '{isoy}{ww}' | '{isoy}'
 
 	export type FormatType<K extends string> = K extends keyof OwnFormat
 		? (OwnFormat[K] extends NumericPattern ? number : string)
@@ -1830,7 +1863,7 @@ export namespace Tempo {
 	export type ns = IntRange<0, 999>
 	export type ww = IntRange<1, 52>
 
-	export type Duration = NonOptional<Temporal.DurationLikeObject> & Record<"iso", string> & Record<"sign", Temporal.Duration["sign"]> & Record<"blank", Temporal.Duration["blank"]> & Record<"unit", string | undefined>
+	export type Duration = NonOptional<Temporal.DurationLikeObject> & Record<"iso", string> & Record<"sign", number> & Record<"blank", boolean> & Record<"unit", string | undefined>
 
 	export type WEEKDAY = enums.WEEKDAY
 	export type WEEKDAYS = enums.WEEKDAYS

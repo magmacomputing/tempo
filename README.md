@@ -22,16 +22,31 @@ npm install @magmacomputing/tempo
 ```
 
 ### 🌐 Browser (Import Maps)
-
-Tempo is an ESM-first library and can be used directly in modern browsers using [Import Maps](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap).
+Since Tempo is a native ESM package, you can use it directly in modern browsers using `importmap`:
 
 ```html
 <script type="importmap">
-  {
-    "imports": {
-      "@magmacomputing/tempo": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo@1.0.5/dist/index.js"
-    }
+{
+  "imports": {
+    "@magmacomputing/tempo": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/index.js"
   }
+}
+</script>
+<script type="module">
+  import { Tempo } from '@magmacomputing/tempo';
+  const t = new Tempo('next friday');
+  console.log(t.format('{mon} {day}'));
+</script>
+```
+
+### 📦 Browser (Script Tag)
+For environments without `importmap` support or simple prototypes, use the bundled version:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/tempo.bundle.js"></script>
+<script>
+  const t = new Tempo('tomorrow');
+  console.log(t.toString());
 </script>
 ```
 
@@ -61,8 +76,8 @@ For detailed technical guides, please refer to:
 - [Tempo vs. Native Temporal](./doc/tempo-vs-temporal.md)
 - [Tempo vs. The Competition](./doc/comparison.md)
 - [Tempo Class Documentation](./doc/Tempo.md)
-- [Parsing Engine](./doc/Tempo.md#parsing)
-- [Formatting Tokens](./doc/Tempo.md#formatting)
+- [Data In ~ Parsing Engine](./doc/Tempo.md#parsing)
+- [Data Out ~ Formatting Tokens](./doc/Tempo.md#formatting)
 - [Plugin System (Terms)](./doc/Tempo.md#plugins-terms)
 - [Configuration Guide](./doc/tempo.config.md)
 - [Commercial Support & Consulting](./doc/commercial.md)
