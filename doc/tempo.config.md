@@ -1,65 +1,38 @@
 # Configuration Guide
 
-**Tempo** is designed to work out-of-the-box with sensible defaults, but it provides a flexible system for global and instance-level configuration.
+**Tempo** provides a flexible, multi-tiered configuration system. Settings are applied in a specific order of precedence, allowing you to set broad defaults that can be refined at the application or instance level.
 
-## 1. Global Configuration (`Tempo.init`)
+## Precedence Hierarchy
 
-The easiest and most common way to configure Tempo is by calling the static `init()` method at the start of your application (e.g., in your `main.js`, `index.ts`, or `App.tsx`).
+Settings are loaded in the following order (where later stages override earlier ones):
+1.  **Library Defaults**: Sensible out-of-the-box settings.
+2.  **Persistent Storage**: Sticky user preferences (e.g., from `localStorage`).
+3.  **Global Discovery**: Enterprise-level setup via `Symbol.for($Tempo)`.
+4.  **Explicit Initialization**: Baseline app configuration via `Tempo.init()`.
+5.  **Instance Constructor**: Specific overrides for a single `new Tempo()` call.
 
-```javascript
-import { Tempo } from '@magmacomputing/tempo';
+---
 
-Tempo.init({
-  timeZone: 'Australia/Sydney', // Default timezone for all instances
-  locale: 'en-AU',              // Default locale for formatting
-  pivot: 80,                    // Custom pivot for parsing 2-digit years
-  debug: false                  // Enable/disable debug logging
-});
-```
+## 1. Persistent Configuration (`$Tempo`)
 
-### Available Options
-
-| Option | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `timeZone` | `string` | System Zone | Default IANA time zone or alias (e.g., 'AEST'). |
-| `locale` | `string` | System Locale | Default BCP 47 language tag (e.g., 'en-US'). |
-| `calendar` | `string` | `'iso8601'` | Default calendar system. |
-| `pivot` | `number` | `75` | The "sliding window" cutoff for parsing two-digit years. |
-| `timeStamp`| `'ms' \| 'ns'` | `'ms'` | Precision for `.ts` and `.now()` (milliseconds or nanoseconds). |
-| `sphere` | `'north' \| 'south'`| Auto-detected | Used currently for seasonal/quarterly plugins. |
-| `debug` | `boolean` | `false` | Enables internal log tracking. |
-| `catch` | `boolean` | `false` | If true, invalid inputs return a "Void" Tempo instead of throwing. |
-
-> [!TIP]
-> **Non-standard options**: Any additional keys provided to `init()` or the constructor are preserved and accessible via `this.config` in instances and plugins. This is particularly useful for passing custom settings to your Terms plugins.
-
-## 2. Instance-Level Configuration
-
-You can override any global setting for a specific instance by passing an options object to the constructor.
+The first layer Tempo checks after its own internal defaults is persistent storage. This is ideal for "sticky" settings like a user's preferred timezone or locale that should persist across sessions without a database.
 
 ```javascript
-// This instance uses UTC regardless of global settings
-const t = new Tempo('now', { timeZone: 'UTC' });
+// Write a preference to localStorage under the key 'userSettings'
+Tempo.writeStore({ timeZone: 'America/New_York' }, 'userSettings');
+
+// On the next page load or session, initialize with that store:
+Tempo.init({ store: 'userSettings' });
 ```
 
-## 3. Persistent Configuration (localStorage for Browser, process.env for NodeJS)
+---
 
-If you are working in a browser environment, Tempo can automatically persist and reload its configuration using external storage.
+## 2. Global Discovery
 
-```javascript
-// Write to localStorage under the key 'myAppConfig'
-Tempo.writeStore({ timeZone: 'America/New_York' }, 'myAppConfig');
+To facilitate configuration in micro-frontend architectures or when using a `<script>` tag, Tempo automatically "discovers" a global configuration object before any instances are created.
 
-// Later, or in another session:
-Tempo.init({ store: 'myAppConfig' });
-```
-
-## 4. Global Discovery
-
-To make configuration as easy as possible (especially when using Tempo via a `<script>` tag or in micro-frontend architectures), Tempo automatically discovers global configuration objects when it initializes.
-
-### Absolute Safety (Recommended) 
-The most secure way to provide global configuration is via the global Symbol registry. This prevents namespace collisions and accidental clobbering by other libraries.
+### Using the Symbol Registry (Recommended)
+This is the most secure method to provide configuration before the library even loads, preventing clobbering by other scripts.
 
 ```javascript
 import { $Tempo } from '@magmacomputing/tempo';
@@ -72,52 +45,86 @@ globalThis[Symbol.for($Tempo)] = {
 ```
 
 ### Discovery Contract
-Tempo strictly follows the `Discovery` interface when performing global lookups.
+Tempo looks for the following structure:
 
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| `options` | `Options \| (() => Options)` | Configuration options merged into `Tempo.#global`. |
+| `options` | `Options \| (() => Options)` | Configuration options merged into global state. |
 | `terms` | `TermPlugin \| TermPlugin[]` | Custom term plugins to be registered. |
 | `timeZones` | `Record<string, string>` | Custom timezone aliases to be merged. |
 
-> [!TIP]
-> Discovery occurs automatically during the first use of Tempo or when calling `Tempo.init()` without arguments.
+---
 
-## 5. Advanced Configuration (Parsing Rules)
+## 3. Explicit Initialization (`Tempo.init`)
 
-You can also extend Tempo's parsing intelligence by adding custom **Events** (date aliases) and **Periods** (time aliases).
+This is the **Standard Developer Tier**. Most applications should call `Tempo.init()` during startup to establish a predictable baseline for all instances.
+
+```javascript
+import { Tempo } from '@magmacomputing/tempo';
+
+Tempo.init({
+  timeZone: 'Australia/Sydney',
+  locale: 'en-AU',
+  pivot: 80,
+  debug: false
+});
+```
+
+### Available Options
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `timeZone` | `string` | System Zone | Default IANA time zone or alias. |
+| `locale` | `string` | System Locale | Default BCP 47 language tag. |
+| `calendar` | `string` | `'iso8601'` | Default calendar system. |
+| `pivot` | `number` | `75` | Cutoff for parsing two-digit years. |
+| `timeStamp`| `'ms' \| 'ns'` | `'ms'` | Precision for timestamps. |
+| `sphere` | `'north' \| 'south'`| Auto-detected | Hemisphere for seasonal plugins. |
+| `debug` | `boolean` | `false` | Enables internal log tracking. |
+| `catch` | `boolean` | `false` | If true, invalid inputs return a Void instance. |
+
+---
+
+## 4. Instance-Level Overrides
+
+The final layer of precedence is the constructor itself. You can override *any* global setting for a specific calculation without affecting the rest of your application.
+
+```javascript
+// This instance uses UTC regardless of any global configuration
+const t = new Tempo('now', { timeZone: 'UTC' });
+```
+
+---
+
+## 5. Advanced: Parsing Rules
+
+Beyond basic settings, you can extend Tempo's intelligence by supplying custom **Events** (date aliases) and **Periods** (time aliases) at any global configuration tier.
 
 ```javascript
 Tempo.init({
   event: {
     'launch date': '2026-05-20',
-    'deadline': () => new Tempo().add({ days: 30 })
+    'deadline': () => Temporal.Now.plainDateISO().add({ days: 30 })
   },
   period: {
-    'tea time': '15:30',
-    'happy hour': '5:00pm'
+    'tea time': '15:30'
   }
 })
 
 const delivery = new Tempo('deadline'); // Parsed using your custom logic
 ```
 
-### Configuration Tiers
-
-Tempo provides multiple ways to handle configuration, each targeting a specific use case:
-
-1.  **Global Discovery (`Symbol.for($Tempo)`)**: The **Power User / Enterprise** tier. Essential for micro-frontends and third-party integrations where you need to configure Tempo *before* the library loads, avoiding namespace collisions.
-2.  **Explicit Initialization (`Tempo.init`)**: The **Developer Standard**. This is the recommended approach for most applications to set a baseline configuration during startup.
-3.  **Persistent Storage (`$Tempo`)**: The **Persistence Layer**. A specialized feature for "sticky" user preferences (like a preferred timezone) that persists across page reloads without a backend.
-4.  **Instance Constructor (`new Tempo`)**: The **Instance Tier**. The standard way to override global settings for a specific date-time calculation.
-
-> [!TIP]
-> **Observability**: When `debug: true` is set in your configuration, Tempo will log its discovery path to the console (e.g., "Global Discovery found via Symbol", "merging from store"), making it easy to trace exactly where a setting originated.
-
 ---
 
-### Industry Standard Recommendation
+## 📊 Summary of Tiers
 
-For most projects, the **Explicit Initialization** pattern (Option 1) is the best choice. It is clear, predictable, and works consistently across browsers, Node.js, and edge runtimes. 
+| Tier | Precedence | Best For... |
+| :--- | :--- | :--- |
+| **Instance** | 🥇 Highest | Ad-hoc overrides for specific calculations. |
+| **Global Init** | 🥈 High | Standard baseline for the whole application. |
+| **Discovery** | 🥉 Medium | Micro-frontends and third-party integrations. |
+| **Persistence**| 🏅 Low | Sticky user preferences across sessions. |
+| **Defaults** | 🐚 Baseline | Out-of-the-box reasonable settings. |
 
-If you find yourself needing to share configuration across multiple legacy scripts, consider creating a single `tempo.config.js` file that exports your configured `Tempo` class or a setup function.
+> [!TIP]
+> **Observability**: When `debug: true` is set, Tempo logs its discovery path to the console (e.g., "Global Discovery found via Symbol"), making it easy to trace exactly where a setting originated.

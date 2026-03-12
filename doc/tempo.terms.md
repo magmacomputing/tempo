@@ -199,8 +199,8 @@ export default function registerTerms() {
 }
 ```
 
-Be aware that the above will only make your plugin available after Tempo has been initialized. See `Tempo.init()`.
-If you want it to also be available dynamically, you will need to register it at runtime using the static `Tempo.addTerm` method. See `On-the-fly registration` below.
+Be aware that the above will only make your plugin available after Tempo has been initialized. See [`Tempo.init()`](./tempo.config.md).
+If you want it to also be available dynamically, you will need to register it at runtime using the static `Tempo.addTerm` method. See [On-the-fly registration](#on-the-fly-registration) below.
 
 ### On-the-fly registration
 
@@ -225,7 +225,7 @@ Since `Tempo` preserves non-standard configuration options in its internal `conf
 
 ```ts
 // 1. Initialize with a custom 'business' config option
-Tempo.init({ 
+[`Tempo.init()`](./tempo.config.md)({ 
   fiscalYearStart: 7 // e.g., July
 });
 

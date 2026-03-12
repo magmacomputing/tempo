@@ -14,7 +14,7 @@ Before an instance is even created, you can inspect the static state of the `Tem
 Returns the current *global* configuration settings that act as the default for all new `Tempo` instances. This includes properties like the default `locale`, `timeZone`, and formatting layouts.
 
 ### `Tempo.default`
-Returns the *initial*, out-of-the-box defaults that `Tempo` ships with, unaffected by any modifications made via `Global Discovery` or `Tempo.init()`.
+Returns the *initial*, out-of-the-box defaults that `Tempo` ships with, unaffected by any modifications made via [Global Discovery](../README.md#global-discovery) or [`Tempo.init()`](./tempo.config.md).
 
 ### `Tempo.terms`
 Returns an array of all currently registered term plugins. This is useful to verify which plugins have been loaded via `Tempo.addTerm()`.
@@ -75,14 +75,14 @@ When this flag is enabled, Tempo will output detailed `console.info` logs during
 ### The `catch` Flag
 By default, `Tempo` is designed to be resilient. If it encounters parsing errors or invalid inputs, it will gracefully fallback.
 
-However, if you want `Tempo` to *throw* `Error` objects instead of swallowing them (useful during development or in strict environments), you can pass `{ catch: true }` in the options:
+However, if you want `Tempo` to *throw* `Error` objects instead of swallowing them (useful during development or in strict environments), you can pass `{ catch: false }` in the options:
 ```typescript
 // Throws an Error instead of returning a fallback date
-const t = new Tempo('invalid string', { catch: true });
+const t = new Tempo('invalid string', { catch: false });
 ```
 
 ### Invalid Instances
-If a `Tempo` instance completely fails to instantiate (and `{ catch: true }` is not set), it returns an empty object. You can check for this using the `isValid()` method:
+If a `Tempo` instance completely fails to instantiate (and `{ catch: false }` is not set), it returns an empty object. You can check for this using the `isValid()` method:
 ```typescript
 const t = new Tempo();
 if (!t.isValid()) {

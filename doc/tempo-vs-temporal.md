@@ -5,8 +5,8 @@ While `Temporal` provides an excellent, mathematically sound foundation for date
 To enhance (not replace) Temporal's strictness, Tempo adds:
 * flexibility (through its parsing engine and output formatting),
 * convenience (through its many getters and methods),
-* extensibility (through its dynamic options (events, periods)),
-* business logic (through its lazy-loaded   plugin system (terms))
+* extensibility (through its dynamic aliases (events, periods)),
+* business logic (through its lazy-loaded plugin system (terms))
 
 Here is a side-by-side comparison of how you achieve the same outcomes, as well as things Tempo can do that native Temporal cannot easily.
 
@@ -16,18 +16,16 @@ Temporal only accepts strict ISO 8601 strings. If you have user input, database 
 
 **Native Temporal ❌**
 ```javascript
-// Throws RangeError: invalid ISO 8601 string
-Temporal.PlainDate.from('2026/01/24'); 
-// Throws RangeError
-Temporal.PlainDate.from('next Friday');
+
+Temporal.PlainDate.from('2026/01/24');    // Throws RangeError: invalid ISO 8601 string
+Temporal.PlainDate.from('next Friday');   // Throws RangeError
 ```
 
 **Tempo ✅**
 ```javascript
-// Parses perfectly
-new Tempo('2026/01/24'); 
-// Parses relative natural language perfectly
-new Tempo('next Friday');
+
+new Tempo('2026/01/24');                  // Parses perfectly
+new Tempo('next Friday');                 // Parses relative natural language perfectly
 ```
 
 ### 2. Formatting: Verbose vs. Simple Tokens
@@ -37,17 +35,16 @@ Temporal relies on the `Intl.DateTimeFormat` API for formatting. While powerful 
 **Native Temporal 🐢**
 ```javascript
 const date = Temporal.Now.plainDateISO();
-// Output: "24 Jan 2026"
-date.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+date.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });  // Output: "24 Jan 2026"
 ```
 
 **Tempo 🚀**
 ```javascript
 const t = new Tempo();
-// Output: "24 Jan 2026"
-t.format('{dd} {mmm} {yyyy}');
-// Pre-built getters for common formats
-t.fmt.date; // "2026-01-24"
+
+// Use the format method to create custom formats, or use the pre-built getters (on the 'fmt' property)
+t.format('{dd} {mmm} {yyyy}');            // Output: "24 Jan 2026"
+t.fmt.date;                               // Output: "2026-01-24"
 ```
 
 ### 3. Business Logic & Complex Terms
@@ -77,14 +74,15 @@ const isWeekend = t.term.isWeekend (through plugins)
 
 // Built-in complex terms via plugins
 t.term.qtr; // returns calculated 'fiscal quarter' based on current instance (date and hemisphere) e.g., 'Q1'
-t.term.szn; // returns calculated 'season' based on current instance (date and hemisphere) e.g., 'Summer'
+t.term.szn; // returns calculated 'meteorological season' based on current instance (date and hemisphere) e.g., 'Summer'
 
 // Time since/until (native Temporal only returns Duration objects, not strings)
 
-t.until('3pm','minutes'); // 5.046264992345"
-t.until('xmas', 'days'); // "289.58470466349036"
-t.until('xmas'); // if not 'unit' provided, then duration object "{years:0, months:9, ..., iso: 'P9M14DT14H1M0.656862748S'}"
+t.until('3pm','minutes');       // 5.046264992345
 
-t.since('yesterday', 'days'); // unit-argument determines granularity "1d ago"
-t.since('yesterday afternoon'); //  if no 'unit' provided, then duration string "-P1DT9H32M19.402536059S"
+t.until('xmas', 'days');        // "289.58470466349036"
+t.until('xmas');                // if no 'unit' provided, then duration object "{years:0, months:9, ... }"
+
+t.since('yesterday', 'days');   // unit-argument determines granularity "1d ago"
+t.since('yesterday afternoon'); // if no 'unit' provided, then duration string "-P1DT9H32M19.402536059S"
 ```

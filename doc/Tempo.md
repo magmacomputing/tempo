@@ -13,6 +13,7 @@ This project came about due to the need for a simple, yet powerful, way to parse
 5. [Plugins (Terms)](#plugins-terms)
 6. [Context & Configuration](#context--configuration)
 7. [Enumerators](#enumerators)
+8. [API Reference](./API.md)
 
 ---
 
@@ -71,6 +72,17 @@ Then, import it at the very top of your application entry point:
 import '@js-temporal/polyfill';
 ```
 
+### 💻 Node.js (Server-Side)
+
+`Tempo` is a native ESM package. In Node.js (20+), simply import the class:
+
+```typescript
+import { Tempo } from '@magmacomputing/tempo';
+
+const t = new Tempo('next Friday');
+console.log(t.format('{dd} {mon} {yyyy}'));
+```
+
 ### 🌐 Browser (Import Maps)
 
 `Tempo` is an ESM-first library and can be used directly in modern browsers using [Import Maps](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap). This is a great way to use `Tempo` without a build step.
@@ -79,7 +91,7 @@ import '@js-temporal/polyfill';
 <script type="importmap">
   {
     "imports": {
-      "@magmacomputing/tempo": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo@1.0.5/dist/index.js",
+      "@magmacomputing/tempo": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/index.js",
       "@js-temporal/polyfill": "https://cdn.jsdelivr.net/npm/@js-temporal/polyfill@0.4.4/dist/index.esm.min.js"
     }
   }
@@ -156,7 +168,7 @@ Formatting uses a placeholder syntax similar to many template engines:
 | Placeholder | Description | Example |
 | :--- | :--- | :--- |
 | `{yyyy}` | 4-digit year | `2024` |
-| `{isoy}` | 4-digit ISO Date year | `2024` |
+| `{wy}` | 4-digit ISO Date year | `2024` |
 | `{yy}` | 2-digit year | `24` |
 | `{mm}` | 2-digit month | `05` |
 | `{mon}` | Full month name | `June` |
@@ -166,7 +178,7 @@ Formatting uses a placeholder syntax similar to many template engines:
 | `{wkd}` | Full weekday name | `Monday` |
 | `{www}` | 3-character weekday name | `Mon` |
 | `{dow}` | Day of week (1-7) | `1` |
-| `{ww}` | Week of year | `21` |
+| `{ww}` | Week of year (1-53) | `21` |
 | `{hh}` | 24-clock hour | `14` |
 | `{HH}` | 12-clock hour (with meridiem) | `02pm` |
 | `{mi}` | 2-digit minutes | `05` |
@@ -178,27 +190,27 @@ Formatting uses a placeholder syntax similar to many template engines:
 | `{ts}` | Unix timestamp | `1716163200000` |
 | `{term.name}` | Term value | eg. `{term.qtr}` returns the current quarter as Q1, Q2, Q3 or Q4 |
 
-*(Note: `{isoy}` represents the ISO week year, which may differ from `{yyyy}` at the start or end of a calendar year if the current date belongs to an ISO week from the adjacent year.)*
+*(Note: `{wy}` represents the ISO week year, which may differ from `{yyyy}` at the start or end of a calendar year if the current date belongs to an ISO week from the adjacent year.)*
 
 ### ISO 8601 Week Dates
 
 Tempo supports the **ISO 8601 Week Date** system, which is commonly used in business and logistics for unambiguous weekly scheduling.
 
 - **`{ww}`**: Represents the ISO week number (01–53).
-- **`{isoy}`**: Represents the ISO week-numbering year.
+- **`{wy}`**: Represents the ISO week-numbering year.
 
 A week in this system always starts on a **Monday**. Week 01 is defined as the week with the year's first Thursday (or the week containing January 4th).
 
 To format a standard ISO week date (e.g., `2024-W21`), use both placeholders together:
 ```typescript
 const t = new Tempo('2024-05-20');
-t.format('{isoy}-W{ww}'); // "2024-W21"
+t.format('{wy}-W{ww}');         // "2024-W21"
 ```
 
 Example:
 ```typescript
 const t = new Tempo();
-t.format('{dd} {mon} {yyyy}'); // "24 January 2026"
+t.format('{dd} {mon} {yyyy}');  // "24 January 2026"
 ```
 
 ---
@@ -257,14 +269,14 @@ Tempo.compare(t1, t2); // 1, meaning t1 is 'later than' t2
 `Tempo` can be extended with "terms" – plugins that calculate complex date ranges. These are accessible via the `t.term` getter.
 
 Common terms include:
-- `t.term.qtr`: Returns the current calendar quarter.
-- `t.term.szn`: Returns the current season (North/South hemisphere-aware).
+- `t.term.qtr`: Returns the current fiscal calendar quarter.
+- `t.term.szn`: Returns the current meteorological season (North/South hemisphere-aware).
 
 ---
 
 ## Context & Configuration
 
-Global settings can be configured using `Tempo.init()`.
+Global settings can be configured using [`Tempo.init()`](./tempo.config.md).
 This will affect any new Tempo instances created (but not affect any existing instances).
 
 ```typescript
@@ -284,7 +296,7 @@ Tempo will automatically translate these abbreviations before passing them to th
 - `mst` -> `America/Denver`
 - `pst` -> `America/Los_Angeles`
 - `aest` -> `Australia/Sydney`
-- *(...and several others. See `tempo.default.ts` for the complete `TimeZone` registry.)*
+- *(...and several others. See [`tempo.default.ts`](./tempo.config.md#timezone-aliases) for the complete `TimeZone` registry.)*
 
 Instances can also be created with specific options:
 ```typescript
@@ -293,16 +305,17 @@ new Tempo('2024-05-20', { timeZone: 'AEST', debug: true });
 
 ---
 
-## Enumerators
+## Library Functionality
 
-Tempo uses a custom `enumify` utility to define robust, iterable enumerations rather than relying on native TypeScript enums.
+While Tempo is primarily a Date-Time engine, it relies on several robust custom utilities under the hood to handle data structures and persistence safely. 
 
-- [Tempo Enumerators Guide](./tempo.enumerators.md): Details on how enumerators are defined, used, and how they compare against standard TypeScript enums.
+These utilities are exported as public API methods for use within your own application logic.
+
+- [Tempo Library Functionality](./tempo.library.md): An index of custom utilities built into Tempo, including robust **Enumerators** (`enumify`) and **Serialization** (`stringify`, `objectify`, `cloneify`).
 
 ---
 
-## Serializers
+## API Reference
 
-Tempo provides robust serialization functions designed to safely encode rich types (like `Map`, `Set`, `BigInt`, `Symbol`, and `Date`) that standard `JSON` methods do not support.
+For a complete list of all static methods, properties, and instance API signatures, please refer to the **[API Reference Document](./API.md)**.
 
-- [Tempo Serializers Guide](./tempo.serializers.md): Details on `stringify`, `objectify`, and `cloneify` usage, benefits, and trade-offs.
