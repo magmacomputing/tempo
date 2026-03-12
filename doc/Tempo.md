@@ -298,3 +298,11 @@ new Tempo('2024-05-20', { timeZone: 'AEST', debug: true });
 Tempo uses a custom `enumify` utility to define robust, iterable enumerations rather than relying on native TypeScript enums.
 
 - [Tempo Enumerators Guide](./tempo.enumerators.md): Details on how enumerators are defined, used, and how they compare against standard TypeScript enums.
+
+---
+
+## Serializers
+
+Tempo provides robust serialization functions designed to safely encode rich types (like `Map`, `Set`, `BigInt`, `Symbol`, and `Date`) that standard `JSON` methods do not support.
+
+- [Tempo Serializers Guide](./tempo.serializers.md): Details on `stringify`, `objectify`, and `cloneify` usage, benefits, and trade-offs.
