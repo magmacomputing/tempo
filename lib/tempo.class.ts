@@ -414,7 +414,7 @@ export class Tempo {
 				if (key.startsWith('usr.'))													// only remove 'usr.' prefixed keys
 					delete Token[key];
 			Tempo.#usrCount = 0;																	// reset user-key counter
-			Tempo.addTerm(...registerTerms);											// register built-in term plugins\
+			Tempo.addTerm(...registerTerms);											// register built-in term plugins
 
 			const dateTime = Intl.DateTimeFormat().resolvedOptions();
 			Object.assign(Tempo.#global.config, {									// some global locale-specific defaults
@@ -1599,7 +1599,7 @@ export class Tempo {
 
 		const result = String(template).replace(Match.braces, (_match, token) => {
 			switch (token) {
-				case 'isoy': return pad(this.ww === 1 && this.mm === Tempo.MONTH.Dec ? this.yy + 1 : (this.ww >= 52 && this.mm === Tempo.MONTH.Jan ? this.yy - 1 : this.yy), 4);
+				case 'wy': return pad(this.ww === 1 && this.mm === Tempo.MONTH.Dec ? this.yy + 1 : (this.ww >= 52 && this.mm === Tempo.MONTH.Jan ? this.yy - 1 : this.yy), 4);
 				case 'yyww': return pad(this.ww === 1 && this.mm === Tempo.MONTH.Dec ? this.yy + 1 : (this.ww >= 52 && this.mm === Tempo.MONTH.Jan ? this.yy - 1 : this.yy), 4) + pad(this.ww);
 				case 'yyyy': return pad(this.yy, 4);
 				case 'yy': return pad(this.yy % 100);
@@ -1634,7 +1634,7 @@ export class Tempo {
 			}
 		});
 
-		const isExplicitlyNumeric = ['{yyyy}{ww}', '{yyyy}{mm}', '{yyyy}{mm}{dd}', '{yyww}', '{isoy}{ww}', '{isoy}'].includes(template);
+		const isExplicitlyNumeric = ['{yyyy}{ww}', '{yyyy}{mm}', '{yyyy}{mm}{dd}', '{yyww}', '{wy}{ww}', '{wy}'].includes(template);
 		return (isExplicitlyNumeric ? ifNumeric(result) : result) as Tempo.FormatType<K>;
 	}
 
@@ -1845,7 +1845,7 @@ export namespace Tempo {
 	}
 
 	/** patterns that return a number */
-	export type NumericPattern = '{yyyy}{mm}' | '{yyww}' | '{yyyy}{mm}{dd}' | '{isoy}{ww}' | '{isoy}'
+	export type NumericPattern = '{yyyy}{mm}' | '{yyww}' | '{yyyy}{mm}{dd}' | '{wy}{ww}' | '{wy}'
 
 	export type FormatType<K extends string> = K extends keyof OwnFormat
 		? (OwnFormat[K] extends NumericPattern ? number : string)
@@ -1861,7 +1861,7 @@ export namespace Tempo {
 	export type ms = IntRange<0, 999>
 	export type us = IntRange<0, 999>
 	export type ns = IntRange<0, 999>
-	export type ww = IntRange<1, 52>
+	export type ww = IntRange<1, 53>
 
 	export type Duration = NonOptional<Temporal.DurationLikeObject> & Record<"iso", string> & Record<"sign", number> & Record<"blank", boolean> & Record<"unit", string | undefined>
 

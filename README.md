@@ -12,6 +12,7 @@ Working with dates in JavaScript has historically been painful. The new `Tempora
 **Tempo** bridges that gap by providing:
 - **Flexible Parsing**: Interprets almost any date string, including relative ones like "next Friday".
 - **Fluent API**: Chainable methods for adding, subtracting, and setting date-times.
+- **Formatting**: Use custom tokens to format date-times in a way that is both intuitive and flexible.
 - **Built-in Plugins**: Access complex date ranges (Quarters, Seasons, Fiscal Years) easily.
 - **Immutable**: operations (like 'set', and 'add') return a new `Tempo` instance, ensuring thread safety and predictability.
 
@@ -19,6 +20,16 @@ Working with dates in JavaScript has historically been painful. The new `Tempora
 
 ```bash
 npm install @magmacomputing/tempo
+```
+
+### 💻 Node.js (Server-Side)
+Tempo is a native ESM package. In Node.js (20+), simply import the class:
+
+```javascript
+import { Tempo } from '@magmacomputing/tempo';
+
+const t = new Tempo('next Friday');
+console.log(t.format('{dd} {mon} {yyyy}'));
 ```
 
 ### 🌐 Browser (Import Maps)

@@ -22,7 +22,7 @@ If you are choosing a date library today, you are likely looking at **Day.js**, 
 ## 💎 Why Tempo Wins
 
 ### 1. The "Terms" Engine (Business Intelligence)
-Most libraries stop at "adding 2 days." Tempo introduces the **Terms** system, allowing you to encode domain-specific logic (Fiscal Quarters, Seasons, Academic Terms, Zodiacs) directly into the date object. 
+Most libraries stop at "adding 2 days." Tempo introduces the **Terms** system, allowing you to encode domain-specific logic (Fiscal Quarters, Meteorological Seasons, Academic Terms, Zodiac Signs) directly into the tempo `term` object. 
 > *Competition:* You have to write custom utility functions and import them everywhere.
 
 ### 2. Human-Centric Parsing
