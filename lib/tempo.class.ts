@@ -778,6 +778,7 @@ export class Tempo {
 
 	// #region Instance public accessors~~~~~~~~~~~~~~~~~~~~~~
 	/** 4-digit year (e.g., 2024) */													get yy() { return this.#zdt.year }
+	/** 4-digit ISO week-numbering year */										get wy() { return this.ww === 1 && this.mm === Tempo.MONTH.Dec ? this.yy + 1 : (this.ww >= 52 && this.mm === Tempo.MONTH.Jan ? this.yy - 1 : this.yy) }
 	/** Month number: Jan=1, Dec=12 */												get mm() { return this.#zdt.month as Tempo.mm }
 	/** ISO week number of the year */												get ww() { return this.#zdt.weekOfYear as Tempo.ww }
 	/** Day of the month (1-31) */														get dd() { return this.#zdt.day }
@@ -1599,8 +1600,8 @@ export class Tempo {
 
 		const result = String(template).replace(Match.braces, (_match, token) => {
 			switch (token) {
-				case 'wy': return pad(this.ww === 1 && this.mm === Tempo.MONTH.Dec ? this.yy + 1 : (this.ww >= 52 && this.mm === Tempo.MONTH.Jan ? this.yy - 1 : this.yy), 4);
-				case 'yyww': return pad(this.ww === 1 && this.mm === Tempo.MONTH.Dec ? this.yy + 1 : (this.ww >= 52 && this.mm === Tempo.MONTH.Jan ? this.yy - 1 : this.yy), 4) + pad(this.ww);
+				case 'wy': return pad(this.wy, 4);
+				case 'yyww': return pad(this.wy, 4) + pad(this.ww);
 				case 'yyyy': return pad(this.yy, 4);
 				case 'yy': return pad(this.yy % 100);
 				case 'mon': return this.mon;
