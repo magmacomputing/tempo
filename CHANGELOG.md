@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **API Reference**: Created `doc/API.md`, a comprehensive technical guide covering all static and instance API entrypoints, signatures, and properties.
 - **Node.js Support**: Added explicit server-side usage instructions and code examples to `README.md` and `doc/Tempo.md`.
-- **`{wy}` Token**: Introduced the `{wy}` formatting token for ISO week-numbering year (renamed from `{isoy}`).
+- **`{wy}` Token & Getter**: Introduced the `{wy}` formatting token and a corresponding public `wy` getter for the 4-digit ISO week-numbering year.
 
 ### Changed
 - **Config Documentation**: Refactored `doc/tempo.config.md` to follow technical precedence (Persistence > Discovery > Global > Instance).
