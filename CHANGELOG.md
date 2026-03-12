@@ -5,22 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.6] - 2026-03-12
 
 ### Added
-- **Global Discovery**: Implemented secure global configuration discovery using `Symbol.for($Tempo)` to prevent namespace collisions.
-- **`$Tempo` Constant**: Exported `$Tempo` to serve as the single source of truth for storage keys and symbolic discovery.
-- **Config Observability**: Added trace logging to `Tempo.init()` (enabled via `debug: true`) to explicitly show configuration source paths (Discovery vs. Store vs. Init).
+- **API Reference**: Created `doc/API.md`, a comprehensive technical guide covering all static and instance API entrypoints, signatures, and properties.
+- **Node.js Support**: Added explicit server-side usage instructions and code examples to `README.md` and `doc/Tempo.md`.
+- **`{wy}` Token**: Introduced the `{wy}` formatting token for ISO week-numbering year (renamed from `{isoy}`).
 
 ### Changed
-- **Deterministic Initialization**: Refactored hemisphere detection to use a fixed reference date instead of `Temporal.Now`, ensuring stable initialization in all environments.
-- **`Tempo.init` Refactor**: Improved configuration prioritization (Discovery > Storage > Init) while maintaining backward compatibility for `TempoOptions`.
-- **Documentation**: Updated `tempo.config.md` with an architectural overview of the four configuration tiers.
+- **Config Documentation**: Refactored `doc/tempo.config.md` to follow technical precedence (Persistence > Discovery > Global > Instance).
+- **Doc Cross-Linking**: Standardized documentation navigation by converting all textual cross-references into clickable markdown links.
+- **Precision Glossaries**: Refined documentation in `vision.md` and `comparison.md` to specify "meteorological seasons" and "zodiac signs".
+- **Token Renaming**: Renamed `{isoy}` to `{wy}` across the library, tests, and documentation for improved semantic clarity.
 
 ### Fixed
-- **Initialization Hang**: Resolved a deadlock/hang during background/headless test runs caused by top-level system clock access.
-- **TypeScript Performance**: Fixed `tsc` hangs by removing recursive index signatures in `Tempo.Options` and `Tempo.Config` interfaces.
-- **TimeZone Normalization**: Enforced case-insensitive matching for custom timezone aliases provided via global discovery.
+- **ISO Week Logic**: Refined `wy` and `yyww` formatting logic to correctly handle boundary cases between years.
+- **Global Discovery Trace**: Improved trace logging visibility when `debug: true` is enabled.
 
 ## [1.0.5] - 2026-03-10
 
