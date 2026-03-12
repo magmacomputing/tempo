@@ -414,7 +414,7 @@ export class Tempo {
 				if (key.startsWith('usr.'))													// only remove 'usr.' prefixed keys
 					delete Token[key];
 			Tempo.#usrCount = 0;																	// reset user-key counter
-			Tempo.#terms = registerTerms();												// register built-in term plugins
+			Tempo.addTerm(...registerTerms);											// register built-in term plugins\
 
 			const dateTime = Intl.DateTimeFormat().resolvedOptions();
 			Object.assign(Tempo.#global.config, {									// some global locale-specific defaults
@@ -615,8 +615,8 @@ export class Tempo {
 		asArray(plugin)
 			.flat(1)
 			.forEach(p => {
-				if (!Tempo.#terms.some(t => t.key === p.key))			// check for duplicate key
-					Tempo.#terms.push(p);														// append; silently ignore duplicates
+				if (!Tempo.#terms.some(t => t.key === p.key))				// check for duplicate key
+					Tempo.#terms.push(p);															// append; silently ignore duplicates
 			})
 	}
 

@@ -8,7 +8,7 @@ This guide explains how they are defined, how you use them as a consumer of the 
 
 ## 1. How Tempo Enums are Defined
 
-Tempo's core enumerators (like Days, Months, Seasons) are built using the exported `enumify` function. 
+Tempo's core enumerators (like Weekdays, Months, Seasons) are built using the exported `enumify` function. 
 
 This utility takes either an Array or an Object and returns a heavily-protected `Proxy`-like object.
 
@@ -96,3 +96,4 @@ Using `enumify` is a deliberate choice for high-quality library design.
 * **Slightly More Boilerplate Definition:** Defining an `enumify` dictionary takes 2-3 lines of code (exporting the const, then exporting the `type` alias). TS native enums do both in one block. 
 * **Missing Nominal Typing:** TypeScript native enums offer "nominal" typing (e.g., `enum A { X }` cannot be passed to a function expecting `enum B { X }` even if the keys/structures match). `enumify` relies on structural typing (union of literals), meaning TypeScript allows passing the raw string `'spring'` into a function rather than forcing you to strictly use `Tempo.SEASON.Spring`. 
 * **Slight Runtime Overhead:** Instantiating the proxy/prototype wrapper and freezing it adds a microscopic runtime cost compared to evaluating a plain object literal, though parsing the library is typically a one-time engine cost.
+* **More Verbose Setup:** TypeScript's enum can use auto-incrementing numeric values, but `enumify` requires explicit values for each key.
