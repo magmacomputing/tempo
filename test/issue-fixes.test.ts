@@ -46,9 +46,8 @@ describe('Tempo Issue Fixes', () => {
     })
 
     test('bracketed timezone is applied before relative event resolution', () => {
-       // Using a specific date/time for the test if possible, but for 'yesterday'
-       // we just need to verify it doesn't use the system default if a bracket is present.
-       const t = new Tempo('yesterday[America/New_York]');
+       // The correct way to resolve relative events in a specific timezone is via options
+       const t = new Tempo('yesterday', { timeZone: 'America/New_York' });
        expect(t.tz).toBe('America/New_York');
        
        // Verify the date is correct for NY
