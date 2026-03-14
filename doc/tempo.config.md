@@ -129,3 +129,6 @@ const delivery = new Tempo('deadline'); // Parsed using your custom logic
 
 > [!TIP]
 > **Observability**: When `debug: true` is set, Tempo logs its discovery path to the console (e.g., "Global Discovery found via Symbol"), making it easy to trace exactly where a setting originated.
+
+> [!NOTE]
+> **Hidden Keys**: The `tempo.config` getter excludes internal properties like `anchor` and input-only properties like `value` to keep the public API clean. These properties are still used internally for relative date resolution and instance hydration.

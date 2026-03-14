@@ -90,4 +90,13 @@ describe('#setConfig refactor verification', () => {
     expect(snippets).toContain('locVal')
   })
 
+  test('should omit scope, anchor, and value from public config getter', () => {
+    const t = new Tempo('now', { timeZone: 'America/New_York' });
+    const config = t.config as any;
+    expect(config.timeZone).toBe('America/New_York');
+    expect(config.scope).toBeUndefined();
+    expect(config.anchor).toBeUndefined();
+    expect(config.value).toBeUndefined();
+  })
+
 })
