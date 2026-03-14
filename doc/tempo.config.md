@@ -104,7 +104,7 @@ Beyond basic settings, you can extend Tempo's intelligence by supplying custom *
 Tempo.init({
   event: {
     'launch date': '2026-05-20',
-    'deadline': function () { return this.toDateTime().add({ days: 30 }) }
+    'deadline': function () { return this.toPlainDate().add({ days: 30 }) }
   },
   period: {
     'tea time': '15:00',

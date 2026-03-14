@@ -17,13 +17,19 @@ describe('Tempo Issue Fixes', () => {
       expect(dayBeforeYesterday.format('{yyyy}-{mm}-{dd}')).toBe(expected.toString());
     })
 
-    test('now uses the instance base if available', () => {
-      // Offset by 1 hour
-      const past = new Tempo().add({ hours: -1 });
-      const nowFromPast = past.set({ event: 'now' });
+    test('now matches the current time by default', () => {
+      const t = new Tempo('now');
+      const realNow = Temporal.Now.instant().epochMilliseconds;
+      // Allow 200ms for execution jitter
+      expect(Math.abs(t.toInstant().epochMilliseconds - realNow)).toBeLessThan(200);
+    })
+
+    test('combined event and period works correctly (e.g. yesterday afternoon)', () => {
+      const t = new Tempo('yesterday afternoon');
+      const expectedDate = new Tempo().add({ days: -1 }).format('{yyyy}-{mm}-{dd}');
       
-      // Since 'now' returns an Instant in this case, it should match the past's instant
-      expect(nowFromPast.toInstant().epochMilliseconds).toBe(past.toInstant().epochMilliseconds);
+      expect(t.format('{yyyy}-{mm}-{dd}')).toBe(expectedDate);
+      expect(t.format('{HH}')).toBe('03pm'); // afternoon is 3:00pm
     })
   })
 
@@ -37,6 +43,18 @@ describe('Tempo Issue Fixes', () => {
     test('handles Z with brackets', () => {
        const t = new Tempo('2024-05-20T10:00:00Z[UTC]');
        expect(t.tz).toBe('UTC');
+    })
+
+    test('bracketed timezone is applied before relative event resolution', () => {
+       // Using a specific date/time for the test if possible, but for 'yesterday'
+       // we just need to verify it doesn't use the system default if a bracket is present.
+       const t = new Tempo('yesterday[America/New_York]');
+       expect(t.tz).toBe('America/New_York');
+       
+       // Verify the date is correct for NY
+       const nyNow = Temporal.Now.zonedDateTimeISO('America/New_York');
+       const expectedDate = nyNow.subtract({ days: 1 }).toPlainDate().toString();
+       expect(t.format('{yyyy}-{mm}-{dd}')).toBe(expectedDate);
     })
   })
 

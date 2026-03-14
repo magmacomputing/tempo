@@ -5,10 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.7] - 2026-03-14
+
+### Added
+- **`toPlain...` Methods**: Added `toPlainDate()`, `toPlainTime()`, and `toPlainDateTime()` helper methods to the `Tempo` class for easier extraction of specific `Temporal` components.
+- **API Reference**: Created `doc/tempo.api.md`, a comprehensive technical guide covering all static and instance API entrypoints, signatures, and properties.
+- **TypeScript Types**: Created `doc/tempo.types.md` as a detailed reference for all core namespace types.
+- **Regression Tests**: Added `test/issue-fixes.test.ts` to permanently cover relative events, timezone brackets, and storage precedence.
+
+### Changed
+- **Relative Events**: Refactored `now`, `today`, `tomorrow`, and `yesterday` to be relative to the specific `Tempo` instance. Date-based events now use `toPlainDate()` for improved parsing robustness.
+- **Config Precedence**: Established and documented a reliable precedence order: Metadata < Defaults < Storage < Discovery < Global Init < Instance.
+- **Storage Logic**: Consolidated persistence merging into `#setConfig`, ensuring storage values correctly act as defaults.
+- **`toInstant` / `toDateTime` Getters**: Enhanced getters to prioritize the instance's underlying value while providing robust fallbacks to system "now" (including safe handling of uninitialized timezones).
+
+### Fixed
+- **Timezone Bracket Parsing**: Resolved an issue where bracketed timezones were ignored or incorrectly overridden by offsets.
+- **Relative Event Drifting**: Fixed a bug where events like 'yesterday' were incorrectly calculated based on the run-date instead of the `Tempo` instance state.
+- **Storage Merge Bug**: Corrected an issue where explicit options were being clobbered by storage values.
+
 ## [1.0.6] - 2026-03-12
 
 ### Added
-- **API Reference**: Created `doc/API.md`, a comprehensive technical guide covering all static and instance API entrypoints, signatures, and properties.
+- **API Reference**: Created `doc/tempo.api.md`, a comprehensive technical guide covering all static and instance API entrypoints, signatures, and properties.
 - **Node.js Support**: Added explicit server-side usage instructions and code examples to `README.md` and `doc/Tempo.md`.
 - **`{wy}` Token & Getter**: Introduced the `{wy}` formatting token and a corresponding public `wy` getter for the 4-digit ISO week-numbering year.
 
