@@ -32,6 +32,7 @@ Snippets are simple regex patterns that can be composed into a layout.  They rep
 | `{unt}` | Time units (year, month, week, etc.) | `year(s)`, `day(s)`, etc. |
 | `{afx}` | Affix modifier | `ago` or `hence` |
 | `{sfx}` | Time suffix | Matches `T` or a space followed by a time pattern |
+| `{brk}` | Timezone/calendar brackets | `[Europe/London]`, `[u-ca=iso8601]` |
 
 ### Composite Snippets
 
@@ -51,10 +52,10 @@ Snippets are wrapped in curly braces `{}` and can be combined to create a layout
 | `dt` | `{dt}` | Calendar or event |
 | `tm` | `{tm}` | Clock or period |
 | `wkd` | `'{mod}?{wkd}{afx}?{sfx}?'` | Weekday name |
-| `dtm` | `({dt}){sfx}?` | Calendar/event and clock/period |
-| `dmy` | `{www}?{dd}{sep}?{mm}({sep}{yy})?{sfx}?` | Day-month(-year) |
-| `mdy` | `{www}?{mm}{sep}?{dd}({sep}{yy})?{sfx}?` | Month-day(-year) |
-| `ymd` | `{www}?{yy}{sep}?{mm}({sep}{dd})?{sfx}?` | Year-month(-day) |
+| `dtm` | `({dt}){sfx}?{brk}?` | Calendar/event and clock/period |
+| `dmy` | `{www}?{dd}{sep}?{mm}({sep}{yy})?{sfx}?{brk}?` | Day-month(-year) |
+| `mdy` | `{www}?{mm}{sep}?{dd}({sep}{yy})?{sfx}?{brk}?` | Month-day(-year) |
+| `ymd` | `{www}?{yy}{sep}?{mm}({sep}{dd})?{sfx}?{brk}?` | Year-month(-day) |
 | `unt` | `{nbr}{sep}?{unt}{sep}?{afx}` | Relative duration |
 | `evt` | `{evt}` | Event only |
 | `per` | `{per}` | Period only |

@@ -9,7 +9,7 @@ Tempo includes a few custom TypeScript decorators that help enforce class behavi
 
 ## Existing Decorators
 
-These decorators can be found in `lib/class.library.ts` and are used internally throughout the Tempo codebase.
+These decorators are used internally throughout the Tempo codebase.
 
 ### `@Immutable`
 This class decorator ensures that instances of the decorated class, as well as its static properties and prototype methods, are completely frozen and cannot be modified at runtime.

@@ -4,7 +4,12 @@ This document provides a comprehensive technical reference for the `Tempo` class
 
 ---
 
-## 🏗️ Static Entrypoints
+- [TypeScript Types Reference](./tempo.types.md)
+- [Enumerator Reference](./tempo.enumerators.md)
+
+---
+
+## 🏗️ Static Methods
 
 ### `Tempo.init(options?: Tempo.Options)`
 Initializes the global default configuration for all subsequent `Tempo` instances.
@@ -62,7 +67,7 @@ Access to the internal dictionaries used by Tempo:
 
 ---
 
-## 🚀 Instance Entrypoints
+## 🚀 Instance Methods
 
 ### `tempo.add(mutate: Tempo.Add)`
 Returns a **new** `Tempo` instance with the specified duration added.

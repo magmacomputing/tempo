@@ -14,7 +14,7 @@ Tempo uses a custom utility called `enumify` to create heavily-protected, iterat
 
 This allows for structural typing, easy iteration (`.keys()`, `.values()`), and runtime safety without the overhead or compilation quirks of standard TS Enums.
 
-It is heavily used internally for concepts like `Days`, `Months`, `Seasons`, and `Tokens`.
+It is heavily used internally for concepts like `Weekdays`, `Months`, `Compass cardinal points` and `Meteorological Seasons`.
 
 👉 **[Read the full Enumerators Guide](./tempo.enumerators.md)** for details on definition, methods, and a comparison with native enums.
 

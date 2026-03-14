@@ -13,7 +13,7 @@ This project came about due to the need for a simple, yet powerful, way to parse
 5. [Plugins (Terms)](#plugins-terms)
 6. [Context & Configuration](#context--configuration)
 7. [Enumerators](#enumerators)
-8. [API Reference](./API.md)
+8. [API Reference](./tempo.api.md)
 
 ---
 
@@ -131,7 +131,7 @@ You can extend these patterns a) globally (via `Tempo.init()`) or b) per instanc
 Tempo.init({
   event: {
     'birthday': '20 May',
-    'tomorrow': function () { return Temporal.Now.plainDateISO().add({ days: 1 }) },
+    'tomorrow': function () { return this.toDateTime().add({ days: 1 }) },
   }
 });
 ```
@@ -179,8 +179,8 @@ Formatting uses a placeholder syntax similar to many template engines:
 | `{www}` | 3-character weekday name | `Mon` |
 | `{dow}` | Day of week (1-7) | `1` |
 | `{ww}` | Week of year (1-53) | `21` |
-| `{hh}` | 24-clock hour | `14` |
-| `{HH}` | 12-clock hour (with meridiem) | `02pm` |
+| `{hh}` | Hour (0-24) | `14` |
+| `{HH}` | Hour (0-12 with meridiem) | `02pm` |
 | `{mi}` | 2-digit minutes | `05` |
 | `{ss}` | 2-digit seconds | `05` |
 | `{ms}` | 3-digit milliseconds | `005` |
@@ -220,9 +220,9 @@ t.format('{dd} {mon} {yyyy}');  // "24 January 2026"
 `Tempo` instances are **immutable**. Methods like `add` and `set` return a *new* `Tempo` instance.
 
 ### `add(mutate)`
-Adds a duration to the instance.
+Adds a duration (positive or negative) to the instance.
 ```typescript
-t.add({ days: 1, hours: 2 });
+t.add({ days: -1, hours: 2 });
 ```
 
 ### `set(offset)`
@@ -317,5 +317,5 @@ These utilities are exported as public API methods for use within your own appli
 
 ## API Reference
 
-For a complete list of all static methods, properties, and instance API signatures, please refer to the **[API Reference Document](./API.md)**.
+For a complete list of all static methods, properties, and instance API signatures, please refer to the **[API Reference Document](./tempo.api.md)**.
 
