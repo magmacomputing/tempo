@@ -102,6 +102,15 @@ Returns the underlying `Temporal.ZonedDateTime` object.
 ### `tempo.toInstant()`
 Returns the underlying `Temporal.Instant` object.
 
+### `tempo.toPlainDate()`
+Returns a `Temporal.PlainDate` representation.
+
+### `tempo.toPlainTime()`
+Returns a `Temporal.PlainTime` representation.
+
+### `tempo.toPlainDateTime()`
+Returns a `Temporal.PlainDateTime` representation.
+
 ---
 
 ## 🔍 Instance Properties

@@ -131,7 +131,7 @@ You can extend these patterns a) globally (via `Tempo.init()`) or b) per instanc
 Tempo.init({
   event: {
     'birthday': '20 May',
-    'tomorrow': function () { return this.toDateTime().add({ days: 1 }) },
+    'tomorrow': function () { return this.toPlainDate().add({ days: 1 }) },
   }
 });
 ```
@@ -315,7 +315,4 @@ These utilities are exported as public API methods for use within your own appli
 
 ---
 
-## API Reference
-
-For a complete list of all static methods, properties, and instance API signatures, please refer to the **[API Reference Document](./tempo.api.md)**.
-
+##Refer to the [API Reference](./tempo.api.md) for a complete list of methods and properties.

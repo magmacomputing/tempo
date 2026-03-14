@@ -50,6 +50,7 @@ export const Token = looseIndex<string, symbol>()({
 	/** day of month offset */																off: Symbol('offset'),
 	/** weekDay */																						wkd: Symbol('weekDay'),
 	/** relative offset (years, days, hours, etc) */					rel: Symbol('relativeOffset'),
+	/** timezone/calendar brackets */													brk: Symbol('brackets'),
 })
 export type Token = typeof Token
 
@@ -82,6 +83,7 @@ export const Snippet = looseIndex<symbol, RegExp>()({
 	[Token.mod]: new RegExp(`((?<mod>${Match.modifier.source})?{nbr} *)`),	// modifier (+,-,<,<=,>,>=) plus optional offset-count
 	[Token.sep]: new RegExp(`(?:${Match.separator.source})`),	// date-input separator character "/\\-., " (non-capture group)
 	[Token.unt]: /(?<unt>year|month|week|day|hour|minute|second|millisecond)(?:s)?/,	// useful for '2 days ago' etc
+	[Token.brk]: /(?:\[(?<brk>[^\]]+)\])*/,										// timezone/calendar brackets [...]
 })
 export type Snippet = typeof Snippet
 
@@ -92,10 +94,10 @@ export type Snippet = typeof Snippet
 export const Layout = looseIndex<symbol, string>()({
 	[Token.dt]: '{dd}{sep}?{mm}({sep}?{yy})?|{mod}?({evt})',	// calendar or event
 	[Token.tm]: '({hh}{mi}?{ss}?{ff}?{mer}?|{per})',					// clock or period
-	[Token.dtm]: '({dt}){sfx}?',															// calendar/event and clock/period
-	[Token.dmy]: '({wkd}{sep}+)?{dd}{sep}?{mm}({sep}?{yy})?{sfx}?',		// day-month(-year)
-	[Token.mdy]: '({wkd}{sep}+)?{mm}{sep}?{dd}({sep}?{yy})?{sfx}?',		// month-day(-year)
-	[Token.ymd]: '({wkd}{sep}+)?{yy}{sep}?{mm}({sep}?{dd})?{sfx}?',		// year-month(-day)
+	[Token.dtm]: '({dt}){sfx}?{brk}?',												// calendar/event and clock/period
+	[Token.dmy]: '({wkd}{sep}+)?{dd}{sep}?{mm}({sep}?{yy})?{sfx}?{brk}?',		// day-month(-year)
+	[Token.mdy]: '({wkd}{sep}+)?{mm}{sep}?{dd}({sep}?{yy})?{sfx}?{brk}?',		// month-day(-year)
+	[Token.ymd]: '({wkd}{sep}+)?{yy}{sep}?{mm}({sep}?{dd})?{sfx}?{brk}?',		// year-month(-day)
 	[Token.wkd]: '{mod}?{wkd}{afx}?{sfx}?',										// special layout (no {dt}!) used for weekday calcs (only one that requires {wkd} pattern)
 	[Token.off]: '{mod}?{dd}{afx}?',													// day of month, with optional offset
 	[Token.rel]: '{nbr}{sep}?{unt}{sep}?{afx}',								// relative duration (e.g. 2 days ago)
@@ -117,10 +119,10 @@ export const Event = looseIndex<string, string | Function>()({
 	'christmas': '25 Dec',
 	'xmas ?eve': '24 Dec',
 	'xmas': '25 Dec',
-	'now': function (this: any) { return Temporal.Now.instant() },
-	'today': function (this: any) { return Temporal.Now.plainDateISO() },
-	'tomorrow': function (this: any) { return Temporal.Now.plainDateISO().add({ days: 1 }) },
-	'yesterday': function (this: any) { return Temporal.Now.plainDateISO().add({ days: -1 }) },
+	'now': function (this: any) { return this.toPlainDateTime() },
+	'today': function (this: any) { return this.toPlainDate() },
+	'tomorrow': function (this: any) { return this.toPlainDate().add({ days: 1 }) },
+	'yesterday': function (this: any) { return this.toPlainDate().add({ days: -1 }) },
 })
 export type Event = typeof Event
 

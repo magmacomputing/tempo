@@ -5,7 +5,7 @@ This document provides a reference for the core TypeScript types and interfaces 
 ---
 
 ## `Tempo.DateTime`
-The primary type used for arguments representing a point in time. `Tempo` is extremely flexible and can interpret a wide range of formats.
+The primary type used for arguments representing a point in time. `Tempo` is extremely flexible and can interpret a wide range of formats. It also provides methods to extract these back as `Temporal` objects (e.g., `toPlainDate()`, `toInstant()`, etc.).
 
 ```typescript
 type DateTime = 
