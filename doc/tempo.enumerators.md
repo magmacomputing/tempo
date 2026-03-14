@@ -54,15 +54,16 @@ Because `enumify` attaches a rich prototype, consumers can iterate through, vali
 
 ```typescript
 // Iterating over properties
-const days = Tempo.WEEKDAY.keys();           // ['All', 'Mon', 'Tue', 'Wed', ...]
-const entries = Tempo.WEEKDAY.entries();     // [['All', 0], ['Mon', 1], ...]
+const days = Tempo.WEEKDAY.keys();                   // ['All', 'Mon', 'Tue', 'Wed', ...]
+const entries = Tempo.WEEKDAY.entries();            // [['All', 0], ['Mon', 1], ...]
 
 // Validation
-if (Tempo.SEASON.has('Spring')) { ... }
-if (Tempo.SEASON.includes('spring')) { ... }
+if (Tempo.SEASON.has('Spring')) { ... }             // true if 'Spring' is a key
+if (Tempo.SEASON.has(Tempo.SEASON.Spring)) { ... }  // true if 'Spring' is a key (using the enum value)
+if (Tempo.SEASON.includes('spring')) { ... }        // true if 'spring' is a value
 
 // Reverse lookups! Get the Key Name from the Value
-const keyName = Tempo.MONTH.keyOf(2);        // 'Feb'
+const keyName = Tempo.MONTH.keyOf(2);               // 'Feb'
 
 // Array manipulation built right in
 const customStrings = Tempo.WEEKDAY.map(([key, val]) => `${key} is day ${val}`);
@@ -93,7 +94,7 @@ Using `enumify` is a deliberate choice for high-quality library design.
 * **NodeJS/ESM Compatibility:** standard TS enums can cause friction with isolated module compilers (like Vite or esbuild) or when importing into vanilla JS. `enumify` generates 100% standard ES2015 JavaScript.
 
 ### The Losses (Trade-offs) for `enumify`
-* **Slightly More Boilerplate Definition:** Defining an `enumify` dictionary takes 2-3 lines of code (exporting the const, then exporting the `type` alias). TS native enums do both in one block. 
+* **Slightly More Boilerplate Definition:** Defining an `enumify` dictionary takes 2-3 lines of code (exporting the const, then exporting the `type` alias). TS native enums do both (value and type) as part of the `enum` keyword. 
 * **Missing Nominal Typing:** TypeScript native enums offer "nominal" typing (e.g., `enum A { X }` cannot be passed to a function expecting `enum B { X }` even if the keys/structures match). `enumify` relies on structural typing (union of literals), meaning TypeScript allows passing the raw string `'spring'` into a function rather than forcing you to strictly use `Tempo.SEASON.Spring`. 
 * **Slight Runtime Overhead:** Instantiating the proxy/prototype wrapper and freezing it adds a microscopic runtime cost compared to evaluating a plain object literal, though parsing the library is typically a one-time engine cost.
 * **More Verbose Setup:** TypeScript's enum can use auto-incrementing numeric values, but `enumify` requires explicit values for each key.

@@ -5,7 +5,7 @@ While `Temporal` provides an excellent, mathematically sound foundation for date
 To enhance (not replace) Temporal's strictness, Tempo adds:
 * flexibility (through its parsing engine and output formatting),
 * convenience (through its many getters and methods),
-* extensibility (through its dynamic aliases (events, periods)),
+* configurability (through its dynamic aliases (events, periods)),
 * business logic (through its lazy-loaded plugin system (terms))
 
 Here is a side-by-side comparison of how you achieve the same outcomes, as well as things Tempo can do that native Temporal cannot easily.

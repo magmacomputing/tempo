@@ -31,4 +31,42 @@ describe('Tempo.format() refinements', () => {
     expect(t3.format('{wy}{ww}')).toBe(202501);
     expect(typeof t3.format('{wy}{ww}')).toBe('number');
   })
+
+  describe('auto-meridiem', () => {
+    const tAM = new Tempo('2024-05-20T10:30:45');
+    const tPM = new Tempo('2024-05-20T22:30:45');
+
+    it('adds am/pm after {HH}', () => {
+      expect(tAM.format('{HH}')).toBe('10am');
+      expect(tPM.format('{HH}')).toBe('10pm');
+    })
+
+    it('adds am/pm after {mi} if it follow {HH}', () => {
+      expect(tAM.format('{HH}:{mi}')).toBe('10:30am');
+      expect(tPM.format('{HH}:{mi}')).toBe('10:30pm');
+    })
+
+    it('adds am/pm after {ss} if it follows {HH}', () => {
+      expect(tAM.format('{HH}:{mi}:{ss}')).toBe('10:30:45am');
+      expect(tPM.format('{HH}:{mi}:{ss}')).toBe('10:30:45pm');
+    })
+
+    it('does not add am/pm if {mer} is already present', () => {
+      expect(tAM.format('{HH} {mer}')).toBe('10 am');
+      expect(tPM.format('{HH} {mer}')).toBe('10 pm');
+    })
+
+    it('does not add am/pm if {MER} is already present', () => {
+      expect(tAM.format('{HH} {MER}')).toBe('10 AM');
+      expect(tPM.format('{HH} {MER}')).toBe('10 PM');
+    })
+
+    it('does not add am/pm for {hh} (24-hour)', () => {
+      expect(tPM.format('{hh}:{mi}')).toBe('22:30');
+    })
+
+    it('handles non-time tokens in between', () => {
+      expect(tAM.format('{HH} on {mon}')).toBe('10am on May');
+    })
+  })
 })

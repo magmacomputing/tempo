@@ -5,10 +5,10 @@
 ## Precedence Hierarchy
 
 Settings are loaded in the following order (where later stages override earlier ones):
-1.  **Library Defaults**: Sensible out-of-the-box settings.
-2.  **Persistent Storage**: Sticky user preferences (e.g., from `localStorage`).
-3.  **Global Discovery**: Enterprise-level setup via `Symbol.for($Tempo)`.
-4.  **Explicit Initialization**: Baseline app configuration via `Tempo.init()`.
+1.  **Library Defaults**: Sensible out-of-the-box baseline.
+2.  **Persistent Storage**: Sticky user preferences (which merge into Defaults).
+3.  **Global Discovery**: Enterprise-level setup discovered via `Symbol.for($Tempo)`.
+4.  **Implicit/Explicit Initialization**: Baseline configuration via `Tempo.init()`.
 5.  **Instance Constructor**: Specific overrides for a single `new Tempo()` call.
 
 ---
@@ -104,10 +104,11 @@ Beyond basic settings, you can extend Tempo's intelligence by supplying custom *
 Tempo.init({
   event: {
     'launch date': '2026-05-20',
-    'deadline': () => Temporal.Now.plainDateISO().add({ days: 30 })
+    'deadline': function () { return this.toDateTime().add({ days: 30 }) }
   },
   period: {
-    'tea time': '15:30'
+    'tea time': '15:00',
+    'mid[ -]?after[ -]?noon': '16:00',  // regex-like key for 'mid after noon' or 'mid-after-noon' etc
   }
 })
 
@@ -123,7 +124,7 @@ const delivery = new Tempo('deadline'); // Parsed using your custom logic
 | **Instance** | 🥇 Highest | Ad-hoc overrides for specific calculations. |
 | **Global Init** | 🥈 High | Standard baseline for the whole application. |
 | **Discovery** | 🥉 Medium | Micro-frontends and third-party integrations. |
-| **Persistence**| 🏅 Low | Sticky user preferences across sessions. |
+| **Persistence**| 🏅 Low (Default) | Sticky user preferences (merges into baseline). |
 | **Defaults** | 🐚 Baseline | Out-of-the-box reasonable settings. |
 
 > [!TIP]
