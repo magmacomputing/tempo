@@ -341,6 +341,9 @@ export class Tempo {
 						shape.config.timeZone = TimeZone[zone] ?? arg.value;
 						break;
 
+					case 'anchor':
+						break;																					// internal anchor used for relativity parsing
+
 					default:																					// else just add to config
 						Object.assign(shape.config, { [optKey]: optVal });
 						break;
@@ -706,16 +709,14 @@ export class Tempo {
 		this.#now = Temporal.Now.instant();											// stash current Instant
 
 		// swap arguments around, if arg1=Options or Temporal-like
-		[this.#tempo, this.#options] = (this.#isOptions(tempo) || this.#isZonedDateTimeLike(tempo))
-			? [(tempo as Tempo.Options)?.value, tempo as Tempo.Options]
-			: [tempo as Tempo.DateTime, { ...options }]
+		[this.#tempo, this.#options] = this.#swap(tempo, options);
 
 		// parse the local options looking for overrides to Tempo.#global.config
 		this.#setLocal(this.#options);
 
 		// we now have all the info we need to instantiate a new Tempo
 		try {
-			this.#zdt = this.#parse(this.#tempo, (this.#options as any).anchor);		// attempt to interpret the DateTime arg
+			this.#zdt = this.#parse(this.#tempo, this.#options.anchor);		// attempt to interpret the DateTime arg
 
 			if (['iso8601', 'gregory'].includes(this.#local.config['calendar'] as any)) {
 				for (const key of Tempo.FORMAT.keys())
@@ -796,7 +797,7 @@ export class Tempo {
 	/** Full weekday name (e.g., 'Monday') */									get wkd() { return Tempo.WEEKDAYS.keyOf(this.#zdt.dayOfWeek as Tempo.Weekday) }
 	/** ISO weekday number: Mon=1, Sun=7 */										get dow() { return this.#zdt.dayOfWeek as Tempo.Weekday }
 	/** Nanoseconds since Unix epoch (BigInt) */							get nano() { return this.#zdt.epochNanoseconds }
-	/** Instance-specific configuration settings */						get config() { return omit({ ...this.#local.config }, 'scope') }
+	/** Instance-specific configuration settings */						get config() { return omit({ ...this.#local.config }, 'scope', 'value', 'anchor') }
 	/** Instance-specific parse rules (merged with global) */	get parse() { return this.#local.parse }
 	/** Object containing results from all term plugins */		get term() { return this.#term }
 	/** Formatted results for all pre-defined format codes */	get fmt() { return this.#fmt }
@@ -833,8 +834,16 @@ export class Tempo {
 	/** time elapsed since another date-time */								since(optsOrDate?: Tempo.DateTime | Tempo.Until | Tempo.Options, optsOrUntil?: Tempo.Options | Tempo.Until): string { return this.#since(optsOrDate, optsOrUntil) }
 
 	/** applies a format to the current `Tempo` instance. */	format<K extends enums.Format>(fmt: K) { return this.#format(fmt) }
-	/** returns a new `Tempo` with specific duration added. */add(mutate: Tempo.Add) { return this.#add(mutate) }
-	/** returns a new `Tempo` with specific offsets. */				set(offset: Tempo.Set | Tempo.Add) { return this.#set(offset) }
+
+	/** returns a new `Tempo` with specific duration added. */
+	add(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) {
+		return this.#add(...this.#swap(tempo, options));
+	}
+
+	/** returns a new `Tempo` with specific offsets. */
+	set(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) {
+		return this.#set(...this.#swap(tempo, options));
+	}
 
 	/** returns the underlying Temporal.Instant */						toInstant() { return this.#anchor?.toInstant() ?? this.#zdt.toInstant() ?? this.#now }
 	/** returns the underlying Temporal.ZonedDateTime */			toDateTime() { return this.#anchor ?? this.#zdt ?? this.#now.toZonedDateTimeISO(this.#local.config.timeZone ?? Temporal.Now.timeZoneId()) }
@@ -874,8 +883,10 @@ export class Tempo {
 
 	/** parse DateTime input */
 	#parse(tempo?: Tempo.DateTime, dateTime?: Temporal.ZonedDateTime) {
-		const timeZone = this.#local.config['timeZone'];
-		const calendar = this.#local.config['calendar'];
+		let timeZone = this.#local.config['timeZone'];
+		let calendar = this.#local.config['calendar'];
+		// Tempo.#dbg.info(this.#local.config, 'parse-start', { tempo, timeZone, dateTime: dateTime?.toString() });
+
 		const today = dateTime ?? this.#now											// use provided ZonedDateTime, else cast instantiation to current timeZone
 			.toZonedDateTimeISO(timeZone);
 		const { type, value } = this.#conform(tempo, today, isDefined(dateTime));	// if String or Number, conform the input against known patterns
@@ -883,6 +894,10 @@ export class Tempo {
 		if (isEmpty(this.#local.parse.result))									// #conform() didn't find any matches
 			this.#local.parse.result = [{ type, value }];
 		Tempo.#dbg.info(this.#local.config, 'parse', `{type: ${type}, value: ${value}}`);					// show what we're parsing
+
+		// re-capture config in case #conform (via #parseZone) updated them
+		timeZone = this.#local.config['timeZone'];
+		calendar = this.#local.config['calendar'];
 
 		switch (type) {
 			case 'Null':
@@ -892,9 +907,8 @@ export class Tempo {
 				return today;
 
 			case 'String':																				// String which didn't conform to a Tempo.pattern
-			case 'Temporal.ZonedDateTime':
 				try {
-					return Temporal.ZonedDateTime.from(value);				// see if Temporal can parse value
+					return Temporal.ZonedDateTime.from(value);				// see if Temporal can parse value (preserving embedded timezone)
 				} catch {																						// else see if Date.parse can parse value
 					const fallback: Partial<Tempo.Match> = { match: 'Date.parse' };
 					this.#result({ type, value }, fallback);
@@ -903,6 +917,11 @@ export class Tempo {
 						.from(`${new Date(value.toString()).toISOString()}[${timeZone}]`)
 						.withCalendar(calendar)
 				}
+
+			case 'Temporal.ZonedDateTime':												// ZonedDateTime object: apply instance timezone
+				return value
+					.withTimeZone(timeZone)
+					.withCalendar(calendar);
 
 			case 'Temporal.PlainDate':
 			case 'Temporal.PlainDateTime':
@@ -927,21 +946,23 @@ export class Tempo {
 
 			case 'Temporal.Instant':
 				return value
-					.toZonedDateTimeISO(timeZone as any)
-					.withCalendar(calendar as any)
+					.toZonedDateTimeISO(timeZone)
+					.withCalendar(calendar)
 
 			case 'Tempo':
 				return value
-					.toDateTime();																		// clone provided Tempo
+					.toDateTime()
+					.withTimeZone(timeZone as any)
+					.withCalendar(calendar as any);													// apply instance timezone to cloned Tempo
 
 			case 'Date':
-				return new Temporal.ZonedDateTime(BigInt(value.getTime() * 1_000_000), timeZone as any, calendar as any);
+				return new Temporal.ZonedDateTime(BigInt(value.getTime() * 1_000_000), timeZone.toString(), calendar.toString());
 
 			case 'Number':																				// Number which didn't conform to a Tempo.pattern
 				const [seconds = BigInt(0), suffix = BigInt(0)] = value.toString().split('.').map(BigInt);
 				const nano = BigInt(suffix.toString().substring(0, 9).padEnd(9, '0'));
 
-				return new Temporal.ZonedDateTime(seconds * BigInt(1_000_000_000) + nano, timeZone as any, calendar as any);
+				return new Temporal.ZonedDateTime(seconds * BigInt(1_000_000_000) + nano, timeZone.toString(), calendar.toString());
 
 			case 'BigInt':																				// BigInt is not conformed against a Tempo.pattern
 				return new Temporal.ZonedDateTime(value, timeZone as any, calendar as any);
@@ -952,10 +973,24 @@ export class Tempo {
 		}
 	}
 
+	/** resolve constructor / method arguments */
+	#swap(tempo?: Tempo.DateTime | Tempo.Options, options: Tempo.Options = {}): [Tempo.DateTime | undefined, Tempo.Options] {
+		return this.#isOptions(tempo)
+			? [tempo.value, { ...tempo }]
+			: [tempo, { ...options }];
+	}
+
 	/** check if we've been given a Tempo Options object */
 	#isOptions(arg: any): arg is Tempo.Options {
-		return isObject(arg) && ownKeys(arg)
-			.some(key => ['snippet', 'layout', 'event', 'period', 'mdyLocales', 'mdyLayouts', 'debug', 'catch', 'store', 'sphere', 'timeStamp', 'pivot', 'locale', 'timeZone', 'calendar'].includes(key as string));
+		if (!isObject(arg) || arg.constructor !== Object) return false;
+
+		const keys = ownKeys(arg);
+		// if it contains any 'mutation' keys, then it's not (just) an options object
+		if (keys.some(key => ['year', 'month', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond', 'event', 'period', 'clock', 'time', 'date', 'start', 'mid', 'end'].includes(key as string)))
+			return false;
+
+		return keys
+			.some(key => ['snippet', 'layout', 'mdyLocales', 'mdyLayouts', 'debug', 'catch', 'store', 'sphere', 'timeStamp', 'pivot', 'locale', 'timeZone', 'calendar'].includes(key as string));
 	}
 
 	/** check if we've been given a ZonedDateTimeLike object */
@@ -1074,7 +1109,6 @@ export class Tempo {
 	/**
 	 * resolve any {event} | {period} to their date | time values,  
 	 * intercept any {month} string,  
-	 * set default {nbr} if {mod} present,  
 	 * Note:  this will mutate the {groups} object
 	*/
 	#parseGroups(groups: Tempo.Groups, dateTime: Temporal.ZonedDateTime) {
@@ -1117,20 +1151,6 @@ export class Tempo {
 					.findIndex(el => el === mm)												// resolve month-name into a month-number
 					.toString()																				// (some browsers do not allow month-names when parsing a Date)
 					.padStart(2, '0')
-			}
-
-			// fix {rdt}
-			if (isDefined(groups["rdt"])) {
-				const idx = ['yesterday', 'tomorrow', 'today'].indexOf(groups["rdt"]);
-				const val = [Event['yesterday'], Event['tomorrow'], Event['today']][idx] as (() => any);
-				const zdt = val.bind(this)();
-
-				Object.assign(groups, {
-					yy: zdt.year.toString(),
-					mm: zdt.month.toString().padStart(2, '0'),
-					dd: zdt.day.toString().padStart(2, '0'),
-				})
-				delete groups["rdt"];
 			}
 		} finally {
 			this.#anchor = void 0 as any;													// reset anchor
@@ -1416,204 +1436,230 @@ export class Tempo {
 				if (isNumeric(val))
 					acc[key] = asNumber(val);
 				return acc;
-			}, {} as Record<string, number>)
+			}, {} as Record<string, number>);
 	}
-
-	/** create new Tempo with {offset} property */
-	#add = (arg: Tempo.Add) => {
+	/** mutate the date-time by adding a duration */
+	#add = (args?: any, options: Tempo.Options = {}) => {
+		let zdt = this.#zdt;
 		Tempo.#pending ??= [...this.#local.parse.result];				// collected parse-results so-far
 
-		const mutate = 'add';
-		const zdt = ownEntries(arg)															// loop through each mutation
-			.reduce((zdt, [unit, offset]) => {										// apply each mutation to preceding one
-				const single = singular(unit);
-				const plural = single + 's';
+		if (isDefined(args)) {
+			if (isObject(args) && args.constructor === Object) {
+				const mutate = 'add';
+				zdt = Object.entries(args ?? {})															// loop through each mutation
+					.reduce((zdt, [unit, offset]) => {											// apply each mutation to preceding one
+						if (unit === 'timeZone' || unit === 'calendar') return zdt;
+						const single = singular(unit as string);
+						const plural = single + 's';
 
-				switch (`${mutate}.${single}`) {
-					case 'add.year':
-					case 'add.month':
-					case 'add.week':
-					case 'add.day':
-					case 'add.hour':
-					case 'add.minute':
-					case 'add.second':
-					case 'add.millisecond':
-					case 'add.microsecond':
-					case 'add.nanosecond':
-						return zdt
-							.add({ [plural]: offset });
+						switch (`${mutate}.${single}`) {
+							case 'add.year':
+							case 'add.month':
+							case 'add.week':
+							case 'add.day':
+							case 'add.hour':
+							case 'add.minute':
+							case 'add.second':
+							case 'add.millisecond':
+							case 'add.microsecond':
+							case 'add.nanosecond':
+								return zdt
+									.add({ [plural]: offset });
 
-					default:
-						Tempo.#dbg.catch(this.#local.config, `Unexpected method(${mutate}), unit(${unit}) and offset(${offset})`);
-						return zdt;
-				}
+							default:
+								Tempo.#dbg.catch(this.#local.config, `Unexpected method(${mutate}), unit(${String(unit)}) and offset(${offset})`);
+								return zdt;
+						}
+					}, this.#zdt)
+			}
+			else {
+				zdt = this.#parse(args, zdt);
+			}
+		}
 
-			}, this.#zdt)
-
-		return new this.#Tempo(zdt, { ...this.#options, anchor: zdt } as any);
+		return new this.#Tempo(zdt, { ...this.#options, ...options, anchor: zdt } as any);
 	}
-
-	/** create a new Tempo with {adjust} property */
-	#set = (args: (Tempo.Add | Tempo.Set)) => {
+	/** mutate the date-time by setting specific offsets */
+	#set = (args?: any, options: Tempo.Options = {}) => {
+		let zdt = this.#zdt;
+		const overrides: Partial<Tempo.Options> = {};
 		Tempo.#pending ??= [...this.#local.parse.result];				// collected parse-results so-far
 
-		const zdt = ownEntries(args)														// loop through each mutation
-			.reduce((zdt, [key, adjust]) => {											// apply each mutation to preceding one
-				const { mutate, offset, single } = ((key) => {
-					switch (key) {
-						case 'start':
-						case 'mid':
-						case 'end':
-							return { mutate: key, offset: 0, single: singular(adjust?.toString() ?? '') }
+		if (isDefined(args)) {
+			if (isObject(args) && args.constructor === Object) {
 
-						default:
-							return { mutate: 'set', offset: adjust, single: singular(key) }
-					}
-				})(key);																						// IIFE to analyze arguments
+				if (args.timeZone) overrides.timeZone = args.timeZone;
+				if (args.calendar) overrides.calendar = args.calendar;
 
-				switch (`${mutate}.${single}`) {
-					case 'set.period':
-					case 'set.time':
-					case 'set.date':
-					case 'set.event':
-					case 'set.dow':																		// set day-of-week by number
-					case 'set.wkd':																		// set day-of-week by name
-						return this.#parse(offset as any, zdt);
+				zdt = Object.entries(args ?? {})											// loop through each mutation
+					.reduce((zdt, [key, adjust]) => {											// apply each mutation to preceding one
+						if (key === 'timeZone' || key === 'calendar') return zdt;
 
-					case 'set.year':
-					case 'set.month':
-					// case 'set.week':																// not defined
-					case 'set.day':
-					case 'set.hour':
-					case 'set.minute':
-					case 'set.second':
-					case 'set.millisecond':
-					case 'set.microsecond':
-					case 'set.nanosecond':
-						return zdt
-							.with({ [single]: offset });
+						const { mutate, offset, single } = ((key) => {
+							switch (key) {
+								case 'start':
+								case 'mid':
+								case 'end':
+									return { mutate: key, offset: 0, single: singular(adjust?.toString() ?? '') }
 
-					case 'set.yy':
-					case 'set.mm':
-					// case 'set.ww':																	// not defined
-					case 'set.dd':
-					case 'set.hh':
-					case 'set.mi':
-					case 'set.ss':
-					case 'set.ms':
-					case 'set.us':
-					case 'set.ns':
-						const value = Tempo.ELEMENT[single as Tempo.Element];
-						return zdt
-							.with({ [value]: offset });
+								default:
+									return { mutate: 'set', offset: adjust, single: singular(key as string) }
+							}
+						})(key);																						// IIFE to analyze arguments
 
-					case 'start.year':
-						return zdt
-							.with({ month: Tempo.MONTH.Jan, day: 1 })
-							.startOfDay();
+						switch (`${mutate}.${single}`) {
+							case 'set.timeZone':
+								return zdt.withTimeZone(offset as any);
+							case 'set.calendar':
+								return zdt.withCalendar(offset as any);
 
-					case 'start.term':																// TODO
-						return zdt;
+							case 'set.period':
+							case 'set.time':
+							case 'set.date':
+							case 'set.event':
+							case 'set.dow':																		// set day-of-week by number
+							case 'set.wkd':																		// set day-of-week by name
+								return this.#parse(offset as any, zdt);
 
-					case 'start.month':
-						return zdt
-							.with({ day: 1 })
-							.startOfDay();
+							case 'set.year':
+							case 'set.month':
+							// case 'set.week':																// not defined
+							case 'set.day':
+							case 'set.hour':
+							case 'set.minute':
+							case 'set.second':
+							case 'set.millisecond':
+							case 'set.microsecond':
+							case 'set.nanosecond':
+								return zdt
+									.with({ [single]: offset });
 
-					case 'start.week':
-						return zdt
-							.add({ days: -(this.dow - Tempo.WEEKDAY.Mon) })
-							.startOfDay();
+							case 'set.yy':
+							case 'set.mm':
+							// case 'set.ww':																	// not defined
+							case 'set.dd':
+							case 'set.hh':
+							case 'set.mi':
+							case 'set.ss':
+							case 'set.ms':
+							case 'set.us':
+							case 'set.ns':
+								const value = Tempo.ELEMENT[single as Tempo.Element];
+								return zdt
+									.with({ [value]: offset });
 
-					case 'start.day':
-						return zdt
-							.startOfDay();
+							case 'start.year':
+								return zdt
+									.with({ month: Tempo.MONTH.Jan, day: 1 })
+									.startOfDay();
 
-					case 'start.hour':
-					case 'start.minute':
-					case 'start.second':
-						return zdt
-							.round({ smallestUnit: offset as 'hour' | 'minute' | 'second', roundingMode: 'trunc' });
+							case 'start.term':																// TODO
+								return zdt;
 
-					// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-					case 'mid.year':
-						return zdt
-							.with({ month: Tempo.MONTH.Jul, day: 1 })
-							.startOfDay();
+							case 'start.month':
+								return zdt
+									.with({ day: 1 })
+									.startOfDay();
 
-					case 'mid.term':																	// TODO: relevant?
-						return zdt;
+							case 'start.week':
+								return zdt
+									.add({ days: -(this.dow - Tempo.WEEKDAY.Mon) })
+									.startOfDay();
 
-					case 'mid.month':
-						return zdt
-							.with({ day: Math.trunc(zdt.daysInMonth / 2) })
-							.startOfDay();
+							case 'start.day':
+								return zdt
+									.startOfDay();
 
-					case 'mid.week':
-						return zdt
-							.add({ days: -(this.dow - Tempo.WEEKDAY.Thu) })
-							.startOfDay();
+							case 'start.hour':
+							case 'start.minute':
+							case 'start.second':
+								return zdt
+									.round({ smallestUnit: offset as 'hour' | 'minute' | 'second', roundingMode: 'trunc' });
 
-					case 'mid.day':
-						return zdt
-							.round({ smallestUnit: 'day', roundingMode: 'trunc' })
-							.add({ hours: 12 });
+							// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+							case 'mid.year':
+								return zdt
+									.with({ month: Tempo.MONTH.Jul, day: 1 })
+									.startOfDay();
 
-					case 'mid.hour':
-						return zdt
-							.round({ smallestUnit: 'hour', roundingMode: 'trunc' })
-							.add({ minutes: 30 });
+							case 'mid.term':																	// TODO: relevant?
+								return zdt;
 
-					case 'mid.minute':
-						return zdt
-							.round({ smallestUnit: 'minute', roundingMode: 'trunc' })
-							.add({ seconds: 30 });
+							case 'mid.month':
+								return zdt
+									.with({ day: Math.trunc(zdt.daysInMonth / 2) })
+									.startOfDay();
 
-					case 'mid.second':
-						return zdt
-							.round({ smallestUnit: 'second', roundingMode: 'trunc' })
-							.add({ milliseconds: 500 });
+							case 'mid.week':
+								return zdt
+									.add({ days: -(this.dow - Tempo.WEEKDAY.Thu) })
+									.startOfDay();
 
-					// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-					case 'end.year':
-						return zdt
-							.add({ years: 1 })
-							.with({ month: Tempo.MONTH.Jan, day: 1 })
-							.startOfDay()
-							.subtract({ nanoseconds: 1 });
+							case 'mid.day':
+								return zdt
+									.round({ smallestUnit: 'day', roundingMode: 'trunc' })
+									.add({ hours: 12 });
 
-					case 'end.term':																	// TODO
-						return zdt
-							.subtract({ nanoseconds: 1 });
+							case 'mid.hour':
+								return zdt
+									.round({ smallestUnit: 'hour', roundingMode: 'trunc' })
+									.add({ minutes: 30 });
 
-					case 'end.month':
-						return zdt
-							.add({ months: 1 })
-							.with({ day: 1 })
-							.startOfDay()
-							.subtract({ nanoseconds: 1 });
+							case 'mid.minute':
+								return zdt
+									.round({ smallestUnit: 'minute', roundingMode: 'trunc' })
+									.add({ seconds: 30 });
 
-					case 'end.week':
-						return zdt
-							.add({ days: (Tempo.WEEKDAY.Sun - this.dow) + 1 })
-							.startOfDay()
-							.subtract({ nanoseconds: 1 });
+							case 'mid.second':
+								return zdt
+									.round({ smallestUnit: 'second', roundingMode: 'trunc' })
+									.add({ milliseconds: 500 });
 
-					case 'end.day':
-					case 'end.hour':
-					case 'end.minute':
-					case 'end.second':
-						return zdt
-							.round({ smallestUnit: offset as 'day' | 'hour' | 'minute' | 'second', roundingMode: 'ceil' })
-							.subtract({ nanoseconds: 1 });
+							// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+							case 'end.year':
+								return zdt
+									.add({ years: 1 })
+									.with({ month: Tempo.MONTH.Jan, day: 1 })
+									.startOfDay()
+									.subtract({ nanoseconds: 1 });
 
-					default:
-						Tempo.#dbg.catch(this.#local.config, `Unexpected method(${mutate}), unit(${adjust}) and offset(${single})`);
-						return zdt;
-				}
-			}, this.#zdt)																					// start reduce with the Tempo zonedDateTime
+							case 'end.term':																	// TODO
+								return zdt
+									.subtract({ nanoseconds: 1 });
 
-		return new this.#Tempo(zdt, { ...this.#options, anchor: zdt } as any);
+							case 'end.month':
+								return zdt
+									.add({ months: 1 })
+									.with({ day: 1 })
+									.startOfDay()
+									.subtract({ nanoseconds: 1 });
+
+							case 'end.week':
+								return zdt
+									.add({ days: (Tempo.WEEKDAY.Sun - this.dow) + 1 })
+									.startOfDay()
+									.subtract({ nanoseconds: 1 });
+
+							case 'end.day':
+							case 'end.hour':
+							case 'end.minute':
+							case 'end.second':
+								return zdt
+									.round({ smallestUnit: offset as 'day' | 'hour' | 'minute' | 'second', roundingMode: 'ceil' })
+									.subtract({ nanoseconds: 1 });
+
+							default:
+								Tempo.#dbg.catch(this.#local.config, `Unexpected method(${mutate}), unit(${adjust}) and offset(${single})`);
+								return zdt;
+						}
+					}, this.#zdt)																					// start reduce with the Tempo zonedDateTime
+			}
+			else {
+				zdt = this.#parse(args, zdt);
+			}
+		}
+
+		return new this.#Tempo(zdt, { ...this.#options, ...options, ...overrides, anchor: zdt } as any);
 	}
 
 	#format = <K extends enums.Format>(fmt: K): Tempo.FormatType<K> => {
@@ -1800,6 +1846,7 @@ export namespace Tempo {
 		/** custom date aliases (events). */										event: Event | Tempo.PatternOption<Tempo.Logic>;
 		/** custom time aliases (periods). */										period: Period | Tempo.PatternOption<Tempo.Logic>;
 		/** supplied value to parse */													value: Tempo.DateTime;
+		/** @internal temporary anchor used during parsing */		anchor: Temporal.ZonedDateTime;
 	}
 
 	export type Options = Partial<BaseOptions> & { [key: string]: any };
@@ -1870,7 +1917,8 @@ export namespace Tempo {
 	export type Until = (Tempo.Options & { unit?: Tempo.Unit }) | Tempo.Unit
 	export type Mutate = 'start' | 'mid' | 'end'
 	export type Set = Partial<Record<Tempo.Mutate, Tempo.Unit> &
-		Record<'date' | 'time' | 'event' | 'period', string>>
+		Record<'date' | 'time' | 'event' | 'period', string> &
+	{ timeZone?: Temporal.TimeZoneLike; calendar?: Temporal.CalendarLike }>
 	export type Add = Partial<Record<Tempo.Unit, number>>
 
 	/** pre-configured format strings */

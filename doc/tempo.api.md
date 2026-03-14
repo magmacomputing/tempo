@@ -5,7 +5,7 @@ This document provides a comprehensive technical reference for the `Tempo` class
 ---
 
 - [TypeScript Types Reference](./tempo.types.md)
-- [Enumerator Reference](./tempo.enumerators.md)
+- [Tempo Cookbook](./tempo.cookbook.md)
 
 ---
 
@@ -69,13 +69,13 @@ Access to the internal dictionaries used by Tempo:
 
 ## 🚀 Instance Methods
 
-### `tempo.add(mutate: Tempo.Add)`
-Returns a **new** `Tempo` instance with the specified duration added.
-- **Example:** `t.add({ days: 2 })`
+### `tempo.add(payload: Tempo.DateTime | Tempo.Add, options?: Tempo.Options)`
+Returns a **new** `Tempo` instance with the specified duration or date-time payload added.
+- **Example:** `t.add({ days: 2 })` or `t.add('tomorrow')`
 
-### `tempo.set(offsets: Tempo.Set | Tempo.Add)`
+### `tempo.set(payload: Tempo.DateTime | Tempo.Set, options?: Tempo.Options)`
 Returns a **new** `Tempo` instance with specific values or relative alignments.
-- **Example:** `t.set({ month: 5, hh: 12 })` or `t.set({ start: 'month' })`
+- **Example:** `t.set({ month: 5, hh: 12 })` or `t.set('start of month')`
 
 ### `tempo.format(fmt: string)`
 Returns a formatted string or number based on the provided token or named format.
@@ -141,5 +141,5 @@ Returns a `Temporal.PlainDateTime` representation.
 - `epoch`: Object containing `ss`, `ms`, `us`, `ns` epoch values.
 - `term`: Object containing results from all active term plugins.
 - `fmt`: Registry of pre-calculated strings for all standard formats.
-- `config`: The effective configuration for this specific instance.
+- `config`: The effective configuration for this specific instance (Note: `scope`, `anchor`, and `value` are excluded from the public object).
 - `parse`: The parsing rules and lineage for this instance.

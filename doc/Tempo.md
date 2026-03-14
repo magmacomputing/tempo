@@ -14,6 +14,7 @@ This project came about due to the need for a simple, yet powerful, way to parse
 6. [Context & Configuration](#context--configuration)
 7. [Enumerators](#enumerators)
 8. [API Reference](./tempo.api.md)
+9. [Cookbook](./tempo.cookbook.md)
 
 ---
 
@@ -219,17 +220,18 @@ t.format('{dd} {mon} {yyyy}');  // "24 January 2026"
 
 `Tempo` instances are **immutable**. Methods like `add` and `set` return a *new* `Tempo` instance.
 
-### `add(mutate)`
-Adds a duration (positive or negative) to the instance.
+### `add(payload, options?)`
+Adds a duration (positive or negative) or a date-time payload to the instance.
 ```typescript
 t.add({ days: -1, hours: 2 });
+t.add('tomorrow');
 ```
 
-### `set(offset)`
+### `set(payload, options?)`
 Sets the instance to a specific point or relative position.
 ```typescript
 t.set({ hour: 0 }); // Midnight
-t.set({ start: 'month' }); // Start of the current month
+t.set('start of month'); // Start of the current month
 ```
 
 ### `until(dateTime, unit?)`
@@ -315,4 +317,4 @@ These utilities are exported as public API methods for use within your own appli
 
 ---
 
-##Refer to the [API Reference](./tempo.api.md) for a complete list of methods and properties.
+## Refer to the [API Reference](./tempo.api.md) for a complete list of methods and properties, or browse the [Cookbook](./tempo.cookbook.md) for common usage patterns.

@@ -9,18 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **`toPlain...` Methods**: Added `toPlainDate()`, `toPlainTime()`, and `toPlainDateTime()` helper methods to the `Tempo` class for easier extraction of specific `Temporal` components.
+- **Argument Flexibility**: Enhanced `.set()` and `.add()` to accept either a date-time payload or an options object as the first argument, improving developer ergonomics.
 - **API Reference**: Created `doc/tempo.api.md`, a comprehensive technical guide covering all static and instance API entrypoints, signatures, and properties.
 - **TypeScript Types**: Created `doc/tempo.types.md` as a detailed reference for all core namespace types.
 - **Regression Tests**: Added `test/issue-fixes.test.ts` to permanently cover relative events, timezone brackets, and storage precedence.
 
 ### Changed
+- **Performance Optimization**: Switched Vitest to `--pool=forks` and refactored internal iteration in `.set()` and `.add()` to resolve test runner hangs during complex parsing.
 - **Relative Events**: Refactored `now`, `today`, `tomorrow`, and `yesterday` to be relative to the specific `Tempo` instance. Date-based events now use `toPlainDate()` for improved parsing robustness.
 - **Config Precedence**: Established and documented a reliable precedence order: Metadata < Defaults < Storage < Discovery < Global Init < Instance.
+- **Config Privacy**: Explicitly excluded the internal `anchor` property from public configuration to prevent developer confusion.
+- **Cleanup**: Removed obsolete `rdt` (recent date) snippet logic as it is fully superseded by smart event aliases (functions).
 - **Storage Logic**: Consolidated persistence merging into `#setConfig`, ensuring storage values correctly act as defaults.
 - **`toInstant` / `toDateTime` Getters**: Enhanced getters to prioritize the instance's underlying value while providing robust fallbacks to system "now" (including safe handling of uninitialized timezones).
 
 ### Fixed
+- **Timezone Round-trip**: Resolved a critical bug where timezone information was lost when reviving Tempo instances from JSON (serialization/deserialization).
 - **Timezone Bracket Parsing**: Resolved an issue where bracketed timezones were ignored or incorrectly overridden by offsets.
+- **Mutation Safety**: Fixed `TypeError: Cannot add property` in `#result` when performing operations on instances decorated with `@Immutable` by ensuring internal state is handled safely.
 - **Relative Event Drifting**: Fixed a bug where events like 'yesterday' were incorrectly calculated based on the run-date instead of the `Tempo` instance state.
 - **Storage Merge Bug**: Corrected an issue where explicit options were being clobbered by storage values.
 

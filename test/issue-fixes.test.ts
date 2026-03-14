@@ -82,4 +82,27 @@ describe('Tempo Issue Fixes', () => {
       delete (globalThis as any)[Symbol.for($Tempo)];
     })
   })
+
+  describe('.set() and .add() Flexibility', () => {
+    test('set() accepts options with timeZone', () => {
+      const t = new Tempo('2024-05-20 10:00', { timeZone: 'UTC' });
+      const lon = t.set({ timeZone: 'Europe/London' });
+      expect(lon.tz).toBe('Europe/London');
+      expect(lon.format('{hh}:{mi}')).toBe('11:00'); // London is DST (+01:00) in May
+    })
+
+    test('set() accepts two arguments (value, options)', () => {
+       const t = new Tempo('2024-05-20 10:00', { timeZone: 'UTC' });
+       // This would have failed before
+       const shifted = t.set('tomorrow', { timeZone: 'America/New_York' });
+       expect(shifted.tz).toBe('America/New_York');
+       expect(shifted.format('{yyyy}-{mm}-{dd}')).toBe('2024-05-21');
+    })
+
+    test('add() accepts options with mutation', () => {
+       const t = new Tempo('2024-05-20 10:00', { timeZone: 'UTC' });
+       const nextWeek = t.add({ days: 7 }, { debug: true });
+       expect(nextWeek.format('{dd}')).toBe('27');
+    })
+  })
 })
