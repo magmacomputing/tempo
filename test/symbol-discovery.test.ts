@@ -66,4 +66,19 @@ describe('Global Discovery (Symbol.for($Tempo))', () => {
 		const t = new Tempo('2024-01-01', { timeZone: 'MYTZ' });
 		expect(t.config.timeZone).toBe('Australia/Brisbane');
 	});
+
+	it('should merge global custom formats', () => {
+		(globalThis as any)[symbolKey] = {
+			formats: {
+				'custom': '{yyyy}!!{mm}!!{dd}'
+			}
+		};
+
+		Tempo.init();
+		expect(Tempo.FORMAT.has('custom')).toBe(true);
+		expect((Tempo.FORMAT as any).custom).toBe('{yyyy}!!{mm}!!{dd}');
+
+		const t = new Tempo('2024-05-20');
+		expect((t.fmt as any).custom).toBe('2024!!05!!20');
+	});
 });

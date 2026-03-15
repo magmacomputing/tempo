@@ -19,10 +19,11 @@ describe(`${label}`, () => {
     const quarter = tempo.term.quarter;                     // evaluate {quarter} on tempo.term
     const qtr = tempo.term.qtr;                             // evaluate {qtr} on tempo.term  
 
-    expect(Object.keys(tempo.term))
-      .toContain('quarter')
-    expect(Object.keys(tempo.term))
-      .toContain('qtr')
+    const keys = [];
+    for (const key in tempo.term) keys.push(key);
+
+    expect(keys).toContain('quarter')
+    expect(keys).toContain('qtr')
     expect(qtr)
       .toBe('Q3')
   })

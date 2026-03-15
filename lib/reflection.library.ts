@@ -1,4 +1,4 @@
-import { asType, getType, isArray, isEmpty, isFunction, isObject, isPrimitive, isType } from '#core/shared/type.library.js';
+import { asType, getType, isEmpty, isFunction, isPrimitive } from '#core/shared/type.library.js';
 import type { Obj, KeyOf, ValueOf, EntryOf, Primitives } from '#core/shared/type.library.js';
 
 /** mutate Object | Array by excluding values with specified primitive 'types' */
@@ -82,26 +82,32 @@ export function ownEntries<T extends Obj>(json: T, all = false) {
 	if (!json || typeof json !== 'object')
 		return [] as EntryOf<T>[];
 
-	const entries = new Map<PropertyKey, any>();
-	const limit = all ? 10 : 1;																// limit depth of 10 down the prototype chain to prevent infinite loops
+	const getOwn = (obj: any): [PropertyKey, any][] => {			// helper function to get own enumerable properties
+		const lvl: [PropertyKey, any][] = [];
+		Reflect.ownKeys(obj).forEach(key => {
+			const desc = Object.getOwnPropertyDescriptor(obj, key);
+			if (desc?.enumerable) lvl.push([key, desc.value]);
+		});
+		return lvl;
+	}
+
+	if (!all)
+		return getOwn(json) as EntryOf<T>[];
+
+	// all=true: collect per-level bottom-up, reverse to top-down, dedup via Map
+	// Map preserves first-insertion position but allows value update (own key shadows ancestor)
+	const levels: [PropertyKey, any][][] = [];
+	const limit = 10;																					// prevent infinite loops
 	let depth = 0;
 	let proto: any = json;
 
 	do {
-		Reflect
-			.ownKeys(proto)
-			.filter(key => !entries.has(key))											// filter out if already tracking this key
-			.forEach(key => {
-				const desc = Object.getOwnPropertyDescriptor(proto, key);
-
-				if (desc?.enumerable)																// only track enumerable properties
-					entries.set(key, desc.value);
-			})
-
+		const lvl = getOwn(proto);
+		if (lvl.length) levels.push(lvl);
 		proto = Object.getPrototypeOf(proto);
 	} while (proto && proto !== Object.prototype && ++depth < limit);
 
-	return [...entries.entries()] as EntryOf<T>[];
+	return [...new Map<PropertyKey, any>(levels.reverse().flat()).entries()] as EntryOf<T>[];
 }
 
 /** get a string-array of 'getter' names for an object */

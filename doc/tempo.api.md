@@ -75,7 +75,7 @@ Returns a **new** `Tempo` instance with the specified duration or date-time payl
 
 ### `tempo.set(payload: Tempo.DateTime | Tempo.Set, options?: Tempo.Options)`
 Returns a **new** `Tempo` instance with specific values or relative alignments.
-- **Example:** `t.set({ month: 5, hh: 12 })` or `t.set('start of month')`
+- **Example:** `t.set({ month: 5, hh: 12 })` or `t.set({ start: 'month' })`
 
 ### `tempo.format(fmt: string)`
 Returns a formatted string or number based on the provided token or named format.

@@ -144,9 +144,10 @@ console.log(london.term.szn); // "Summer"
 
 ## Interoperability
 
-### Converting to Native `Date`
+### Converting to / from Native `Date`
 ```typescript
 const date = new Tempo().toDate();
+const tempo = new Tempo(new Date());
 ```
 
 ### Converting to `Temporal` Objects
