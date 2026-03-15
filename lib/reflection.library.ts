@@ -1,6 +1,12 @@
 import { asType, getType, isEmpty, isFunction, isPrimitive } from '#core/shared/type.library.js';
 import type { Obj, KeyOf, ValueOf, EntryOf, Primitives } from '#core/shared/type.library.js';
 
+/** property marker used to terminate prototype traversal in ownEntries() */
+export const $Base = Symbol.for('$Base');
+
+/** Node.js custom inspection symbol */
+export const $Inspect = Symbol.for('nodejs.util.inspect.custom');
+
 /** mutate Object | Array by excluding values with specified primitive 'types' */
 export function exclude<T extends Obj>(obj: T, ...types: (Primitives | Lowercase<Primitives>)[]) {
 	const exclusions = types
@@ -104,10 +110,16 @@ export function ownEntries<T extends Obj>(json: T, all = false) {
 	do {
 		const lvl = getOwn(proto);
 		if (lvl.length) levels.push(lvl);
+		if (Object.prototype.hasOwnProperty.call(proto, $Base)) break;			// stop at marker
 		proto = Object.getPrototypeOf(proto);
 	} while (proto && proto !== Object.prototype && ++depth < limit);
 
 	return [...new Map<PropertyKey, any>(levels.reverse().flat()).entries()] as EntryOf<T>[];
+}
+
+/** return an Object containing all own and inherited enumerable properties */
+export function allEntries<T extends Obj>(json: T) {
+	return Object.fromEntries(ownEntries(json, true));
 }
 
 /** get a string-array of 'getter' names for an object */
