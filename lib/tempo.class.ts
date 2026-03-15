@@ -8,7 +8,7 @@ import { Cipher } from '#core/shared/cipher.class.js';
 import { asArray } from '#core/shared/array.library.js';
 import { cleanify, stringify } from '#core/shared/serialize.library.js';
 import { getStorage, setStorage } from '#core/shared/storage.library.js';
-import { ownKeys, ownEntries, getAccessors, omit } from '#core/shared/reflection.library.js';
+import { ownKeys, ownEntries, allEntries, getAccessors, omit, $Base, $Inspect } from '#core/shared/reflection.library.js';
 import { getContext, CONTEXT } from '#core/shared/utility.library.js';
 import { asNumber, asInteger, isNumeric, ifNumeric } from '#core/shared/number.library.js';
 import { pad, singular, toProperCase, trimAll } from '#core/shared/string.library.js';
@@ -706,11 +706,18 @@ export class Tempo {
 	/** underlying Temporal ZonedDateTime */									#zdt!: Temporal.ZonedDateTime;
 	/** temporary anchor used during parsing */								#anchor?: Temporal.ZonedDateTime;
 	/** prebuilt formats, for convenience */									#fmt = {} as Tempo.Format;
-	/** instance term plugins */															#term = {} as Property<any>;
 	/** instance values to complement static values */				#local = {
 		/** instance configuration */															config: {} as Tempo.Config,
 		/** instance parse rules (only populated if provided) */	parse: {} as Tempo.Parse
 	} as Tempo.State
+	/** instance term plugins */															#term = (() => {
+		const base = {} as Property<any>;
+		const all = function (this: any) { return allEntries(this) }	// shared traversal logic
+		Object.defineProperty(base, $Base, { enumerable: false, configurable: false, value: true });
+		Object.defineProperty(base, $Inspect, { enumerable: false, configurable: true, value: all });
+		Object.defineProperty(base, 'toJSON', { enumerable: false, configurable: true, value: all });
+		return base;
+	})();
 
 	// #endregion Instance properties
 
@@ -811,7 +818,7 @@ export class Tempo {
 	/** Nanoseconds since Unix epoch (BigInt) */							get nano() { return this.#zdt.epochNanoseconds }
 	/** Instance-specific configuration settings */						get config() { return omit({ ...this.#local.config }, 'scope', 'value', 'anchor') }
 	/** Instance-specific parse rules (merged with global) */	get parse() { return this.#local.parse }
-	/** Object containing results from all term plugins */		get term() { return this.#term }
+	/** Object containing results from all term plugins */		get term() { return this.#getTermProxy() }
 	/** Formatted results for all pre-defined format codes */	get fmt() { return this.#fmt }
 	/** units since epoch */																	get epoch() {
 		return secure({
@@ -871,6 +878,26 @@ export class Tempo {
 	// #endregion Instance public methods
 
 	// #region Instance private methods~~~~~~~~~~~~~~~~~~~~~~~
+	/** stealth proxy wrapping #term prototype-chain to allow for iteration and logging */
+	#getTermProxy() {
+		return new Proxy({}, {
+			get: (target, key, receiver) => {
+				if (key === $Inspect || key === 'toJSON') return () => allEntries(this.#term);
+				return Reflect.get(this.#term, key, receiver);
+			},
+			ownKeys: () => Reflect.ownKeys(allEntries(this.#term)),
+			getOwnPropertyDescriptor: (target, key) => {
+				const entries = allEntries(this.#term);
+				if (Object.prototype.hasOwnProperty.call(entries, key)) {
+					return { enumerable: true, configurable: true, value: (entries as any)[key] };
+				}
+				return void 0;
+			},
+			getPrototypeOf: () => Object.getPrototypeOf(this.#term),
+			has: (target, key) => Reflect.has(this.#term, key),
+		}) as Property<any>;
+	}
+
 	/**
 	 * setup local 'config' and 'parse' rules (with prototype set to global)
 	 * we copy down the current global config to the local instance, then apply any options provided.  

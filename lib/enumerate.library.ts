@@ -2,7 +2,7 @@ import { secure } from '#core/shared/utility.library.js';
 import { Serializable } from '#core/shared/class.library.js';
 import { stringify } from '#core/shared/serialize.library.js';
 import { memoizeMethod } from '#core/shared/function.library.js';
-import { ownEntries } from '#core/shared/reflection.library.js';
+import { ownEntries, $Inspect } from '#core/shared/reflection.library.js';
 import { asType, isArray, isNumber } from '#core/shared/type.library.js';
 import type { Index, Prettify, Entry, Invert, Property, CountOf, KeyOf, ValueOf, EntryOf, LooseKey, WellKnownSymbols } from '#core/shared/type.library.js';
 
@@ -57,7 +57,7 @@ const ENUM = secure(Object.create(null, {
 	filter: value(function (this: Enum.wrap<any>, fn: (entry: [PropertyKey, any], index: number, enumify: Enum.wrap<any>) => boolean, thisArg?: any) { return enumify(this.entries().reduce((acc: ObjectArg, entry, index) => (fn.call(thisArg, entry, index, this) ? Object.assign(acc, { [entry[0]]: entry[1] }) : acc), {} as ObjectArg)) }),
 	map: value(function (this: Enum.wrap<any>, fn: (entry: [PropertyKey, any], index: number, enumify: Enum.wrap<any>) => any, thisArg?: any) { return enumify(this.entries().reduce((acc: ObjectArg, entry, index) => { const res = fn.call(thisArg, entry, index, this); return Object.assign(acc, isArray(res) && res.length === 2 ? { [res[0] as any]: res[1] } : { [entry[0]]: res }) }, {} as ObjectArg)) }),
 
-	[Symbol.for('nodejs.util.inspect.custom')]: value(function (this: any) { return this.toJSON() }),
+	[$Inspect]: value(function (this: any) { return this.toJSON() }),
 	[Symbol.iterator]: value(function (this: Property<any> & Proto<any>) { return this.entries()[Symbol.iterator](); }),
 	[Symbol.toStringTag]: value(tag),
 }) as Proto<any>);

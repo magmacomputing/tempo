@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Custom Global Formats**: Introduced support for defining custom format layouts via Global Discovery (`Symbol.for($Tempo)`), making them available across all instances.
 
+### Changed
+- **Term Traversal Logic**: Unified prototype traversal by introducing a shared `$Base` symbol to terminate chain climbing, improving both performance and collision resistance.
+- **Node.js Custom Inspection**: Standardized the Node.js custom inspection symbol as `$Inspect` in the reflection library and updated `Tempo` and `Enumify` for consistent console formatting.
+- **Stealth Proxy for terms**: Implemented a "Stealth Proxy" for the `term` accessor to provide a flat, iterable object view of resolved terms across Node.js and Browser environments while preserving lazy resolution.
+- **Term Getters Performance**: Refactored `#setTerm` logic to use prototype shadowing (`Object.create`), improving performance and reducing overhead.
+- **Strict Global Discovery**: Standardized the global configuration mechanism by removing legacy `TempoOptions` support and strictly enforcing the `Tempo.Discovery` contract.
+- **Enumify Extend**: Refactored the internal `extend` utility within `enumify` for improved maintainability.
+
 ## [1.0.7] - 2026-03-14
 
 ### Added

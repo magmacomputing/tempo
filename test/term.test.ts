@@ -8,7 +8,7 @@ const label = 'term:';
 describe(`${label}`, () => {
 
   test(`${label} check for the {quarter} plugin`, () => {
-    const qtr = Tempo.terms.find(({ key }: { key: string }) => key === 'qtr');
+    const qtr = Tempo.terms.find(({ key }) => key === 'qtr');
 
     expect(qtr)
       .toBeDefined()
