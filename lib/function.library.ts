@@ -60,10 +60,15 @@ export function memoizeFunction<F extends (...args: any[]) => any>(fn: F) {
 
 const wm = new WeakMap<object, Property<any>>();
 
+/** manually clear the memoization cache for an object */
+export function clearCache(obj: object) {
+	wm.delete(obj);
+}
+
 /** define a Descriptor for an Object's memoized-method */
 export function memoizeMethod<T>(name: PropertyKey, fn: (this: Property<any>, ...args: any[]) => T) {
 	return {
-		enumerable: true,
+		enumerable: false,
 		configurable: false,
 		writable: false,
 		value: function (this: Property<any>, ...args: any[]) {

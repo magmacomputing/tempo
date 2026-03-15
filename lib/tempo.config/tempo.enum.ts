@@ -79,6 +79,7 @@ export const FORMAT = enumify({
 		/** just Date portion */																date: '{yyyy}-{mm}-{dd}',
 		/** just Time portion */																time: '{hh}:{mi}:{ss}',
 })
+
 export type FORMAT = ValueOf<typeof FORMAT>
 export type Format = LooseUnion<KeyOf<typeof FORMAT>>
 
@@ -101,3 +102,15 @@ export const ELEMENT = enumify({
 })
 export type ELEMENT = ValueOf<typeof ELEMENT>
 export type Element = KeyOf<typeof ELEMENT>
+
+export const MUTATION = enumify(ELEMENT.values()).extend(['event', 'period', 'clock', 'time', 'date', 'start', 'mid', 'end'])
+export type MUTATION = ValueOf<typeof MUTATION>
+export type Mutation = KeyOf<typeof MUTATION>
+
+export const ZONED_DATE_TIME = enumify(['value', 'timeZoneId', 'calendarId', 'monthCode', 'offset', 'timeZone']).extend(ELEMENT.values())
+export type ZONED_DATE_TIME = ValueOf<typeof ZONED_DATE_TIME>
+export type ZonedDateTime = KeyOf<typeof ZONED_DATE_TIME>
+
+export const Option = enumify(['value', 'mdyLocales', 'mdyLayouts', 'store', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period', 'formats'])
+export type Option = typeof Option
+export type Options = KeyOf<Option>

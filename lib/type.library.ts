@@ -1,7 +1,3 @@
-import { Tempo } from '#core/shared/tempo.class.js';
-import { Pledge } from '#core/shared/pledge.class.js';
-import type { Enum } from '#core/shared/enumerate.library.js';
-
 /** the primitive type reported by toStringTag() */
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
 
@@ -20,9 +16,9 @@ export const getType = (obj?: any, ...instances: Instance[]) => {
 
 			return (instances
 				.find(inst => obj instanceof inst.class)?.type			// allow for 'real' name of Instance, after minification
-				?? name) as Type;																	// return Object name
+				?? name) as Type;																		// return Object name
 
-		case type === 'Function' && obj.valueOf().toString().startsWith('class '):
+		case type === 'Function' && Function.prototype.toString.call(obj).startsWith('class '):
 			return 'Class';
 
 		default:
@@ -71,9 +67,9 @@ export const isError = (err: unknown): err is Error => isType(err, 'Error');
 export const isTemporal = <T>(obj: T): obj is Extract<T, Temporals> => protoType(obj).startsWith('Temporal.');
 
 // non-standard Objects
-export const isTempo = (obj: unknown): obj is Tempo => isType(obj, 'Tempo');
-export const isEnum = <E extends Property<any>>(obj: unknown): obj is Enum.props<E> => isType(obj, 'Enumify');
-export const isPledge = <P>(obj: unknown): obj is Pledge<P> => isType(obj, 'Pledge');
+export const isTempo = (obj: unknown): obj is GetType<'Tempo'> => isType(obj, 'Tempo' as any);
+export const isEnum = <E extends Property<any>>(obj: unknown): obj is GetType<'Enumify', E> => isType(obj, 'Enumify' as any);
+export const isPledge = <P>(obj: unknown): obj is GetType<'Pledge', P> => isType(obj, 'Pledge' as any);
 
 export const nullToZero = <T>(obj: T) => obj ?? 0;
 export const nullToEmpty = <T>(obj: T) => obj ?? '';
@@ -112,7 +108,9 @@ type SafeCount<T, Acc extends any[] = [], Last = LastInUnion<T>> =
 
 /** Own properties of an Array, Object, Map or Enum */
 export type WellKnownSymbols = { [K in keyof SymbolConstructor]: SymbolConstructor[K] extends symbol ? SymbolConstructor[K] : never }[keyof SymbolConstructor]
-type IgnoreOf = WellKnownSymbols | Enum.methods
+/** Augmentable map of method/property names to exclude from KeyOf/ValueOf/OwnOf */
+export interface IgnoreOfMap {}
+type IgnoreOf = WellKnownSymbols | keyof IgnoreOfMap;
 
 export type CountOf<T> = SafeCount<T>
 export type OwnOf<T extends Obj> = T extends Array<any> ? { [K in number]: T[number] } : Omit<T, IgnoreOf>
@@ -161,78 +159,48 @@ declare const Temporal: any;
 export type Temporals = typeof Temporal extends { Now: any } ? Exclude<keyof typeof Temporal, 'Now'> : never;
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-export type Type =
-	| 'String'
-	| 'Number'
-	| 'BigInt'
-	| 'Boolean'
-	| 'Object'
-	| 'Array' | 'ArrayLike'
-	| 'Null'
-	| 'Undefined' | 'Void' | 'Empty'
-	| 'Date'
-	| 'Function' | 'AsyncFunction'
-	| 'Class'
-	| 'Promise'
-	| 'RegExp'
-	| 'Blob'
-	| 'Map'
-	| 'Set'
-	| 'WeakMap' | 'WeakSet' | 'WeakRef'
-	| 'Symbol'
-	| 'Error'
+export interface TypeValueMap<T = any> {
+	String: { type: 'String', value: string };
+	Number: { type: 'Number', value: number };
+	BigInt: { type: 'BigInt', value: bigint };
+	Boolean: { type: 'Boolean', value: boolean };
+	Object: { type: 'Object', value: Extract<T, Property<unknown>> };
+	Array: { type: 'Array', value: Array<T> };
+	ArrayLike: { type: 'ArrayLike', value: ArrayLike<T> };
+	Undefined: { type: 'Undefined', value: undefined };
+	Null: { type: 'Null', value: null };
+	Void: { type: 'Void', value: void };
+	Empty: { type: 'Empty', value: unknown };
+	Date: { type: 'Date', value: Date };
+	Function: { type: 'Function', value: Function };
+	AsyncFunction: { type: 'AsyncFunction', value: Function };
+	Class: { type: 'Class', value: T };
+	Promise: { type: 'Promise', value: Promise<T> };
+	RegExp: { type: 'RegExp', value: RegExp };
+	Blob: { type: 'Blob', value: Blob };
+	Map: { type: 'Map', value: Map<any, T> };
+	Set: { type: 'Set', value: Set<T> };
+	WeakSet: { type: 'WeakSet', value: WeakSet<Property<unknown>> };
+	WeakMap: { type: 'WeakMap', value: WeakMap<Property<unknown>, T> };
+	WeakRef: { type: 'WeakRef', value: any };
+	Symbol: { type: 'Symbol', value: symbol };
+	Error: { type: 'Error', value: Error };
 
-	| 'Temporal'
-	| 'Temporal.Instant'
-	| 'Temporal.ZonedDateTime'
-	| 'Temporal.PlainDateTime'
-	| 'Temporal.PlainDate'
-	| 'Temporal.PlainTime'
-	| 'Temporal.PlainYearMonth'
-	| 'Temporal.PlainMonthDay'
+	Temporal: { type: 'Temporal', value: Temporals };
+	'Temporal.Instant': { type: 'Temporal.Instant', value: Temporal.Instant };
+	'Temporal.ZonedDateTime': { type: 'Temporal.ZonedDateTime', value: Temporal.ZonedDateTime };
+	'Temporal.PlainDateTime': { type: 'Temporal.PlainDateTime', value: Temporal.PlainDateTime };
+	'Temporal.PlainDate': { type: 'Temporal.PlainDate', value: Temporal.PlainDate };
+	'Temporal.PlainTime': { type: 'Temporal.PlainTime', value: Temporal.PlainTime };
+	'Temporal.PlainYearMonth': { type: 'Temporal.PlainYearMonth', value: Temporal.PlainYearMonth };
+	'Temporal.PlainMonthDay': { type: 'Temporal.PlainMonthDay', value: Temporal.PlainMonthDay };
+}
 
-	| 'Enumify'
-	| 'Tempo'
-	| 'Pledge'
+export type Type = keyof TypeValueMap<any>;
+export type TypeValue<T> = TypeValueMap<T>[keyof TypeValueMap<T>];
 
-export type TypeValue<T> =
-	| { type: 'String', value: string }
-	| { type: 'Number', value: number }
-	| { type: 'BigInt', value: bigint }
-	| { type: 'Boolean', value: boolean }
-	| { type: 'Object', value: Extract<T, Property<unknown>> }
-	| { type: 'Array', value: Array<T> }
-	| { type: 'ArrayLike', value: ArrayLike<T> }
-	| { type: 'Undefined', value: undefined }
-	| { type: 'Null', value: null }
-	| { type: 'Void', value: void }
-	| { type: 'Empty', value: unknown }
-	| { type: 'Date', value: Date }
-	| { type: 'Function', value: Function }
-	| { type: 'Class', value: T }
-	| { type: 'Promise', value: Promise<T> }
-	| { type: 'RegExp', value: RegExp }
-	| { type: 'Blob', value: Blob }
-	| { type: 'Map', value: Map<any, T> }
-	| { type: 'Set', value: Set<T> }
-	| { type: 'WeakSet', value: WeakSet<Property<unknown>> }
-	| { type: 'WeakMap', value: WeakMap<Property<unknown>, T> }
-	// | { type: 'WeakRef', value: WeakRef<Property<unknown>, T> }
-	| { type: 'Symbol', value: symbol }
-	| { type: 'Error', value: Error }
-
-	| { type: 'Temporal', value: Temporals }
-	| { type: 'Temporal.Instant', value: Temporal.Instant }
-	| { type: 'Temporal.ZonedDateTime', value: Temporal.ZonedDateTime }
-	| { type: 'Temporal.PlainDateTime', value: Temporal.PlainDateTime }
-	| { type: 'Temporal.PlainDate', value: Temporal.PlainDate }
-	| { type: 'Temporal.PlainTime', value: Temporal.PlainTime }
-	| { type: 'Temporal.PlainYearMonth', value: Temporal.PlainYearMonth }
-	| { type: 'Temporal.PlainMonthDay', value: Temporal.PlainMonthDay }
-
-	| { type: 'Tempo', value: Tempo }
-	| { type: 'Pledge', value: Pledge<T> }
-	| { type: 'Enumify', value: Enum.wrap<Property<any>> }
+/** late-binding Type utility for augmented modules */
+export type GetType<K extends string, T = any> = K extends keyof TypeValueMap<T> ? TypeValueMap<T>[K]['value'] : any;
 
 // https://dev.to/harry0000/a-bit-convenient-typescript-type-definitions-for-objectentries-d6g
 type TupleEntry<T extends readonly unknown[], I extends unknown[] = [], R = never> =

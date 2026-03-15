@@ -7,6 +7,11 @@ import { cleanify } from '#core/shared/serialize.library.js';
 import { Immutable } from '#core/shared/class.library.js';
 import { isEmpty, isObject } from '#core/shared/type.library.js';
 
+declare module './type.library.js' {
+	interface TypeValueMap<T> {
+		Pledge: { type: 'Pledge', value: Pledge<T> };
+	}
+}
 
 /**
  * Wrap a Promise's resolve/reject/finally methods for later fulfilment.  

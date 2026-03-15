@@ -231,7 +231,7 @@ t.add('tomorrow');
 Sets the instance to a specific point or relative position.
 ```typescript
 t.set({ hour: 0 }); // Midnight
-t.set('start of month'); // Start of the current month
+t.set({ start: 'month' }); // Start of the current month
 ```
 
 ### `until(dateTime, unit?)`

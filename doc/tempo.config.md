@@ -38,10 +38,11 @@ This is the most secure method to provide configuration before the library even 
 import { $Tempo } from '@magmacomputing/tempo';
 
 globalThis[Symbol.for($Tempo)] = {
-  options: { timeZone: 'Europe/Paris' },
-  timeZones: { 'MYTZ': 'Asia/Dubai' },
-  terms: [ myCustomTermPlugin ]
-}
+   options: { timeZone: 'Europe/Paris' },
+   timeZones: { 'MYTZ': 'Asia/Dubai' },
+   formats: { 'myFormat': '{dd}!!{mm}!!{yyyy}' },
+   terms: [ myCustomTermPlugin ]
+ }
 ```
 
 ### Discovery Contract
@@ -52,6 +53,7 @@ Tempo looks for the following structure:
 | `options` | `Options \| (() => Options)` | Configuration options merged into global state. |
 | `terms` | `TermPlugin \| TermPlugin[]` | Custom term plugins to be registered. |
 | `timeZones` | `Record<string, string>` | Custom timezone aliases to be merged. |
+| `formats` | `Record<string, string>` | Custom format strings to be merged into `Tempo.FORMAT`. |
 
 ---
 

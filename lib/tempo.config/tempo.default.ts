@@ -167,7 +167,6 @@ export const TimeZone = looseIndex<string, string>()({
 export type TimeZone = typeof TimeZone
 
 /** Reasonable default options for initial Tempo config */
-export const Options = ['value', 'mdyLocales', 'mdyLayouts', 'store', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period'] as const;
 export const Default = secure({
 	/** log to console */																			debug: false,
 	/** catch or throw Errors */															catch: false,

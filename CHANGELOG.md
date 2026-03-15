@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.8] - Unreleased
+
+### Added
+- **Custom Global Formats**: Introduced support for defining custom format layouts via Global Discovery (`Symbol.for($Tempo)`), making them available across all instances.
+
 ## [1.0.7] - 2026-03-14
 
 ### Added

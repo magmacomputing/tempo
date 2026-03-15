@@ -14,6 +14,7 @@ import { asNumber, asInteger, isNumeric, ifNumeric } from '#core/shared/number.l
 import { pad, singular, toProperCase, trimAll } from '#core/shared/string.library.js';
 import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction } from '#core/shared/type.library.js';
 import type { IntRange, LooseUnion, Mutable, NonOptional, OwnOf, Property, TPlural, Type } from '#core/shared/type.library.js';
+import type { Enum } from '#core/shared/enumerate.library.js';
 
 import * as enums from '#core/shared/tempo.config/tempo.enum.js';
 import registerTerms from '#core/shared/tempo.config/plugins/term.import.js';
@@ -23,6 +24,12 @@ import { Match, Token, Snippet, Layout, Event, Period, Default, TimeZone } from 
 import '#core/shared/prototype.library.js';									// patch prototypes
 
 // #endregion
+
+declare module './type.library.js' {
+	interface TypeValueMap<T> {
+		Tempo: { type: 'Tempo', value: Tempo };
+	}
+}
 
 // #region Const variables
 
@@ -77,7 +84,7 @@ export class Tempo {
 	/** Compass cardinal points */														static get COMPASS() { return enums.COMPASS }
 
 	/** Tempo to Temporal DateTime Units map */								static get ELEMENT() { return enums.ELEMENT }
-	/** Pre-configured format {name -> string} pairs */				static get FORMAT() { return enums.FORMAT }
+	/** Pre-configured format {name -> string} pairs */				static get FORMAT() { return Tempo.#global.config.formats }
 	/** some useful Dates */																	static get LIMIT() { return enums.LIMIT }
 
 	// #endregion
@@ -341,6 +348,12 @@ export class Tempo {
 						shape.config.timeZone = TimeZone[zone] ?? arg.value;
 						break;
 
+					case 'formats':
+						if (Tempo.#isLocal(shape) && !Tempo.#hasOwn(shape.config, 'formats'))
+							shape.config.formats = shape.config.formats.extend({}); // shadow global
+						shape.config.formats = shape.config.formats.extend(arg.value as Property<any>);
+						break;
+
 					case 'anchor':
 						break;																					// internal anchor used for relativity parsing
 
@@ -387,7 +400,11 @@ export class Tempo {
 		if (discovery.terms)
 			Tempo.addTerm(...asArray(discovery.terms as any));
 
-		// 3. Process Options
+		// 3. Process Formats
+		if (discovery.formats)
+			shape.config.formats = shape.config.formats.extend(discovery.formats);
+
+		// 4. Process Options
 		let opts = discovery.options || {};
 		return isFunction(opts) ? opts() : opts;
 	}
@@ -436,7 +453,7 @@ export class Tempo {
 				mdyLocales: Tempo.#mdyLocales(Default.mdyLocales as Tempo.Options['mdyLocales']),
 				mdyLayouts: asArray(Default.mdyLayouts as Tempo.Options['mdyLayouts']) as Tempo.Pair[],
 				pivot: Default.pivot,
-			} as Tempo.Parse;																				// remove previous parsing rules
+			} as Tempo.Parse;																			// remove previous parsing rules
 
 			for (const key of Object.keys(Token))									// purge user-allocated Tokens
 				if (key.startsWith('usr.'))													// only remove 'usr.' prefixed keys
@@ -449,10 +466,11 @@ export class Tempo {
 				calendar: dateTime.calendar,
 				timeZone: dateTime.timeZone,
 				locale: Tempo.#locale(),														// get from browser, if possible
+				formats: enums.FORMAT,															// initialize with default formats
 			})
 
 			Tempo.#setConfig(Tempo.#global,
-				{ store: $Tempo, scope: 'global' } as Tempo.Options,
+				{ store: $Tempo, scope: 'global' },
 				Default as Tempo.Options,														// set Tempo defaults
 				Tempo.readStore($Tempo),														// allow for storage-values to overwrite
 				Tempo.#setDiscovery(Tempo.#global),									// support "Global Discovery" of user-options
@@ -719,8 +737,8 @@ export class Tempo {
 			this.#zdt = this.#parse(this.#tempo, this.#options.anchor);		// attempt to interpret the DateTime arg
 
 			if (['iso8601', 'gregory'].includes(this.#local.config['calendar'] as any)) {
-				for (const key of Tempo.FORMAT.keys())
-					Object.assign(this.#fmt, { [key]: this.format(key) });
+				for (const key of this.#local.config.formats.keys())
+					Object.assign(this.#fmt, { [key]: this.format(key as enums.Format) });
 			}
 
 			Tempo.#terms																					// add the plug-in getters for the pre-defined Terms to the instance
@@ -735,6 +753,7 @@ export class Tempo {
 			}
 
 			secure(this.#fmt);																		// prevent mutations
+			secure(this.#term);																		// secure the initial object with getters
 			secure(this.#local.config);
 			secure(this.#local.parse);
 		} catch (err) {
@@ -744,29 +763,22 @@ export class Tempo {
 	}
 
 	// This function has be defined within the Tempo class (and not imported from another module) because it references a private-variable
-	/** this will add the self-updating {getter} on the Tempo.term object */
+	/** this will add a getter on the instance #term private field */
 	#setTerm(self: Tempo, name: PropertyKey | undefined, define: (this: any, key?: boolean) => any, isKeyOnly: boolean) {
 		if (isDefined(name) && isDefined(define)) {
 			Object.defineProperty(self.#term, name, {
 				configurable: false,
 				enumerable: false,
 				get: function () {
-					const props = Object.getOwnPropertyDescriptors(self.#term);
-					self.#term = {}																		// wipe down the 'term'
-					ownEntries(props)
-						.forEach(([prop, desc]) => {										// rebuild all the 'term' descriptors
-							if (prop !== name)														// except the current one
-								Object.defineProperty(self.#term, prop, desc);
-						})
-
 					const value = define.call(self, isKeyOnly);				// evaluate the term range-lookup
-					Object.defineProperty(self.#term, name, {					// re-add the property as a value instead of a getter
-						value,
-						configurable: false,
-						writable: false,
-						enumerable: true,
-					})
-					secure(self.#term);
+					self.#term = secure(Object.create(self.#term, {		// prototype-shadow the getter with a frozen value
+						[name]: {
+							value,
+							configurable: false,
+							writable: false,
+							enumerable: true
+						}
+					}))
 					return secure(value);
 				}
 			})
@@ -986,11 +998,11 @@ export class Tempo {
 
 		const keys = ownKeys(arg);
 		// if it contains any 'mutation' keys, then it's not (just) an options object
-		if (keys.some(key => ['year', 'month', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond', 'event', 'period', 'clock', 'time', 'date', 'start', 'mid', 'end'].includes(key as string)))
+		if (keys.some(key => enums.MUTATION.has(key)))
 			return false;
 
 		return keys
-			.some(key => ['snippet', 'layout', 'mdyLocales', 'mdyLayouts', 'debug', 'catch', 'store', 'sphere', 'timeStamp', 'pivot', 'locale', 'timeZone', 'calendar'].includes(key as string));
+			.some(key => enums.Option.has(key));
 	}
 
 	/** check if we've been given a ZonedDateTimeLike object */
@@ -1000,13 +1012,13 @@ export class Tempo {
 
 		// if it contains any 'options' keys, it's not a ZonedDateTime
 		const keys = ownKeys(tempo);
-		if (keys.some(key => ['snippet', 'layout', 'event', 'period', 'mdyLocales', 'mdyLayouts', 'debug', 'catch', 'store'].includes(key as string)))
+		if (keys.some(key => enums.Option.has(key) && key !== 'value'))
 			return false;
 
 		// we include {value} to allow for Tempo instances
 		return keys
 			.filter(isString)
-			.every(key => ['value', 'timeZoneId', 'calendarId', 'year', 'month', 'monthCode', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond', 'offset', 'timeZone'].includes(key))							// if every key in tempo-object is included in this array
+			.every(key => enums.ZONED_DATE_TIME.has(key))
 	}
 
 	/** trace the initial instance pattern-match */
@@ -1662,12 +1674,12 @@ export class Tempo {
 		return new this.#Tempo(zdt, { ...this.#options, ...options, ...overrides, anchor: zdt } as any);
 	}
 
-	#format = <K extends enums.Format>(fmt: K): Tempo.FormatType<K> => {
+	#format = <K extends string>(fmt: K): Tempo.FormatType<K> => {
 		if (isNull(this.#tempo))
 			return void 0 as unknown as Tempo.FormatType<K>;			// don't format <null> dates
 
-		const obj = Tempo.FORMAT;
-		let template = (isString(fmt) && Tempo.#hasOwn(obj, fmt))
+		const obj = this.#local.config.formats;
+		let template = (isString(fmt) && obj.has(fmt))
 			? (obj as any)[fmt] as string
 			: String(fmt);
 
@@ -1845,6 +1857,7 @@ export namespace Tempo {
 		/** patterns to help parse value */											layout: Layout | Tempo.PatternOption<Tempo.Pattern>;
 		/** custom date aliases (events). */										event: Event | Tempo.PatternOption<Tempo.Logic>;
 		/** custom time aliases (periods). */										period: Period | Tempo.PatternOption<Tempo.Logic>;
+		/** custom format strings to merge in the FORMAT enum */formats: Property<any>;
 		/** supplied value to parse */													value: Tempo.DateTime;
 		/** @internal temporary anchor used during parsing */		anchor: Temporal.ZonedDateTime;
 	}
@@ -1897,8 +1910,9 @@ export namespace Tempo {
 	 * the Config that Tempo will use to interpret a Tempo.DateTime  
 	 * derived from user-supplied options, else json-stored options, else reasonable-default options
 	 */
-	export interface Config extends Required<OptionsKeep> {
+	export interface Config extends Required<Omit<OptionsKeep, "formats">> {
 		/** configuration (global | local) */										scope: 'global' | 'local';
+		/** pre-configured format strings */										formats: Enum.wrap<any>;
 		[key: string]: any;
 	}
 
@@ -1910,6 +1924,7 @@ export namespace Tempo {
 		/** pre-defined config options for Tempo.#global */			options?: Options | (() => Options);
 		/** term plugins to be registered via Tempo.addTerm() */terms?: TermPlugin | TermPlugin[];
 		/** aliases to merge in the TimeZone dictionary */			timeZones?: Record<string, string>;
+		/** custom format strings to merge in the FORMAT dictionary */formats?: Property<any>;
 	}
 
 	/** Configuration to use for #until() and #since() argument */
@@ -1922,17 +1937,15 @@ export namespace Tempo {
 	export type Add = Partial<Record<Tempo.Unit, number>>
 
 	/** pre-configured format strings */
-	export type OwnFormat = Mutable<OwnOf<typeof Tempo.FORMAT>>
+	export type OwnFormat = Mutable<OwnOf<typeof enums.FORMAT>>
 	export type Format = {
 		[K in keyof OwnFormat]: FormatType<K>;
-	} & {
-		[key: string]: string | number;
-	}
+	} & Record<string, string | number>;
 
 	/** patterns that return a number */
 	export type NumericPattern = '{yyyy}{mm}' | '{yyww}' | '{yyyy}{mm}{dd}' | '{wy}{ww}' | '{wy}'
 
-	export type FormatType<K extends string> = K extends keyof OwnFormat
+	export type FormatType<K extends PropertyKey> = K extends keyof OwnFormat
 		? (OwnFormat[K] extends NumericPattern ? number : string)
 		: K extends NumericPattern ? number : string | number;
 
@@ -1983,8 +1996,8 @@ namespace Internal {
 Tempo.init();																								// initialize default global configuration
 
 type Fmt = {																								// used for the fmtTempo() shortcut
-	<F extends enums.Format>(fmt: F, tempo?: Tempo.DateTime, options?: Tempo.Options): Tempo.FormatType<F>;
-	<F extends enums.Format>(fmt: F, options: Tempo.Options): Tempo.FormatType<F>;
+	<F extends string>(fmt: F, tempo?: Tempo.DateTime, options?: Tempo.Options): Tempo.FormatType<F>;
+	<F extends string>(fmt: F, options: Tempo.Options): Tempo.FormatType<F>;
 }
 
 // shortcut functions to common Tempo properties / methods
