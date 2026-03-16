@@ -43,7 +43,7 @@ export const CONTEXT = {
 	'Deno': 'deno',
 	'GoogleAppsScript': 'google-apps-script',
 } as const
-export type CONTEXT = ValueOf<typeof CONTEXT>;
+export type CONTEXT = ValueOf<typeof CONTEXT>
 type Context = { global: any, type: CONTEXT }
 
 /** determine JavaScript environment context */

@@ -6,7 +6,7 @@ To use a NodeJS interactive session to test your Tempo library, you can use the 
 
 // turbo
 ```bash
-npx tsx -i --import ./repl.ts
+npx tsx -i --import ./test/repl.ts
 ```
 
 
@@ -32,4 +32,4 @@ t1.add({ days: 5 }).format('plain');
 ### Why this works
 - `npx tsx`: Uses the `tsx` runner to handle TypeScript files on the fly.
 - `-i`: Explicitly requests an interactive session.
-- `--import ./lib/repl.ts`: Loads the helper script before starting the REPL, which attaches `Tempo` to `globalThis`.
+- `--import ./test/repl.ts`: Loads the helper script before starting the REPL, which attaches `Tempo` to `globalThis`.

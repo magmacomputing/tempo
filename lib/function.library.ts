@@ -66,18 +66,18 @@ export function clearCache(obj: object) {
 }
 
 /** define a Descriptor for an Object's memoized-method */
-export function memoizeMethod<T>(name: PropertyKey, fn: (this: Property<any>, ...args: any[]) => T) {
+export function memoizeMethod<Context = Property<any>, T = any>(name: PropertyKey, fn: (this: Context, ...args: any[]) => T) {
 	return {
 		enumerable: false,
 		configurable: false,
 		writable: false,
-		value: function (this: Property<any>, ...args: any[]) {
+		value: function (this: Context, ...args: any[]) {
 			const key = `${String(name)},${JSON.stringify(args)}`;
-			let cache = wm.get(this);
+			let cache = wm.get(this as any);
 
 			if (!cache) {																					// add a new object into the WeakMap
 				cache = Object.create(null) as Property<any>;
-				wm.set(this, cache);
+				wm.set(this as any, cache);
 			}
 
 			if (isUndefined(cache[key])) {												// first time for this method

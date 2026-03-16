@@ -1,26 +1,24 @@
 import { Tempo, $Tempo } from '#core/shared/tempo.class.js';
 
 describe('Global Configuration Discovery', () => {
-	const sym = Symbol.for($Tempo);
-
 	beforeEach(() => {
 		// Clear discovery before each test
-		delete (globalThis as any)[sym];
+		delete (globalThis as any)[$Tempo];
 		Tempo.init();
 	});
 
 	afterEach(() => {
-		delete (globalThis as any)[sym];
+		delete (globalThis as any)[$Tempo];
 		Tempo.init();
 	}); // Reset Tempo to default state
 
 	afterAll(() => {
-		delete (globalThis as any)[sym];
+		delete (globalThis as any)[$Tempo];
 		Tempo.init(); // Clean up
 	});
 
 	test('Tempo automatically discovers and applies via Symbol.for($Tempo) (Discovery Contract)', () => {
-		(globalThis as any)[sym] = {
+		(globalThis as any)[$Tempo] = {
 			options: { timeZone: 'Europe/Paris', customGlobalVal: true }
 		};
 
@@ -33,7 +31,7 @@ describe('Global Configuration Discovery', () => {
 	});
 
 	test('Tempo supports functional options in Discovery Contract', () => {
-		(globalThis as any)[sym] = {
+		(globalThis as any)[$Tempo] = {
 			options: () => ({ timeZone: 'Asia/Tokyo', customGlobalFn: true })
 		};
 
@@ -46,7 +44,7 @@ describe('Global Configuration Discovery', () => {
 	});
 
 	test('Explicit init options override Global Discovery', () => {
-		(globalThis as any)[sym] = {
+		(globalThis as any)[$Tempo] = {
 			options: { timeZone: 'Europe/Paris' }
 		};
 
@@ -58,7 +56,7 @@ describe('Global Configuration Discovery', () => {
 	});
 
 	test('Tempo discovers global options for events and periods', () => {
-		(globalThis as any)[sym] = {
+		(globalThis as any)[$Tempo] = {
 			options: {
 				event: { 'global launch': '2026-10-01' },
 				period: { 'global teatime': '15:30' }

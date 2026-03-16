@@ -36,11 +36,11 @@ export class Logify {
 		throw new Error(`${this.#name}${msg}`);									// this goes back to the caller
 	}
 
-	/** console.log */																				log = this.#log.bind(this, Method.Log);
-	/** console.info */																				info = this.#log.bind(this, Method.Info);
-	/** console.warn */																				warn = this.#log.bind(this, Method.Warn);
-	/** console.debug */																			debug = this.#log.bind(this, Method.Debug);
-	/** console.error */																			error = this.#log.bind(this, Method.Error);
+	/** console.log */																				log = (...msg: any[]) => this.#log(Method.Log, ...msg);
+	/** console.info */																				info = (...msg: any[]) => this.#log(Method.Info, ...msg);
+	/** console.warn */																				warn = (...msg: any[]) => this.#log(Method.Warn, ...msg);
+	/** console.debug */																			debug = (...msg: any[]) => this.#log(Method.Debug, ...msg);
+	/** console.error */																			error = (...msg: any[]) => this.#log(Method.Error, ...msg);
 
 	constructor(self?: Logify.Constructor | string, opts = {} as Logify.Constructor) {
 		const arg = asType(self);

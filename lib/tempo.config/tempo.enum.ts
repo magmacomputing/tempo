@@ -1,6 +1,6 @@
-import { enumify } from '#core/shared/enumerate.library.js';
+import { enumify, type Enum } from '#core/shared/enumerate.library.js';
 import { secure } from '#core/shared/utility.library.js';
-import type { KeyOf, ValueOf, LooseUnion } from '#core/shared/type.library.js';
+import type { KeyOf, ValueOf, LooseUnion, Property } from '#core/shared/type.library.js';
 
 /**
  * Various enumerations used throughout Tempo library.  
@@ -23,10 +23,6 @@ export const MONTHS = enumify(['Every', 'January', 'February', 'March', 'April',
 export type MONTH = KeyOf<typeof MONTH>
 export type MONTHS = KeyOf<typeof MONTHS>
 export type Month = ValueOf<typeof MONTH>
-
-/** DURATION is now an alias for TIME */
-// export const DURATION = enumify(['year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond']);
-// export const DURATIONS = enumify(['years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds', 'nanoseconds']);
 
 export const SEASON = enumify({ Summer: 'summer', Autumn: 'autumn', Winter: 'winter', Spring: 'spring' });
 export const COMPASS = enumify({ North: 'north', East: 'east', South: 'south', West: 'west' });
@@ -103,11 +99,11 @@ export const ELEMENT = enumify({
 export type ELEMENT = ValueOf<typeof ELEMENT>
 export type Element = KeyOf<typeof ELEMENT>
 
-export const MUTATION = enumify(ELEMENT.values()).extend(['event', 'period', 'clock', 'time', 'date', 'start', 'mid', 'end'])
+export const MUTATION = enumify(ELEMENT.values()).extend(['event', 'period', 'clock', 'time', 'date', 'start', 'mid', 'end']) as any;
 export type MUTATION = ValueOf<typeof MUTATION>
 export type Mutation = KeyOf<typeof MUTATION>
 
-export const ZONED_DATE_TIME = enumify(['value', 'timeZoneId', 'calendarId', 'monthCode', 'offset', 'timeZone']).extend(ELEMENT.values())
+export const ZONED_DATE_TIME = enumify(['value', 'timeZoneId', 'calendarId', 'monthCode', 'offset', 'timeZone']).extend(ELEMENT.values()) as any;
 export type ZONED_DATE_TIME = ValueOf<typeof ZONED_DATE_TIME>
 export type ZonedDateTime = KeyOf<typeof ZONED_DATE_TIME>
 
