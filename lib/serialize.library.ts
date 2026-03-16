@@ -272,7 +272,7 @@ function typeify(json: any, sentinel?: Function) {
 	if (!isObject(json) || ownKeys(json).length !== 1)
 		return json;																						// only JSON Objects, with a single key:value pair
 
-	const [$type, value] = ownEntries(json)[0] as [`$${Type}`, any];
+	const [$type, value] = ownEntries(json)[0] as unknown as [`$${Type}`, any];
 	if (!String($type).startsWith('$'))
 		return json;																						// not a serialized single key:value Object
 	const type = $type.substring(1) as Type;									// remove '$' prefix

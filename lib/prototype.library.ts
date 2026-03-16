@@ -10,7 +10,7 @@ import type { Property } from '#core/shared/type.library.js';
  * extend an Object's prototype to include new method, if no clash
  */
 export const patch = <T extends Record<'prototype' | 'name', any>>(proto: T, property: string, method: Function) => {
-	if (proto.prototype.hasOwnProperty(property)) {						// if already defined,
+	if (Object.hasOwn(proto.prototype, property)) {						// if already defined,
 		if (trimAll(method.toString()) !== trimAll(proto.prototype?.[property]?.toString()))
 			console.warn(`${proto.name}.${property} already defined`);	// show warning if different method definition
 	} else {

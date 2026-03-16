@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Custom Global Formats**: Introduced support for defining custom format layouts via Global Discovery (`Symbol.for($Tempo)`), making them available across all instances.
+- **Type Safety Refinement**: Significantly enhanced the `Tempo` class by removing redundant `as any` casts, particularly in `#parse` and timezone handling, achieved through better destructuring and explicit string resolution.
+- **Modern Syntax Adoption**: Updated the codebase to use `Object.getOwn()` instead of legacy `Object.prototype.hasOwnProperty.call()` for cleaner and more modern property checks.
 
 ### Changed
 - **Term Traversal Logic**: Unified prototype traversal by introducing a shared `$Base` symbol to terminate chain climbing, improving both performance and collision resistance.
@@ -17,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Term Getters Performance**: Refactored `#setTerm` logic to use prototype shadowing (`Object.create`), improving performance and reducing overhead.
 - **Strict Global Discovery**: Standardized the global configuration mechanism by removing legacy `TempoOptions` support and strictly enforcing the `Tempo.Discovery` contract.
 - **Enumify Extend**: Refactored the internal `extend` utility within `enumify` for improved maintainability.
+- **Parsing Reorganization**: Adjusted the `#parse` method to resolve `tz` and `cal` identifiers *after* configuration updates, ensuring internal state always reflects the most current settings.
+
+### Fixed
+- **Timezone Round-trip Restoration**: Fully resolved critical serialization regressions by updating `#setConfig` to recursively handle the `config` property during revival.
+- **Instance Timezone Integrity**: Restored the safe update to `#local.config.timeZone` in `#parseZone`, ensuring internal getters stay in sync with date-time strings without clobbering initial state.
+- **String Handling Cleanup**: Removed redundant `String()` wraps in regex group parsing and mutation logic where types were already guaranteed.
 
 ## [1.0.7] - 2026-03-14
 

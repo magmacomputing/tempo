@@ -99,9 +99,9 @@ export function assertNever(val: never): asserts val is never { throw new Error(
 /** bottom value */																					export type Nullish = null | undefined | void;
 /** Generic Record */																				export type Property<T> = Record<PropertyKey, T>;
 /** Generic Record or Array */															export type Obj = Property<any> | Array<any>
-
+type SafeRecursion = 50;
 type SafeCount<T, Acc extends any[] = [], Last = LastInUnion<T>> =
-	Acc['length'] extends 1000 ? number :											// limit of recursive depth
+	Acc['length'] extends SafeRecursion ? number :						// limit of recursive depth
 	0 extends (1 & T) ? number :															// detect 'any'
 	[T] extends [never] ? Acc['length'] :
 	SafeCount<Exclude<T, Last>, [...Acc, any]>
@@ -109,7 +109,7 @@ type SafeCount<T, Acc extends any[] = [], Last = LastInUnion<T>> =
 /** Own properties of an Array, Object, Map or Enum */
 export type WellKnownSymbols = { [K in keyof SymbolConstructor]: SymbolConstructor[K] extends symbol ? SymbolConstructor[K] : never }[keyof SymbolConstructor]
 /** Augmentable map of method/property names to exclude from KeyOf/ValueOf/OwnOf */
-export interface IgnoreOfMap {}
+export interface IgnoreOfMap { }
 type IgnoreOf = WellKnownSymbols | keyof IgnoreOfMap;
 
 export type CountOf<T> = SafeCount<T>
@@ -321,7 +321,7 @@ type LastInUnion<U> = UnionToIntersection<U extends unknown ? (x: U) => 0 : neve
  * usage: UnionToTuple<A | B> = [A, B]
  */
 export type UnionToTuple<T, Acc extends any[] = [], Last = LastInUnion<T>> =
-	Acc['length'] extends 1000 ? T[] :												// limit of recursive depth
+	Acc['length'] extends SafeRecursion ? T[] :								// limit of recursive depth
 	[T] extends [never] ? Acc :
 	UnionToTuple<Exclude<T, Last>, [Last, ...Acc]>
 

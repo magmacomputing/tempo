@@ -3,9 +3,8 @@ import type { Obj, KeyOf, ValueOf, EntryOf, Primitives } from '#core/shared/type
 
 /** property marker used to terminate prototype traversal in ownEntries() */
 export const $Base = Symbol.for('$Base');
-
-/** Node.js custom inspection symbol */
-export const $Inspect = Symbol.for('nodejs.util.inspect.custom');
+/** property marker used to unwrap proxies in ownEntries() */
+export const $Target = Symbol.for('$Target');
 
 /** mutate Object | Array by excluding values with specified primitive 'types' */
 export function exclude<T extends Obj>(obj: T, ...types: (Primitives | Lowercase<Primitives>)[]) {
@@ -90,10 +89,13 @@ export function ownEntries<T extends Obj>(json: T, all = false) {
 
 	const getOwn = (obj: any): [PropertyKey, any][] => {			// helper function to get own enumerable properties
 		const lvl: [PropertyKey, any][] = [];
-		Reflect.ownKeys(obj).forEach(key => {
-			const desc = Object.getOwnPropertyDescriptor(obj, key);
+		const t = obj[$Target] ?? obj;													// unwrap if it's a proxy
+
+		Reflect.ownKeys(t).forEach(key => {
+			const desc = Object.getOwnPropertyDescriptor(t, key);
 			if (desc?.enumerable) lvl.push([key, desc.value]);
 		});
+
 		return lvl;
 	}
 
@@ -110,11 +112,14 @@ export function ownEntries<T extends Obj>(json: T, all = false) {
 	do {
 		const lvl = getOwn(proto);
 		if (lvl.length) levels.push(lvl);
-		if (Object.prototype.hasOwnProperty.call(proto, $Base)) break;			// stop at marker
-		proto = Object.getPrototypeOf(proto);
+
+		const t = proto[$Target] ?? proto;											// CRITICAL: unwrap before checking marker to avoid trap recursion
+		if (Object.hasOwn(t, $Base)) break;
+
+		proto = Object.getPrototypeOf(t);
 	} while (proto && proto !== Object.prototype && ++depth < limit);
 
-	return [...new Map<PropertyKey, any>(levels.reverse().flat()).entries()] as EntryOf<T>[];
+	return [...new Map(levels.reverse().flat()).entries()] as EntryOf<T>[];
 }
 
 /** return an Object containing all own and inherited enumerable properties */

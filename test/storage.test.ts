@@ -2,7 +2,7 @@ import { Tempo, $Tempo } from '#core/shared/tempo.class.js';
 
 describe('Tempo storage functionality', () => {
 	const customKey = 'my-custom-key';
-	const defaultKey = $Tempo;
+	const defaultKey = Symbol.keyFor($Tempo)!;
 
 	beforeEach(() => {
 		// Clear process.env for the keys we use

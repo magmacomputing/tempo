@@ -1,21 +1,19 @@
 import { Tempo, $Tempo } from '#core/shared/tempo.class.js';
 
 describe('Global Discovery (Symbol.for($Tempo))', () => {
-	const symbolKey = Symbol.for($Tempo);
-
 	beforeEach(() => {
 		// Clear all discovery mechanisms
-		delete (globalThis as any)[symbolKey];
+		delete (globalThis as any)[$Tempo];
 		Tempo.init();
 	});
 
 	afterEach(() => {
-		delete (globalThis as any)[symbolKey];
+		delete (globalThis as any)[$Tempo];
 		Tempo.init();
 	});
 
 	it('should discover and merge global options', () => {
-		(globalThis as any)[symbolKey] = {
+		(globalThis as any)[$Tempo] = {
 			options: {
 				locale: 'en-AU',
 				limit: 42
@@ -28,7 +26,7 @@ describe('Global Discovery (Symbol.for($Tempo))', () => {
 	});
 
 	it('should support functional global options', () => {
-		(globalThis as any)[symbolKey] = {
+		(globalThis as any)[$Tempo] = {
 			options: () => ({
 				locale: 'ja-JP'
 			})
@@ -40,7 +38,7 @@ describe('Global Discovery (Symbol.for($Tempo))', () => {
 
 	it('should register global terms', () => {
 		const mockDefine = vi.fn();
-		(globalThis as any)[symbolKey] = {
+		(globalThis as any)[$Tempo] = {
 			terms: [{
 				key: 'globalTerm',
 				description: 'A globally registered term',
@@ -54,7 +52,7 @@ describe('Global Discovery (Symbol.for($Tempo))', () => {
 	});
 
 	it('should merge global timezone aliases', () => {
-		(globalThis as any)[symbolKey] = {
+		(globalThis as any)[$Tempo] = {
 			timeZones: {
 				'MYTZ': 'Australia/Brisbane'
 			}
@@ -68,7 +66,7 @@ describe('Global Discovery (Symbol.for($Tempo))', () => {
 	});
 
 	it('should merge global custom formats', () => {
-		(globalThis as any)[symbolKey] = {
+		(globalThis as any)[$Tempo] = {
 			formats: {
 				'custom': '{yyyy}!!{mm}!!{dd}'
 			}
