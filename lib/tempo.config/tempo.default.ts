@@ -56,8 +56,8 @@ export type Token = typeof Token
 
 /**
  * user will need to know these in order to configure their own patterns  
- * Tempo.Snippet is a simple regex pattern object						, e.g. { Symbol('yy'): /(([0-9]{2})?[0-9]{2})/ }    
- * Tempo.Layout is a string-combination of Snippet names		, e.g. '{yy}{sep}{mm}({sep}{dd})?{sfx}?'  
+ * Tempo.Snippet is a simple regex pattern object						e.g. { Symbol('yy'): /(([0-9]{2})?[0-9]{2})/ }    
+ * Tempo.Layout is a string-combination of Snippet names		e.g. '{yy}{sep}{mm}({sep}{dd})?{sfx}?'  
  * Tempo.Pattern is a translation of a Layout/Snippets into an anchored regex.  
  * The {pattern} is used to parse a string | number in the Tempo constructor {DateTime} argument
  */
@@ -83,7 +83,7 @@ export const Snippet = looseIndex<symbol, RegExp>()({
 	[Token.mod]: new RegExp(`((?<mod>${Match.modifier.source})?{nbr} *)`),	// modifier (+,-,<,<=,>,>=) plus optional offset-count
 	[Token.sep]: new RegExp(`(?:${Match.separator.source})`),	// date-input separator character "/\\-., " (non-capture group)
 	[Token.unt]: /(?<unt>year|month|week|day|hour|minute|second|millisecond)(?:s)?/,	// useful for '2 days ago' etc
-	[Token.brk]: /(?:\[(?<brk>[^\]]+)\])*/,										// timezone/calendar brackets [...]
+	[Token.brk]: /\[(?<brk>[^\]]+)\](?:\[(?<cal>[^\]]+)\])?/,	// timezone/calendar brackets [...]
 })
 export type Snippet = typeof Snippet
 

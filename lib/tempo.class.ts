@@ -352,8 +352,10 @@ export class Tempo {
 
 					case 'formats':
 						if (Tempo.#isLocal(shape) && !Tempo.#hasOwn(shape.config, 'formats'))
-							shape.config.formats = shape.config.formats.extend({}); // shadow global
-						shape.config.formats = shape.config.formats.extend(arg.value as Property<any>);
+							shape.config.formats = shape.config.formats.extend({}); // shadow parent prototype
+
+						if (isObject(arg.value))
+							shape.config.formats = shape.config.formats.extend(arg.value as Property<any>);
 						break;
 
 					case 'anchor':
@@ -446,8 +448,7 @@ export class Tempo {
 	 */
 	static init(options: Tempo.Options = {}) {
 		if (isEmpty(options)) {																	// if no options supplied, reset all
-			Tempo.#global.config = {} as Tempo.Config;						// remove previous config
-			Tempo.#global.parse = {																// set parsing rules
+			Tempo.#global.parse = Object.create({									// 1. Setup Library Defaults on the prototype for #global.parse
 				snippet: { ...Snippet } as Snippet,
 				layout: { ...Layout } as Layout,
 				event: { ...Event } as Event,
@@ -455,26 +456,27 @@ export class Tempo {
 				mdyLocales: Tempo.#mdyLocales(Default.mdyLocales as Tempo.Options['mdyLocales']),
 				mdyLayouts: asArray(Default.mdyLayouts as Tempo.Options['mdyLayouts']) as Tempo.Pair[],
 				pivot: Default.pivot,
-			} as Tempo.Parse;																			// remove previous parsing rules
+			})
 
+			const { calendar, timeZone } = Intl.DateTimeFormat().resolvedOptions();
+			Tempo.#global.config = Object.create({								// 2. Setup Library Defaults on the prototype for #global.config
+				...omit({ ...Default }, ...enums.PARSE.keys()),			// use Default as base, omit parse-related
+				calendar,
+				timeZone,
+				locale: Tempo.#locale(),
+				formats: enums.FORMAT,
+			})
+
+			Tempo.#usrCount = 0;																	// reset user-key counter
 			for (const key of Object.keys(Token))									// purge user-allocated Tokens
 				if (key.startsWith('usr.'))													// only remove 'usr.' prefixed keys
 					delete Token[key];
-			Tempo.#usrCount = 0;																	// reset user-key counter
-			Tempo.addTerm(...registerTerms);											// register built-in term plugins
 
-			const dateTime = Intl.DateTimeFormat().resolvedOptions();
-			Object.assign(Tempo.#global.config, {									// some global locale-specific defaults
-				calendar: dateTime.calendar,
-				timeZone: dateTime.timeZone,
-				locale: Tempo.#locale(),														// get from browser, if possible
-				formats: enums.FORMAT,															// initialize with default formats
-			})
+			Tempo.addTerm(...registerTerms);											// register built-in term plugins
 
 			const storeKey = Symbol.keyFor($Tempo) as string;
 			Tempo.#setConfig(Tempo.#global,
 				{ store: storeKey, scope: 'global' },
-				Default as Tempo.Options,														// set Tempo defaults
 				Tempo.readStore(storeKey),													// allow for storage-values to overwrite
 				Tempo.#setDiscovery(Tempo.#global),									// support "Global Discovery" of user-options
 			)
@@ -485,7 +487,7 @@ export class Tempo {
 		if (Context.type === CONTEXT.Browser || options.debug === true)
 			Tempo.#dbg.info(Tempo.config, 'Tempo:', Tempo.#global.config);
 
-		return Tempo.#global.config;
+		return Tempo.config;
 	}
 
 	/**
@@ -649,7 +651,8 @@ export class Tempo {
 
 	/** Tempo global config settings */
 	static get config() {
-		return secure({ ...Tempo.#global.config });
+		const clone = Object.create(Object.getPrototypeOf(Tempo.#global.config), Object.getOwnPropertyDescriptors(Tempo.#global.config));
+		return getProxy(omit(clone, ...enums.PARSE.keys()));
 	}
 
 	/** Tempo initial default settings */
@@ -812,7 +815,11 @@ export class Tempo {
 	/** Full weekday name (e.g., 'Monday') */									get wkd() { return Tempo.WEEKDAYS.keyOf(this.#zdt.dayOfWeek as Tempo.Weekday) }
 	/** ISO weekday number: Mon=1, Sun=7 */										get dow() { return this.#zdt.dayOfWeek as Tempo.Weekday }
 	/** Nanoseconds since Unix epoch (BigInt) */							get nano() { return this.#zdt.epochNanoseconds }
-	/** Instance-specific configuration settings */						get config() { return omit({ ...this.#local.config }, 'scope', 'value', 'anchor') }
+	/** current Tempo configuration */
+	get config() {
+		const clone = Object.create(Object.getPrototypeOf(this.#local.config), Object.getOwnPropertyDescriptors(this.#local.config));
+		return getProxy(omit(clone, 'scope', 'value', 'anchor'));
+	}
 	/** Instance-specific parse rules (merged with global) */	get parse() { return this.#local.parse }
 	/** Object containing results from all term plugins */		get term() { return getProxy(this.#term) }
 	/** Formatted results for all pre-defined format codes */	get fmt() { return this.#fmt }
@@ -877,14 +884,13 @@ export class Tempo {
 	 * parse object without affecting the global parse object.
 	 */
 	#setLocal(options: Tempo.Options) {
-		// copy down current global config to local instance
-		this.#local.config = Object.create(Tempo.#global.config);// set prototype-link to global config
-		const { mdyLocales, mdyLayouts, ...config } = Tempo.#global.config as Tempo.Options;
-		Object.assign(this.#local.config, config, { scope: 'local' });
+		// setup local config (prototype-linked to global config)
+		this.#local.config = Object.create(Tempo.#global.config);
+		Object.assign(this.#local.config, { scope: 'local' });
 
-		// setup effective parse rules for this instance (prototype-link to global)
-		this.#local.parse = Object.create(Tempo.#global.parse);	// set prototype to global parse
-		this.#local.parse.result = [];													// start with empty result
+		// setup local parse rules (prototype-linked to global parse)
+		this.#local.parse = Object.create(Tempo.#global.parse);
+		this.#local.parse.result = [];
 
 		Tempo.#setConfig(this.#local, options);									// set #local config
 	}
@@ -994,13 +1000,12 @@ export class Tempo {
 	#isOptions(arg: any): arg is Tempo.Options {
 		if (!isObject(arg) || arg.constructor !== Object) return false;
 
-		const keys = ownKeys(arg);
-		// if it contains any 'mutation' keys, then it's not (just) an options object
+		const keys = ownKeys(arg);															// if it contains any 'mutation' keys, then it's not (just) an options object
 		if (keys.some(key => enums.MUTATION.has(key)))
 			return false;
 
 		return keys
-			.some(key => enums.Option.has(key));
+			.some(key => enums.OPTION.has(key));
 	}
 
 	/** check if we've been given a ZonedDateTimeLike object */
@@ -1010,7 +1015,7 @@ export class Tempo {
 
 		// if it contains any 'options' keys, it's not a ZonedDateTime
 		const keys = ownKeys(tempo);
-		if (keys.some(key => enums.Option.has(key) && key !== 'value'))
+		if (keys.some(key => enums.OPTION.has(key) && key !== 'value'))
 			return false;
 
 		// we include {value} to allow for Tempo instances
@@ -1376,7 +1381,15 @@ export class Tempo {
 			dateTime = dateTime.withTimeZone(zone);								// apply timezone override
 		}
 
+		const cal = groups["cal"];
+		if (cal) {
+			const calendar = cal.startsWith('u-ca=') ? cal.substring(5) : cal;
+			this.#local.config.calendar = calendar;
+			dateTime = dateTime.withCalendar(calendar);
+		}
+
 		delete groups["brk"];
+		delete groups["cal"];
 		delete groups["tzd"];
 
 		return dateTime;

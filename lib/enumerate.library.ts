@@ -2,7 +2,7 @@ import { secure } from '#core/shared/utility.library.js';
 import { Serializable } from '#core/shared/class.library.js';
 import { stringify } from '#core/shared/serialize.library.js';
 import { memoizeMethod } from '#core/shared/function.library.js';
-import { ownEntries } from '#core/shared/reflection.library.js';
+import { ownEntries, $Base } from '#core/shared/reflection.library.js';
 import { getProxy } from './proxy.library.js';
 import { asType, isArray, isNumber } from '#core/shared/type.library.js';
 import type { Index, Prettify, Invert, Property, CountOf, KeyOf, ValueOf, EntryOf, LooseKey, WellKnownSymbols } from '#core/shared/type.library.js';
@@ -29,8 +29,8 @@ type Proto<T extends Property<any>> = Prettify<{
 	/** iterate through all Enum entries */										forEach(fn: (entry: EntryOf<T>, index: number, enumify: wrap<T>) => void, thisArg?: any): void;
 	/** filter Enum entries and return a new Enum */					filter(fn: (entry: EntryOf<T>, index: number, enumify: wrap<T>) => boolean, thisArg?: any): wrap<Partial<T>>;
 	/** map Enum entries and return a new Enum */							map(fn: (entry: EntryOf<T>, index: number, enumify: wrap<T>) => any, thisArg?: any): wrap<Property<any>>;
-	/** extend an existing Enum with new property-entries */	extend<const E extends ArrayArg>(list: E): wrap<T & Index<E>>;
-	/** extend an existing Enum with new property-entries */	extend<const E extends ObjectArg>(list: E): wrap<T & E>;
+	/** extend an existing Enum with new property-entries */	extend<const E extends ArrayArg>(list: E): wrap<Prettify<Omit<T, keyof Index<E>> & Index<E>>>;
+	/** extend an existing Enum with new property-entries */	extend<const E extends ObjectArg>(list: E): wrap<Prettify<Omit<T, keyof E> & E>>;
 	/** iterate through all Enum entries */										readonly [Symbol.iterator]: () => IterableIterator<EntryOf<T>>;
 	/** used to identify the Enumify type */									readonly [Symbol.toStringTag]: typeof tag;
 }>
@@ -70,7 +70,7 @@ const ENUM = secure(Object.create(null, {
 	invert: memoizeMethod('invert', function (this: Context) { return enumify(this.entries().reduce((acc: ObjectArg, [key, val]: [PropertyKey, any]) => ({ ...acc, [val]: key }), {} as ObjectArg)) }),
 	toString: memoizeMethod('toString', function (this: Context) { return stringify(this.toJSON()) }),
 
-	has: value(function (this: Context, key: PropertyKey) { return this.keys().includes(key) }),
+	has: value(function (this: Context, key: PropertyKey) { return this.keys().includes(key as any) }),
 	includes: value(function (this: Context, search: any) { return this.values().includes(search) }),
 	keyOf: value(function (this: Context, search: any) { return this.invert()[search] }),
 	extend: value(function (this: Context, list: any): any { return (enumify as any).call(this, list) }),
@@ -124,6 +124,9 @@ export function enumify<T>(this: any, list: T): any {
 	}
 
 	const target = Object.create(proto, Object.getOwnPropertyDescriptors(stash));
+	if (proto === ENUM) {																			// if root enum, add non-enumerable marker
+		Object.defineProperty(target, $Base, { enumerable: false, value: true });
+	}
 	return getProxy(secure(target));
 }
 

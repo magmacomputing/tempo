@@ -107,6 +107,24 @@ If you have a question, find a bug, or want to suggest a new feature:
 2. **Questions & Ideas**: Start a thread in [Discussions](https://github.com/magmacomputing/tempo/discussions).
 3. **Direct Contact**: You can reach me at `hello@magmacomputing.com.au`.
 
+## 🛡️ Privacy & Transparency
+
+We value your privacy. **Tempo** does not include any runtime telemetry or "phone-home" features. To understand adoption and prioritize features, we use [Scarf](https://scarf.sh/) to aggregate anonymous download statistics. 
+
+- **No Runtime Tracking**: Tempo will never make network requests from your application.
+- **Anonymous Data**: We only see aggregated metadata (e.g., download volume, general geographic region) provided by the registry gateway.
+- **Opt-out**: You can opt-out of Scarf's tracking by following their [opt-out instructions](https://scarf.sh/privacy-policy#opt-out).
+
+## 🗳️ Feedback & Reactions
+
+How are we doing? Let us know with a simple reaction!  
+*(This will open a pre-filled GitHub Issue)*
+
+[🚀 Premium!](https://github.com/magmacomputing/tempo/issues/new?title=Feedback:%20🚀%20Premium!) &nbsp; | &nbsp; 
+[⭐ Loving it!](https://github.com/magmacomputing/tempo/issues/new?title=Feedback:%20⭐%20Loving%20it!) &nbsp; | &nbsp; 
+[💡 Needs work](https://github.com/magmacomputing/tempo/issues/new?title=Feedback:%20💡%20Needs%20work) &nbsp; | &nbsp; 
+[🐞 Found a bug](https://github.com/magmacomputing/tempo/issues/new?title=Feedback:%20🐞%20Found%20a%20bug)
+
 ## ⚖️ License
 
 Distributed under the MIT License. See `LICENSE` for more information.

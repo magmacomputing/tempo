@@ -45,4 +45,17 @@ describe('enumify stealth proxy', () => {
     expect(EXTENDED.B).toBe(20);
     expect(EXTENDED.values()).toEqual([1, 20, 3]);
   });
+
+  it('should support Symbol keys in enums', () => {
+    const sym = Symbol('test');
+    const MyEnum = enumify({
+      [sym]: 'symbol-value',
+      standard: 'string-value'
+    });
+
+    expect(MyEnum.keys()).toContain(sym);
+    expect(MyEnum.has(sym)).toBe(true);
+    expect((MyEnum as any)[sym]).toBe('symbol-value');
+    expect(MyEnum.entries().find(([key]) => key === sym)).toBeDefined();
+  });
 });
