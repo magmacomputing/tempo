@@ -107,6 +107,10 @@ export const ZONED_DATE_TIME = enumify(['value', 'timeZoneId', 'calendarId', 'mo
 export type ZONED_DATE_TIME = ValueOf<typeof ZONED_DATE_TIME>
 export type ZonedDateTime = KeyOf<typeof ZONED_DATE_TIME>
 
-export const Option = enumify(['value', 'mdyLocales', 'mdyLayouts', 'store', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period', 'formats'])
-export type Option = typeof Option
-export type Options = KeyOf<Option>
+export const OPTION = enumify(['value', 'mdyLocales', 'mdyLayouts', 'store', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period', 'formats'])
+export type OPTION = typeof OPTION
+export type Option = KeyOf<OPTION>
+
+export const PARSE = enumify(['mdyLocales', 'mdyLayouts', 'formats', 'pivot', 'snippet', 'layout', 'event', 'period', 'anchor', 'value'])
+export type PARSE = typeof PARSE
+export type Parse = KeyOf<PARSE>

@@ -83,7 +83,7 @@ export function ownValues<T extends Obj>(json: T) {
 }
 
 /** tuple of enumerable entries with string | symbol keys */
-export function ownEntries<T extends Obj>(json: T, all = false) {
+export function ownEntries<T extends Obj>(json: T, all = false, boundary = false) {
 	if (!json || typeof json !== 'object')
 		return [] as EntryOf<T>[];
 
@@ -110,11 +110,11 @@ export function ownEntries<T extends Obj>(json: T, all = false) {
 	let proto: any = json;
 
 	do {
+		const t = proto[$Target] ?? proto;											// CRITICAL: unwrap before checking marker to avoid trap recursion
+		if (boundary && Object.hasOwn(t, $Base) && depth > 0) break;						// break before collecting if boundary requested and $Base is present
+
 		const lvl = getOwn(proto);
 		if (lvl.length) levels.push(lvl);
-
-		const t = proto[$Target] ?? proto;											// CRITICAL: unwrap before checking marker to avoid trap recursion
-		if (Object.hasOwn(t, $Base)) break;
 
 		proto = Object.getPrototypeOf(t);
 	} while (proto && proto !== Object.prototype && ++depth < limit);
@@ -123,8 +123,8 @@ export function ownEntries<T extends Obj>(json: T, all = false) {
 }
 
 /** return an Object containing all own and inherited enumerable properties */
-export function allEntries<T extends Obj>(json: T) {
-	return Object.fromEntries(ownEntries(json, true));
+export function allEntries<T extends Obj>(json: T, boundary = false) {
+	return Object.fromEntries(ownEntries(json, true, boundary));
 }
 
 /** get a string-array of 'getter' names for an object */

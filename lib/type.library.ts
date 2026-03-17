@@ -102,9 +102,9 @@ export function assertNever(val: never): asserts val is never { throw new Error(
 type SafeRecursion = 50;
 type SafeCount<T, Acc extends any[] = [], Last = LastInUnion<T>> =
 	Acc['length'] extends SafeRecursion ? number :						// limit of recursive depth
-	0 extends (1 & T) ? number :															// detect 'any'
-	[T] extends [never] ? Acc['length'] :
-	SafeCount<Exclude<T, Last>, [...Acc, any]>
+	0 extends (1 & T) ? number :															// detect 'number'
+	[T] extends [never] ? Acc['length'] :											// detect 'never'
+	SafeCount<Exclude<T, Last>, [...Acc, any]>								// count remaining
 
 /** Own properties of an Array, Object, Map or Enum */
 export type WellKnownSymbols = { [K in keyof SymbolConstructor]: SymbolConstructor[K] extends symbol ? SymbolConstructor[K] : never }[keyof SymbolConstructor]
@@ -114,7 +114,7 @@ type IgnoreOf = WellKnownSymbols | keyof IgnoreOfMap;
 
 export type CountOf<T> = SafeCount<T>
 export type OwnOf<T extends Obj> = T extends Array<any> ? { [K in number]: T[number] } : Omit<T, IgnoreOf>
-export type KeyOf<T extends Obj> = T extends Array<any> ? number : Exclude<Extract<keyof T, PropertyKey>, IgnoreOf>
+export type KeyOf<T extends Obj> = T extends Array<any> ? number : Exclude<Extract<keyof T, string | symbol>, IgnoreOf>
 export type ValueOf<T extends Obj> = T extends Array<any> ? T[number] : T[KeyOf<T>]
 export type EntryOf<T extends Obj> = [KeyOf<T>, ValueOf<T>]
 

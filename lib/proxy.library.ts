@@ -19,7 +19,7 @@ export function getProxy<T extends object>(target: T) {
           return val;
 
         if (!cachedJSON) {                                  // otherwise, create a virtual closure
-          cachedJSON = () => allEntries(receiver);          // Object.fromEntries(ownEntries(receiver, true));
+          cachedJSON = () => allEntries(receiver, true);    // Object.fromEntries(ownEntries(receiver, true, true));
           cachedJSON.$isVirtual = true;                     // and mark it as virtual
         }
 
