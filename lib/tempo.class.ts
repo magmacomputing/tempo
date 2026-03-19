@@ -108,7 +108,7 @@ export class Tempo {
 	/** return the Prototype parent of an object */						static #proto(obj: object) { return Object.getPrototypeOf(obj) }
 	/** test object has own property with the given key */		static #hasOwn(obj: object, key: string) { return Object.hasOwn(obj, key) }
 	/** return whether the shape is 'local' or 'global' */		static #isLocal(shape: Tempo.State) { return shape.config.scope === 'local' }
-	/** create an object based on a prototype */							static #create(obj: object, name: string) { return Object.create(Tempo.#proto(obj)[name]) }
+	/** create an object based on a prototype */							static #create<T extends object>(obj: object, name: string): T { return Object.create(Tempo.#proto(obj)[name]) }
 
 	/**
 	 * {dt} is a layout that combines date-related {snippets} (e.g. dd, mm -or- evt) into a pattern against which a string can be tested.  
@@ -763,10 +763,10 @@ export class Tempo {
 	/** underlying Temporal ZonedDateTime */									#zdt!: Temporal.ZonedDateTime;
 	/** temporary anchor used during parsing */								#anchor?: Temporal.ZonedDateTime | undefined;
 	/** prebuilt formats, for convenience */									#fmt = {} as Tempo.Formats;
-	/** instance term plugins */															#term = Object.create(null) as Property<any>;
+	/** instance term plugins */															#term = Object.create(null) as Tempo.Terms;
 	/** instance values to complement static values */				#local = {
 		/** instance configuration */															config: {} as Tempo.Config,
-		/** instance parse rules (only populated if provided) */	parse: {} as Tempo.Parse
+		/** instance parse rules (only populated if provided) */	parse: { result: [] as Tempo.Match[] } as Tempo.Parse
 	} as Tempo.State;
 
 	// #endregion Instance properties
@@ -802,7 +802,7 @@ export class Tempo {
 				})
 
 			if (isDefined(Tempo.#pending)) {											// are we mutating with 'set()' ?
-				(this.#local.parse.result as any[]).unshift(...Tempo.#pending);	// prepend collected parse-matches
+				this.#local.parse.result.unshift(...Tempo.#pending);// prepend collected parse-matches
 				Tempo.#pending = void 0;														// and reset mutating-flag
 			}
 
@@ -2039,6 +2039,9 @@ export namespace Tempo {
 
 	/** Enum registry of format strings */
 	export type Format = Enum.wrap<OwnFormat & Record<string, string | number>>;
+
+	/** mapping of terms to their resolved values */
+	export type Terms = Property<any>;
 
 	/** patterns that return a number */
 	export type NumericPattern = '{yyyy}{mm}' | '{yyww}' | '{yyyy}{mm}{dd}' | '{wy}{ww}' | '{wy}'

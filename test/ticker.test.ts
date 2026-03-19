@@ -1,4 +1,4 @@
-import { Tempo } from '#core/shared/tempo.class.js';
+import { Tempo, isTempo } from '#core/shared/tempo.class.js';
 
 const label = 'ticker:';
 
@@ -17,7 +17,8 @@ describe(`${label}`, () => {
 		stop();
 
 		expect(count).toBeGreaterThanOrEqual(3);
-		expect(lastTick?.constructor?.name).toBe('Tempo');
+		expect(lastTick).toBeDefined();
+		expect(isTempo(lastTick)).toBe(true);
 
 		const finalCount = count;
 		await new Promise(resolve => setTimeout(resolve, 100));
@@ -35,7 +36,8 @@ describe(`${label}`, () => {
 		}
 
 		expect(results.length).toBe(3);
-		expect(results[0]?.constructor?.name).toBe('Tempo');
+		expect(results[0]).toBeDefined();
+		expect(isTempo(results[0])).toBe(true);
 	});
 
 	test(`${label} validation`, () => {
