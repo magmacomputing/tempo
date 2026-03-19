@@ -1,0 +1,41 @@
+import { Tempo } from '#core/shared/tempo.class.js';
+
+const label = 'ticker:';
+
+describe(`${label}`, () => {
+
+	test(`${label} callback pattern`, async () => {
+		let count = 0;
+		let lastTick: any;
+
+		const stop = Tempo.ticker(50, (t) => {
+			count++;
+			lastTick = t;
+		});
+
+		await new Promise(resolve => setTimeout(resolve, 200)); // wait for ~4 ticks
+		stop();
+
+		expect(count).toBeGreaterThanOrEqual(3);
+		expect(lastTick?.constructor?.name).toBe('Tempo');
+
+		const finalCount = count;
+		await new Promise(resolve => setTimeout(resolve, 100));
+		expect(count).toBe(finalCount); // check it stopped
+	});
+
+	test(`${label} async generator pattern`, async () => {
+		const ticker = Tempo.ticker(20);
+		const results: any[] = [];
+
+		let i = 0;
+		for await (const t of ticker) {
+			results.push(t);
+			if (++i === 3) break;
+		}
+
+		expect(results.length).toBe(3);
+		expect(results[0]?.constructor?.name).toBe('Tempo');
+	});
+
+});

@@ -1,3 +1,5 @@
+import './temporal.polyfill.js';                           	// side-effect runtime check for Temporal
+
 // #region library modules~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import { Logify } from '#core/shared/logify.class.js';
@@ -636,6 +638,40 @@ export class Tempo {
 
 	static now() { return Temporal.Now.instant().epochNanoseconds; }
 
+	/**
+	 * Creates a reactive ticker that emits a new `Tempo` instance at regular intervals.
+	 * 
+	 * @param intervalMs - The interval in milliseconds between ticks.
+	 * @param callback - Optional callback function to receive each tick.
+	 * @returns If no callback is provided, returns an AsyncGenerator. If a callback is provided, returns a stop function.
+	 * 
+	 * @example
+	 * ```typescript
+	 * // Pattern 1: Async Generator
+	 * for await (const t of Tempo.ticker(1000)) {
+	 *   console.log(t.format('{hh}:{mi}:{ss}'));
+	 * }
+	 * 
+	 * // Pattern 2: Callback Subscription
+	 * const stop = Tempo.ticker(1000, (t) => render(t));
+	 * ```
+	 */
+	static ticker(intervalMs: number): AsyncGenerator<Tempo>;
+	static ticker(intervalMs: number, callback: (t: Tempo) => void): () => void;
+	static ticker(intervalMs: number, callback?: (t: Tempo) => void): any {
+		if (isFunction(callback)) {
+			const id = setInterval(() => callback(new Tempo()), intervalMs);
+			return () => clearInterval(id);										// stop the interval
+		}
+
+		return (async function* () {
+			while (true) {
+				await new Promise(resolve => setTimeout(resolve, intervalMs));
+				yield new Tempo();												// emit new Tempo
+			}
+		})();
+	}
+
 	/** static Tempo.terms getter */
 	static get terms() {
 		return secure(Tempo.#terms
@@ -767,7 +803,7 @@ export class Tempo {
 				})
 
 			if (isDefined(Tempo.#pending)) {											// are we mutating with 'set()' ?
-				this.#local.parse.result.unshift(...Tempo.#pending);	// prepend collected parse-matches
+				(this.#local.parse.result as any[]).unshift(...Tempo.#pending);	// prepend collected parse-matches
 				Tempo.#pending = void 0;														// and reset mutating-flag
 			}
 
