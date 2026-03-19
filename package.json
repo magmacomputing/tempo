@@ -1,6 +1,6 @@
 {
   "name": "@magmacomputing/tempo",
-  "version": "1.0.8",
+  "version": "1.1.0",
   "description": "A premium, high-performance wrapper around the JavaScript Temporal API. A modern, immutable, and fluent alternative to Moment.js, Day.js, and Luxon.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-03-20
+
+### Added
+- **Reactive Clock (Tempo.ticker)**: Introduced the new `static ticker()` method, providing a lightweight way to create high-performance date-time streams using either **Async Generators** (`for await...of`) or callback-based subscriptions.
+- **Ticker Documentation**: Created a dedicated guide `doc/tempo.ticker.md` for reactive clock patterns.
+
+### Changed
+- **Polyfill Decoupling**: Moved the `Temporal` API availability check from the main entry point (`index.ts`) to the core `Tempo` class. This allows standalone utility libraries (`enumify`, `serialize`) to be used in environments without `Temporal` support, while ensuring the engine still provides clear, explicit errors when required.
+
 ## [1.0.8] - 2026-03-19
 
 ### Added
