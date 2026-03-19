@@ -26,8 +26,8 @@ describe('Global Configuration Discovery', () => {
 		Tempo.init();
 
 		const t = new Tempo('now');
-		expect(t.config.timeZone).toBe('Europe/Paris');
-		expect(t.config.customGlobalVal).toBe(true);
+		expect(Tempo.config.timeZone).toBe('Europe/Paris');
+		expect(Tempo.config.customGlobalVal).toBe(true);
 	});
 
 	test('Tempo supports functional options in Discovery Contract', () => {
@@ -39,8 +39,8 @@ describe('Global Configuration Discovery', () => {
 		Tempo.init();
 
 		const t = new Tempo('now');
-		expect(t.config.timeZone).toBe('Asia/Tokyo');
-		expect(t.config.customGlobalFn).toBe(true);
+		expect(Tempo.config.timeZone).toBe('Asia/Tokyo');
+		expect(Tempo.config.customGlobalFn).toBe(true);
 	});
 
 	test('Explicit init options override Global Discovery', () => {
@@ -52,7 +52,7 @@ describe('Global Configuration Discovery', () => {
 		Tempo.init({ timeZone: 'America/New_York' }); // Explicit override
 
 		const t = new Tempo('now');
-		expect(t.config.timeZone).toBe('America/New_York');
+		expect(Tempo.config.timeZone).toBe('America/New_York');
 	});
 
 	test('Tempo discovers global options for events and periods', () => {

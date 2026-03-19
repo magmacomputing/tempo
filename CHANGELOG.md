@@ -5,14 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.8] - Unreleased
+## [1.0.8] - 2026-03-19
 
 ### Added
+- **Numeric Pattern Inference**: Corrected `Formats` and `Format` types to ensure numeric patterns (like `yearMonthDay`) are correctly inferred as `number` while preserving enum-like functionality for the format registry.
+- **Layout Patterns Guide**: Created a new technical guide `doc/tempo.layout.md` for describing Tempo services through custom layout/snippet building.
+- **Enum Type Flexibility**: Loosened TypeScript constraints on `enumify` objects. The `count()` method now returns a standard `number`, and iteration callbacks (`forEach`, `filter`, `map`) now accept a generic `Enum.wrap<any>`, resolving assignability issues in complex configurations like `Tempo.Config`.
 - **Custom Global Formats**: Introduced support for defining custom format layouts via Global Discovery (`Symbol.for($Tempo)`), making them available across all instances.
 - **Type Safety Refinement**: Significantly enhanced the `Tempo` class by removing redundant `as any` casts, particularly in `#parse` and timezone handling, achieved through better destructuring and explicit string resolution.
 - **Modern Syntax Adoption**: Updated the codebase to use `Object.getOwn()` instead of legacy `Object.prototype.hasOwnProperty.call()` for cleaner and more modern property checks.
 
 ### Changed
+- **Core Simplification ($Base Removal)**: Removed the `$Base` symbol and its termination logic from `reflection.library.ts`. This simplifies prototype chain traversal across the library, as boundary protection is no longer required following the `config` getter refactor and existing enumerable property filtering for Enums.
+- **Constant Modernization**: Renamed and deprecated `Tempo.TIME` and `Tempo.TIMES` in favor of more semantic `Tempo.DURATION` and `Tempo.DURATIONS`, improving readability and consistency with internal logic.
+- **Enum Extension Optimization**: Refactored `Enum.extend` to support deep prototype chains (up to 50 levels) and fixed a critical boundary bug where root Enum data was being excluded from child extensions.
+- **Proxy Trap Performance**: Optimized `toJSON` and `$Inspect` traps in `getProxy` to prevent unnecessary prototype chain traversal. The traps now prioritize checking for own properties, significantly improving performance and preventing recursion during serialization.
 - **Term Traversal Logic**: Unified prototype traversal by introducing a shared `$Base` symbol to terminate chain climbing, improving both performance and collision resistance.
 - **Node.js Custom Inspection**: Standardized the Node.js custom inspection symbol as `$Inspect` in the reflection library and updated `Tempo` and `Enumify` for consistent console formatting.
 - **Stealth Proxy for terms**: Implemented a "Stealth Proxy" for the `term` accessor to provide a flat, iterable object view of resolved terms across Node.js and Browser environments while preserving lazy resolution.
@@ -22,6 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Parsing Reorganization**: Adjusted the `#parse` method to resolve `tz` and `cal` identifiers *after* configuration updates, ensuring internal state always reflects the most current settings.
 
 ### Fixed
+- **Decorator Compatibility**: Resolved nominal typing issues in `registerTerms` by loosening internal constraints, enabling seamless synchronization with projects using Stage 3 decorators (like `whiteLibrary`).
+- **Enum Boundary Bug**: Corrected the logic in `ownEntries` to ensure that root Enum entries (marked with `$Base`) are correctly collected during full-chain resolution.
+- **Getter Handling in Extensions**: Fixed a regression in `reflection.library.ts` where properties with getters were being incorrectly unwrapped; they are now accessed directly to ensure proper execution.
 - **Timezone Round-trip Restoration**: Fully resolved critical serialization regressions by updating `#setConfig` to recursively handle the `config` property during revival.
 - **Instance Timezone Integrity**: Restored the safe update to `#local.config.timeZone` in `#parseZone`, ensuring internal getters stay in sync with date-time strings without clobbering initial state.
 - **String Handling Cleanup**: Removed redundant `String()` wraps in regex group parsing and mutation logic where types were already guaranteed.
