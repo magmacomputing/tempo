@@ -125,6 +125,17 @@ How are we doing? Let us know with a simple reaction!
 [💡 Needs work](https://github.com/magmacomputing/tempo/issues/new?title=Feedback:%20💡%20Needs%20work) &nbsp; | &nbsp; 
 [🐞 Found a bug](https://github.com/magmacomputing/tempo/issues/new?title=Feedback:%20🐞%20Found%20a%20bug)
 
+### ⚡ Quick Reactions
+*(Native reactions available in [Discussions](https://github.com/magmacomputing/tempo/discussions/categories/feedback))*
+
+[👍 Like](https://github.com/magmacomputing/tempo/discussions/categories/feedback) &nbsp; | &nbsp;
+[❤️ Love](https://github.com/magmacomputing/tempo/discussions/categories/feedback) &nbsp; | &nbsp;
+[😄 Haha](https://github.com/magmacomputing/tempo/discussions/categories/feedback) &nbsp; | &nbsp;
+[😮 Wow](https://github.com/magmacomputing/tempo/discussions/categories/feedback) &nbsp; | &nbsp;
+[😢 Sad](https://github.com/magmacomputing/tempo/discussions/categories/feedback) &nbsp; | &nbsp;
+[😡 Angry](https://github.com/magmacomputing/tempo/discussions/categories/feedback) &nbsp; | &nbsp;
+[💩 Poop](https://github.com/magmacomputing/tempo/discussions/categories/feedback)
+
 ## ⚖️ License
 
 Distributed under the MIT License. See `LICENSE` for more information.

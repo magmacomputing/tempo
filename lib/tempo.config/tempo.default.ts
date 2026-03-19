@@ -12,11 +12,15 @@ export const Match = {
 	/** event */																							event: /^(g|l)evt[0-9]+$/,
 	/** period */																							period: /^(g|l)per[0-9]+$/,
 	/** two digit year */																			twoDigit: /^[0-9]{2}$/,
+	/** date */																								date: /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/,
+	/** time */																								time: /^[0-9]{2}:[0-9]{2}(:[0-9]{2})?$/,
 	/** hour-minute-second with no separator */								hhmiss: /(hh)(m[i|m])(ss)?/i,
 	/** separator characters (/ - . ,) */											separator: /[\/\-\.\s,]/,
 	/** modifier characters (+-<>=) */												modifier: /[\+\-\<\>][\=]?|this|next|prev|last/,
 	/** offset post keywords (ago|hence) */										affix: /ago|hence/,
 	/** strip out these characters from a string */						strips: /\(|\)/g,
+	/** whitespace characters */															spaces: /\s+/g,
+	/** Z character */																				zed: /^Z$/,
 } as const
 
 /** Tempo Symbol registry */
@@ -83,7 +87,7 @@ export const Snippet = looseIndex<symbol, RegExp>()({
 	[Token.mod]: new RegExp(`((?<mod>${Match.modifier.source})?{nbr} *)`),	// modifier (+,-,<,<=,>,>=) plus optional offset-count
 	[Token.sep]: new RegExp(`(?:${Match.separator.source})`),	// date-input separator character "/\\-., " (non-capture group)
 	[Token.unt]: /(?<unt>year|month|week|day|hour|minute|second|millisecond)(?:s)?/,	// useful for '2 days ago' etc
-	[Token.brk]: /\[(?<brk>[^\]]+)\](?:\[(?<cal>[^\]]+)\])?/,	// timezone/calendar brackets [...]
+	[Token.brk]: /(\[(?<brk>[^\]]+)\](?:\[(?<cal>[^\]]+)\])?)?/,	// timezone/calendar brackets [...]
 })
 export type Snippet = typeof Snippet
 
@@ -92,9 +96,9 @@ export type Snippet = typeof Snippet
  * the Layout's keys are in the order that they will be checked against an input value  
  */
 export const Layout = looseIndex<symbol, string>()({
-	[Token.dt]: '{dd}{sep}?{mm}({sep}?{yy})?|{mod}?({evt})',	// calendar or event
+	[Token.dt]: '({dd}{sep}?{mm}({sep}?{yy})?|{mod}?({evt}))',// calendar or event
 	[Token.tm]: '({hh}{mi}?{ss}?{ff}?{mer}?|{per})',					// clock or period
-	[Token.dtm]: '({dt}){sfx}?{brk}?',												// calendar/event and clock/period
+	[Token.dtm]: '({dt})(?:(?:{sep}+|T)({tm}))?{tzd}?{brk}?',	// calendar/event and clock/period
 	[Token.dmy]: '({wkd}{sep}+)?{dd}{sep}?{mm}({sep}?{yy})?{sfx}?{brk}?',		// day-month(-year)
 	[Token.mdy]: '({wkd}{sep}+)?{mm}{sep}?{dd}({sep}?{yy})?{sfx}?{brk}?',		// month-day(-year)
 	[Token.ymd]: '({wkd}{sep}+)?{yy}{sep}?{mm}({sep}?{dd})?{sfx}?{brk}?',		// year-month(-day)

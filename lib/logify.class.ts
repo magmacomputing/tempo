@@ -1,5 +1,5 @@
 import { Immutable } from '#core/shared/class.library.js';
-import { asType, type ValueOf } from '#core/shared/type.library.js';
+import { asType, isObject, type ValueOf } from '#core/shared/type.library.js';
 
 const Method = {
 	Log: 'log',
@@ -33,7 +33,7 @@ export class Logify {
 		}
 
 		this.error(...msg);																			// this goes to the console
-		throw new Error(`${this.#name}${msg}`);									// this goes back to the caller
+		throw new Error(`${this.#name}${msg.map(m => isObject(m) ? JSON.stringify(m) : String(m)).join(' ')}`); // catch will be loud or silent, based on #catch config
 	}
 
 	/** console.log */																				log = (...msg: any[]) => this.#log(Method.Log, ...msg);

@@ -137,7 +137,7 @@ Tempo.init({
 });
 ```
 
-- [Layout Patterns Guide](file:///home/michael/Project/tempo/doc/tempo.layout.md): Details on creating custom parsing patterns and using relative units.
+- [Layout Patterns Guide](./tempo.layout.md): Details on creating custom parsing patterns and using relative units.
 
 ### US-Style Dates (Ambiguous Digits)
 When parsing dates comprised entirely of digits (e.g., `04012026`), the input can be visually ambiguous: Is it `04-Jan-2026` (Day-Month-Year) or `Apr-01-2026` (Month-Day-Year)?

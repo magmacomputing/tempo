@@ -1,8 +1,6 @@
 import { asType, getType, isEmpty, isFunction, isPrimitive } from '#core/shared/type.library.js';
 import type { Obj, KeyOf, ValueOf, EntryOf, Primitives } from '#core/shared/type.library.js';
 
-/** property marker used to terminate prototype traversal in ownEntries() */
-export const $Base = Symbol.for('$Base');
 /** property marker used to unwrap proxies in ownEntries() */
 export const $Target = Symbol.for('$Target');
 
@@ -83,20 +81,16 @@ export function ownValues<T extends Obj>(json: T) {
 }
 
 /** tuple of enumerable entries with string | symbol keys */
-export function ownEntries<T extends Obj>(json: T, all = false, boundary = false) {
+export function ownEntries<T extends Obj>(json: T, all = false) {
 	if (!json || typeof json !== 'object')
 		return [] as EntryOf<T>[];
 
 	const getOwn = (obj: any): [PropertyKey, any][] => {			// helper function to get own enumerable properties
-		const lvl: [PropertyKey, any][] = [];
-		const t = obj[$Target] ?? obj;													// unwrap if it's a proxy
+		const tgt = obj[$Target] ?? obj;												// unwrap if it's a proxy
 
-		Reflect.ownKeys(t).forEach(key => {
-			const desc = Object.getOwnPropertyDescriptor(t, key);
-			if (desc?.enumerable) lvl.push([key, desc.value]);
-		});
-
-		return lvl;
+		return Reflect.ownKeys(tgt)
+			.filter(key => Object.getOwnPropertyDescriptor(tgt, key)?.enumerable)
+			.map(key => [key, tgt[key]]);
 	}
 
 	if (!all)
@@ -105,13 +99,12 @@ export function ownEntries<T extends Obj>(json: T, all = false, boundary = false
 	// all=true: collect per-level bottom-up, reverse to top-down, dedup via Map
 	// Map preserves first-insertion position but allows value update (own key shadows ancestor)
 	const levels: [PropertyKey, any][][] = [];
-	const limit = 10;																					// prevent infinite loops
+	const limit = 50;																					// prevent infinite loops (increased from 10)
 	let depth = 0;
 	let proto: any = json;
 
 	do {
 		const t = proto[$Target] ?? proto;											// CRITICAL: unwrap before checking marker to avoid trap recursion
-		if (boundary && Object.hasOwn(t, $Base) && depth > 0) break;						// break before collecting if boundary requested and $Base is present
 
 		const lvl = getOwn(proto);
 		if (lvl.length) levels.push(lvl);
@@ -122,9 +115,9 @@ export function ownEntries<T extends Obj>(json: T, all = false, boundary = false
 	return [...new Map(levels.reverse().flat()).entries()] as EntryOf<T>[];
 }
 
-/** return an Object containing all own and inherited enumerable properties */
-export function allEntries<T extends Obj>(json: T, boundary = false) {
-	return Object.fromEntries(ownEntries(json, true, boundary));
+/** return an Object containing all 'own' and 'inherited' enumerable properties */
+export function allObject<T extends Obj>(json: T) {
+	return Object.fromEntries(ownEntries(json, true));
 }
 
 /** get a string-array of 'getter' names for an object */

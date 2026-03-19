@@ -1,6 +1,6 @@
-import { enumify, type Enum } from '#core/shared/enumerate.library.js';
+import { enumify } from '#core/shared/enumerate.library.js';
 import { secure } from '#core/shared/utility.library.js';
-import type { KeyOf, ValueOf, LooseUnion, Property } from '#core/shared/type.library.js';
+import type { KeyOf, ValueOf, LooseUnion } from '#core/shared/type.library.js';
 
 /**
  * Various enumerations used throughout Tempo library.  

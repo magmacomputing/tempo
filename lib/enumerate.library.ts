@@ -2,10 +2,10 @@ import { secure } from '#core/shared/utility.library.js';
 import { Serializable } from '#core/shared/class.library.js';
 import { stringify } from '#core/shared/serialize.library.js';
 import { memoizeMethod } from '#core/shared/function.library.js';
-import { ownEntries, $Base } from '#core/shared/reflection.library.js';
+import { ownEntries } from '#core/shared/reflection.library.js';
 import { getProxy } from './proxy.library.js';
 import { asType, isArray, isNumber } from '#core/shared/type.library.js';
-import type { Index, Prettify, Invert, Property, CountOf, KeyOf, ValueOf, EntryOf, LooseKey, WellKnownSymbols } from '#core/shared/type.library.js';
+import type { Index, Prettify, Invert, Property, KeyOf, ValueOf, EntryOf, LooseKey, WellKnownSymbols } from '#core/shared/type.library.js';
 
 /** used to identify the Enumify type */										const tag = 'Enumify' as const;
 
@@ -18,7 +18,7 @@ declare module './type.library.js' {
 
 /** prototype entries with string | symbol keys */
 type Proto<T extends Property<any>> = Prettify<{
-	/** number of entries in the Enum */											count(): CountOf<KeyOf<T>>;
+	/** number of entries in the Enum */											count(): number;
 	/** array of all enumerable property names */							keys(): KeyOf<T>[];
 	/** array of all enumerable object values */							values(): ValueOf<T>[];
 	/** tuple of enumerable entries */												entries(): EntryOf<T>[];
@@ -26,9 +26,9 @@ type Proto<T extends Property<any>> = Prettify<{
 	/** check if a 'key' exists in the Enum */								has(key: LooseKey<KeyOf<T>>): boolean;
 	/** check if a 'value' exists in the Enum */							includes(search: LooseKey<ValueOf<T>>): boolean;
 	/** return the key for a given value */										keyOf(search: LooseKey<ValueOf<T>>): KeyOf<T>;
-	/** iterate through all Enum entries */										forEach(fn: (entry: EntryOf<T>, index: number, enumify: wrap<T>) => void, thisArg?: any): void;
-	/** filter Enum entries and return a new Enum */					filter(fn: (entry: EntryOf<T>, index: number, enumify: wrap<T>) => boolean, thisArg?: any): wrap<Partial<T>>;
-	/** map Enum entries and return a new Enum */							map(fn: (entry: EntryOf<T>, index: number, enumify: wrap<T>) => any, thisArg?: any): wrap<Property<any>>;
+	/** iterate through all Enum entries */										forEach(fn: (entry: EntryOf<T>, index: number, enumify: wrap<any>) => void, thisArg?: any): void;
+	/** filter Enum entries and return a new Enum */					filter(fn: (entry: EntryOf<T>, index: number, enumify: wrap<any>) => boolean, thisArg?: any): wrap<Partial<T>>;
+	/** map Enum entries and return a new Enum */							map(fn: (entry: EntryOf<T>, index: number, enumify: wrap<any>) => any, thisArg?: any): wrap<Property<any>>;
 	/** extend an existing Enum with new property-entries */	extend<const E extends ArrayArg>(list: E): wrap<Prettify<Omit<T, keyof Index<E>> & Index<E>>>;
 	/** extend an existing Enum with new property-entries */	extend<const E extends ObjectArg>(list: E): wrap<Prettify<Omit<T, keyof E> & E>>;
 	/** iterate through all Enum entries */										readonly [Symbol.iterator]: () => IterableIterator<EntryOf<T>>;
@@ -124,10 +124,7 @@ export function enumify<T>(this: any, list: T): any {
 	}
 
 	const target = Object.create(proto, Object.getOwnPropertyDescriptors(stash));
-	if (proto === ENUM) {																			// if root enum, add non-enumerable marker
-		Object.defineProperty(target, $Base, { enumerable: false, value: true });
-	}
-	return getProxy(secure(target));
+	return getProxy(target);
 }
 
 /** create an entry in the Serialization Registry to describe how to rebuild an Enum */

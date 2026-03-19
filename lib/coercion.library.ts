@@ -9,7 +9,6 @@ export function asArray<T, K>(arr: T | Iterable<T> | ArrayLike<T> = [], fill?: K
 	switch (true) {
 		case isArrayLike<T>(arr):																// allow for {length:nn} objects
 		case isIterable<T>(arr) && !isString(arr):							// dont iterate Strings
-
 			return Array.from<T, K>(arr, val => {
 				return isUndefined(fill) || isDefined(val)
 					? val as unknown as K															// if no {fill}, then use {val}
