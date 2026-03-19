@@ -1,7 +1,7 @@
 {
   "name": "@magmacomputing/tempo",
   "version": "1.0.8",
-  "description": "A premium, high-performance wrapper around the JavaScript Temporal API.",
+  "description": "A premium, high-performance wrapper around the JavaScript Temporal API. A modern, immutable, and fluent alternative to Moment.js, Day.js, and Luxon.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -35,7 +35,19 @@
     "Time",
     "Parsing",
     "Formatting",
-    "Fluent API"
+    "Fluent API",
+    "Moment",
+    "Momentjs",
+    "Dayjs",
+    "Luxon",
+    "Date-fns",
+    "Immutable",
+    "Modern JavaScript",
+    "Temporal API",
+    "TC39 Temporal",
+    "TypeScript",
+    "ESM",
+    "Timezone"
   ],
   "author": "Michael <hello@magmacomputing.com.au>",
   "license": "MIT",

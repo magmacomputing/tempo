@@ -1,9 +1,11 @@
 # <img src="./img/hourglass-svgrepo-com.svg" width="100px"> <span style="font-size:4em;">Tempo</span>
 
-**Tempo** is a premium, high-performance wrapper around the JavaScript `Temporal` API, providing a fluent and intuitive interface for date-time manipulation and flexible parsing.
+**Tempo** is a premium, high-performance wrapper around the JavaScript `Temporal` API. It provides a modern, **immutable**, and **fluent** interface for date-time manipulation, and flexible parsing. It's designed as a better-performing, type-safe alternative to legacy libraries like **Moment.js**, **Day.js**, and **Luxon**.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Temporal](https://img.shields.io/badge/Temporal-Stage%203-blue)](https://tc39.es/proposal-temporal/)
+[![TypeScript Ready](https://img.shields.io/badge/TypeScript-Ready-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Native ESM](https://img.shields.io/badge/Native-ESM-green)](https://nodejs.org/api/esm.html)
 
 ## 🚀 Overview
 
@@ -11,10 +13,19 @@ Working with dates in JavaScript has historically been painful. The new `Tempora
 
 **Tempo** bridges that gap by providing:
 - **Flexible Parsing**: Interprets almost any date string, including relative ones like "next Friday".
-- **Fluent API**: Chainable methods for adding, subtracting, and setting date-times.
+- **Fluent API**: Chainable methods for adding, subtracting, and setting date-times (similar to Moment.js).
 - **Formatting**: Use custom tokens to format date-times in a way that is both intuitive and flexible.
 - **Built-in Plugins**: Access complex date ranges (Quarters, Seasons, Fiscal Years) easily.
-- **Immutable**: operations (like 'set', and 'add') return a new `Tempo` instance, ensuring thread safety and predictability.
+- **Immutable**: Operations (like `set` and `add`) return a new `Tempo` instance, ensuring thread safety and predictability.
+
+## 🤔 Why Tempo?
+
+If you're looking for a **modern date library** that leverages the native power of the browser's `Temporal` API, Tempo is for you.
+
+- **Type Safety**: Built from the ground up with TypeScript.
+- **Performance**: High-performance wrapper with minimal overhead.
+- **Familiarity**: If you like the fluent syntax of **Moment** or **Day.js**, you'll feel right at home.
+- **Future-Proof**: Built on the TC39 `Temporal` standard.
 
 ## 📦 Installation
 
