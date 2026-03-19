@@ -664,13 +664,13 @@ export class Tempo {
 
 		if (isFunction(callback)) {
 			const id = setInterval(() => callback(new Tempo()), intervalMs);
-			return () => clearInterval(id);										// stop the interval
+			return () => clearInterval(id);												// stop the interval
 		}
 
 		return (async function* () {
 			while (true) {
 				await new Promise(resolve => setTimeout(resolve, intervalMs));
-				yield new Tempo();												// emit new Tempo
+				yield new Tempo();																	// emit new Tempo
 			}
 		})();
 	}
