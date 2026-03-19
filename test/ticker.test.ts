@@ -38,4 +38,11 @@ describe(`${label}`, () => {
 		expect(results[0]?.constructor?.name).toBe('Tempo');
 	});
 
+	test(`${label} validation`, () => {
+		expect(() => Tempo.ticker(0)).toThrow(RangeError);
+		expect(() => Tempo.ticker(-1)).toThrow(RangeError);
+		expect(() => Tempo.ticker(NaN)).toThrow(RangeError);
+		expect(() => Tempo.ticker(Infinity)).toThrow(RangeError);
+	});
+
 });

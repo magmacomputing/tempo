@@ -658,7 +658,10 @@ export class Tempo {
 	 */
 	static ticker(intervalMs: number): AsyncGenerator<Tempo>;
 	static ticker(intervalMs: number, callback: (t: Tempo) => void): () => void;
-	static ticker(intervalMs: number, callback?: (t: Tempo) => void): any {
+	static ticker(intervalMs: number, callback?: (t: Tempo) => void): AsyncGenerator<Tempo> | (() => void) {
+		if (typeof intervalMs !== 'number' || !Number.isFinite(intervalMs) || intervalMs <= 0)
+			throw new RangeError('Tempo.ticker: intervalMs must be a finite number > 0')
+
 		if (isFunction(callback)) {
 			const id = setInterval(() => callback(new Tempo()), intervalMs);
 			return () => clearInterval(id);										// stop the interval

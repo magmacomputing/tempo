@@ -13,7 +13,7 @@ This project came about due to the need for a simple, yet powerful, way to parse
 5. [Ticker (Clocks)](#ticker-clocks)
 6. [Plugins (Terms)](#plugins-terms)
 7. [Context & Configuration](#context--configuration)
-8. [Enumerators](#enumerators)
+8. [Library Functionality](#library-functionality)
 9. [API Reference](./tempo.api.md)
 10. [Cookbook](./tempo.cookbook.md)
 
