@@ -54,6 +54,9 @@ export class Pledge<T> {
 		return Pledge.status;
 	}
 
+	/** reset static defaults */
+	static [Symbol.dispose]() { Pledge.init({}) }
+
 	static get status() {
 		return Pledge.#static as Pledge.Status<typeof Pledge>;
 	}
