@@ -498,6 +498,8 @@ export class Tempo {
 		return Tempo.config;
 	}
 
+	/** release global config and reset library to defaults */			static [Symbol.dispose]() { Tempo.init() }
+
 	/**
 	 * Reads `Tempo` options from persistent storage (e.g., localStorage).
 	 * @returns The stored configuration or an empty object.
@@ -642,37 +644,80 @@ export class Tempo {
 	 * Creates a reactive ticker that emits a new `Tempo` instance at regular intervals.
 	 * 
 	 * @param intervalMs - The interval in milliseconds between ticks.
+	 * @param seed - Optional date-time to 'seed' the ticker (Virtual Clock).
 	 * @param callback - Optional callback function to receive each tick.
 	 * @returns If no callback is provided, returns an AsyncGenerator. If a callback is provided, returns a stop function.
 	 * 
 	 * @example
 	 * ```typescript
-	 * // Pattern 1: Async Generator
-	 * for await (const t of Tempo.ticker(1000)) {
-	 *   console.log(t.format('{hh}:{mi}:{ss}'));
+	 * // Pattern 1: Explicit Resource Management (Recommended)
+	 * {
+	 *   using ticker = Tempo.ticker(1000, (t) => render(t));
+	 * } // stops automatically here
+	 * 
+	 * // Pattern 2: Virtual Clock (Seeded)
+	 * {
+	 *   // Emits '2024-01-01', then '2024-01-01 + 1s', etc.
+	 *   await using ticker = Tempo.ticker(1000, '2024-01-01');
+	 *   for await (const t of ticker) {
+	 *     console.log(t.format());
+	 *     if (condition) break;
+	 *   }
 	 * }
 	 * 
-	 * // Pattern 2: Callback Subscription
+	 * // Pattern 3: Manual stop
 	 * const stop = Tempo.ticker(1000, (t) => render(t));
+	 * stop(); // must be called manually to avoid memory leaks
 	 * ```
+	 * 
+	 * > [!WARNING]
+	 * > If using `const` or `let` instead of `using` / `await using`, you **must** call the returned function (or call `.return()` on the generator) to clear the interval and avoid memory leaks.
 	 */
-	static ticker(intervalMs: number): AsyncGenerator<Tempo>;
-	static ticker(intervalMs: number, callback: (t: Tempo) => void): () => void;
-	static ticker(intervalMs: number, callback?: (t: Tempo) => void): AsyncGenerator<Tempo> | (() => void) {
+	static ticker(intervalMs: number): AsyncGenerator<Tempo> & AsyncDisposable;
+	static ticker(intervalMs: number, seed: Tempo.DateTime): AsyncGenerator<Tempo> & AsyncDisposable;
+	static ticker(intervalMs: number, callback: (t: Tempo) => void): (() => void) & Disposable;
+	static ticker(intervalMs: number, seed: Tempo.DateTime, callback: (t: Tempo) => void): (() => void) & Disposable;
+	static ticker(intervalMs: number, seedOrCallback?: Tempo.DateTime | ((t: Tempo) => void), callback?: (t: Tempo) => void): (AsyncGenerator<Tempo> & AsyncDisposable) | ((() => void) & Disposable) {
 		if (typeof intervalMs !== 'number' || !Number.isFinite(intervalMs) || intervalMs <= 0)
 			throw new RangeError('Tempo.ticker: intervalMs must be a finite number > 0')
 
-		if (isFunction(callback)) {
-			const id = setInterval(() => callback(new Tempo()), intervalMs);
-			return () => clearInterval(id);												// stop the interval
+		const seed = isFunction(seedOrCallback) ? undefined : seedOrCallback;
+		const cb = isFunction(seedOrCallback) ? seedOrCallback : callback;
+
+		if (isFunction(cb)) {
+			let current = isDefined(seed) ? new Tempo(seed) : undefined;
+			if (isDefined(current)) cb(current);												// emit seed immediately (virtual clock)
+
+			const id = setInterval(() => {
+				if (isDefined(current)) {
+					current = current.add({ milliseconds: intervalMs });
+					cb(current);
+				} else {
+					cb(new Tempo());
+				}
+			}, intervalMs);
+			const stop = () => clearInterval(id);												// stop the interval
+			return Object.assign(stop, { [Symbol.dispose]: stop });
 		}
 
-		return (async function* () {
+		const generator = (async function* () {
+			let current = isDefined(seed) ? new Tempo(seed) : undefined;
+			if (isDefined(current)) yield current;											// emit seed immediately (virtual clock)
+
 			while (true) {
 				await new Promise(resolve => setTimeout(resolve, intervalMs));
-				yield new Tempo();																	// emit new Tempo
+				if (isDefined(current)) {
+					current = current.add({ milliseconds: intervalMs });
+					yield current;
+				} else {
+					yield new Tempo();
+				}
 			}
 		})();
+
+		return Object.assign(generator, {
+			[Symbol.asyncDispose]: async () => { await generator.return(undefined as any) }
+		});
 	}
 
 	/** static Tempo.terms getter */
