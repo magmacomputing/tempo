@@ -779,12 +779,8 @@ export class Tempo {
 	constructor(tempo: Tempo.DateTime, options?: Tempo.Options);
 	constructor(tempo?: Tempo.DateTime | Tempo.Options, options: Tempo.Options = {}) {
 		this.#now = Temporal.Now.instant();											// stash current Instant
-
-		// swap arguments around, if arg1=Options or Temporal-like
-		[this.#tempo, this.#options] = this.#swap(tempo, options);
-
-		// parse the local options looking for overrides to Tempo.#global.config
-		this.#setLocal(this.#options);
+		[this.#tempo, this.#options] = this.#swap(tempo, options);// swap arguments around, if arg1=Options or Temporal-like
+		this.#setLocal(this.#options);													// parse the local options looking for overrides to Tempo.#global.config
 
 		// we now have all the info we need to instantiate a new Tempo
 		try {

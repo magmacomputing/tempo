@@ -10,11 +10,12 @@ This project came about due to the need for a simple, yet powerful, way to parse
 2. [Parsing](#parsing)
 3. [Formatting](#formatting)
 4. [Manipulation](#manipulation)
-5. [Plugins (Terms)](#plugins-terms)
-6. [Context & Configuration](#context--configuration)
-7. [Enumerators](#enumerators)
-8. [API Reference](./tempo.api.md)
-9. [Cookbook](./tempo.cookbook.md)
+5. [Ticker (Clocks)](#ticker-clocks)
+6. [Plugins (Terms)](#plugins-terms)
+7. [Context & Configuration](#context--configuration)
+8. [Enumerators](#enumerators)
+9. [API Reference](./tempo.api.md)
+10. [Cookbook](./tempo.cookbook.md)
 
 ---
 
@@ -263,6 +264,21 @@ const t1 = new Tempo('2024-05-20', { timeZone: 'America/New_York' });
 const t2 = new Tempo('2024-05-20', { timeZone: 'Europe/London' });
 Tempo.compare(t1, t2); // 1, meaning t1 is 'later than' t2
 ```
+
+---
+
+## Ticker (Clocks)
+
+`Tempo.ticker` creates a reactive stream of `Tempo` instances, making it easy to build clocks or countdowns. It supports both modern **Async Generators** and traditional **Callback Subscriptions**.
+
+```typescript
+// Pattern: Async Generator
+for await (const t of Tempo.ticker(1000)) {
+  console.log(t.format('{hh}:{mi}:{ss}'));
+}
+```
+
+See the [Tempo Ticker guide](./tempo.ticker.md) for full details and API signatures.
 
 ---
 
