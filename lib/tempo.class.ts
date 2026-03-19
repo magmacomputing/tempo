@@ -626,7 +626,7 @@ export class Tempo {
 
 	/** global discovery configuration */
 	static get discovery() {
-		return getProxy(omit({ ...(globalThis as any)[$Tempo] }, 'value'));
+		return getProxy(omit({ ...(globalThis as any)[$Tempo], scope: 'discovery' }, 'value'));
 	}
 
 	/** Creates a new `Tempo` instance. */
@@ -667,7 +667,7 @@ export class Tempo {
 
 	/** Tempo initial default settings */
 	static get default() {
-		return secure(Default);
+		return secure({ ...Default, scope: 'default' });
 	}
 
 	/** 
@@ -1991,7 +1991,7 @@ export namespace Tempo {
 	export type Mutate = 'start' | 'mid' | 'end'
 	export type Set = Partial<Record<Mutate, Unit> &
 		Record<'date' | 'time' | 'event' | 'period', string> &
-		{ timeZone?: Temporal.TimeZoneLike; calendar?: Temporal.CalendarLike }>
+	{ timeZone?: Temporal.TimeZoneLike; calendar?: Temporal.CalendarLike }>
 	export type Add = Partial<Record<Tempo.Unit, number>>
 
 	/** pre-configured format strings */
