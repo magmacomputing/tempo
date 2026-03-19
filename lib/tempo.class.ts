@@ -1,3 +1,5 @@
+import './temporal.polyfill.js';                           	// side-effect runtime check for Temporal
+
 // #region library modules~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import { Logify } from '#core/shared/logify.class.js';
@@ -106,7 +108,7 @@ export class Tempo {
 	/** return the Prototype parent of an object */						static #proto(obj: object) { return Object.getPrototypeOf(obj) }
 	/** test object has own property with the given key */		static #hasOwn(obj: object, key: string) { return Object.hasOwn(obj, key) }
 	/** return whether the shape is 'local' or 'global' */		static #isLocal(shape: Tempo.State) { return shape.config.scope === 'local' }
-	/** create an object based on a prototype */							static #create(obj: object, name: string) { return Object.create(Tempo.#proto(obj)[name]) }
+	/** create an object based on a prototype */							static #create<T extends object>(obj: object, name: string): T { return Object.create(Tempo.#proto(obj)[name]) }
 
 	/**
 	 * {dt} is a layout that combines date-related {snippets} (e.g. dd, mm -or- evt) into a pattern against which a string can be tested.  
@@ -636,6 +638,43 @@ export class Tempo {
 
 	static now() { return Temporal.Now.instant().epochNanoseconds; }
 
+	/**
+	 * Creates a reactive ticker that emits a new `Tempo` instance at regular intervals.
+	 * 
+	 * @param intervalMs - The interval in milliseconds between ticks.
+	 * @param callback - Optional callback function to receive each tick.
+	 * @returns If no callback is provided, returns an AsyncGenerator. If a callback is provided, returns a stop function.
+	 * 
+	 * @example
+	 * ```typescript
+	 * // Pattern 1: Async Generator
+	 * for await (const t of Tempo.ticker(1000)) {
+	 *   console.log(t.format('{hh}:{mi}:{ss}'));
+	 * }
+	 * 
+	 * // Pattern 2: Callback Subscription
+	 * const stop = Tempo.ticker(1000, (t) => render(t));
+	 * ```
+	 */
+	static ticker(intervalMs: number): AsyncGenerator<Tempo>;
+	static ticker(intervalMs: number, callback: (t: Tempo) => void): () => void;
+	static ticker(intervalMs: number, callback?: (t: Tempo) => void): AsyncGenerator<Tempo> | (() => void) {
+		if (typeof intervalMs !== 'number' || !Number.isFinite(intervalMs) || intervalMs <= 0)
+			throw new RangeError('Tempo.ticker: intervalMs must be a finite number > 0')
+
+		if (isFunction(callback)) {
+			const id = setInterval(() => callback(new Tempo()), intervalMs);
+			return () => clearInterval(id);												// stop the interval
+		}
+
+		return (async function* () {
+			while (true) {
+				await new Promise(resolve => setTimeout(resolve, intervalMs));
+				yield new Tempo();																	// emit new Tempo
+			}
+		})();
+	}
+
 	/** static Tempo.terms getter */
 	static get terms() {
 		return secure(Tempo.#terms
@@ -724,10 +763,10 @@ export class Tempo {
 	/** underlying Temporal ZonedDateTime */									#zdt!: Temporal.ZonedDateTime;
 	/** temporary anchor used during parsing */								#anchor?: Temporal.ZonedDateTime | undefined;
 	/** prebuilt formats, for convenience */									#fmt = {} as Tempo.Formats;
-	/** instance term plugins */															#term = Object.create(null) as Property<any>;
+	/** instance term plugins */															#term = Object.create(null) as Tempo.Terms;
 	/** instance values to complement static values */				#local = {
 		/** instance configuration */															config: {} as Tempo.Config,
-		/** instance parse rules (only populated if provided) */	parse: {} as Tempo.Parse
+		/** instance parse rules (only populated if provided) */	parse: { result: [] as Tempo.Match[] } as Tempo.Parse
 	} as Tempo.State;
 
 	// #endregion Instance properties
@@ -743,12 +782,8 @@ export class Tempo {
 	constructor(tempo: Tempo.DateTime, options?: Tempo.Options);
 	constructor(tempo?: Tempo.DateTime | Tempo.Options, options: Tempo.Options = {}) {
 		this.#now = Temporal.Now.instant();											// stash current Instant
-
-		// swap arguments around, if arg1=Options or Temporal-like
-		[this.#tempo, this.#options] = this.#swap(tempo, options);
-
-		// parse the local options looking for overrides to Tempo.#global.config
-		this.#setLocal(this.#options);
+		[this.#tempo, this.#options] = this.#swap(tempo, options);// swap arguments around, if arg1=Options or Temporal-like
+		this.#setLocal(this.#options);													// parse the local options looking for overrides to Tempo.#global.config
 
 		// we now have all the info we need to instantiate a new Tempo
 		try {
@@ -767,7 +802,7 @@ export class Tempo {
 				})
 
 			if (isDefined(Tempo.#pending)) {											// are we mutating with 'set()' ?
-				this.#local.parse.result.unshift(...Tempo.#pending);	// prepend collected parse-matches
+				this.#local.parse.result.unshift(...Tempo.#pending);// prepend collected parse-matches
 				Tempo.#pending = void 0;														// and reset mutating-flag
 			}
 
@@ -2004,6 +2039,9 @@ export namespace Tempo {
 
 	/** Enum registry of format strings */
 	export type Format = Enum.wrap<OwnFormat & Record<string, string | number>>;
+
+	/** mapping of terms to their resolved values */
+	export type Terms = Property<any>;
 
 	/** patterns that return a number */
 	export type NumericPattern = '{yyyy}{mm}' | '{yyww}' | '{yyyy}{mm}{dd}' | '{wy}{ww}' | '{wy}'
