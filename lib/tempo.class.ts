@@ -14,7 +14,7 @@ import { getProxy } from '#core/shared/proxy.library.js';
 import { getContext, CONTEXT } from '#core/shared/utility.library.js';
 import { asNumber, asInteger, isNumeric, ifNumeric } from '#core/shared/number.library.js';
 import { pad, singular, toProperCase } from '#core/shared/string.library.js';
-import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction } from '#core/shared/type.library.js';
+import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isNumber, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction } from '#core/shared/type.library.js';
 import type { IntRange, LooseUnion, Mutable, NonOptional, OwnOf, Property, TPlural, Type } from '#core/shared/type.library.js';
 import type { Enum } from '#core/shared/enumerate.library.js';
 
@@ -642,10 +642,11 @@ export class Tempo {
 
 	/**
 	 * Creates a reactive ticker that emits a new `Tempo` instance at regular intervals.
+	 * All tickers emit their initial state immediately upon initialization.
 	 * 
-	 * @param intervalMs - The interval in milliseconds between ticks.
+	 * @param intervalMs - The interval in milliseconds between ticks. Use a negative value for backwards tickers/countdowns.
 	 * @param seed - Optional date-time to 'seed' the ticker (Virtual Clock).
-	 * @param callback - Optional callback function to receive each tick.
+	 * @param callback - Optional callback function (t, stop) to receive each tick and an internal stop() controller.
 	 * @returns If no callback is provided, returns an AsyncGenerator. If a callback is provided, returns a stop function.
 	 * 
 	 * @example
@@ -655,7 +656,12 @@ export class Tempo {
 	 *   using ticker = Tempo.ticker(1000, (t) => render(t));
 	 * } // stops automatically here
 	 * 
-	 * // Pattern 2: Virtual Clock (Seeded)
+	 * // Pattern 2: Self-Stopping Ticker (Countdown)
+	 * Tempo.ticker(-1000, { ss: 10 }, (t, stop) => {
+	 *   if (t.ss === 0) stop(); // internal control
+	 * });
+	 * 
+	 * // Pattern 3: Virtual Clock (Seeded)
 	 * {
 	 *   // Emits '2024-01-01', then '2024-01-01 + 1s', etc.
 	 *   await using ticker = Tempo.ticker(1000, '2024-01-01');
@@ -665,7 +671,7 @@ export class Tempo {
 	 *   }
 	 * }
 	 * 
-	 * // Pattern 3: Manual stop
+	 * // Pattern 4: Manual stop
 	 * const stop = Tempo.ticker(1000, (t) => render(t));
 	 * stop(); // must be called manually to avoid memory leaks
 	 * ```
@@ -673,50 +679,50 @@ export class Tempo {
 	 * > [!WARNING]
 	 * > If using `const` or `let` instead of `using` / `await using`, you **must** call the returned function (or call `.return()` on the generator) to clear the interval and avoid memory leaks.
 	 */
-	static ticker(intervalMs: number): AsyncGenerator<Tempo> & AsyncDisposable;
-	static ticker(intervalMs: number, seed: Tempo.DateTime): AsyncGenerator<Tempo> & AsyncDisposable;
-	static ticker(intervalMs: number, callback: (t: Tempo) => void): (() => void) & Disposable;
-	static ticker(intervalMs: number, seed: Tempo.DateTime, callback: (t: Tempo) => void): (() => void) & Disposable;
-	static ticker(intervalMs: number, seedOrCallback?: Tempo.DateTime | ((t: Tempo) => void), callback?: (t: Tempo) => void): (AsyncGenerator<Tempo> & AsyncDisposable) | ((() => void) & Disposable) {
-		if (typeof intervalMs !== 'number' || !Number.isFinite(intervalMs) || intervalMs <= 0)
-			throw new RangeError('Tempo.ticker: intervalMs must be a finite number > 0')
+	static ticker(intervalMs: number | string | bigint): AsyncGenerator<Tempo> & AsyncDisposable;
+	static ticker(intervalMs: number | string | bigint, seed: Tempo.DateTime): AsyncGenerator<Tempo> & AsyncDisposable;
+	static ticker(intervalMs: number | string | bigint, callback: (t: Tempo, stop: () => void) => void): (() => void) & Disposable;
+	static ticker(intervalMs: number | string | bigint, seed: Tempo.DateTime, callback: (t: Tempo, stop: () => void) => void): (() => void) & Disposable;
+	static ticker(intervalMs: number | string | bigint, seedOrCallback?: Tempo.DateTime | ((t: Tempo, stop: () => void) => void), callback?: (t: Tempo, stop: () => void) => void): (AsyncGenerator<Tempo> & AsyncDisposable) | ((() => void) & Disposable) {
+		const interval = asNumber(intervalMs as any);
+		if (!isNumber(interval))
+			throw new RangeError('Tempo.ticker: intervalMs must be a finite numeric value');
 
-		const seed = isFunction(seedOrCallback) ? undefined : seedOrCallback;
-		const cb = isFunction(seedOrCallback) ? seedOrCallback : callback;
+		const [seed, cb] = isFunction(seedOrCallback)
+			? [void 0, seedOrCallback]
+			: [seedOrCallback, callback];
+		let current = new Tempo(seed);
 
 		if (isFunction(cb)) {
-			let current = isDefined(seed) ? new Tempo(seed) : undefined;
-			if (isDefined(current)) cb(current);												// emit seed immediately (virtual clock)
+			let id: ReturnType<typeof setTimeout> | undefined, stopped = (interval === 0);
+			const stop = Object.assign(() => {
+				stopped = true;
+				clearTimeout(id);
+			}, { [Symbol.dispose]: () => stop() });
 
-			const id = setInterval(() => {
-				if (isDefined(current)) {
-					current = current.add({ milliseconds: intervalMs });
-					cb(current);
-				} else {
-					cb(new Tempo());
+			(function tick() {
+				cb(current.clone(), stop);													// unified emission
+				if (!stopped) {
+					id = setTimeout(() => {
+						current = current.add({ milliseconds: interval });// increment (or decrement)
+						tick();
+					}, Math.abs(interval));
 				}
-			}, intervalMs);
-			const stop = () => clearInterval(id);												// stop the interval
-			return Object.assign(stop, { [Symbol.dispose]: stop });
+			})();
+			return stop;
 		}
 
 		const generator = (async function* () {
-			let current = isDefined(seed) ? new Tempo(seed) : undefined;
-			if (isDefined(current)) yield current;											// emit seed immediately (virtual clock)
-
 			while (true) {
-				await new Promise(resolve => setTimeout(resolve, intervalMs));
-				if (isDefined(current)) {
-					current = current.add({ milliseconds: intervalMs });
-					yield current;
-				} else {
-					yield new Tempo();
-				}
+				yield current.clone();															// emit immediately
+				if (interval === 0) break;													// support for 'emit-once'
+				await new Promise(resolve => setTimeout(resolve, Math.abs(interval)));
+				current = current.add({ milliseconds: interval });	// increment (or decrement)
 			}
 		})();
 
 		return Object.assign(generator, {
-			[Symbol.asyncDispose]: async () => { await generator.return(undefined as any) }
+			[Symbol.asyncDispose]: async () => { await generator.return(void 0 as any) }
 		});
 	}
 
@@ -951,6 +957,7 @@ export class Tempo {
 	/** applies a format to the current `Tempo` instance. */	format<K extends enums.Format>(fmt: K) { return this.#format(fmt) }
 	/** returns a new `Tempo` with specific duration added. */add(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return this.#add(tempo as any, options); }
 	/** returns a new `Tempo` with specific offsets. */				set(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return this.#set(tempo as any, options); }
+	/** returns a clone of the current `Tempo` instance. */		clone() { return new this.#Tempo(this, this.config) }
 
 	/** returns the underlying Temporal.ZonedDateTime */			toDateTime() { return this.#zdt ?? this.#anchor ?? this.#now.toZonedDateTimeISO(this.#local.config.timeZone) }
 	/** returns a Temporal.PlainDate representation */				toPlainDate() { return this.toDateTime().toPlainDate() }
@@ -999,7 +1006,7 @@ export class Tempo {
 		const tz = isString(timeZone) ? timeZone : (timeZone as any).id ?? (timeZone as any).timeZoneId;
 		const cal = isString(calendar) ? calendar : (calendar as any).id ?? (calendar as any).calendarId;
 
-		if (isEmpty(this.#local.parse.result))									// #conform() didn't find any matches
+		if (isEmpty(this.#local.parse.result) && isUndefined(Tempo.#pending))		// #conform() didn't find any matches
 			this.#local.parse.result = [{ type, value }];
 		Tempo.#dbg.info(this.#local.config, 'parse', `{type: ${type}, value: ${value}}`); // show what we're parsing
 

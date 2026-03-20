@@ -41,3 +41,28 @@ Tempo utilizes several custom TypeScript class decorators internally to enforce 
 Because Tempo's build target is currently ES2022, this decorator functionality is transpiled away into standard Javascript functions by the compiler rather than using native ECMAScript decorators. Our aim is to transition these to first-class native features once Javascript engines mature their decorator support. See [`Tempo.init()`](./tempo.config.md).
 
 👉 **[Read the full Decorators Guide](./tempo.decorators.md)** for details on the specific decorators used within the codebase.
+
+<br>
+
+## 4. Deferred Promises (`Pledge`)
+
+Tempo provides a specialized wrapper around `Promise.withResolvers()` called `Pledge`. It is designed to simplify modern asynchronous patterns where you need to manage a promise's lifecycle externally.
+
+### Key Features
+*   **State Tracking:** Transparent access to `isPending`, `isResolved`, and `isRejected` flags.
+*   **Custom Lifecycle Hooks:** Support for `onResolve`, `onReject`, and `onSettle` callbacks.
+*   **Immutable Shell:** Once created, the Pledge instance is frozen, ensuring the promise reference cannot be swapped.
+*   **Resource Management:** Implements `Symbol.dispose` to automatically reject pending promises when they go out of scope, preventing deadlocks or memory leaks.
+
+```typescript
+// Create a new pledge
+const p = new Pledge<string>('MyAsyncOperation');
+
+// Resolve it later
+p.resolve('Operation Successful');
+
+// Wait for it anywhere
+const result = await p.promise;
+```
+
+👉 **[See direct examples in the Pledge source](file:///home/michael/Project/tempo/lib/pledge.class.ts)** for advanced usage with callbacks and debugging tags.

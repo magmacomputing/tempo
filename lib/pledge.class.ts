@@ -83,22 +83,21 @@ export class Pledge<T> {
 				ifDefined({ tag: arg.tag, debug: arg.debug, catch: arg.catch, }),
 			)
 
-			asArray(Pledge.#static.onResolve)											// stack any static onResolve actions
-				.concat(asArray(arg.onResolve))											// stack any instance onResolve actions
-				.forEach(resolve => this.#pledge.promise.then(resolve));
-			asArray(Pledge.#static.onReject)											// stack any static onReject actions
-				.concat(asArray(arg.onReject))											// stack any instance onReject actions
-				.forEach(reject => this.#pledge.promise.catch(reject));
-			asArray(Pledge.#static.onSettle)											// stack any static onSettle actions
-				.concat(asArray(arg.onSettle))											// stack any instance onSettle actions
-				.forEach(settle => this.#pledge.promise.finally(settle));
+			const onResolve = asArray(Pledge.#static.onResolve).concat(asArray(arg.onResolve));
+			const onReject = asArray(Pledge.#static.onReject).concat(asArray(arg.onReject));
+			const onSettle = asArray(Pledge.#static.onSettle).concat(asArray(arg.onSettle));
 
-			if (this.#status.catch)																// stack a 'catch-all'
-				this.#pledge.promise.catch(_ => this.#catch(this.#status, this.#status.error));
+			if (onResolve.length) this.#pledge.promise.then(val => onResolve.forEach(cb => cb(val)));
+			if (onReject.length) this.#pledge.promise.catch(err => onReject.forEach(cb => cb(err)));
+			if (onSettle.length) this.#pledge.promise.finally(() => onSettle.forEach(cb => cb()));
+
+			if (this.#status.catch)
+				this.#pledge.promise.catch(err => this.#catch(this.#status, err));
 		} else {
 			this.#dbg = new Logify();
 			Object.assign(this.#status, ifDefined({ tag: arg ?? Pledge.#static.tag, }));
 		}
+		this.#pledge.promise.catch(() => {});										// global catch-all to prevent unhandled rejections
 		Object.freeze(this);																		// make this instance immutable
 	}
 

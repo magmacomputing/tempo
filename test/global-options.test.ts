@@ -4,17 +4,17 @@ describe('Global Configuration Discovery', () => {
 	beforeEach(() => {
 		// Clear discovery before each test
 		delete (globalThis as any)[$Tempo];
-		Tempo.init();
+		Tempo[Symbol.dispose]();
 	});
 
 	afterEach(() => {
 		delete (globalThis as any)[$Tempo];
-		Tempo.init();
+		Tempo[Symbol.dispose]();
 	}); // Reset Tempo to default state
 
 	afterAll(() => {
 		delete (globalThis as any)[$Tempo];
-		Tempo.init(); // Clean up
+		Tempo[Symbol.dispose]();																// Clean up
 	});
 
 	test('Tempo automatically discovers and applies via Symbol.for($Tempo) (Discovery Contract)', () => {

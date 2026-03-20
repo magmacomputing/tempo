@@ -33,8 +33,16 @@ Returns the current Unix epoch in nanoseconds as a `BigInt`.
 ### `Tempo.getSymbol(key?: string | symbol)`
 Retrieves or registers a `Symbol` for internal token mapping.
 
+### `Tempo.ticker(intervalMs, seed?, callback?)`
+Creates a reactive stream of `Tempo` instances at regular intervals. The first emission is immediate. Supports negative intervals for backwards counting.
+- **Returns:** An `AsyncGenerator` (if no callback) or a `stop` function (if callback provided).
+- **See:** [Tempo Ticker Guide](./tempo.ticker.md) for full usage patterns.
+
 ### `Tempo.regexp(layout, snippet?)`
 Translates a Tempo layout string into a compiled `RegExp`.
+
+### `Tempo[Symbol.dispose]()`
+Releases the global configuration and resets the library to its initial defaults. Equivalent to calling `Tempo.init()`.
 
 ---
 
@@ -76,6 +84,9 @@ Returns a **new** `Tempo` instance with the specified duration or date-time payl
 ### `tempo.set(payload: Tempo.DateTime | Tempo.Set, options?: Tempo.Options)`
 Returns a **new** `Tempo` instance with specific values or relative alignments.
 - **Example:** `t.set({ month: 5, hh: 12 })` or `t.set({ start: 'month' })`
+
+### `tempo.clone()`
+Returns a **new**, lean `Tempo` instance based on the current one. It preserves all local configuration but starts a fresh "parse history" (length 1). This is ideal for minimizing memory footprint in long chains or live tickers.
 
 ### `tempo.format(fmt: string)`
 Returns a formatted string or number based on the provided token or named format.

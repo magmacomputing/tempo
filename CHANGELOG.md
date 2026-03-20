@@ -10,11 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2026-03-20
 
 ### Added
-- **Reactive Clock (Tempo.ticker)**: Introduced the new `static ticker()` method, providing a lightweight way to create high-performance date-time streams using either **Async Generators** (`for await...of`) or callback-based subscriptions.
+- **Reactive Clock (`Tempo.ticker`)**: Introduced the new `static ticker()` method, providing a lightweight way to create high-performance date-time streams using either **Async Generators** (`for await...of`) or callback-based subscriptions.
+- **Immediate Emission**: All tickers emit their initial state immediately upon initialization (T=0), providing instant UI feedback and consistent "virtual clock" behavior for both seeded and unseeded tickers.
+- **Backwards Tickers**: `Tempo.ticker` accepts negative `intervalMs` values, enabling natural countdown timers and reverse-running clocks (e.g., `Tempo.ticker(-1000, ...)`).
+- **Self-Stopping Callbacks**: The ticker callback receives a `(t, stop)` signature. The optional second argument is a `stop` function that allows the ticker to terminate itself internally, even during the very first (T=0) emission.
+- **Emit-Once Support**: Passing `intervalMs = 0` creates a one-shot ticker that emits exactly once and self-terminates with no interval ever being scheduled.
+- **Flexible Interval Input**: `intervalMs` now accepts `number`, `string`, or `bigint`, using the library's own `ifNumeric` utility for automatic coercion.
 - **Ticker Documentation**: Created a dedicated guide `doc/tempo.ticker.md` for reactive clock patterns.
+- **Ticker Test Suite**: Created `test/ticker.test.ts` with comprehensive coverage for all ticker patterns.
 
 ### Changed
 - **Polyfill Decoupling**: Moved the `Temporal` API availability check from the main entry point (`index.ts`) to the core `Tempo` class. This allows standalone utility libraries (`enumify`, `serialize`) to be used in environments without `Temporal` support, while ensuring the engine still provides clear, explicit errors when required.
+- **Ticker Validation**: Uses library-native `ifNumeric` + `isNumber` for validation instead of manual `typeof` checks, aligning with the Tempo-way of type coercion.
+- **`isNumeric` Refinement**: Updated `isNumeric` in the coercion library to correctly reject non-finite `Number` values (`NaN`, `Infinity`) while accepting all finite numeric types.
 
 ## [1.0.8] - 2026-03-19
 
