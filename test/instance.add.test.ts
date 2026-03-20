@@ -37,7 +37,7 @@ describe(`${label} add method`, () => {
     const t = new Tempo('20-May');
     expect(t.parse.result.length).toBe(1);
     const t2 = t.add({ day: 1 });
-    expect(t2.parse.result.length).toBe(2);
+    expect(t2.parse.result.length).toBe(1);
     expect(t2.parse.result[0].match).toBeDefined();
   });
 

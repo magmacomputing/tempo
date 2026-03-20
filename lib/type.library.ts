@@ -38,7 +38,7 @@ export const isReference = (obj?: unknown): obj is Object => !isPrimitive(obj);
 export const isIterable = <T>(obj: unknown): obj is Iterable<T> => Symbol.iterator in Object(obj) && !isString(obj);
 
 export const isString = <T>(obj?: T): obj is Extract<T, string> => isType(obj, 'String');
-export const isNumber = <T>(obj?: T): obj is Extract<T, number> => isType(obj, 'Number');
+export const isNumber = <T>(obj?: T): obj is Extract<T, number> => isType(obj, 'Number') && isFinite(obj as number);
 export const isInteger = <T>(obj?: T): obj is Extract<T, bigint> => isType(obj, 'BigInt');
 export const isIntegerLike = <T>(obj?: T): obj is Extract<T, string> => isType(obj, 'String') && /^-?[0-9]+n$/.test(obj as string);
 export const isDigit = <T>(obj?: T): obj is Extract<T, number | bigint> => isType(obj, 'Number', 'BigInt');

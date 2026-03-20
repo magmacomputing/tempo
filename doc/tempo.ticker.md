@@ -32,14 +32,41 @@ import { Tempo } from '@magmacomputing/tempo';
 
 ### 2. Virtual Clock (Seeding)
 
-You can "seed" the ticker with a starting date-time. This transforms the ticker into a **Virtual Clock** that increments from the seed point rather than using the system time. The first value emitted is the seed itself (emitted immediately).
+You can "seed" the ticker with a starting date-time or a set of `Tempo.Options`. This transforms the ticker into a **Virtual Clock** that increments from the seed point rather than using the system time. 
+
+**Note on Timing**: All tickers (seeded or not) emit their initial state **immediately** upon initialization. Subsequent emissions happen at the specified interval.
+
+### 3. Backwards Tickers (Countdowns)
+
+By providing a **negative** `intervalMs`, you can create a ticker that moves backwards in time. This is useful for building count-down timers or simulating reverse-time flows.
 
 ```typescript
+// Count down from 10 seconds ago, moving backwards 1s at a time
+Tempo.ticker(-1000, { hh:0, mi:0, ss:10 }, (t, stop) => {
+  console.log(t.format('ss'));
+  if (t.ss === 0) stop(); // stop at zero using the internal stop() function
+});
+```
+
+```typescript
+// Pattern A: Seed with a date string
 // Starts at '2024-01-01', then '2024-01-01 + 1s', etc.
 for await (const t of Tempo.ticker(1000, '2024-01-01')) {
   console.log(t.format());
 }
+
+// Pattern B: Seed with Options (e.g. for a specific TimeZone)
+// Emits 'now' in New York, then 'now + 1s', etc. 
+// Every tick is automatically adjusted for the timezone (including DST).
+const nyTicker = Tempo.ticker(1000, { timeZone: 'America/New_York' });
 ```
+
+#### Why Seeding is Useful:
+
+- **Multi-Timezone Dashboards**: Easily create live clocks for different regions by seeding with `{ timeZone: '...' }`.
+- **Simulation/Replay**: Seed with a historical timestamp to replay data or run simulations at a relative pace.
+- **Countdown/Up Timers**: Track elapsed time from a fixed anchor date.
+- **Testing Edge Cases**: Verify UI behavior around specific events (e.g. DST transitions) by seeding the ticker just before the event.
 
 ### 3. Manual Callback Subscription
 
@@ -60,12 +87,13 @@ stop();
 `Tempo.ticker` is optimized for zero-overhead:
 - **No extra dependencies**: Relies on native `setInterval` and `AsyncGenerators`.
 - **Instance-per-tick**: Every tick emits a fresh, immutable `Tempo` instance reflecting the exact time of the event.
+- **Automatic Efficiency**: Each tick instance is automatically **cloned** (via `.clone()`) to minimize memory footprint and keep the internal parse history lean.
 - **Explicit Disposal**: Implements `Symbol.dispose` and `Symbol.asyncDispose` for safe resource management.
 
 ## API Reference
 
-### `Tempo.ticker(intervalMs: number, seed?: Tempo.DateTime): AsyncGenerator<Tempo> & AsyncDisposable`
-Creates an infinite stream of `Tempo` instances. If `seed` is provided, it increments from that point.
+### `Tempo.ticker(intervalMs: number, seed?: Tempo.DateTime | Tempo.Options): AsyncGenerator<Tempo> & AsyncDisposable`
+Creates an infinite stream of `Tempo` instances. If `seed` is provided (as a date or options object), it increments from that point.
 
-### `Tempo.ticker(intervalMs: number, seed?: Tempo.DateTime, callback: (t: Tempo) => void): (() => void) & Disposable`
-Starts a recurring timer and returns a function to stop it. If `seed` is provided, the first callback is immediate.
+### `Tempo.ticker(intervalMs: number, seed?: Tempo.DateTime | Tempo.Options, callback: (t: Tempo) => void): (() => void) & Disposable`
+Starts a recurring timer and returns a function to stop it. The first callback is immediate. If `intervalMs` is negative, the ticker moves backwards in time.
