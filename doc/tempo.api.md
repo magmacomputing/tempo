@@ -16,6 +16,16 @@ Initializes the global default configuration for all subsequent `Tempo` instance
 - **Returns:** `Tempo.Config` (The resolved global config).
 - **Note:** Settings are inherited from library defaults, persistent storage, and provided options.
 
+### `Tempo.discover(config: Tempo.Discovery)`
+Bootstraps the library with a Global Discovery object and automatically calls `Tempo.init()`.
+- **Returns:** `Tempo.Config` (The resolved global config).
+- **Note:** This is the recommended way to provide global configuration in ESM environments.
+
+### `Tempo.extend(...plugins: Tempo.Plugin[])`
+Extends the `Tempo` class and prototype with new functionality.
+- **Example:** `Tempo.extend(TickerPlugin)`
+- **Note:** Plugins are only installed once. Existing core members are protected from being overwritten.
+
 ### `Tempo.from(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options)`
 Creates a new `Tempo` instance. A static alternative to `new Tempo()`.
 - **Returns:** `Tempo`
@@ -34,7 +44,7 @@ Returns the current Unix epoch in nanoseconds as a `BigInt`.
 Retrieves or registers a `Symbol` for internal token mapping.
 
 ### `Tempo.ticker(intervalMs, seed?, callback?)`
-Creates a reactive stream of `Tempo` instances at regular intervals. The first emission is immediate. Supports negative intervals for backwards counting.
+(Plugin required) Creates a reactive stream of `Tempo` instances at regular intervals. 
 - **Returns:** An `AsyncGenerator` (if no callback) or a `stop` function (if callback provided).
 - **See:** [Tempo Ticker Guide](./tempo.ticker.md) for full usage patterns.
 

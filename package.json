@@ -4,11 +4,27 @@
   "description": "A premium, high-performance wrapper around the JavaScript Temporal API. A modern, immutable, and fluent alternative to Moment.js, Day.js, and Luxon.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
+      "import": "./dist/index.js"
+    },
+    "./enums": {
+      "types": "./dist/tempo.config/tempo.enum.d.ts",
+      "import": "./dist/tempo.config/tempo.enum.js"
+    },
+    "./serialize": {
+      "types": "./dist/serialize.library.d.ts",
+      "import": "./dist/serialize.library.js"
+    },
+    "./pledge": {
+      "types": "./dist/pledge.class.d.ts",
+      "import": "./dist/pledge.class.js"
+    },
+    "./plugins/ticker": {
+      "types": "./dist/plugins/ticker.plugin.d.ts",
+      "import": "./dist/plugins/ticker.plugin.js"
     }
   },
   "directories": {

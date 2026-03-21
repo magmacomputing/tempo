@@ -13,7 +13,7 @@ import { ownKeys, ownEntries, getAccessors, omit } from '#core/shared/reflection
 import { getProxy } from '#core/shared/proxy.library.js';
 import { getContext, CONTEXT } from '#core/shared/utility.library.js';
 import { asNumber, asInteger, isNumeric, ifNumeric } from '#core/shared/number.library.js';
-import { pad, singular, toProperCase } from '#core/shared/string.library.js';
+import { pad, singular, toProperCase, trimAll } from '#core/shared/string.library.js';
 import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isNumber, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction } from '#core/shared/type.library.js';
 import type { IntRange, LooseUnion, Mutable, NonOptional, OwnOf, Property, TPlural, Type } from '#core/shared/type.library.js';
 import type { Enum } from '#core/shared/enumerate.library.js';
@@ -43,31 +43,8 @@ declare module './type.library.js' {
 
 /**
  * # Tempo
- * **Tempo** is a powerful wrapper around `Temporal.ZonedDateTime` designed for flexible parsing and intuitive manipulation of date-time objects.
- * 
- * It bridges the gap between raw string/number inputs and the strict requirements of the ECMAScript Temporal API.
- * 
- * ### Key Features
- * - **Flexible Parsing**: Interprets strings, numbers, BigInts, and various Temporal objects.
- * - **Static Utility**: Access to common enums like `WEEKDAY`, `MONTH` and `SEASON`.
- * - **Fluent API**: Methods for adding, setting, formatting, and comparing date-times.
- * - **Alias Parsing**: Define custom `events` (e.g., "xmas" → "25 Dec") and `periods` (e.g., "noon" → "12:00") for intuitive parsing.
- * - **Plugin System**: Extensible via "terms" to provide contextual date calculations (e.g., quarters, seasons, zodiac signs, etc.).
- * 
- * @example
- * ```typescript
- * // Standard parsing
- * const t1 = new Tempo('2024-05-20');
- * 
- * // Using an event alias (pre-defined or custom)
- * const t2 = new Tempo('christmas'); // Dec 25th, current year
- * 
- * // Using a period alias
- * const t3 = new Tempo('2024-05-20 midnight'); // 2024-05-20T00:00:00
- * 
- * // Custom events and periods for this instance
- * const t4 = new Tempo('birthday tea-time', { event: { 'birthday': '20 May' },  period: { 'tea-time': '15:30' } });
- * ```
+ * A powerful wrapper around `Temporal.ZonedDateTime` for flexible parsing and intuitive manipulation of date-time objects.
+ * Bridges the gap between raw string/number inputs and the strict requirements of the ECMAScript Temporal API.
  */
 @Serializable
 @Immutable
@@ -363,6 +340,14 @@ export class Tempo {
 							shape.config.formats = shape.config.formats.extend(arg.value as Property<any>) as Tempo.Format;
 						break;
 
+					case 'discovery':
+						shape.config.discovery = isSymbol(optVal) ? Symbol.keyFor(optVal) as string : optVal;
+						break;
+
+					case 'plugins':
+						asArray(optVal).forEach(p => this.extend(p));
+						break;
+
 					case 'anchor':
 						break;																					// internal anchor used for relativity parsing
 
@@ -396,8 +381,9 @@ export class Tempo {
 	}
 
 	/** support "Global Discovery" of user-options */
-	static #setDiscovery(shape: Tempo.State) {
-		const discovery = (globalThis as any)[$Tempo] as Tempo.Discovery;
+	static #setDiscovery(shape: Tempo.State, key: string | symbol = shape.config.discovery ?? $Tempo) {
+		const sym = isString(key) ? Symbol.for(key) : key;
+		const discovery = (globalThis as any)[sym] as Tempo.Discovery;
 		if (!isObject(discovery)) return {};
 
 		// 1. Process TimeZones (normalize to lowercase for lookup)
@@ -412,6 +398,10 @@ export class Tempo {
 		// 3. Process Formats
 		if (discovery.formats)
 			shape.config.formats = shape.config.formats.extend(discovery.formats) as Tempo.Format;
+
+		// 4. Process Plugins
+		if (discovery.plugins)
+			asArray(discovery.plugins).forEach(p => this.extend(p));
 
 		// 4. Process Options
 		let opts = discovery.options || {};
@@ -439,6 +429,20 @@ export class Tempo {
 	// #endregion Static private methods
 
 	// #region Static public methods~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	/**
+	 * Bootstrap the library with a Custom Global Discovery object.
+	 * 
+	 * This replaces the manual `globalThis[Symbol.for($Tempo)] = { ... }` pattern 
+	 * and automatically calls `Tempo.init()` to apply the discovered configuration.
+	 * 
+	 * @param config - The Global Discovery object to register.
+	 * @returns The resolved global configuration.
+	 */
+	static discover(config: Tempo.Discovery) {
+		(globalThis as any)[$Tempo] = config;
+		return this.init();
+	}
 
 	/**
 	 * Initializes the global default configuration for all subsequent `Tempo` instances.
@@ -470,6 +474,7 @@ export class Tempo {
 					calendar,
 					timeZone,
 					locale: Tempo.#locale(),
+					discovery: Symbol.keyFor($Tempo) as string,
 					formats: Object.create(enums.FORMAT),
 					scope: 'global'
 				}
@@ -484,13 +489,15 @@ export class Tempo {
 
 			const storeKey = Symbol.keyFor($Tempo) as string;
 			Tempo.#setConfig(Tempo.#global,
-				{ store: storeKey, scope: 'global' },
+				{ store: storeKey, discovery: storeKey, scope: 'global' },
 				Tempo.readStore(storeKey),													// allow for storage-values to overwrite
-				Tempo.#setDiscovery(Tempo.#global),									// support "Global Discovery" of user-options
+				Tempo.#setDiscovery(Tempo.#global, $Tempo),					// support "Global Discovery" of user-options
 			)
 		}
-		else
-			Tempo.#setConfig(Tempo.#global, Tempo.#setDiscovery(Tempo.#global), options);
+		else {
+			const discovery = options.discovery ?? Tempo.#global.config.discovery ?? Symbol.keyFor($Tempo);
+			Tempo.#setConfig(Tempo.#global, Tempo.#setDiscovery(Tempo.#global, discovery as string), options);
+		}
 
 		if (Context.type === CONTEXT.Browser || options.debug === true)
 			Tempo.#dbg.info(Tempo.config, 'Tempo:', Tempo.#global.config);
@@ -498,12 +505,25 @@ export class Tempo {
 		return Tempo.config;
 	}
 
-	/** release global config and reset library to defaults */			static [Symbol.dispose]() { Tempo.init() }
+	/** release global config and reset library to defaults */
+	static [Symbol.dispose]() { Tempo.init() }
 
-	/**
-	 * Reads `Tempo` options from persistent storage (e.g., localStorage).
-	 * @returns The stored configuration or an empty object.
+	/** 
+	 * Extends the Tempo class with new functionality.
+	 * Plugins can add static or instance methods to the library.
 	 */
+	static extend(plugin: Tempo.Plugin, options?: any) {
+		const p = plugin as Tempo.PluginContainer;
+
+		if (!p.installed) {
+			p(options, this, (val: any) => new this(val));
+			p.installed = true;
+		}
+
+		return this;
+	}
+
+	/** Reads options from persistent storage (e.g., localStorage). */
 	static readStore(key = Tempo.#global.config.store) {
 		return getStorage<Tempo.Options>(key, {});
 	}
@@ -525,20 +545,12 @@ export class Tempo {
 		return groups;
 	}
 
-	/**
-	 * Writes the provided configuration into persistent storage.
-	 * @param config - The options to save.
-	 */
+	/** Writes configuration into persistent storage. */
 	static writeStore(config?: Tempo.Options, key = Tempo.#global.config.store) {
 		return setStorage(key, config);
 	}
 
-	/**
-	 * looks-up or registers a new `Symbol` for a given key.  
-	 * auto-maintains the `Token` registry for internal consistency.  
-	 * 
-	 * @param key - The description for which to retrieve/create a Symbol.
-	 */
+	/** lookup or registers a new `Symbol` for a given key. */
 	static getSymbol(key?: string | symbol) {
 		if (isUndefined(key)) {
 			const usr = `usr.${++Tempo.#usrCount}`;								// allocate a prefixed 'user' key
@@ -555,10 +567,7 @@ export class Tempo {
 		return Token[key as keyof typeof Token] ?? Symbol.for(`$Tempo.${key}`);
 	}
 
-	/**
-	 * translates a {layout} string into an anchored, case-insensitive regular expression.  
-	 * supports placeholder expansion using the {snippet} registry (e.g., `{yy}`, `{mm}`).
-	 */
+	/** translates {layout} into an anchored, case-insensitive RegExp. */
 	static regexp(layout: string | RegExp, snippet?: Snippet) {
 		// helper function to replace {name} placeholders with their corresponding snippets
 		function matcher(str: string | RegExp, depth = 0): string {
@@ -604,19 +613,7 @@ export class Tempo {
 		return new RegExp(`^(${layout})$`, 'i');								// translate the source into a regex
 	}
 
-	/**
-	 * Compares two `Tempo` instances or date-time values.  
-	 * Useful for sorting or determining chronological order.  
-	 * 
-	 * @param tempo1 - The first value to compare.
-	 * @param tempo2 - The second value to compare (defaults to 'now').
-	 * @returns `-1` if `tempo1 < tempo2`, `0` if tempo1 == tempo2, `1` if `tempo1 > tempo2`.
-	 * 
-	 * @example
-	 * ```typescript
-	 * const sorted = [t1, t2].sort(Tempo.compare);
-	 * ```
-	 */
+	/** Compares two `Tempo` instances or date-time values. */
 	static compare(tempo1?: Tempo.DateTime | Tempo.Options, tempo2?: Tempo.DateTime | Tempo.Options) {
 		const one = new Tempo(tempo1 as Tempo.DateTime), two = new Tempo(tempo2 as Tempo.DateTime);
 
@@ -630,7 +627,23 @@ export class Tempo {
 
 	/** global discovery configuration */
 	static get discovery() {
-		return getProxy(omit({ ...(globalThis as any)[$Tempo], scope: 'discovery' }, 'value'));
+		const sym = Symbol.for(this.config.discovery);
+		return getProxy(omit({ ...(globalThis as any)[sym], scope: 'discovery' }, 'value'));
+	}
+
+	/**
+ * Returns a snapshot of the configuration layers used by Tempo.
+ * Useful for debugging how the final configuration is built.
+ */
+	static get options() {
+		const keyFor = this.config.store ?? Symbol.keyFor($Tempo) as string;
+
+		return {
+			default: this.default,
+			discovery: this.discovery,
+			storage: getProxy(Object.assign({ key: keyFor, scope: 'storage' }, omit(Tempo.readStore(keyFor), 'value'))),
+			global: this.config,
+		};
 	}
 
 	/** Creates a new `Tempo` instance. */
@@ -640,91 +653,7 @@ export class Tempo {
 
 	static now() { return Temporal.Now.instant().epochNanoseconds; }
 
-	/**
-	 * Creates a reactive ticker that emits a new `Tempo` instance at regular intervals.
-	 * All tickers emit their initial state immediately upon initialization.
-	 * 
-	 * @param intervalMs - The interval in milliseconds between ticks. Use a negative value for backwards tickers/countdowns.
-	 * @param seed - Optional date-time to 'seed' the ticker (Virtual Clock).
-	 * @param callback - Optional callback function (t, stop) to receive each tick and an internal stop() controller.
-	 * @returns If no callback is provided, returns an AsyncGenerator. If a callback is provided, returns a stop function.
-	 * 
-	 * @example
-	 * ```typescript
-	 * // Pattern 1: Explicit Resource Management (Recommended)
-	 * {
-	 *   using ticker = Tempo.ticker(1000, (t) => render(t));
-	 * } // stops automatically here
-	 * 
-	 * // Pattern 2: Self-Stopping Ticker (Countdown)
-	 * Tempo.ticker(-1000, { ss: 10 }, (t, stop) => {
-	 *   if (t.ss === 0) stop(); // internal control
-	 * });
-	 * 
-	 * // Pattern 3: Virtual Clock (Seeded)
-	 * {
-	 *   // Emits '2024-01-01', then '2024-01-01 + 1s', etc.
-	 *   await using ticker = Tempo.ticker(1000, '2024-01-01');
-	 *   for await (const t of ticker) {
-	 *     console.log(t.format());
-	 *     if (condition) break;
-	 *   }
-	 * }
-	 * 
-	 * // Pattern 4: Manual stop
-	 * const stop = Tempo.ticker(1000, (t) => render(t));
-	 * stop(); // must be called manually to avoid memory leaks
-	 * ```
-	 * 
-	 * > [!WARNING]
-	 * > If using `const` or `let` instead of `using` / `await using`, you **must** call the returned function (or call `.return()` on the generator) to clear the interval and avoid memory leaks.
-	 */
-	static ticker(intervalMs: number | string | bigint): AsyncGenerator<Tempo> & AsyncDisposable;
-	static ticker(intervalMs: number | string | bigint, seed: Tempo.DateTime): AsyncGenerator<Tempo> & AsyncDisposable;
-	static ticker(intervalMs: number | string | bigint, callback: (t: Tempo, stop: () => void) => void): (() => void) & Disposable;
-	static ticker(intervalMs: number | string | bigint, seed: Tempo.DateTime, callback: (t: Tempo, stop: () => void) => void): (() => void) & Disposable;
-	static ticker(intervalMs: number | string | bigint, seedOrCallback?: Tempo.DateTime | ((t: Tempo, stop: () => void) => void), callback?: (t: Tempo, stop: () => void) => void): (AsyncGenerator<Tempo> & AsyncDisposable) | ((() => void) & Disposable) {
-		const interval = asNumber(intervalMs as any);
-		if (!isNumber(interval))
-			throw new RangeError('Tempo.ticker: intervalMs must be a finite numeric value');
 
-		const [seed, cb] = isFunction(seedOrCallback)
-			? [void 0, seedOrCallback]
-			: [seedOrCallback, callback];
-		let current = new Tempo(seed);
-
-		if (isFunction(cb)) {
-			let id: ReturnType<typeof setTimeout> | undefined, stopped = (interval === 0);
-			const stop = Object.assign(() => {
-				stopped = true;
-				clearTimeout(id);
-			}, { [Symbol.dispose]: () => stop() });
-
-			(function tick() {
-				cb(current.clone(), stop);													// unified emission
-				if (!stopped) {
-					id = setTimeout(() => {
-						current = current.add({ milliseconds: interval });// increment (or decrement)
-						tick();
-					}, Math.abs(interval));
-				}
-			})();
-			return stop;
-		}
-
-		const generator = (async function* () {
-			while (true) {
-				yield current.clone();															// emit immediately
-				if (interval === 0) break;													// support for 'emit-once'
-				await new Promise(resolve => setTimeout(resolve, Math.abs(interval)));
-				current = current.add({ milliseconds: interval });	// increment (or decrement)
-			}
-		})();
-
-		return Object.assign(generator, {
-			[Symbol.asyncDispose]: async () => { await generator.return(void 0 as any) }
-		});
-	}
 
 	/** static Tempo.terms getter */
 	static get terms() {
@@ -732,13 +661,7 @@ export class Tempo {
 			.map(({ define, ...rest }) => rest));									// omit the 'define' method
 	}
 
-	/**
-	 * Registers a new term plugin with Tempo.
-	 * The plugin will be available on `tempo.term` for all subsequently created instances.
-	 * This is non-destructive: existing global configuration is unchanged.
-	 *
-	 * @param plugin - An object with `key`, `scope`, `description`, and a `define` function.
-	 */
+	/** Registers a new term plugin (available on `tempo.term`). See `doc/tempo.md`. */
 	static addTerm(...plugin: Tempo.TermPlugin[]) {
 		asArray(plugin)
 			.flat(1)
@@ -757,7 +680,7 @@ export class Tempo {
 
 	/** Tempo initial default settings */
 	static get default() {
-		return secure({ ...Default, scope: 'default' });
+		return secure({ ...Default, scope: 'default', timeZone: TimeZone });
 	}
 
 	/** 
@@ -954,7 +877,7 @@ export class Tempo {
 	/** time elapsed since (without unit) */									since(dateTimeOrOpts?: Tempo.DateTime | Tempo.Options, opts?: Tempo.Options): string;
 	/** time elapsed since another date-time */								since(optsOrDate?: Tempo.DateTime | Tempo.Until | Tempo.Options, optsOrUntil?: Tempo.Options | Tempo.Until): string { return this.#since(optsOrDate, optsOrUntil) }
 
-	/** applies a format to the current `Tempo` instance. */	format<K extends enums.Format>(fmt: K) { return this.#format(fmt) }
+	/** applies a format to the instance. See `doc/tempo.md`. */	format<K extends enums.Format>(fmt: K) { return this.#format(fmt) }
 	/** returns a new `Tempo` with specific duration added. */add(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return this.#add(tempo as any, options); }
 	/** returns a new `Tempo` with specific offsets. */				set(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return this.#set(tempo as any, options); }
 	/** returns a clone of the current `Tempo` instance. */		clone() { return new this.#Tempo(this, this.config) }
@@ -974,15 +897,7 @@ export class Tempo {
 
 	// #region Instance private methods~~~~~~~~~~~~~~~~~~~~~~~
 
-	/**
-	 * setup local 'config' and 'parse' rules (with prototype set to global)
-	 * we copy down the current global config to the local instance, then apply any options provided.  
-	 * in this way, we preserve immutability of this instance, in case the user later changes the global config.
-	 * 
-	 * we do not copy down the current global parse rules, but instead create a new parse object
-	 * that prototypes the global parse object.  this way, we can add new parse rules to the local
-	 * parse object without affecting the global parse object.
-	 */
+	/** setup local 'config' and 'parse' rules (prototype-linked to global) */
 	#setLocal(options: Tempo.Options) {
 		// setup local config (prototype-linked to global config)
 		this.#local.config = Object.create(Tempo.#global.config);
@@ -1186,20 +1101,20 @@ export class Tempo {
 			return this.#conform(res, dateTime, isAnchored);
 		}
 
-		const trimmedValue = String(value).trim().replace(Match.spaces, ' ');
+		const trim = trimAll(value);
 
 		if (type === 'String') {																// if original value is String
-			if (isEmpty(trimmedValue)) {													// don't conform empty string
+			if (isEmpty(trim)) {																	// don't conform empty string
 				this.#result(arg, { match: 'Empty' });
 				return Object.assign(arg, { type: 'Empty' });
 			}
-			if (isIntegerLike(trimmedValue)) {										// if string representation of BigInt literal
+			if (isIntegerLike(trim)) {														// if string representation of BigInt literal
 				this.#result(arg, { match: 'BigInt' });
-				return Object.assign(arg, { type: 'BigInt', value: asInteger(trimmedValue) });
+				return Object.assign(arg, { type: 'BigInt', value: asInteger(trim) });
 			}
 		}
 		else {																									// else it is a Number
-			if (trimmedValue.length <= 7) {         							// cannot reliably interpret small numbers:  might be {ss} or {yymmdd} or {dmmyyyy}
+			if (trim.length <= 7) {         											// cannot reliably interpret small numbers:  might be {ss} or {yymmdd} or {dmmyyyy}
 				Tempo.#dbg.catch(this.#local.config, 'Cannot safely interpret number with less than 8-digits: use string instead');
 				return arg;
 			}
@@ -1209,7 +1124,7 @@ export class Tempo {
 
 		const map = this.#local.parse.pattern;
 		for (const [sym, pat] of map) {
-			const groups = this.#parseMatch(pat, trimmedValue);		// determine pattern-match groups
+			const groups = this.#parseMatch(pat, trim);						// determine pattern-match groups
 			if (isEmpty(groups)) continue;												// no match, so skip this iteration
 
 			this.#result(arg, { match: sym.description, groups: cleanify(groups) });	// stash the {key} of the pattern that was matched
@@ -1219,7 +1134,7 @@ export class Tempo {
 
 			dateTime = this.#parseWeekday(groups, dateTime);			// if {weekDay} pattern, calculate a calendar value
 			dateTime = this.#parseDate(groups, dateTime);					// if {calendar}|{event} pattern, translate to date value
-			dateTime = this.#parseTime(groups, dateTime);			// if {clock}|{period} pattern, translate to a time value
+			dateTime = this.#parseTime(groups, dateTime);					// if {clock}|{period} pattern, translate to a time value
 
 			/**
 			 * finished analyzing a matched pattern.  
@@ -1250,11 +1165,7 @@ export class Tempo {
 		return groups;
 	}
 
-	/**
-	 * resolve any {event} | {period} to their date | time values,  
-	 * intercept any {month} string,  
-	 * Note:  this will mutate the {groups} object
-	 */
+	/** resolve {event} | {period} to their date | time values (mutates groups) */
 	#parseGroups(groups: Tempo.Groups, dateTime: Temporal.ZonedDateTime): Temporal.ZonedDateTime {
 		this.#anchor = dateTime;																// temporarily anchor the instance so events resolve relative to current state
 
@@ -1428,13 +1339,7 @@ export class Tempo {
 			return dateTime;
 		}
 
-		/**
-		 * change two-digit year into four-digits using 'pivot-year' (defaulted to '75' years) to determine century  
-		 * pivot		= (currYear - Tempo.pivot) % 100						// for example: Rem((2024 - 75) / 100) => 49
-		 * century	= Int(currYear / 100)												// for example: Int(2024 / 100) => 20
-		 * 22				=> 2022																			// 22 is less than pivot, so use {century}
-		 * 57				=> 1957																			// 57 is more than pivot, so use {century - 1}
-		 */
+		// convert 2-digit year to 4-digits using 'pivot-year' (relative to current century)
 		if (year.toString().match(Match.twoDigit)) {						// if {year} match just-two digits
 			const pivot = dateTime
 				.subtract({ years: this.#local.parse["pivot"] })		// pivot cutoff to determine century
@@ -1461,11 +1366,7 @@ export class Tempo {
 			.withPlainTime(dateTime.toPlainTime());								// restore the time
 	}
 
-	/**
-	 * match input against 'tm' pattern.  
-	 * {groups} is expected to contain time-components (like {hh:'3', mi:'30', mer:'pm'}).  
-	 * returns an adjusted ZonedDateTime  
-	 */
+	/** match input against 'tm' pattern (returns adjusted ZonedDateTime) */
 	#parseTime(groups: Tempo.Groups = {}, dateTime: Temporal.ZonedDateTime) {
 		if (isUndefined(groups["hh"]))													// must contain 'time' with at least {hh}
 			return dateTime;
@@ -1545,9 +1446,7 @@ export class Tempo {
 		return groups;																					// overlay the match date-components
 	}
 
-	/**
-	 * match a {period} string against the time pattern  
-	 */
+	/** match a {period} string against the time pattern */
 	#parsePeriod(per: string): Tempo.Groups {
 		const groups: Tempo.Groups = {};
 		const tm = this.#getPattern('tm');													// get the RegExp for the time-pattern
@@ -1987,6 +1886,7 @@ export namespace Tempo {
 	/** the Options object found in a config-module, or passed to a call to Tempo.init({}) or 'new Tempo({})' */
 	export interface BaseOptions {
 		/** localStorage key */																	store: string;
+		/** globalThis Discovery Symbol */											discovery: string;
 		/** additional console.log for tracking */							debug: boolean | undefined;
 		/** catch or throw Errors */														catch: boolean | undefined;
 		/** Temporal timeZone */																timeZone: Temporal.TimeZoneLike;
@@ -2002,6 +1902,7 @@ export namespace Tempo {
 		/** custom date aliases (events). */										event: Event | Tempo.PatternOption<Tempo.Logic>;
 		/** custom time aliases (periods). */										period: Period | Tempo.PatternOption<Tempo.Logic>;
 		/** custom format strings to merge in the FORMAT enum */formats: Property<any>;
+		/** plugins to be automatically Extended via Tempo.extend() */plugins: Plugin | Plugin[];
 		/** supplied value to parse */													value: Tempo.DateTime;
 		/** @internal temporary anchor used during parsing */		anchor: Temporal.ZonedDateTime;
 	}
@@ -2015,16 +1916,21 @@ export namespace Tempo {
 		define: (this: Tempo, keyOnly?: boolean) => any
 	}
 
+	/** plugin function that can extend the Tempo prototype or static space */
+	export type Plugin = (options: any, TempoClass: typeof Tempo, factory: (val: any) => Tempo) => void;
+
+	/** internal metadata for a plugin to track installation */
+	export interface PluginContainer extends Plugin {
+		installed?: boolean;
+	}
+
 	/** the encapsulated state of a Tempo instance */
 	export interface State {																	// 'global' and 'local' variables
 		/** current defaults for all Tempo instances */					config: Tempo.Config;
 		/** parsing rules */																		parse: Tempo.Parse;
 	}
 
-	/**
-	 * Parsing rules  
-	 * Once a Tempo is instantiated, these values are for debug purposes only  
-	 */
+	/** Debugging results of a parse operation. See `doc/tempo.api.md`. */
 	export interface Parse {
 		/** Locales which prefer 'mm-dd-yyyy' date-order */			mdyLocales: { locale: string, timeZones: string[] }[];
 		/** Layout names that are switched to mdy */						mdyLayouts: Tempo.Pair[];
@@ -2051,10 +1957,7 @@ export namespace Tempo {
 	/** drop the parse-only Options */
 	type OptionsKeep = Omit<BaseOptions, "mdyLocales" | "mdyLayouts" | "pivot" | "snippet" | "layout" | "event" | "period" | "value">
 
-	/**
-	 * the Config that Tempo will use to interpret a Tempo.DateTime  
-	 * derived from user-supplied options, else json-stored options, else reasonable-default options
-	 */
+	/** Instance configuration derived from supply, storage, and discovery. */
 	export interface Config extends Required<Omit<OptionsKeep, "formats">> {
 		/** configuration (global | local) */										scope: 'global' | 'local';
 		/** pre-configured format strings */										formats: Format;
@@ -2070,6 +1973,7 @@ export namespace Tempo {
 		/** term plugins to be registered via Tempo.addTerm() */terms?: TermPlugin | TermPlugin[];
 		/** aliases to merge in the TimeZone dictionary */			timeZones?: Record<string, string>;
 		/** custom format strings to merge in the FORMAT dictionary */formats?: Property<any>;
+		/** plugins to be automatically extended via Tempo.extend() */plugins?: Plugin | Plugin[];
 	}
 
 	/** Configuration to use for #until() and #since() argument */

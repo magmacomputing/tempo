@@ -1,6 +1,17 @@
 # Tempo Ticker
 
-`Tempo.ticker` is a static method that creates a reactive stream of `Tempo` instances at regular intervals. It is designed to be high-performance and lightweight, providing a simple way to build clocks, countdowns, or scheduled updates.
+`Tempo.ticker` is an optional plugin that creates a reactive stream of `Tempo` instances at regular intervals. It is designed to be high-performance and lightweight, providing a simple way to build clocks, countdowns, or scheduled updates.
+
+## Installation
+
+To use the ticker, you must first extend the core `Tempo` class with the `TickerPlugin`:
+
+```typescript
+import { Tempo } from '@magmacomputing/tempo';
+import { TickerPlugin } from '@magmacomputing/tempo/plugins/ticker';
+
+Tempo.extend(TickerPlugin);
+```
 
 ## Usage Patterns
 
@@ -41,8 +52,8 @@ You can "seed" the ticker with a starting date-time or a set of `Tempo.Options`.
 By providing a **negative** `intervalMs`, you can create a ticker that moves backwards in time. This is useful for building count-down timers or simulating reverse-time flows.
 
 ```typescript
-// Count down from 10 seconds ago, moving backwards 1s at a time
-Tempo.ticker(-1000, { hh:0, mi:0, ss:10 }, (t, stop) => {
+// Count down from 10 seconds past midnight, moving backwards 1s at a time
+Tempo.ticker(-1000, "00:00:10", (t, stop) => {
   console.log(t.format('ss'));
   if (t.ss === 0) stop(); // stop at zero using the internal stop() function
 });

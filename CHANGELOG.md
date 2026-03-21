@@ -5,24 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-## [1.1.0] - 2026-03-20
+## [1.1.0] - 2026-03-21
 
 ### Added
-- **Reactive Clock (`Tempo.ticker`)**: Introduced the new `static ticker()` method, providing a lightweight way to create high-performance date-time streams using either **Async Generators** (`for await...of`) or callback-based subscriptions.
-- **Immediate Emission**: All tickers emit their initial state immediately upon initialization (T=0), providing instant UI feedback and consistent "virtual clock" behavior for both seeded and unseeded tickers.
-- **Backwards Tickers**: `Tempo.ticker` accepts negative `intervalMs` values, enabling natural countdown timers and reverse-running clocks (e.g., `Tempo.ticker(-1000, ...)`).
-- **Self-Stopping Callbacks**: The ticker callback receives a `(t, stop)` signature. The optional second argument is a `stop` function that allows the ticker to terminate itself internally, even during the very first (T=0) emission.
-- **Emit-Once Support**: Passing `intervalMs = 0` creates a one-shot ticker that emits exactly once and self-terminates with no interval ever being scheduled.
-- **Flexible Interval Input**: `intervalMs` now accepts `number`, `string`, or `bigint`, using the library's own `ifNumeric` utility for automatic coercion.
-- **Ticker Documentation**: Created a dedicated guide `doc/tempo.ticker.md` for reactive clock patterns.
-- **Ticker Test Suite**: Created `test/ticker.test.ts` with comprehensive coverage for all ticker patterns.
+- **Plugin System (`Tempo.extend`)**: Introduced a formal architecture for extending the `Tempo` class and prototype, allowing for modular feature injection (e.g., `TickerPlugin`).
+- **Auto-Plugin Discovery**: Plugins can now be automatically loaded via the `plugins` configuration in `Tempo.init()` or through the Global Discovery manifest (`Symbol.for($Tempo)`).
+- **Selective Immobility**: Enhanced the `@Immutable` decorator with a "Selective Immute" pattern. Core methods (including Symbols like `Symbol.dispose`) are now write-protected, while the class remains extensible for new plugins.
+- **Reactive Clock (Modularized)**: The `Tempo.ticker` logic has been extracted into an optional plugin available at `@magmacomputing/tempo/plugins/ticker`. This reduces core bundle size while offering high-performance Async Generators and countdown support.
+- **Symbol Protection**: Core identifiers are now safe from runtime hijacking, providing a robust security model for library consumers.
 
 ### Changed
-- **Polyfill Decoupling**: Moved the `Temporal` API availability check from the main entry point (`index.ts`) to the core `Tempo` class. This allows standalone utility libraries (`enumify`, `serialize`) to be used in environments without `Temporal` support, while ensuring the engine still provides clear, explicit errors when required.
-- **Ticker Validation**: Uses library-native `ifNumeric` + `isNumber` for validation instead of manual `typeof` checks, aligning with the Tempo-way of type coercion.
-- **`isNumeric` Refinement**: Updated `isNumeric` in the coercion library to correctly reject non-finite `Number` values (`NaN`, `Infinity`) while accepting all finite numeric types.
+- **Polyfill Decoupling**: Moved the `Temporal` API availability check to the core `Tempo` class, allowing standalone utilities to run in environments without `Temporal`.
+- **Type-Strict Reflection**: Updated internal reflection tools to use `ownEntries()` for cleaner property descriptor management.
+- **Documentation Overhaul**: Updated all technical guides to reflect the modular, plugin-based architecture.
 
 ## [1.0.8] - 2026-03-19
 

@@ -2,14 +2,16 @@ import { Tempo, $Tempo } from '#core/shared/tempo.class.js';
 
 describe('Tempo storage functionality', () => {
 	const customKey = 'my-custom-key';
-	const defaultKey = Symbol.keyFor($Tempo)!;
+	const testKey = '$TempoTest';
+	const testDiscovery = '$TempoTest';
 
 	beforeEach(() => {
-		// Clear process.env for the keys we use
+		// Clear environment for the keys we use
+		delete (globalThis as any)[Symbol.for(testDiscovery)];
 		delete process.env[customKey];
-		delete process.env[defaultKey];
-		// Reset global config to default state
-		Tempo.init();
+		delete process.env[testKey];
+		// Reset global config to use test keys
+		Tempo.init({ store: testKey, discovery: testDiscovery });
 	})
 
 	it('should write to and read from a custom storage key', () => {
@@ -32,11 +34,11 @@ describe('Tempo storage functionality', () => {
 		expect(t.config.store).toBe(customKey);
 	})
 
-	it('should load default storage key during Tempo.init()', () => {
+	it('should load storage key during Tempo.init()', () => {
 		const config: Tempo.Options = { timeZone: 'Asia/Tokyo' };
-		Tempo.writeStore(config, defaultKey);
+		Tempo.writeStore(config, testKey);
 
-		Tempo.init(); // Reset and load from defaultKey
+		Tempo.init({ store: testKey, discovery: testDiscovery }); // Reset and load from testKey
 		expect(Tempo.config.timeZone).toBe('Asia/Tokyo');
 	})
 })

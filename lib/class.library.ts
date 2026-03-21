@@ -1,3 +1,4 @@
+import { ownEntries } from '#core/shared/reflection.library.js';
 import { Registry } from '#core/shared/serialize.library.js';
 import type { Constructor } from '#core/shared/type.library.js';
 
@@ -21,10 +22,22 @@ export function Immutable<T extends Constructor>(value: T, { kind, name, addInit
 			}[name] as T;
 
 			addInitializer(() => {																// wait for construction to complete
-				Object.freeze(value);																// freeze the static properties
-				Object.freeze(value.prototype);											// freeze the prototype methods
-				Object.freeze(wrapper);															// freeze the wrapper static properties
-				Object.freeze(wrapper.prototype);										// freeze the wrapper prototype methods
+				const protect = (obj: object) => {									// protect existing members
+					ownEntries(Object.getOwnPropertyDescriptors(obj))
+						.filter(([name]) => name !== 'constructor')			// dont touch the constructor
+						.forEach(([name, { configurable, writable }]) => {
+							if (configurable) {
+								const update: PropertyDescriptor = { configurable: false };
+								if (writable) update.writable = false; 			// only data descriptors have 'writable'
+								Object.defineProperty(obj, name, update);
+							}
+						});
+				};
+
+				protect(value);																			// protect original static members
+				protect(value.prototype);														// protect original prototype members
+				protect(wrapper);																		// protect wrapper static members
+				protect(wrapper.prototype);													// protect wrapper prototype members
 			});
 
 			return wrapper;
