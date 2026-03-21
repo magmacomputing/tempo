@@ -1,4 +1,4 @@
-import { Tempo, $Tempo } from '#core/shared/tempo.class.js';
+import { Tempo, $Tempo } from '#core/tempo.class.js';
 
 describe('static.options', () => {
 	const testKey = '$TempoTest';

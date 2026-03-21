@@ -1,4 +1,4 @@
-import { Tempo, isTempo } from '#core/shared/tempo.class.js';
+import { Tempo, isTempo } from '#core/tempo.class.js';
 import { TickerPlugin } from '#core/shared/plugins/ticker.plugin.js';
 
 Tempo.extend(TickerPlugin);

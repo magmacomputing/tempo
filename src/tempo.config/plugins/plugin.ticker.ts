@@ -1,8 +1,8 @@
 import { asNumber } from '#core/shared/number.library.js';
 import { isNumber, isFunction } from '#core/shared/type.library.js';
-import type { Tempo } from '#core/shared/tempo.class.js';
+import type { Tempo } from '#core/tempo.class.js';
 
-declare module '#core/shared/tempo.class.js' {
+declare module '#core/tempo.class.js' {
 	namespace Tempo {
 		let ticker: {
 			(intervalMs: number | string | bigint): AsyncGenerator<Tempo> & AsyncDisposable;
@@ -18,7 +18,7 @@ declare module '#core/shared/tempo.class.js' {
  * Implementation of Tempo.ticker as an optional plugin.
  * Extends the Tempo class with pulse-based date-time generators.
  */
-export const TickerPlugin: Tempo.Plugin = (_options, TempoClass) => {
+export const TickerPlugin: Tempo.Plugin = (_options, TempoClass, _factory) => {
 
 	/**
 	 * ## Tempo.ticker()
@@ -43,6 +43,7 @@ export const TickerPlugin: Tempo.Plugin = (_options, TempoClass) => {
 
 		const now = () => (globalThis as any).Temporal.Now.instant().epochMilliseconds;
 
+		// Pattern 2 ~ Callbacks
 		if (isFunction(cb)) {
 			let id: ReturnType<typeof setTimeout> | undefined, stopped = (interval === 0);
 			const start = now(), absInterval = Math.abs(interval);
@@ -67,6 +68,7 @@ export const TickerPlugin: Tempo.Plugin = (_options, TempoClass) => {
 			return stop;
 		}
 
+		// Pattern 1 ~ Async Generators
 		const generator = (async function* () {
 			const start = now(), absInterval = Math.abs(interval);
 			let ticks = 0;
@@ -83,5 +85,5 @@ export const TickerPlugin: Tempo.Plugin = (_options, TempoClass) => {
 		return Object.assign(generator, {
 			[Symbol.asyncDispose]: async () => { await generator.return(void 0 as any) }
 		});
-	};
-};
+	}
+}

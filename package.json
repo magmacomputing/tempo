@@ -2,29 +2,29 @@
   "name": "@magmacomputing/tempo",
   "version": "1.1.0",
   "description": "A premium, high-performance wrapper around the JavaScript Temporal API. A modern, immutable, and fluent alternative to Moment.js, Day.js, and Luxon.",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
     },
     "./enums": {
-      "types": "./dist/tempo.config/tempo.enum.d.ts",
-      "import": "./dist/tempo.config/tempo.enum.js"
+      "types": "./dist/src/tempo.config/tempo.enum.d.ts",
+      "import": "./dist/src/tempo.config/tempo.enum.js"
     },
     "./serialize": {
-      "types": "./dist/serialize.library.d.ts",
-      "import": "./dist/serialize.library.js"
+      "types": "./dist/lib/serialize.library.d.ts",
+      "import": "./dist/lib/serialize.library.js"
     },
     "./pledge": {
-      "types": "./dist/pledge.class.d.ts",
-      "import": "./dist/pledge.class.js"
+      "types": "./dist/lib/pledge.class.d.ts",
+      "import": "./dist/lib/pledge.class.js"
     },
     "./plugins/ticker": {
-      "types": "./dist/tempo.config/plugins/plugin.ticker.d.ts",
-      "import": "./dist/tempo.config/plugins/plugin.ticker.js"
+      "types": "./dist/src/tempo.config/plugins/plugin.ticker.d.ts",
+      "import": "./dist/src/tempo.config/plugins/plugin.ticker.js"
     }
   },
   "directories": {
@@ -74,21 +74,21 @@
   "homepage": "https://github.com/magmacomputing/tempo#readme",
   "devDependencies": {
     "@js-temporal/polyfill": "^0.5.1",
-    "@release-it/keep-a-changelog": "^5.0.0",
+    "@release-it/keep-a-changelog": "^7.0.1",
     "@rollup/plugin-alias": "^6.0.0",
     "@rollup/plugin-commonjs": "^29.0.2",
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-terser": "^1.0.0",
     "@rollup/plugin-typescript": "^12.3.0",
     "@types/jest": "^30.0.0",
-    "@vitest/ui": "^4.1.0",
-    "release-it": "^17.1.1",
+    "@vitest/ui": "^4.0.18",
+    "release-it": "^19.2.4",
     "rollup": "^4.59.0",
     "tsc-alias": "^1.8.16",
     "tslib": "^2.8.1",
     "tsx": "^4.21.0",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^4.1.0"
+    "vitest": "^4.0.18"
   },
   "dependencies": {
     "@scarf/scarf": "^1.4.0"

@@ -1,4 +1,4 @@
-import './temporal.polyfill.js';                           	// side-effect runtime check for Temporal
+import '#core/shared/temporal.polyfill.js';									// side-effect runtime check for Temporal
 
 // #region library modules~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -14,21 +14,20 @@ import { getProxy } from '#core/shared/proxy.library.js';
 import { getContext, CONTEXT } from '#core/shared/utility.library.js';
 import { asNumber, asInteger, isNumeric, ifNumeric } from '#core/shared/number.library.js';
 import { pad, singular, toProperCase, trimAll } from '#core/shared/string.library.js';
-import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isNumber, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction } from '#core/shared/type.library.js';
+import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction } from '#core/shared/type.library.js';
 import type { IntRange, LooseUnion, Mutable, NonOptional, OwnOf, Property, TPlural, Type } from '#core/shared/type.library.js';
 import type { Enum } from '#core/shared/enumerate.library.js';
 
-import * as enums from '#core/shared/tempo.config/tempo.enum.js';
-import registerTerms from '#core/shared/tempo.config/terms/term.import.js';
+import * as enums from '#core/tempo.config/tempo.enum.js';
+import registerTerms from '#core/tempo.config/terms/term.import.js';
 
-import { Match, Token, Snippet, Layout, Event, Period, Default, TimeZone } from '#core/shared/tempo.config/tempo.default.js';
+import { Match, Token, Snippet, Layout, Event, Period, Default, TimeZone } from '#core/tempo.config/tempo.default.js';
 
-// import type { Temporal } from '@js-temporal/polyfill';
 import '#core/shared/prototype.library.js';									// patch prototypes
 
 // #endregion
 
-declare module './type.library.js' {
+declare module '#core/shared/type.library.js' {
 	interface TypeValueMap<T> {
 		Tempo: { type: 'Tempo', value: Tempo };
 	}

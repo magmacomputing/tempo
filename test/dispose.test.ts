@@ -1,4 +1,4 @@
-import { Tempo } from '#core/shared/tempo.class.js';
+import { Tempo } from '#core/tempo.class.js';
 import { Pledge } from '#core/shared/pledge.class.js';
 import { TickerPlugin } from '#core/shared/plugins/ticker.plugin.js';
 

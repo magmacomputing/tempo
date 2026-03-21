@@ -2,7 +2,6 @@ import resolve from '@rollup/plugin-node-resolve';
 import typescript from '@rollup/plugin-typescript';
 import commonjs from '@rollup/plugin-commonjs';
 import alias from '@rollup/plugin-alias';
-import terser from '@rollup/plugin-terser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -10,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default {
-	input: 'lib/tempo.class.ts',
+	input: 'src/tempo.class.ts',
 	output: [
 		{
 			file: 'dist/tempo.bundle.js',
@@ -31,7 +30,7 @@ export default {
 		alias({
 			entries: [
 				{ find: /^#core\/shared\/(.*)\.js$/, replacement: path.resolve(__dirname, 'lib/$1.ts') },
-				{ find: /^#core\/shared\/(.*)$/, replacement: path.resolve(__dirname, 'lib/$1.ts') }
+				{ find: /^#core\/(.*)\.js$/, replacement: path.resolve(__dirname, 'src/$1.ts') }
 			]
 		}),
 		resolve({
@@ -41,7 +40,7 @@ export default {
 		typescript({
 			tsconfig: './tsconfig.json',
 			declaration: false, // Don't generate declaration files for the bundle
-			outDir: undefined,  // Let rollup handle output
+			outDir: void 0,  // Let rollup handle output
 			lib: ['ESNext', 'DOM'], // Override to avoid 'ESNext.Temporal' validation error in plugin
 			types: ['@js-temporal/polyfill'] // Inject Temporal types since we dropped the ESNext.Temporal lib
 		})
