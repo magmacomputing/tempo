@@ -23,8 +23,8 @@
       "import": "./dist/pledge.class.js"
     },
     "./plugins/ticker": {
-      "types": "./dist/plugins/ticker.plugin.d.ts",
-      "import": "./dist/plugins/ticker.plugin.js"
+      "types": "./dist/tempo.config/plugins/plugin.ticker.d.ts",
+      "import": "./dist/tempo.config/plugins/plugin.ticker.js"
     }
   },
   "directories": {

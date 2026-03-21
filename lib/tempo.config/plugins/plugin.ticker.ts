@@ -1,9 +1,8 @@
-import { asNumber } from '../number.library.js';
-import { isNumber, isFunction } from '../type.library.js';
-import * as enums from '../tempo.config/tempo.enum.js';
-import type { Tempo } from '../tempo.class.js';
+import { asNumber } from '#core/shared/number.library.js';
+import { isNumber, isFunction } from '#core/shared/type.library.js';
+import type { Tempo } from '#core/shared/tempo.class.js';
 
-declare module '../tempo.class.js' {
+declare module '#core/shared/tempo.class.js' {
 	namespace Tempo {
 		let ticker: {
 			(intervalMs: number | string | bigint): AsyncGenerator<Tempo> & AsyncDisposable;
@@ -39,7 +38,7 @@ export const TickerPlugin: Tempo.Plugin = (_options, TempoClass) => {
 		const [seed, cb] = isFunction(seedOrCallback)
 			? [void 0, seedOrCallback]
 			: [seedOrCallback, callback];
-		
+
 		let current = new TempoClass(seed);
 
 		const now = () => (globalThis as any).Temporal.Now.instant().epochMilliseconds;

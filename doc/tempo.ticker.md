@@ -8,7 +8,7 @@ To use the ticker, you must first extend the core `Tempo` class with the `Ticker
 
 ```typescript
 import { Tempo } from '@magmacomputing/tempo';
-import { TickerPlugin } from '@magmacomputing/tempo/plugins/ticker';
+import { TickerPlugin } from '@magmacomputing/tempo/tempo.config/plugins/plugin.ticker';
 
 Tempo.extend(TickerPlugin);
 ```

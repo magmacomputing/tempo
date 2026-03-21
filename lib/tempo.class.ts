@@ -19,7 +19,7 @@ import type { IntRange, LooseUnion, Mutable, NonOptional, OwnOf, Property, TPlur
 import type { Enum } from '#core/shared/enumerate.library.js';
 
 import * as enums from '#core/shared/tempo.config/tempo.enum.js';
-import registerTerms from '#core/shared/tempo.config/plugins/term.import.js';
+import registerTerms from '#core/shared/tempo.config/terms/term.import.js';
 
 import { Match, Token, Snippet, Layout, Event, Period, Default, TimeZone } from '#core/shared/tempo.config/tempo.default.js';
 
