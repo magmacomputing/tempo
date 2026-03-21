@@ -1,4 +1,3 @@
-import { describe, test, expect, vi } from 'vitest';
 import { Pledge } from '../lib/pledge.class.js';
 
 describe('Pledge', () => {
@@ -32,7 +31,7 @@ describe('Pledge', () => {
 	test('callbacks', async () => {
 		const onResolve = vi.fn();
 		const onReject = vi.fn();
-		
+
 		const p1 = new Pledge({ onResolve });
 		p1.resolve('data');
 		await p1.promise;
