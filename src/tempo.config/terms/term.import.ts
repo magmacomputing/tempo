@@ -6,11 +6,11 @@
  * returns an array of Terms to be loaded into Tempo.#terms
  */
 
-import * as qtr from '#core/shared/tempo.config/plugins/term.quarter.js';
-import * as szn from '#core/shared/tempo.config/plugins/term.season.js';
-import * as zdc from '#core/shared/tempo.config/plugins/term.zodiac.js';
-import * as per from '#core/shared/tempo.config/plugins/term.timeline.js';
-import type { Tempo } from '#core/shared/tempo.class.js';
+import * as qtr from './term.quarter.js';
+import * as szn from './term.season.js';
+import * as zdc from './term.zodiac.js';
+import * as per from './term.timeline.js';
+import type { Tempo } from '../../tempo.class.js';
 
 export default [
 	{ key: qtr.key, scope: qtr.scope, description: qtr.description, define: qtr.define },

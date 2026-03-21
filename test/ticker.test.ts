@@ -1,4 +1,7 @@
-import { Tempo, isTempo } from '#core/shared/tempo.class.js';
+import { Tempo, isTempo } from '#core/tempo.class.js';
+import { TickerPlugin } from '#core/shared/plugins/ticker.plugin.js';
+
+Tempo.extend(TickerPlugin);
 
 const label = 'ticker:';
 
@@ -9,7 +12,7 @@ describe(`${label}`, () => {
 		let lastTick: any;
 
 		{
-			using _stop = Tempo.ticker(50, (t) => {
+			using _stop = Tempo.ticker(100, (t) => {
 				count++;
 				lastTick = t;
 			});
@@ -18,7 +21,7 @@ describe(`${label}`, () => {
 			expect(count).toBe(1);
 			expect(lastTick).toBeDefined();
 
-			await new Promise(resolve => setTimeout(resolve, 250));	// wait for ~5 total ticks
+			await new Promise(resolve => setTimeout(resolve, 500));	// wait for ~5 total ticks
 		} // stop() is called automatically here
 
 		expect(count).toBeGreaterThanOrEqual(4);

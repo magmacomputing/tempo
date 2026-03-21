@@ -38,7 +38,7 @@ export type SEASON = ValueOf<typeof SEASON>; // Type: 'summer' | 'autumn' | 'win
 
 ## 2. Using Enums Outside of Tempo
 
-For consumers of the library, these enumerations are exposed cleanly as **static getters** on the core `Tempo` class. 
+For consumers of the library, these enumerations are exposed cleanly as **static getters** on the core `Tempo` class.  They are also available as a namespace object from the 'barrel' (index.ts) export `enums`.
 
 You can use the values directly as arguments:
 
@@ -48,6 +48,15 @@ import { Tempo } from '@magmacomputing/tempo';
 // Direct Value access
 const direction = Tempo.COMPASS.North; // 'north'
 const monthIndex = Tempo.MONTH.Feb;    // 2 (since 'All' was index 0)
+```
+or alternatively, directly from the 'enums' export in the package.json
+```typescript
+import { enums } from '@magmacomputing/tempo/enums';
+
+const {COMPASS, MONTH} = enums;
+
+const direction = COMPASS.North; // 'north'
+const monthIndex = MONTH.Feb;    // 2 (since 'All' was index 0)
 ```
 
 Because `enumify` attaches a rich prototype, consumers can iterate through, validate, and query the enum structure easily. These are operations that are painfully clunky with standard TypeScript `enums`.

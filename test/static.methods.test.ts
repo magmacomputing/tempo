@@ -1,9 +1,15 @@
-import { Tempo } from '#core/shared/tempo.class.js';
+import { Tempo } from '#core/tempo.class.js';
 
 const label = 'static.methods:';
+const testKey = '$TempoTest';
+const testDiscovery = '$TempoTest';
 
 // Reset to defaults before each test to ensure isolation
-beforeEach(() => { Tempo.init() });
+beforeEach(() => {
+  delete (globalThis as any)[Symbol.for(testDiscovery)];
+  Tempo.writeStore(void 0, testKey);
+  Tempo.init({ store: testKey, discovery: testDiscovery });
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tempo.init()
@@ -242,21 +248,18 @@ describe(`${label} now`, () => {
 
 })
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tempo.readStore() / Tempo.writeStore()
-// ─────────────────────────────────────────────────────────────────────────────
 describe(`${label} readStore / writeStore`, () => {
 
   test('readStore returns an object (empty when nothing stored)', () => {
-    const result = Tempo.readStore();
+    const result = Tempo.readStore(); // Uses testKey from config
     expect(typeof result).toBe('object');
   })
 
   test('writeStore and readStore round-trip an options object', () => {
-    Tempo.writeStore({ pivot: 42 });
+    Tempo.writeStore({ pivot: 42 }); // Uses testKey from config
     const result = Tempo.readStore();
     expect(result?.pivot).toBe(42);
-    Tempo.writeStore(undefined);											// clean up
+    Tempo.writeStore(void 0);        // clean up (uses testKey)
   })
 
 })

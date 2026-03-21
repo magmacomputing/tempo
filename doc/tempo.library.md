@@ -54,15 +54,4 @@ Tempo provides a specialized wrapper around `Promise.withResolvers()` called `Pl
 *   **Immutable Shell:** Once created, the Pledge instance is frozen, ensuring the promise reference cannot be swapped.
 *   **Resource Management:** Implements `Symbol.dispose` to automatically reject pending promises when they go out of scope, preventing deadlocks or memory leaks.
 
-```typescript
-// Create a new pledge
-const p = new Pledge<string>('MyAsyncOperation');
-
-// Resolve it later
-p.resolve('Operation Successful');
-
-// Wait for it anywhere
-const result = await p.promise;
-```
-
-👉 **[See direct examples in the Pledge source](file:///home/michael/Project/tempo/lib/pledge.class.ts)** for advanced usage with callbacks and debugging tags.
+👉 **[Read the full Pledge Guide](./tempo.pledge.md)** for advanced usage with callbacks, debugging tags, and lifecycle management.

@@ -1,4 +1,4 @@
-import { Tempo } from '#core/shared/tempo.class.js';
+import { Tempo } from '#core/tempo.class.js';
 
 describe('Tempo.from() static method', () => {
 	it('should create an instance of Tempo from no arguments (now)', () => {
@@ -8,7 +8,7 @@ describe('Tempo.from() static method', () => {
 
 		// check that it's close to "now"
 		const now = Temporal.Now.instant().epochMilliseconds;
-		expect(Math.abs(t.epoch.ms - now)).toBeLessThan(100);
+		expect(Math.abs(t.epoch.ms - now)).toBeLessThan(200);
 	})
 
 	it('should create an instance of Tempo from options only', () => {

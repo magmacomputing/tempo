@@ -31,18 +31,18 @@ Tempo.init({ store: 'userSettings' });
 
 To facilitate configuration in micro-frontend architectures or when using a `<script>` tag, Tempo automatically "discovers" a global configuration object before any instances are created.
 
-### Using the Symbol Registry (Recommended)
-This is the most secure method to provide configuration before the library even loads, preventing clobbering by other scripts.
+### Using a Static Method (Recommended)
+This is the most secure and ergonomic method to provide configuration, and is compatible with ESM hoisting.
 
 ```javascript
-import { $Tempo } from '@magmacomputing/tempo';
+import { Tempo } from '@magmacomputing/tempo';
 
-globalThis[Symbol.for($Tempo)] = {
+Tempo.discover({
    options: { timeZone: 'Europe/Paris' },
    timeZones: { 'MYTZ': 'Asia/Dubai' },
    formats: { 'myFormat': '{dd}!!{mm}!!{yyyy}' },
    terms: [ myCustomTermPlugin ]
- }
+ });
 ```
 
 ### Discovery Contract
@@ -51,6 +51,7 @@ Tempo looks for the following structure:
 | Property | Type | Description |
 | :--- | :--- | :--- |
 | `options` | `Options \| (() => Options)` | Configuration options merged into global state. |
+| `plugins` | `Plugin \| Plugin[]` | Modular plugins to be extended onto Tempo automatically. |
 | `terms` | `TermPlugin \| TermPlugin[]` | Custom term plugins to be registered. |
 | `timeZones` | `Record<string, string>` | Custom timezone aliases to be merged. |
 | `formats` | `Record<string, string>` | Custom format strings to be merged into `Tempo.FORMAT`. |

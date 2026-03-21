@@ -1,7 +1,7 @@
 import { cloneify } from '#core/shared/serialize.library.js';
-import { COMPASS } from '#core/shared/tempo.config/tempo.enum.js';
-import { getTermRange, type Range } from '#core/shared/tempo.config/plugins/term.utils.js';
-import type { Tempo } from '#core/shared/tempo.class.js';
+import { COMPASS } from '#core/tempo.config/tempo.enum.js';
+import { getTermRange, type Range } from './term.utils.js';
+import type { Tempo } from '#core/tempo.class.js';
 
 /** definition of fiscal quarter ranges */
 const ranges = [

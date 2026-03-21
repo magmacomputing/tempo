@@ -10,8 +10,9 @@ This project came about due to the need for a simple, yet powerful, way to parse
 2. [Parsing](#parsing)
 3. [Formatting](#formatting)
 4. [Manipulation](#manipulation)
-5. [Ticker (Clocks)](#ticker-clocks)
-6. [Plugins (Terms)](#plugins-terms)
+5. [Plugins (Extending Tempo)](#plugin-system)
+6. [Ticker (Optional Plugin)](#ticker-clocks)
+7. [Terms (Built-in Plugins)](#plugins-terms)
 7. [Context & Configuration](#context--configuration)
 8. [Library Functionality](#library-functionality)
 9. [API Reference](./tempo.api.md)
@@ -267,9 +268,29 @@ Tempo.compare(t1, t2); // 1, meaning t1 is 'later than' t2
 
 ---
 
-## Ticker (Clocks)
+## Plugin System
 
-`Tempo.ticker` creates a reactive stream of `Tempo` instances, making it easy to build clocks or countdowns. It supports both modern **Async Generators** and traditional **Callback Subscriptions**.
+Tempo is designed to be lean. Non-core features like the `ticker` or advanced business logic can be added via the plugin system.
+
+### Extending Tempo
+To add a plugin, use the static `extend()` method. 
+
+```typescript
+import { Tempo } from '@magmacomputing/tempo';
+import { TickerPlugin } from '@magmacomputing/tempo/plugins/ticker';
+
+Tempo.extend(TickerPlugin);
+```
+
+> [!NOTE]
+> **Selective Immobility**: When you extend Tempo, the core methods (like `format`, `add`, `set`) are protected. You can add NEW functionality, but you cannot overwrite the essential behavior of the library.
+
+---
+
+## Ticker (Optional Plugin)
+
+`Tempo.ticker` creates a reactive stream of `Tempo` instances, making it easy to build clocks or countdowns. 
+**Note**: This requires the `TickerPlugin` to be installed first.
 
 ```typescript
 // Pattern: Async Generator
