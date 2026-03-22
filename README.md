@@ -35,7 +35,11 @@ npm install @magmacomputing/tempo
 ```
 
 ### 💻 Node.js (Server-Side)
-Tempo is a native ESM package. In Node.js (20+), simply import the class:
+Tempo is a native ESM package. In Node.js (20+), simply import the class.
+> [!NOTE]
+> Tempo uses native Node.js subpath imports (`#core/*`). This requires Node.js 14.6+ or 12.19+ in server-side environments.
+
+In Node.js:
 
 ```javascript
 import { Tempo } from '@magmacomputing/tempo';

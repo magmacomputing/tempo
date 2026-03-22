@@ -1,0 +1,31 @@
+{
+  "name": "@magma/shared",
+  "version": "1.1.0",
+  "description": "Shared utility library for Tempo",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*"
+    }
+  },
+  "imports": {
+    "#core/shared/*": {
+      "development": "./src/*",
+      "default": "./dist/*"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "tsc -b --clean"
+  },
+  "dependencies": {
+    "tslib": "^2.8.1"
+  }
+}
