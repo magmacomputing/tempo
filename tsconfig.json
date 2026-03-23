@@ -1,7 +1,7 @@
 {
   "files": [],
   "references": [
-    { "path": "./packages/shared" },
+    { "path": "./packages/library" },
     { "path": "./packages/tempo" }
   ]
 }

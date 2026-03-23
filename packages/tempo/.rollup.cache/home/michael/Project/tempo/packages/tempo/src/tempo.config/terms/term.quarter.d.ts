@@ -1,5 +1,5 @@
 import { type Range } from './term.utils.js';
-import type { Tempo } from '#core/tempo.class.js';
+import type { Tempo } from '#tempo/tempo.class.js';
 export declare const key = "qtr";
 export declare const scope = "quarter";
 export declare const description = "Fiscal Quarter";

@@ -1,5 +1,5 @@
-import { enumify } from '#core/shared/enumerate.library.js';
-import { secure } from '#core/shared/utility.library.js';
+import { enumify } from '#library/enumerate.library.js';
+import { secure } from '#library/utility.library.js';
 /**
  * Various enumerations used throughout Tempo library.
  * These are exported and added as static getters of the Tempo class.

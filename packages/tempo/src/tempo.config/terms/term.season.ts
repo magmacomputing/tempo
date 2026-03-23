@@ -1,7 +1,7 @@
-import { cloneify } from '#core/shared/serialize.library.js';
-import { COMPASS } from '#core/tempo.config/tempo.enum.js';
+import { cloneify } from '#library/serialize.library.js';
+import { COMPASS } from '#tempo/tempo.config/tempo.enum.js';
 import { getTermRange, type Range } from './term.utils.js';
-import type { Tempo } from '#core/tempo.class.js';
+import type { Tempo } from '#tempo/tempo.class.js';
 
 /** definition of meteorological season ranges */
 const ranges = [																						// @link https://www.timeanddate.com/calendar/aboutseasons.html

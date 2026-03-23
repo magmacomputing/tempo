@@ -1,4 +1,4 @@
-import { stringify, objectify, cloneify } from '#core/shared/serialize.library.js';
+import { stringify, objectify, cloneify } from '#library/serialize.library.js';
 
 describe('Serializer Library', () => {
 

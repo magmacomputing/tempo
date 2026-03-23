@@ -1,8 +1,8 @@
 import './setup.js';
 
-import * as barrel from '#core/index.js';
-import { getType } from '#core/shared/type.library.js';
-import { Token, Snippet } from '#core/tempo.config/tempo.default.js';
+import * as barrel from '#tempo/index.js';
+import { getType } from '#library/type.library.js';
+import { Token, Snippet } from '#tempo/tempo.config/tempo.default.js';
 
 // pre-load Tempo and Token to the global scope for ease of use in the REPL
 Object.assign(globalThis, { Tempo: barrel.Tempo, Token, Snippet, getType, stringify: barrel.stringify, objectify: barrel.objectify, enumify: barrel.enumify, enums: barrel.enums });

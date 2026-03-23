@@ -1,43 +1,46 @@
-import '#core/temporal.polyfill.js';												// side-effect runtime check for Temporal
+import '#tempo/temporal.polyfill.js';												// side-effect runtime check for Temporal
 
 // #region library modules~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-import { Logify } from '#core/shared/logify.class.js';
-import { ifDefined } from '#core/shared/object.library.js';
-import { secure } from '#core/shared/utility.library.js';
-import { Immutable, Serializable } from '#core/shared/class.library.js';
-import { asArray, asNumber, asInteger, isNumeric, ifNumeric } from '#core/shared/coercion.library.js';
-import { cleanify, stringify } from '#core/shared/serialize.library.js';
-import { getStorage, setStorage } from '#core/shared/storage.library.js';
-import { ownKeys, ownEntries, getAccessors, omit } from '#core/shared/reflection.library.js';
-import { getProxy } from '#core/shared/proxy.library.js';
-import { getContext, CONTEXT } from '#core/shared/utility.library.js';
-import { pad, singular, toProperCase, trimAll } from '#core/shared/string.library.js';
-import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction } from '#core/shared/type.library.js';
-import type { IntRange, LooseUnion, NonOptional, Property, Plural, Type } from '#core/shared/type.library.js';
+import { Logify } from '#library/logify.class.js';
+import { ifDefined } from '#library/object.library.js';
+import { secure } from '#library/utility.library.js';
+import { Immutable, Serializable } from '#library/class.library.js';
+import { asArray, asNumber, asInteger, isNumeric, ifNumeric } from '#library/coercion.library.js';
+import { cleanify, stringify } from '#library/serialize.library.js';
+import { getStorage, setStorage } from '#library/storage.library.js';
+import { ownKeys, ownEntries, getAccessors, omit } from '#library/reflection.library.js';
+import { getProxy } from '#library/proxy.library.js';
+import { getContext, CONTEXT } from '#library/utility.library.js';
+import { pad, singular, toProperCase, trimAll } from '#library/string.library.js';
+import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction, isArray } from '#library/type.library.js';
+import type { IntRange, LooseUnion, NonOptional, Property, Plural, Type } from '#library/type.library.js';
 
-import * as enums from '#core/tempo.config/tempo.enum.js';
-import registerTerms from '#core/tempo.config/terms/term.import.js';
+import * as enums from '#tempo/tempo.config/tempo.enum.js';
+import registerTerms from '#tempo/tempo.config/terms/term.import.js';
 
-import { Match, Token, Snippet, Layout, Event, Period, Default, TimeZone } from '#core/tempo.config/tempo.default.js';
+import { Match, Token, Snippet, Layout, Event, Period, Default, TimeZone } from '#tempo/tempo.config/tempo.default.js';
 
-import '#core/shared/prototype.library.js';									// patch prototypes
+import '#library/prototype.library.js';									// patch prototypes
 
 // #endregion
 
-declare module '#core/shared/type.library.js' {
+declare module '#library/type.library.js' {
 	interface TypeValueMap<T> {
 		Tempo: { type: 'Tempo', value: Tempo }									// register our 'Tempo' as a TypeValue
 	}
 }
 
-// #region Const variables
-
 /** key to use for storage / globalThis Symbol */						export const $Tempo = Symbol.for('$Tempo');
 /** current execution context*/															const Context = getContext();
 
-// #endregion Const variables
+declare global {
+	interface globalThis {
+		[$Tempo]?: Tempo.Discovery;
+	}
+}
 
+// #region Const variables
 /**
  * # Tempo
  * A powerful wrapper around `Temporal.ZonedDateTime` for flexible parsing and intuitive manipulation of date-time objects.
@@ -192,7 +195,8 @@ export class Tempo {
 			monthDay.push(...shape.parse.mdyLocales);							// append local mdyLocales (not overwrite global)
 
 		return monthDay.some(mdy => {
-			const tzs = (mdy as any).timeZones ?? (mdy as any).getTimeZones?.() ?? [];
+			const m = mdy as { locale: string, timeZones: string[] };
+			const tzs = m.timeZones ?? (m as Record<string, any>).getTimeZones?.() ?? [];
 			return tzs.includes(shape.config.timeZone as string);
 		});
 	}
@@ -342,7 +346,7 @@ export class Tempo {
 						break;
 
 					case 'plugins':
-						asArray(optVal).forEach(p => this.extend(p));
+						asArray(optVal).forEach(p => this.load(p));
 						break;
 
 					case 'anchor':
@@ -374,13 +378,13 @@ export class Tempo {
 	static #mdyLocales(value: Tempo.Options["mdyLocales"]) {
 		return asArray(value)
 			.map(mdy => new Intl.Locale(mdy))
-			.map(mdy => ({ locale: mdy.baseName, timeZones: (mdy as any).getTimeZones?.() ?? [] }))
+			.map(mdy => ({ locale: mdy.baseName, timeZones: (mdy as Record<string, any>).getTimeZones?.() ?? [] }))
 	}
 
 	/** support "Global Discovery" of user-options */
 	static #setDiscovery(shape: Tempo.State, key: string | symbol = shape.config.discovery ?? $Tempo) {
 		const sym = isString(key) ? Symbol.for(key) : key;
-		const discovery = (globalThis as any)[sym] as Tempo.Discovery;
+		const discovery = (globalThis as Record<symbol, any>)[sym] as Tempo.Discovery;
 		if (!isObject(discovery)) return {}
 
 		// 1. Process TimeZones (normalize to lowercase for lookup)
@@ -390,7 +394,7 @@ export class Tempo {
 
 		// 2. Process Terms
 		if (discovery.terms)
-			Tempo.addTerm(...asArray(discovery.terms as any));
+			this.load(asArray(discovery.terms));
 
 		// 3. Process Formats
 		if (discovery.formats)
@@ -398,7 +402,7 @@ export class Tempo {
 
 		// 4. Process Plugins
 		if (discovery.plugins)
-			asArray(discovery.plugins).forEach(p => this.extend(p));
+			asArray(discovery.plugins).forEach(p => this.load(p));
 
 		// 4. Process Options
 		let opts = discovery.options || {}
@@ -428,17 +432,36 @@ export class Tempo {
 	// #region Static public methods~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	/**
-	 * Bootstrap the library with a Custom Global Discovery object.
+	 * Unified loader for library extensions.
 	 * 
-	 * This replaces the manual `globalThis[Symbol.for($Tempo)] = { ... }` pattern 
-	 * and automatically calls `Tempo.init()` to apply the discovered configuration.
-	 * 
-	 * @param config - The Global Discovery object to register.
-	 * @returns The resolved global configuration.
+	 * @param arg - A `Plugin` function, a `TermPlugin` object (or array), or a `Discovery` object.
+	 * @param options - Optional configuration for a standard `Plugin`.
+	 * @returns The `Tempo` class for chaining.
 	 */
-	static discover(config: Tempo.Discovery) {
-		(globalThis as any)[$Tempo] = config;
-		return this.init();
+	static load(plugin: Tempo.Plugin | Tempo.Plugin[], options?: any): typeof Tempo;
+	static load(term: Tempo.TermPlugin | Tempo.TermPlugin[]): typeof Tempo;
+	static load(config: Tempo.Discovery | Tempo.Discovery[]): typeof Tempo;
+	static load(arg: any, options?: any) {
+		asArray(arg).flat(1).forEach(item => {
+			if (isFunction(item)) {
+				if (!item.installed) {
+					item(options, this, (val: any) => new this(val));	// handle Plugins (Functional extension)
+					item.installed = true;
+				}
+			}
+
+			if (isObject(item) && isString(item.key) && isFunction(item.define)) {
+				if (!Tempo.#terms.some(term => term.key === item.key))
+					Tempo.#terms.push(item);													// handle TermPlugins (Grammar extension)
+			}
+
+			if (isObject(item) && ownKeys(item).some(key => enums.DISCOVERY.has(key as any))) {
+				(globalThis as Record<symbol, any>)[$Tempo] = item;	// handle Discovery (Configuration bootstrapping)
+				this.init();
+			}
+		});
+
+		return this;
 	}
 
 	/**
@@ -482,7 +505,7 @@ export class Tempo {
 				if (key.startsWith('usr.'))													// only remove 'usr.' prefixed keys
 					delete Token[key];
 
-			Tempo.addTerm(...(registerTerms as any[]));											// register built-in term plugins
+			this.load(registerTerms);											// register built-in term plugins
 
 			const storeKey = Symbol.keyFor($Tempo) as string;
 			Tempo.#setConfig(Tempo.#global,
@@ -505,41 +528,10 @@ export class Tempo {
 	/** release global config and reset library to defaults */
 	static [Symbol.dispose]() { Tempo.init() }
 
-	/** 
-	 * Extends the Tempo class with new functionality.
-	 * Plugins can add static or instance methods to the library.
-	 */
-	static extend(plugin: Tempo.Plugin, options?: any) {
-		const p = plugin as Tempo.PluginContainer;
-
-		if (!p.installed) {
-			p(options, this, (val: any) => new this(val));
-			p.installed = true;
-		}
-
-		return this;
-	}
 
 	/** Reads options from persistent storage (e.g., localStorage). */
 	static readStore(key = Tempo.#global.config.store) {
 		return getStorage<Tempo.Options>(key, {});
-	}
-
-	/** convert a Temporal object into a `Tempo.Groups` object */
-	static #conformToGroups(tempo: Temporal.ZonedDateTime | Temporal.PlainDate | Temporal.PlainTime): Tempo.Groups {
-		const groups: Tempo.Groups = {}
-		if ('year' in tempo) {
-			groups.yy = (tempo as any).year.toString().padStart(4, '0');
-			groups.mm = (tempo as any).month.toString().padStart(2, '0');
-			groups.dd = (tempo as any).day.toString().padStart(2, '0');
-		}
-		if ('hour' in tempo) {
-			groups.hh = (tempo as any).hour.toString().padStart(2, '0');
-			groups.mi = (tempo as any).minute.toString().padStart(2, '0');
-			groups.ss = (tempo as any).second.toString().padStart(2, '0');
-			groups.ff = (tempo as any).nanosecond.toString().padStart(9, '0');
-		}
-		return groups;
 	}
 
 	/** Writes configuration into persistent storage. */
@@ -579,18 +571,18 @@ export class Tempo {
 
 			return source.replace(Match.braces, (match, name) => {// iterate over "{}" pairs in the source string
 				const token = Tempo.getSymbol(name);								// get the symbol for this {name}
-				const customs = snippet?.[token as any]?.source ?? snippet?.[name as any]?.source;
-				const globals = Tempo.#global.parse.snippet[token as any]?.source ?? Tempo.#global.parse.snippet[name as any]?.source;
-				const layout = Layout[token as any];									// get resolution source (layout)
+				const customs = snippet?.[token as keyof Snippet]?.source ?? snippet?.[name as keyof Snippet]?.source;
+				const globals = Tempo.#global.parse.snippet[token as keyof Snippet]?.source ?? Tempo.#global.parse.snippet[name as keyof Snippet]?.source;
+				const layout = Layout[token as keyof Layout];									// get resolution source (layout)
 
 				let res = customs ?? globals ?? layout;						// get the snippet/layout source
 
 				if (isNullish(res) && name.includes('.')) {				// if no definition found, try fallback
 					const prefix = name.split('.')[0];								// get the base token name
 					const pToken = Tempo.getSymbol(prefix);
-					res = snippet?.[pToken as any]?.source ?? snippet?.[prefix as any]?.source
-						?? Snippet[pToken as any]?.source ?? Snippet[prefix as any]?.source
-						?? Layout[pToken as any];
+					res = snippet?.[pToken as keyof Snippet]?.source ?? snippet?.[prefix as keyof Snippet]?.source
+						?? Snippet[pToken as keyof Snippet]?.source ?? Snippet[prefix as keyof Snippet]?.source
+						?? Layout[pToken as keyof Layout];
 				}
 
 				if (res && name.includes('.')) {										// wrap dotted extensions for identification
@@ -623,9 +615,15 @@ export class Tempo {
 	}
 
 	/** global discovery configuration */
+	static #getConfig(sym: symbol) {
+		const discovery = (globalThis as Record<symbol, any>)[sym];
+		return getProxy(omit({ ...discovery, scope: 'discovery' }, 'value'));
+	}
+
+	/** global discovery configuration */
 	static get discovery() {
 		const sym = Symbol.for(this.config.discovery);
-		return getProxy(omit({ ...(globalThis as any)[sym], scope: 'discovery' }, 'value'));
+		return Tempo.#getConfig(sym);
 	}
 
 	/**
@@ -656,16 +654,6 @@ export class Tempo {
 	static get terms() {
 		return secure(Tempo.#terms
 			.map(({ define, ...rest }) => rest));									// omit the 'define' method
-	}
-
-	/** Registers a new term plugin (available on `tempo.term`). See `doc/tempo.md`. */
-	static addTerm(...plugin: Tempo.TermPlugin[]) {
-		asArray(plugin)
-			.flat(1)
-			.forEach(p => {
-				if (!Tempo.#terms.some(t => t.key === p.key))				// check for duplicate key
-					Tempo.#terms.push(p);															// append; silently ignore duplicates
-			})
 	}
 
 	/** static Tempo properties getter */
@@ -761,7 +749,8 @@ export class Tempo {
 			this.#anchor = this.#options.anchor;
 			this.#zdt = this.#parse(this.#tempo as Tempo.DateTime, this.#anchor);		// attempt to interpret the DateTime arg
 
-			if (['iso8601', 'gregory'].includes(this.#local.config['calendar'] as any)) {
+			const cal = this.#local.config.calendar;
+			if (isString(cal) && ['iso8601', 'gregory'].includes(cal)) {
 				for (const key of this.#local.config.formats.keys())
 					Object.assign(this.#fmt, { [key]: this.format(key as enums.Format) });
 			}
@@ -875,8 +864,8 @@ export class Tempo {
 	/** time elapsed since another date-time */								since(optsOrDate?: Tempo.DateTime | Tempo.Until | Tempo.Options, optsOrUntil?: Tempo.Options | Tempo.Until): string { return this.#since(optsOrDate, optsOrUntil) }
 
 	/** applies a format to the instance. See `doc/tempo.md`. */	format<K extends enums.Format>(fmt: K) { return this.#format(fmt) }
-	/** returns a new `Tempo` with specific duration added. */add(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return this.#add(tempo as any, options); }
-	/** returns a new `Tempo` with specific offsets. */				set(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return this.#set(tempo as any, options); }
+	/** returns a new `Tempo` with specific duration added. */add(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return this.#add(tempo as Tempo.Add, options); }
+	/** returns a new `Tempo` with specific offsets. */				set(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return this.#set(tempo as Tempo.Set, options); }
 	/** returns a clone of the current `Tempo` instance. */		clone() { return new this.#Tempo(this, this.config) }
 
 	/** returns the underlying Temporal.ZonedDateTime */			toDateTime() { return this.#zdt ?? this.#anchor ?? this.#now.toZonedDateTimeISO(this.#local.config.timeZone) }
@@ -915,8 +904,8 @@ export class Tempo {
 
 		// evaluate latest timezone / calendar (after #conform which might have updated them)
 		const { timeZone, calendar } = this.#local.config;
-		const tz = isString(timeZone) ? timeZone : (timeZone as any).id ?? (timeZone as any).timeZoneId;
-		const cal = isString(calendar) ? calendar : (calendar as any).id ?? (calendar as any).calendarId;
+		const tz = isString(timeZone) ? timeZone : (timeZone as unknown as { id: string }).id ?? (timeZone as any).timeZoneId;
+		const cal = isString(calendar) ? calendar : (calendar as unknown as { id: string }).id ?? (calendar as any).calendarId;
 
 		if (isEmpty(this.#local.parse.result) && isUndefined(Tempo.#pending))		// #conform() didn't find any matches
 			this.#local.parse.result = [{ type, value }];
@@ -1070,9 +1059,9 @@ export class Tempo {
 		const { type, value } = arg;
 
 		if (this.#isZonedDateTimeLike(tempo)) {									// tempo is ZonedDateTime-ish object (throw away 'value' property)
-			const { timeZone, calendar, value, ...options } = tempo as any;
+			const { timeZone, calendar, value, ...options } = tempo as Tempo.Options;
 			let zdt = !isEmpty(options)
-				? dateTime.with({ ...options })
+				? dateTime.with(options as Temporal.ZonedDateTimeLikeObject)
 				: dateTime;
 
 			if (timeZone)
@@ -1186,7 +1175,7 @@ export class Tempo {
 				delete groups[key];
 			}
 		} finally {
-			this.#anchor = void 0 as any;													// reset anchor
+			this.#anchor = undefined;													// reset anchor
 		}
 
 		// resolve month-names into month-numbers (some browsers do not allow month-names when parsing a Date)
@@ -1233,17 +1222,18 @@ export class Tempo {
 					? -adjust
 					: -(adjust - 1)
 			case '<=':																						// period before or including base-date
+			case '-=':
 				return (period < offset)
 					? -adjust
 					: -(adjust - 1)
-			case '>':																							// period after base-date
+			case '>':																							// period strictly after base-date
 			case 'hence':
-				return (period > offset)
+				return (period >= offset)
 					? adjust
 					: (adjust - 1)
 			case '>=':																						// period after or including base-date
 			case '+=':
-				return (period >= offset)
+				return (period > offset)
 					? adjust
 					: (adjust - 1)
 			default:																							// unexpected modifier
@@ -1277,7 +1267,7 @@ export class Tempo {
 		*/
 		const time = ['hh', 'mi', 'ss', 'ms', 'us', 'ns', 'ff', 'mer'] as const;
 		if (!ownKeys(rest)
-			.every(key => time.includes(key as any)))										// non 'time-unit' keys detected
+			.every(key => (time as ReadonlyArray<string>).includes(key as string)))										// non 'time-unit' keys detected
 			return dateTime;																			// this is not a true {weekDay} pattern, so early-exit
 
 		if (!isEmpty(mod) && !isEmpty(sfx)) {
@@ -1539,8 +1529,8 @@ export class Tempo {
 		if (isDefined(args)) {
 			if (isObject(args) && args.constructor === Object) {
 
-				if ((args as any).timeZone) overrides.timeZone = (args as any).timeZone;
-				if ((args as any).calendar) overrides.calendar = (args as any).calendar;
+				if ((args as Temporal.ZonedDateTimeLikeObject).timeZone) overrides.timeZone = (args as Temporal.ZonedDateTimeLikeObject).timeZone;
+				if ((args as Temporal.ZonedDateTimeLikeObject).calendar) overrides.calendar = (args as Temporal.ZonedDateTimeLikeObject).calendar;
 
 				zdt = Object.entries(args ?? {})										// loop through each mutation
 					.reduce((zdt, [key, adjust]) => {								// apply each mutation to preceding one
@@ -1560,9 +1550,9 @@ export class Tempo {
 
 						switch (`${mutate}.${single}`) {
 							case 'set.timeZone':
-								return zdt.withTimeZone(offset as any);
+								return zdt.withTimeZone(offset as Temporal.TimeZoneLike);
 							case 'set.calendar':
-								return zdt.withCalendar(offset as any);
+								return zdt.withCalendar(offset as Temporal.CalendarLike);
 
 							case 'set.period':
 							case 'set.time':
@@ -1719,7 +1709,7 @@ export class Tempo {
 
 		const obj = this.#local.config.formats;
 		let template = (isString(fmt) && obj.has(fmt))
-			? (obj as any)[fmt] as string
+			? (obj as Record<string, string>)[fmt]
 			: String(fmt);
 
 		// auto-meridiem: if {HH} is present and {mer} is absent, append it after the last time component
@@ -1820,11 +1810,14 @@ export class Tempo {
 		if (isDefined(unit))
 			unit = `${singular(unit)}s` as Tempo.Unit;						// coerce to plural
 
-		return (isUndefined(unit) || since)											// if no 'unit' provided, or if called via #since()
-			? getAccessors(duration)															// return an Object with all the duration accessors
-				.reduce((acc: any, dur: any) => Object.assign(acc, { [dur]: (duration as any)[dur] }),
-					ifDefined({ iso: duration.toString(), unit } as Tempo.Duration))
-			: duration.total({ relativeTo: this.#zdt, unit });		// sum-up the duration components
+		if (isUndefined(unit) || since) {
+			const res = getAccessors(duration)
+				.reduce((acc, dur) => Object.assign(acc, ifDefined({ [dur]: (duration as any)[dur] })),
+					{} as Record<string, any>);
+			return Object.assign(res, { iso: duration.toString(), unit }) as Tempo.Duration;
+		}
+
+		return duration.total({ relativeTo: this.#zdt, unit });
 	}
 
 	/** format the elapsed time between two Tempos (to nanosecond) */

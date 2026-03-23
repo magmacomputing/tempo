@@ -1,4 +1,4 @@
-import { Tempo } from '#core/tempo.class.js';
+import { Tempo } from '#tempo/tempo.class.js';
 
 describe('Tempo.format() refinements', () => {
   const t = new Tempo('2024-05-20T10:00:00Z');

@@ -1,10 +1,10 @@
-import '#core/shared/temporal.polyfill.js';
-import type { IntRange, LooseUnion, Mutable, NonOptional, OwnOf, Property, TPlural, Type } from '#core/shared/type.library.js';
-import type { Enum } from '#core/shared/enumerate.library.js';
-import * as enums from '#core/tempo.config/tempo.enum.js';
-import { Token, Snippet, Layout, Event, Period } from '#core/tempo.config/tempo.default.js';
-import '#core/shared/prototype.library.js';
-declare module '#core/shared/type.library.js' {
+import '#library/temporal.polyfill.js';
+import type { IntRange, LooseUnion, Mutable, NonOptional, OwnOf, Property, TPlural, Type } from '#library/type.library.js';
+import type { Enum } from '#library/enumerate.library.js';
+import * as enums from '#tempo/tempo.config/tempo.enum.js';
+import { Token, Snippet, Layout, Event, Period } from '#tempo/tempo.config/tempo.default.js';
+import '#library/prototype.library.js';
+declare module '#library/type.library.js' {
     interface TypeValueMap<T> {
         Tempo: {
             type: 'Tempo';
@@ -20,10 +20,10 @@ declare module '#core/shared/type.library.js' {
  */
 export declare class Tempo {
     #private;
-    /** Weekday names (short-form) */ static get WEEKDAY(): Enum.wrap<import("#core/shared/type.library.js").Index<["All", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]>>;
-    /** Weekday names (long-form) */ static get WEEKDAYS(): Enum.wrap<import("#core/shared/type.library.js").Index<["Everyday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]>>;
-    /** Month names (short-form) */ static get MONTH(): Enum.wrap<import("#core/shared/type.library.js").Index<["All", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]>>;
-    /** Month names (long-form) */ static get MONTHS(): Enum.wrap<import("#core/shared/type.library.js").Index<["Every", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]>>;
+    /** Weekday names (short-form) */ static get WEEKDAY(): Enum.wrap<import("#library/type.library.js").Index<["All", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]>>;
+    /** Weekday names (long-form) */ static get WEEKDAYS(): Enum.wrap<import("#library/type.library.js").Index<["Everyday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]>>;
+    /** Month names (short-form) */ static get MONTH(): Enum.wrap<import("#library/type.library.js").Index<["All", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]>>;
+    /** Month names (long-form) */ static get MONTHS(): Enum.wrap<import("#library/type.library.js").Index<["Every", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]>>;
     /** Time durations as seconds (singular) */ static get DURATION(): Enum.wrap<{
         readonly year: 31536000;
         readonly month: 2628000;
@@ -73,7 +73,7 @@ export declare class Tempo {
         readonly ns: "nanosecond";
     }>;
     /** Pre-configured format {name -> string} pairs */ static get FORMAT(): Tempo.Format;
-    /** some useful Dates */ static get LIMIT(): import("#core/shared/type.library.js").SecureObject<{
+    /** some useful Dates */ static get LIMIT(): import("#library/type.library.js").SecureObject<{
         readonly maxTempo: any;
         readonly minTempo: any;
     }>;
@@ -170,9 +170,9 @@ export declare class Tempo {
  * Useful for debugging how the final configuration is built.
  */
     static get options(): {
-        default: import("#core/shared/type.library.js").SecureObject<{
+        default: import("#library/type.library.js").SecureObject<{
             readonly scope: "default";
-            readonly timeZone: import("#core/shared/type.library.js").Extend<{
+            readonly timeZone: import("#library/type.library.js").Extend<{
                 readonly utc: "UTC";
                 readonly gmt: "Europe/London";
                 readonly est: "America/New_York";
@@ -198,9 +198,9 @@ export declare class Tempo {
             readonly pivot?: number | undefined;
             readonly sphere?: Tempo.COMPASS | undefined;
             readonly timeStamp?: Tempo.TimeStamp | undefined;
-            readonly mdyLocales?: string | import("#core/shared/type.library.js").SecureArray<string> | undefined;
-            readonly mdyLayouts?: import("#core/shared/type.library.js").SecureArray<Tempo.Pair> | undefined;
-            readonly snippet?: string | import("#core/shared/type.library.js").SecureObject<import("#core/shared/type.library.js").Extend<{
+            readonly mdyLocales?: string | import("#library/type.library.js").SecureArray<string> | undefined;
+            readonly mdyLayouts?: import("#library/type.library.js").SecureArray<Tempo.Pair> | undefined;
+            readonly snippet?: string | import("#library/type.library.js").SecureObject<import("#library/type.library.js").Extend<{
                 readonly [Token.yy /** return the Prototype parent of an object */] /** return the Prototype parent of an object */: RegExp;
                 readonly [Token.mm]: RegExp;
                 readonly [Token.dd]: RegExp;
@@ -219,8 +219,8 @@ export declare class Tempo {
                 readonly [Token.sep]: RegExp;
                 readonly [Token.unt]: RegExp;
                 readonly [Token.brk]: RegExp;
-            }, symbol, RegExp>> | import("#core/shared/type.library.js").SecureObject<RegExp> | import("#core/shared/type.library.js").SecureObject<Record<string | symbol, Tempo.Pattern>> | import("#core/shared/type.library.js").SecureArray<Tempo.PatternOption<Tempo.Pattern>> | undefined;
-            readonly layout?: string | import("#core/shared/type.library.js").SecureObject<RegExp> | import("#core/shared/type.library.js").SecureObject<Record<string | symbol, Tempo.Pattern>> | import("#core/shared/type.library.js").SecureArray<Tempo.PatternOption<Tempo.Pattern>> | import("#core/shared/type.library.js").SecureObject<import("#core/shared/type.library.js").Extend<{
+            }, symbol, RegExp>> | import("#library/type.library.js").SecureObject<RegExp> | import("#library/type.library.js").SecureObject<Record<string | symbol, Tempo.Pattern>> | import("#library/type.library.js").SecureArray<Tempo.PatternOption<Tempo.Pattern>> | undefined;
+            readonly layout?: string | import("#library/type.library.js").SecureObject<RegExp> | import("#library/type.library.js").SecureObject<Record<string | symbol, Tempo.Pattern>> | import("#library/type.library.js").SecureArray<Tempo.PatternOption<Tempo.Pattern>> | import("#library/type.library.js").SecureObject<import("#library/type.library.js").Extend<{
                 readonly [Token.dt]: "({dd}{sep}?{mm}({sep}?{yy})?|{mod}?({evt}))";
                 readonly [Token.tm]: "({hh}{mi}?{ss}?{ff}?{mer}?|{per})";
                 readonly [Token.dtm]: "({dt})(?:(?:{sep}+|T)({tm}))?{tzd}?{brk}?";
@@ -241,7 +241,7 @@ export declare class Tempo {
                 readonly [Token.off]: "{mod}?{dd}{afx}?";
                 readonly [Token.rel]: "{nbr}{sep}?{unt}{sep}?{afx}";
             }, symbol, string>> | undefined;
-            readonly event?: Tempo.Logic | import("#core/shared/type.library.js").SecureObject<import("#core/shared/type.library.js").Extend<{
+            readonly event?: Tempo.Logic | import("#library/type.library.js").SecureObject<import("#library/type.library.js").Extend<{
                 readonly 'new.?years? ?eve': "31 Dec";
                 readonly nye: "31 Dec";
                 readonly 'new.?years?( ?day)?': "01 Jan";
@@ -254,8 +254,8 @@ export declare class Tempo {
                 readonly today: (this: any) => any;
                 readonly tomorrow: (this: any) => any;
                 readonly yesterday: (this: any) => any;
-            }, string, string | Function>> | import("#core/shared/type.library.js").SecureObject<Record<string | symbol, Tempo.Logic>> | import("#core/shared/type.library.js").SecureArray<Tempo.PatternOption<Tempo.Logic>> | undefined;
-            readonly period?: Tempo.Logic | import("#core/shared/type.library.js").SecureObject<Record<string | symbol, Tempo.Logic>> | import("#core/shared/type.library.js").SecureArray<Tempo.PatternOption<Tempo.Logic>> | import("#core/shared/type.library.js").SecureObject<import("#core/shared/type.library.js").Extend<{
+            }, string, string | Function>> | import("#library/type.library.js").SecureObject<Record<string | symbol, Tempo.Logic>> | import("#library/type.library.js").SecureArray<Tempo.PatternOption<Tempo.Logic>> | undefined;
+            readonly period?: Tempo.Logic | import("#library/type.library.js").SecureObject<Record<string | symbol, Tempo.Logic>> | import("#library/type.library.js").SecureArray<Tempo.PatternOption<Tempo.Logic>> | import("#library/type.library.js").SecureObject<import("#library/type.library.js").Extend<{
                 readonly 'mid[ -]?night': "24:00";
                 readonly morning: "8:00";
                 readonly 'mid[ -]?morning': "10:00";
@@ -265,8 +265,8 @@ export declare class Tempo {
                 readonly evening: "18:00";
                 readonly night: "20:00";
             }, string, string | Function>> | undefined;
-            readonly formats?: import("#core/shared/type.library.js").SecureObject<Property<any>> | undefined;
-            readonly plugins?: Tempo.Plugin | import("#core/shared/type.library.js").SecureArray<Tempo.Plugin> | undefined;
+            readonly formats?: import("#library/type.library.js").SecureObject<Property<any>> | undefined;
+            readonly plugins?: Tempo.Plugin | import("#library/type.library.js").SecureArray<Tempo.Plugin> | undefined;
             readonly value?: Tempo.DateTime;
             readonly anchor?: Temporal.ZonedDateTime;
         }>;
@@ -297,7 +297,7 @@ export declare class Tempo {
     static from(tempo: Tempo.DateTime | undefined, options?: Tempo.Options): Tempo;
     static now(): any;
     /** static Tempo.terms getter */
-    static get terms(): import("#core/shared/type.library.js").SecureArray<{
+    static get terms(): import("#library/type.library.js").SecureArray<{
         key: string;
         scope?: string;
         description: string;
@@ -305,11 +305,11 @@ export declare class Tempo {
     /** Registers a new term plugin (available on `tempo.term`). See `doc/tempo.md`. */
     static addTerm(...plugin: Tempo.TermPlugin[]): void;
     /** static Tempo properties getter */
-    static get properties(): import("#core/shared/type.library.js").SecureArray<string | symbol>;
+    static get properties(): import("#library/type.library.js").SecureArray<string | symbol>;
     /** Tempo initial default settings */
-    static get default(): import("#core/shared/type.library.js").SecureObject<{
+    static get default(): import("#library/type.library.js").SecureObject<{
         readonly scope: "default";
-        readonly timeZone: import("#core/shared/type.library.js").Extend<{
+        readonly timeZone: import("#library/type.library.js").Extend<{
             readonly utc: "UTC";
             readonly gmt: "Europe/London";
             readonly est: "America/New_York";
@@ -335,9 +335,9 @@ export declare class Tempo {
         readonly pivot?: number | undefined;
         readonly sphere?: Tempo.COMPASS | undefined;
         readonly timeStamp?: Tempo.TimeStamp | undefined;
-        readonly mdyLocales?: string | import("#core/shared/type.library.js").SecureArray<string> | undefined;
-        readonly mdyLayouts?: import("#core/shared/type.library.js").SecureArray<Tempo.Pair> | undefined;
-        readonly snippet?: string | import("#core/shared/type.library.js").SecureObject<import("#core/shared/type.library.js").Extend<{
+        readonly mdyLocales?: string | import("#library/type.library.js").SecureArray<string> | undefined;
+        readonly mdyLayouts?: import("#library/type.library.js").SecureArray<Tempo.Pair> | undefined;
+        readonly snippet?: string | import("#library/type.library.js").SecureObject<import("#library/type.library.js").Extend<{
             readonly [Token.yy /** return the Prototype parent of an object */] /** return the Prototype parent of an object */: RegExp;
             readonly [Token.mm]: RegExp;
             readonly [Token.dd]: RegExp;
@@ -356,8 +356,8 @@ export declare class Tempo {
             readonly [Token.sep]: RegExp;
             readonly [Token.unt]: RegExp;
             readonly [Token.brk]: RegExp;
-        }, symbol, RegExp>> | import("#core/shared/type.library.js").SecureObject<RegExp> | import("#core/shared/type.library.js").SecureObject<Record<string | symbol, Tempo.Pattern>> | import("#core/shared/type.library.js").SecureArray<Tempo.PatternOption<Tempo.Pattern>> | undefined;
-        readonly layout?: string | import("#core/shared/type.library.js").SecureObject<RegExp> | import("#core/shared/type.library.js").SecureObject<Record<string | symbol, Tempo.Pattern>> | import("#core/shared/type.library.js").SecureArray<Tempo.PatternOption<Tempo.Pattern>> | import("#core/shared/type.library.js").SecureObject<import("#core/shared/type.library.js").Extend<{
+        }, symbol, RegExp>> | import("#library/type.library.js").SecureObject<RegExp> | import("#library/type.library.js").SecureObject<Record<string | symbol, Tempo.Pattern>> | import("#library/type.library.js").SecureArray<Tempo.PatternOption<Tempo.Pattern>> | undefined;
+        readonly layout?: string | import("#library/type.library.js").SecureObject<RegExp> | import("#library/type.library.js").SecureObject<Record<string | symbol, Tempo.Pattern>> | import("#library/type.library.js").SecureArray<Tempo.PatternOption<Tempo.Pattern>> | import("#library/type.library.js").SecureObject<import("#library/type.library.js").Extend<{
             readonly [Token.dt]: "({dd}{sep}?{mm}({sep}?{yy})?|{mod}?({evt}))";
             readonly [Token.tm]: "({hh}{mi}?{ss}?{ff}?{mer}?|{per})";
             readonly [Token.dtm]: "({dt})(?:(?:{sep}+|T)({tm}))?{tzd}?{brk}?";
@@ -378,7 +378,7 @@ export declare class Tempo {
             readonly [Token.off]: "{mod}?{dd}{afx}?";
             readonly [Token.rel]: "{nbr}{sep}?{unt}{sep}?{afx}";
         }, symbol, string>> | undefined;
-        readonly event?: Tempo.Logic | import("#core/shared/type.library.js").SecureObject<import("#core/shared/type.library.js").Extend<{
+        readonly event?: Tempo.Logic | import("#library/type.library.js").SecureObject<import("#library/type.library.js").Extend<{
             readonly 'new.?years? ?eve': "31 Dec";
             readonly nye: "31 Dec";
             readonly 'new.?years?( ?day)?': "01 Jan";
@@ -391,8 +391,8 @@ export declare class Tempo {
             readonly today: (this: any) => any;
             readonly tomorrow: (this: any) => any;
             readonly yesterday: (this: any) => any;
-        }, string, string | Function>> | import("#core/shared/type.library.js").SecureObject<Record<string | symbol, Tempo.Logic>> | import("#core/shared/type.library.js").SecureArray<Tempo.PatternOption<Tempo.Logic>> | undefined;
-        readonly period?: Tempo.Logic | import("#core/shared/type.library.js").SecureObject<Record<string | symbol, Tempo.Logic>> | import("#core/shared/type.library.js").SecureArray<Tempo.PatternOption<Tempo.Logic>> | import("#core/shared/type.library.js").SecureObject<import("#core/shared/type.library.js").Extend<{
+        }, string, string | Function>> | import("#library/type.library.js").SecureObject<Record<string | symbol, Tempo.Logic>> | import("#library/type.library.js").SecureArray<Tempo.PatternOption<Tempo.Logic>> | undefined;
+        readonly period?: Tempo.Logic | import("#library/type.library.js").SecureObject<Record<string | symbol, Tempo.Logic>> | import("#library/type.library.js").SecureArray<Tempo.PatternOption<Tempo.Logic>> | import("#library/type.library.js").SecureObject<import("#library/type.library.js").Extend<{
             readonly 'mid[ -]?night': "24:00";
             readonly morning: "8:00";
             readonly 'mid[ -]?morning': "10:00";
@@ -402,8 +402,8 @@ export declare class Tempo {
             readonly evening: "18:00";
             readonly night: "20:00";
         }, string, string | Function>> | undefined;
-        readonly formats?: import("#core/shared/type.library.js").SecureObject<Property<any>> | undefined;
-        readonly plugins?: Tempo.Plugin | import("#core/shared/type.library.js").SecureArray<Tempo.Plugin> | undefined;
+        readonly formats?: import("#library/type.library.js").SecureObject<Property<any>> | undefined;
+        readonly plugins?: Tempo.Plugin | import("#library/type.library.js").SecureArray<Tempo.Plugin> | undefined;
         readonly value?: Tempo.DateTime;
         readonly anchor?: Temporal.ZonedDateTime;
     }>;
@@ -416,7 +416,7 @@ export declare class Tempo {
     /** allow for auto-convert of Tempo to BigInt, Number or String */
     [Symbol.toPrimitive](hint?: 'string' | 'number' | 'default'): any;
     /** iterate over instance formats */
-    [Symbol.iterator](): ArrayIterator<import("#core/shared/type.library.js").EntryOf<Tempo.Formats>>;
+    [Symbol.iterator](): ArrayIterator<import("#library/type.library.js").EntryOf<Tempo.Formats>>;
     get [Symbol.toStringTag](): string;
     /**
      * Instantiates a new `Tempo` object.
@@ -467,7 +467,7 @@ export declare class Tempo {
     /** Instance-specific parse rules (merged with global) */ get parse(): Tempo.Parse;
     /** Object containing results from all term plugins */ get term(): Tempo.Terms;
     /** Formatted results for all pre-defined format codes */ get fmt(): Tempo.Formats;
-    /** units since epoch */ get epoch(): import("#core/shared/type.library.js").SecureObject<{
+    /** units since epoch */ get epoch(): import("#library/type.library.js").SecureObject<{
         /** seconds since epoch */ readonly ss: number;
         /** milliseconds since epoch */ readonly ms: any;
         /** microseconds since epoch */ readonly us: number;

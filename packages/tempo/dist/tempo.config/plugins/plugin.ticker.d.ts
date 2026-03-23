@@ -1,5 +1,5 @@
-import type { Tempo } from '#core/tempo.class.js';
-declare module '#core/tempo.class.js' {
+import type { Tempo } from '#tempo/tempo.class.js';
+declare module '#tempo/tempo.class.js' {
     namespace Tempo {
         /** ticker 'intervalMs' allowed types */ type TickerInterval = number | string | bigint;
         /** callback function for Tempo.ticker() */ type TickerCallback = (t: Tempo, stop: () => void) => void;

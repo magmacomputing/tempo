@@ -1,8 +1,8 @@
-import { Tempo } from '#core/tempo.class.js';
-import { Pledge } from '#core/shared/pledge.class.js';
-import { TickerPlugin } from '#core/tempo.config/plugins/plugin.ticker.js';
+import { Tempo } from '#tempo/tempo.class.js';
+import { Pledge } from '#library/pledge.class.js';
+import { TickerPlugin } from '#tempo/tempo.config/plugins/plugin.ticker.js';
 
-Tempo.extend(TickerPlugin);
+Tempo.load(TickerPlugin);
 
 describe('Static Symbol.dispose', () => {
 

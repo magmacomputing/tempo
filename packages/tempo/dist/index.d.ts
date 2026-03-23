@@ -1,6 +1,6 @@
-export * from "#core/temporal.polyfill.js";
-export * from '#core/tempo.class.js';
-export * as enums from '#core/tempo.config/tempo.enum.js';
-export * from '#core/shared/pledge.class.js';
-export * from '#core/shared/serialize.library.js';
-export * from '#core/shared/enumerate.library.js';
+export * from "#tempo/temporal.polyfill.js";
+export * from '#tempo/tempo.class.js';
+export * as enums from '#tempo/tempo.config/tempo.enum.js';
+export * from '#library/pledge.class.js';
+export * from '#library/serialize.library.js';
+export * from '#library/enumerate.library.js';

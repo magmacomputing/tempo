@@ -1,5 +1,5 @@
-import type { Tempo } from '#core/tempo.class.js';
-declare module '#core/tempo.class.js' {
+import type { Tempo } from '#tempo/tempo.class.js';
+declare module '#tempo/tempo.class.js' {
     namespace Tempo {
         let ticker: {
             (intervalMs: number | string | bigint): AsyncGenerator<Tempo> & AsyncDisposable;

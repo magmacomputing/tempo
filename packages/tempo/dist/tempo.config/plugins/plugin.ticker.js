@@ -1,5 +1,5 @@
-import { asNumber } from '#core/shared/coercion.library.js';
-import { isNumber, isFunction } from '#core/shared/type.library.js';
+import { asNumber } from '#library/coercion.library.js';
+import { isNumber, isFunction } from '#library/type.library.js';
 /**
  * # TickerPlugin
  * Implementation of Tempo.ticker as an optional plugin.

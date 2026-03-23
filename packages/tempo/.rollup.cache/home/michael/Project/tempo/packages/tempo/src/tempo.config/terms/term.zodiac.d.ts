@@ -1,5 +1,5 @@
 import { type Range } from './term.utils.js';
-import type { Tempo } from '#core/tempo.class.js';
+import type { Tempo } from '#tempo/tempo.class.js';
 export declare const key = "zdc";
 export declare const scope = "zodiac";
 export declare const description = "Astrological Zodiac sign";

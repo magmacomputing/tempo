@@ -15,8 +15,8 @@
   "devDependencies": {
     "@js-temporal/polyfill": "^0.5.1",
     "@release-it/keep-a-changelog": "^7.0.1",
-    "@rollup/plugin-commonjs": "^29.0.2",
     "@rollup/plugin-node-resolve": "^16.0.3",
+    "@types/node": "^25.5.0",
     "@vitest/ui": "^4.0.18",
     "release-it": "^19.2.4",
     "rollup": "^4.59.0",

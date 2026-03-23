@@ -5,16 +5,27 @@
       "vitest/globals",
       "node"
     ],
-    "rootDir": "../../"
+    "typeRoots": [
+      "../../../node_modules/@types"
+    ],
+    "rootDir": "../../",
+    "paths": {
+      "#library/*": [
+        "../../library/lib/*"
+      ],
+      "#tempo/*": [
+        "../src/*"
+      ]
+    }
   },
   "include": [
     "**/*.ts",
     "../src/**/*.ts",
-    "../../shared/src/**/*.ts"
+    "../../library/lib/**/*.ts"
   ],
   "references": [
     {
-      "path": "../../shared"
+      "path": "../../library"
     }
   ],
   "exclude": []

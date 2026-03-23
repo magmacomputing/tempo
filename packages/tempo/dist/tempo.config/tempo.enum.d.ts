@@ -1,5 +1,5 @@
-import type { Enum } from '#core/shared/enumerate.library.js';
-import type { OwnOf, KeyOf, ValueOf, LooseUnion, Mutable } from '#core/shared/type.library.js';
+import type { Enum } from '#library/enumerate.library.js';
+import type { OwnOf, KeyOf, ValueOf, LooseUnion, Mutable } from '#library/type.library.js';
 /**
  * Various enumerations used throughout Tempo library.
  * These are exported and added as static getters of the Tempo class.
@@ -9,13 +9,13 @@ import type { OwnOf, KeyOf, ValueOf, LooseUnion, Mutable } from '#core/shared/ty
  * ```
  */
 /** */
-export declare const WEEKDAY: Enum.wrap<import("#core/shared/type.library.js").Index<["All", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]>>;
-export declare const WEEKDAYS: Enum.wrap<import("#core/shared/type.library.js").Index<["Everyday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]>>;
+export declare const WEEKDAY: Enum.wrap<import("#library/type.library.js").Index<["All", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]>>;
+export declare const WEEKDAYS: Enum.wrap<import("#library/type.library.js").Index<["Everyday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]>>;
 export type WEEKDAY = KeyOf<typeof WEEKDAY>;
 export type WEEKDAYS = KeyOf<typeof WEEKDAYS>;
 export type Weekday = ValueOf<typeof WEEKDAY>;
-export declare const MONTH: Enum.wrap<import("#core/shared/type.library.js").Index<["All", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]>>;
-export declare const MONTHS: Enum.wrap<import("#core/shared/type.library.js").Index<["Every", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]>>;
+export declare const MONTH: Enum.wrap<import("#library/type.library.js").Index<["All", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]>>;
+export declare const MONTHS: Enum.wrap<import("#library/type.library.js").Index<["Every", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]>>;
 export type MONTH = KeyOf<typeof MONTH>;
 export type MONTHS = KeyOf<typeof MONTHS>;
 export type Month = ValueOf<typeof MONTH>;
@@ -92,7 +92,7 @@ export type Formats = {
 } & Record<string, string | number>;
 /** Enum registry of format strings */
 export type FormatEnum = Enum.wrap<OwnFormat & Record<string, string | number>>;
-export declare const LIMIT: import("#core/shared/type.library.js").SecureObject<{
+export declare const LIMIT: import("#library/type.library.js").SecureObject<{
     /** Tempo(31-Dec-9999.23:59:59).ns */ readonly maxTempo: bigint;
     /** Tempo(01-Jan-1000.00:00:00).ns */ readonly minTempo: bigint;
 }>;
@@ -116,10 +116,10 @@ export type Mutation = KeyOf<typeof MUTATION>;
 export declare const ZONED_DATE_TIME: any;
 export type ZONED_DATE_TIME = ValueOf<typeof ZONED_DATE_TIME>;
 export type ZonedDateTime = KeyOf<typeof ZONED_DATE_TIME>;
-export declare const OPTION: Enum.wrap<import("#core/shared/type.library.js").Index<["value", "mdyLocales", "mdyLayouts", "store", "discovery", "debug", "catch", "timeZone", "calendar", "locale", "pivot", "sphere", "timeStamp", "snippet", "layout", "event", "period", "formats", "plugins"]>>;
-export type OPTION = typeof OPTION;
-export type Option = KeyOf<OPTION>;
-export declare const PARSE: Enum.wrap<import("#core/shared/type.library.js").Index<["mdyLocales", "mdyLayouts", "formats", "pivot", "snippet", "layout", "event", "period", "anchor", "value", "discovery", "plugins"]>>;
-export type PARSE = typeof PARSE;
-export type Parse = KeyOf<PARSE>;
+export declare const OPTION: Enum.wrap<import("#library/type.library.js").Index<["value", "mdyLocales", "mdyLayouts", "store", "discovery", "debug", "catch", "timeZone", "calendar", "locale", "pivot", "sphere", "timeStamp", "snippet", "layout", "event", "period", "formats", "plugins"]>>;
+export type Option = KeyOf<typeof OPTION>;
+export declare const PARSE: Enum.wrap<import("#library/type.library.js").Index<["mdyLocales", "mdyLayouts", "formats", "pivot", "snippet", "layout", "event", "period", "anchor", "value", "discovery", "plugins"]>>;
+export type Parse = KeyOf<typeof PARSE>;
+export declare const DISCOVERY: Enum.wrap<import("#library/type.library.js").Index<["options", "timeZones", "terms", "plugins"]>>;
+export type Discovery = KeyOf<typeof DISCOVERY>;
 export {};

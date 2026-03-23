@@ -1,4 +1,4 @@
-import type { Tempo } from '#core/tempo.class.js';
+import type { Tempo } from '#tempo/tempo.class.js';
 /** common RegExp patterns */
 export declare const Match: {
     /** match all {} pairs, if they start with a word char */ readonly braces: RegExp;
@@ -17,7 +17,7 @@ export declare const Match: {
     /** Z character */ readonly zed: RegExp;
 };
 /** Tempo Symbol registry */
-export declare const Token: import("#core/shared/type.library.js").Extend<{
+export declare const Token: import("#library/type.library.js").Extend<{
     /** year */ readonly yy: symbol;
     /** month */ readonly mm: symbol;
     /** day */ readonly dd: symbol;
@@ -58,7 +58,7 @@ export type Token = typeof Token;
 /**
  * a {snippet} is a simple, reusable regex pattern for a component of a date-time string (e.g. 'hh' or 'yy')
  */
-export declare const Snippet: import("#core/shared/type.library.js").Extend<{
+export declare const Snippet: import("#library/type.library.js").Extend<{
     readonly [Token.yy]: RegExp;
     readonly [Token.mm]: RegExp;
     readonly [Token.dd]: RegExp;
@@ -82,7 +82,7 @@ export type Snippet = typeof Snippet;
  * a {layout} is a Record of snippet-combinations describing an input DateTime argument
  * the Layout's keys are in the order that they will be checked against an input value
  */
-export declare const Layout: import("#core/shared/type.library.js").Extend<{
+export declare const Layout: import("#library/type.library.js").Extend<{
     readonly [Token.dt]: "({dd}{sep}?{mm}({sep}?{yy})?|{mod}?({evt}))";
     readonly [Token.tm]: "({hh}{mi}?{ss}?{ff}?{mer}?|{per})";
     readonly [Token.dtm]: "({dt})(?:(?:{sep}+|T)({tm}))?{tzd}?{brk}?";
@@ -100,7 +100,7 @@ export type Layout = typeof Layout;
  * if assigning a function, use standard 'function()' syntax to allow for 'this' binding.
  * also, a function should always have a .toString() method which returns a parse-able Date string
  */
-export declare const Event: import("#core/shared/type.library.js").Extend<{
+export declare const Event: import("#library/type.library.js").Extend<{
     readonly 'new.?years? ?eve': "31 Dec";
     readonly nye: "31 Dec";
     readonly 'new.?years?( ?day)?': "01 Jan";
@@ -120,7 +120,7 @@ export type Event = typeof Event;
  * values can be a string or a function.
  * if using a function, use regular 'function()' syntax to allow for 'this' binding.
  */
-export declare const Period: import("#core/shared/type.library.js").Extend<{
+export declare const Period: import("#library/type.library.js").Extend<{
     readonly 'mid[ -]?night': "24:00";
     readonly morning: "8:00";
     readonly 'mid[ -]?morning': "10:00";
@@ -135,7 +135,7 @@ export type Period = typeof Period;
  * a {timeZone} alias dictionary mapping common abbreviations to IANA strings.
  * Tempo will check this registry to convert abbreviations before passing them to Temporal.
  */
-export declare const TimeZone: import("#core/shared/type.library.js").Extend<{
+export declare const TimeZone: import("#library/type.library.js").Extend<{
     readonly utc: "UTC";
     readonly gmt: "Europe/London";
     readonly est: "America/New_York";
@@ -154,4 +154,4 @@ export declare const TimeZone: import("#core/shared/type.library.js").Extend<{
 }, string, string>;
 export type TimeZone = typeof TimeZone;
 /** Reasonable default options for initial Tempo config */
-export declare const Default: import("#core/shared/type.library.js").SecureObject<Tempo.Options>;
+export declare const Default: import("#library/type.library.js").SecureObject<Tempo.Options>;

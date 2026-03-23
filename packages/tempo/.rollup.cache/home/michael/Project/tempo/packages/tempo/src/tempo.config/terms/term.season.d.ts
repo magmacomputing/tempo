@@ -1,5 +1,5 @@
 import { type Range } from './term.utils.js';
-import type { Tempo } from '#core/tempo.class.js';
+import type { Tempo } from '#tempo/tempo.class.js';
 export declare const key = "szn";
 export declare const scope = "season";
 export declare const description = "Meteorlogical season";

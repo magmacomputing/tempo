@@ -1,6 +1,6 @@
 import { getTermRange, type Range } from './term.utils.js';
-import { cloneify } from '#core/shared/serialize.library.js';
-import type { Tempo } from '#core/tempo.class.js';
+import { cloneify } from '#library/serialize.library.js';
+import type { Tempo } from '#tempo/tempo.class.js';
 
 /** definition of astrological zodiac ranges */
 const ranges = [																						// @link https://en.wikipedia.org/wiki/Astrological_sign

@@ -1,4 +1,4 @@
-import { Tempo } from '#core/tempo.class.js';
+import { Tempo } from '#tempo/tempo.class.js';
 
 describe('Custom Configuration Options', () => {
 
@@ -9,7 +9,7 @@ describe('Custom Configuration Options', () => {
 
 	test('non-standard options are accessible in Terms plugins', () => {
 		// Register a term that uses a custom config option
-		Tempo.addTerm({
+		Tempo.load({
 			key: 'customTerm',
 			description: 'A term that uses custom config',
 			define() {

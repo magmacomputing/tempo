@@ -1067,10 +1067,12 @@ To add a polyfill to your project:
     const ZONED_DATE_TIME = enumify(['value', 'timeZoneId', 'calendarId', 'monthCode', 'offset', 'timeZone']).extend(ELEMENT.values());
     const OPTION = enumify(['value', 'mdyLocales', 'mdyLayouts', 'store', 'discovery', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period', 'formats', 'plugins']);
     const PARSE = enumify(['mdyLocales', 'mdyLayouts', 'formats', 'pivot', 'snippet', 'layout', 'event', 'period', 'anchor', 'value', 'discovery', 'plugins']);
+    const DISCOVERY = enumify(['options', 'timeZones', 'terms', 'plugins']);
 
     var tempo_enum = /*#__PURE__*/Object.freeze({
         __proto__: null,
         COMPASS: COMPASS,
+        DISCOVERY: DISCOVERY,
         DURATION: DURATION,
         DURATIONS: DURATIONS,
         ELEMENT: ELEMENT,
@@ -1544,17 +1546,16 @@ To add a polyfill to your project:
             : asArray(a || []); // return the collated result
     });
 
-    // #region Const variables
     /** key to use for storage / globalThis Symbol */ const $Tempo = Symbol.for('$Tempo');
     /** current execution context*/ const Context = getContext();
-    // #endregion Const variables
+    // #region Const variables
     /**
      * # Tempo
      * A powerful wrapper around `Temporal.ZonedDateTime` for flexible parsing and intuitive manipulation of date-time objects.
      * Bridges the gap between raw string/number inputs and the strict requirements of the ECMAScript Temporal API.
      */
     let Tempo = (() => {
-        var _Tempo_dbg, _Tempo_global, _Tempo_pending, _Tempo_usrCount, _Tempo_terms, _Tempo_proto, _Tempo_hasOwn, _Tempo_isLocal, _Tempo_create, _Tempo_setEvents, _Tempo_setPeriods, _Tempo_setSphere, _Tempo_isMonthDay, _Tempo_swapLayout, _Tempo_prefix, _Tempo_locale, _Tempo_setConfig, _Tempo_mdyLocales, _Tempo_setDiscovery, _Tempo_setPatterns;
+        var _Tempo_dbg, _Tempo_global, _Tempo_pending, _Tempo_usrCount, _Tempo_terms, _Tempo_proto, _Tempo_hasOwn, _Tempo_isLocal, _Tempo_create, _Tempo_setEvents, _Tempo_setPeriods, _Tempo_setSphere, _Tempo_isMonthDay, _Tempo_swapLayout, _Tempo_prefix, _Tempo_locale, _Tempo_setConfig, _Tempo_mdyLocales, _Tempo_setDiscovery, _Tempo_setPatterns, _Tempo_getConfig;
         let _classDecorators = [Serializable, Immutable];
         let _classDescriptor;
         let _classExtraInitializers = [];
@@ -1641,20 +1642,24 @@ To add a polyfill to your project:
                             locale; // cannot determine locale
                     } };
             }
-            // #endregion Static private methods
-            // #region Static public methods~~~~~~~~~~~~~~~~~~~~~~~~~~
-            /**
-             * Bootstrap the library with a Custom Global Discovery object.
-             *
-             * This replaces the manual `globalThis[Symbol.for($Tempo)] = { ... }` pattern
-             * and automatically calls `Tempo.init()` to apply the discovered configuration.
-             *
-             * @param config - The Global Discovery object to register.
-             * @returns The resolved global configuration.
-             */
-            static discover(config) {
-                globalThis[$Tempo] = config;
-                return this.init();
+            static load(arg, options) {
+                asArray(arg).flat(1).forEach(item => {
+                    if (isFunction(item)) {
+                        if (!item.installed) {
+                            item(options, this, (val) => new this(val)); // handle Plugins (Functional extension)
+                            item.installed = true;
+                        }
+                    }
+                    if (isObject(item) && isString(item.key) && isFunction(item.define)) {
+                        if (!__classPrivateFieldGet(Tempo, _classThis, "f", _Tempo_terms).some(term => term.key === item.key))
+                            __classPrivateFieldGet(Tempo, _classThis, "f", _Tempo_terms).push(item); // handle TermPlugins (Grammar extension)
+                    }
+                    if (isObject(item) && ownKeys(item).some(key => DISCOVERY.has(key))) {
+                        globalThis[$Tempo] = item; // handle Discovery (Configuration bootstrapping)
+                        this.init();
+                    }
+                });
+                return this;
             }
             /**
              * Initializes the global default configuration for all subsequent `Tempo` instances.
@@ -1692,7 +1697,7 @@ To add a polyfill to your project:
                     for (const key of Object.keys(Token)) // purge user-allocated Tokens
                         if (key.startsWith('usr.')) // only remove 'usr.' prefixed keys
                             delete Token[key];
-                    Tempo.addTerm(...registerTerms); // register built-in term plugins
+                    this.load(registerTerms); // register built-in term plugins
                     const storeKey = Symbol.keyFor($Tempo);
                     __classPrivateFieldGet(Tempo, _classThis, "m", _Tempo_setConfig).call(Tempo, __classPrivateFieldGet(Tempo, _classThis, "f", _Tempo_global), { store: storeKey, discovery: storeKey, scope: 'global' }, Tempo.readStore(storeKey), // allow for storage-values to overwrite
                     __classPrivateFieldGet(Tempo, _classThis, "m", _Tempo_setDiscovery).call(Tempo, __classPrivateFieldGet(Tempo, _classThis, "f", _Tempo_global), $Tempo));
@@ -1767,7 +1772,8 @@ To add a polyfill to your project:
                 if (__classPrivateFieldGet(Tempo, _classThis, "m", _Tempo_isLocal).call(Tempo, shape) && __classPrivateFieldGet(Tempo, _classThis, "m", _Tempo_hasOwn).call(Tempo, shape.parse, 'mdyLocales'))
                     monthDay.push(...shape.parse.mdyLocales); // append local mdyLocales (not overwrite global)
                 return monthDay.some(mdy => {
-                    const tzs = mdy.timeZones ?? mdy.getTimeZones?.() ?? [];
+                    const m = mdy;
+                    const tzs = m.timeZones ?? m.getTimeZones?.() ?? [];
                     return tzs.includes(shape.config.timeZone);
                 });
             }, _Tempo_swapLayout = function _Tempo_swapLayout(shape) {
@@ -1863,7 +1869,7 @@ To add a polyfill to your project:
                             shape.config.discovery = isSymbol(optVal) ? Symbol.keyFor(optVal) : optVal;
                             break;
                         case 'plugins':
-                            asArray(optVal).forEach(p => this.extend(p));
+                            asArray(optVal).forEach(p => this.load(p));
                             break;
                         case 'anchor':
                             break; // internal anchor used for relativity parsing
@@ -1898,13 +1904,13 @@ To add a polyfill to your project:
                     TimeZone[key.toLowerCase()] = value;
                 // 2. Process Terms
                 if (discovery.terms)
-                    Tempo.addTerm(...asArray(discovery.terms));
+                    this.load(asArray(discovery.terms));
                 // 3. Process Formats
                 if (discovery.formats)
                     shape.config.formats = shape.config.formats.extend(discovery.formats);
                 // 4. Process Plugins
                 if (discovery.plugins)
-                    asArray(discovery.plugins).forEach(p => this.extend(p));
+                    asArray(discovery.plugins).forEach(p => this.load(p));
                 // 4. Process Options
                 let opts = discovery.options || {};
                 return isFunction(opts) ? opts() : opts;
@@ -1920,18 +1926,6 @@ To add a polyfill to your project:
                 for (const [sym, layout] of ownEntries(shape.parse.layout, true))
                     shape.parse.pattern.set(sym, Tempo.regexp(layout, snippet));
             }, Symbol.dispose)]() { Tempo.init(); }
-            /**
-             * Extends the Tempo class with new functionality.
-             * Plugins can add static or instance methods to the library.
-             */
-            static extend(plugin, options) {
-                const p = plugin;
-                if (!p.installed) {
-                    p(options, this, (val) => new this(val));
-                    p.installed = true;
-                }
-                return this;
-            }
             /** Reads options from persistent storage (e.g., localStorage). */
             static readStore(key = __classPrivateFieldGet(Tempo, _classThis, "f", _Tempo_global).config.store) {
                 return getStorage(key, {});
@@ -2004,7 +1998,7 @@ To add a polyfill to your project:
             /** global discovery configuration */
             static get discovery() {
                 const sym = Symbol.for(this.config.discovery);
-                return getProxy(omit({ ...globalThis[sym], scope: 'discovery' }, 'value'));
+                return __classPrivateFieldGet(Tempo, _classThis, "m", _Tempo_getConfig).call(Tempo, sym);
             }
             /**
          * Returns a snapshot of the configuration layers used by Tempo.
@@ -2025,15 +2019,6 @@ To add a polyfill to your project:
             static get terms() {
                 return secure(__classPrivateFieldGet(Tempo, _classThis, "f", _Tempo_terms)
                     .map(({ define, ...rest }) => rest)); // omit the 'define' method
-            }
-            /** Registers a new term plugin (available on `tempo.term`). See `doc/tempo.md`. */
-            static addTerm(...plugin) {
-                asArray(plugin)
-                    .flat(1)
-                    .forEach(p => {
-                    if (!__classPrivateFieldGet(Tempo, _classThis, "f", _Tempo_terms).some(t => t.key === p.key)) // check for duplicate key
-                        __classPrivateFieldGet(Tempo, _classThis, "f", _Tempo_terms).push(p); // append; silently ignore duplicates
-                });
             }
             /** static Tempo properties getter */
             static get properties() {
@@ -2060,7 +2045,10 @@ To add a polyfill to your project:
                 });
             }
             /** iterate over Tempo properties */
-            static [(Symbol.iterator)]() {
+            static [(_Tempo_getConfig = function _Tempo_getConfig(sym) {
+                const discovery = globalThis[sym];
+                return getProxy(omit({ ...discovery, scope: 'discovery' }, 'value'));
+            }, Symbol.iterator)]() {
                 return Tempo.properties[Symbol.iterator](); // static Iterator over array of 'getters'
             }
             // #endregion Static public methods
@@ -2102,7 +2090,8 @@ To add a polyfill to your project:
                 try {
                     this.#anchor = this.#options.anchor;
                     this.#zdt = this.#parse(this.#tempo, this.#anchor); // attempt to interpret the DateTime arg
-                    if (['iso8601', 'gregory'].includes(this.#local.config['calendar'])) {
+                    const cal = this.#local.config.calendar;
+                    if (isString(cal) && ['iso8601', 'gregory'].includes(cal)) {
                         for (const key of this.#local.config.formats.keys())
                             Object.assign(this.#fmt, { [key]: this.format(key) });
                     }
@@ -2361,7 +2350,7 @@ To add a polyfill to your project:
                 if (this.#isZonedDateTimeLike(tempo)) { // tempo is ZonedDateTime-ish object (throw away 'value' property)
                     const { timeZone, calendar, value, ...options } = tempo;
                     let zdt = !isEmpty(options)
-                        ? dateTime.with({ ...options })
+                        ? dateTime.with(options)
                         : dateTime;
                     if (timeZone)
                         zdt = zdt.withTimeZone(timeZone); // optionally set timeZone
@@ -2453,7 +2442,7 @@ To add a polyfill to your project:
                     }
                 }
                 finally {
-                    this.#anchor = void 0; // reset anchor
+                    this.#anchor = undefined; // reset anchor
                 }
                 // resolve month-names into month-numbers (some browsers do not allow month-names when parsing a Date)
                 if (isDefined(groups["mm"]) && !isNumeric(groups["mm"])) {
@@ -2496,17 +2485,18 @@ To add a polyfill to your project:
                             ? -adjust
                             : -(adjust - 1);
                     case '<=': // period before or including base-date
+                    case '-=':
                         return (period < offset)
                             ? -adjust
                             : -(adjust - 1);
-                    case '>': // period after base-date
+                    case '>': // period strictly after base-date
                     case 'hence':
-                        return (period > offset)
+                        return (period >= offset)
                             ? adjust
                             : (adjust - 1);
                     case '>=': // period after or including base-date
                     case '+=':
-                        return (period >= offset)
+                        return (period > offset)
                             ? adjust
                             : (adjust - 1);
                     default: // unexpected modifier
@@ -2999,10 +2989,12 @@ To add a polyfill to your project:
                 const duration = this.#zdt.until(offset.#zdt.withCalendar(this.#zdt.calendarId), { largestUnit: diffZone ? 'hours' : (unit ?? 'years') });
                 if (isDefined(unit))
                     unit = `${singular(unit)}s`; // coerce to plural
-                return (isUndefined(unit) || since) // if no 'unit' provided, or if called via #since()
-                    ? getAccessors(duration) // return an Object with all the duration accessors
-                        .reduce((acc, dur) => Object.assign(acc, { [dur]: duration[dur] }), ifDefined({ iso: duration.toString(), unit }))
-                    : duration.total({ relativeTo: this.#zdt, unit }); // sum-up the duration components
+                if (isUndefined(unit) || since) {
+                    const res = getAccessors(duration)
+                        .reduce((acc, dur) => Object.assign(acc, ifDefined({ [dur]: duration[dur] })), {});
+                    return Object.assign(res, { iso: duration.toString(), unit });
+                }
+                return duration.total({ relativeTo: this.#zdt, unit });
             }
             /** format the elapsed time between two Tempos (to nanosecond) */
             #since(arg, until = {}) {

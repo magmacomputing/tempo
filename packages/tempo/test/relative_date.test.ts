@@ -1,5 +1,5 @@
-import '#core/temporal.polyfill.js';
-import { Tempo } from '#core/tempo.class.js';
+import '#tempo/temporal.polyfill.js';
+import { Tempo } from '#tempo/tempo.class.js';
 
 describe('Tempo smoke tests', () => {
   beforeAll(() => {

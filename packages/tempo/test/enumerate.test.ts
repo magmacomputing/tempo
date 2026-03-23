@@ -1,4 +1,4 @@
-import { enumify } from '#core/shared/enumerate.library.js';
+import { enumify } from '#library/enumerate.library.js';
 
 describe('enumify stealth proxy', () => {
   it('should expose all keys from the prototype chain in Object.keys()', () => {

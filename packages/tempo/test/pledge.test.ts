@@ -1,4 +1,4 @@
-import { Pledge } from '#core/shared/pledge.class.js';
+import { Pledge } from '#library/pledge.class.js';
 
 describe('Pledge', () => {
 

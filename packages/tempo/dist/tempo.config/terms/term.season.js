@@ -1,5 +1,5 @@
-import { cloneify } from '#core/shared/serialize.library.js';
-import { COMPASS } from '#core/tempo.config/tempo.enum.js';
+import { cloneify } from '#library/serialize.library.js';
+import { COMPASS } from '#tempo/tempo.config/tempo.enum.js';
 import { getTermRange } from './term.utils.js';
 /** definition of meteorological season ranges */
 const ranges = [

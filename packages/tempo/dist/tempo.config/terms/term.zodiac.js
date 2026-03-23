@@ -1,5 +1,5 @@
 import { getTermRange } from './term.utils.js';
-import { cloneify } from '#core/shared/serialize.library.js';
+import { cloneify } from '#library/serialize.library.js';
 /** definition of astrological zodiac ranges */
 const ranges = [
     [

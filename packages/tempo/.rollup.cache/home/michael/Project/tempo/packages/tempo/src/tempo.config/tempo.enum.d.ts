@@ -1,4 +1,4 @@
-import type { KeyOf, ValueOf, LooseUnion } from '#core/shared/type.library.js';
+import type { KeyOf, ValueOf, LooseUnion } from '#library/type.library.js';
 /**
  * Various enumerations used throughout Tempo library.
  * These are exported and added as static getters of the Tempo class.
@@ -8,23 +8,23 @@ import type { KeyOf, ValueOf, LooseUnion } from '#core/shared/type.library.js';
  ```
  */
 /** */
-export declare const WEEKDAY: import("#core/shared/enumerate.library.js").Enum.wrap<import("#core/shared/type.library.js").Index<["All", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]>>;
-export declare const WEEKDAYS: import("#core/shared/enumerate.library.js").Enum.wrap<import("#core/shared/type.library.js").Index<["Everyday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]>>;
+export declare const WEEKDAY: import("#library/enumerate.library.js").Enum.wrap<import("#library/type.library.js").Index<["All", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]>>;
+export declare const WEEKDAYS: import("#library/enumerate.library.js").Enum.wrap<import("#library/type.library.js").Index<["Everyday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]>>;
 export type WEEKDAY = KeyOf<typeof WEEKDAY>;
 export type WEEKDAYS = KeyOf<typeof WEEKDAYS>;
 export type Weekday = ValueOf<typeof WEEKDAY>;
-export declare const MONTH: import("#core/shared/enumerate.library.js").Enum.wrap<import("#core/shared/type.library.js").Index<["All", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]>>;
-export declare const MONTHS: import("#core/shared/enumerate.library.js").Enum.wrap<import("#core/shared/type.library.js").Index<["Every", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]>>;
+export declare const MONTH: import("#library/enumerate.library.js").Enum.wrap<import("#library/type.library.js").Index<["All", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]>>;
+export declare const MONTHS: import("#library/enumerate.library.js").Enum.wrap<import("#library/type.library.js").Index<["Every", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]>>;
 export type MONTH = KeyOf<typeof MONTH>;
 export type MONTHS = KeyOf<typeof MONTHS>;
 export type Month = ValueOf<typeof MONTH>;
-export declare const SEASON: import("#core/shared/enumerate.library.js").Enum.wrap<{
+export declare const SEASON: import("#library/enumerate.library.js").Enum.wrap<{
     readonly Summer: "summer";
     readonly Autumn: "autumn";
     readonly Winter: "winter";
     readonly Spring: "spring";
 }>;
-export declare const COMPASS: import("#core/shared/enumerate.library.js").Enum.wrap<{
+export declare const COMPASS: import("#library/enumerate.library.js").Enum.wrap<{
     readonly North: "north";
     readonly East: "east";
     readonly South: "south";
@@ -33,7 +33,7 @@ export declare const COMPASS: import("#core/shared/enumerate.library.js").Enum.w
 export type SEASON = ValueOf<typeof SEASON>;
 export type COMPASS = ValueOf<typeof COMPASS>;
 /** number of seconds in a time unit */
-export declare const DURATION: import("#core/shared/enumerate.library.js").Enum.wrap<{
+export declare const DURATION: import("#library/enumerate.library.js").Enum.wrap<{
     /** approx number of seconds in a year */ readonly year: 31536000;
     /** approx number of seconds in a month */ readonly month: 2628000;
     /** number of seconds in a week */ readonly week: 604800;
@@ -46,7 +46,7 @@ export declare const DURATION: import("#core/shared/enumerate.library.js").Enum.
     /** number of seconds in a nanosecond */ readonly nanosecond: 1e-9;
 }>;
 /** number of milliseconds in a time unit */
-export declare const DURATIONS: import("#core/shared/enumerate.library.js").Enum.wrap<{
+export declare const DURATIONS: import("#library/enumerate.library.js").Enum.wrap<{
     /** approx number of milliseconds in a year */ readonly years: number;
     /** approx number of milliseconds in a month */ readonly months: number;
     /** number of milliseconds in a week */ readonly weeks: number;
@@ -61,7 +61,7 @@ export declare const DURATIONS: import("#core/shared/enumerate.library.js").Enum
 export type DURATION = KeyOf<typeof DURATION>;
 export type DURATIONS = KeyOf<typeof DURATIONS>;
 /** pre-defined Format code short-cuts */
-export declare const FORMAT: import("#core/shared/enumerate.library.js").Enum.wrap<{
+export declare const FORMAT: import("#library/enumerate.library.js").Enum.wrap<{
     /** useful for standard date display */ readonly display: "{www}, {dd} {mmm} {yyyy}";
     /** useful for standard datestamps */ readonly weekDate: "{www}, {yyyy}-{mmm}-{dd}";
     /** useful for standard timestamps */ readonly weekTime: "{www}, {yyyy}-{mmm}-{dd} {hh}:{mi}:{ss}";
@@ -79,11 +79,11 @@ export declare const FORMAT: import("#core/shared/enumerate.library.js").Enum.wr
 }>;
 export type FORMAT = ValueOf<typeof FORMAT>;
 export type Format = LooseUnion<KeyOf<typeof FORMAT>>;
-export declare const LIMIT: import("#core/shared/type.library.js").SecureObject<{
+export declare const LIMIT: import("#library/type.library.js").SecureObject<{
     /** Tempo(31-Dec-9999.23:59:59).ns */ readonly maxTempo: any;
     /** Tempo(01-Jan-1000.00:00:00).ns */ readonly minTempo: any;
 }>;
-export declare const ELEMENT: import("#core/shared/enumerate.library.js").Enum.wrap<{
+export declare const ELEMENT: import("#library/enumerate.library.js").Enum.wrap<{
     readonly yy: "year";
     readonly mm: "month";
     readonly ww: "week";
@@ -103,9 +103,9 @@ export type Mutation = KeyOf<typeof MUTATION>;
 export declare const ZONED_DATE_TIME: any;
 export type ZONED_DATE_TIME = ValueOf<typeof ZONED_DATE_TIME>;
 export type ZonedDateTime = KeyOf<typeof ZONED_DATE_TIME>;
-export declare const OPTION: import("#core/shared/enumerate.library.js").Enum.wrap<import("#core/shared/type.library.js").Index<["value", "mdyLocales", "mdyLayouts", "store", "discovery", "debug", "catch", "timeZone", "calendar", "locale", "pivot", "sphere", "timeStamp", "snippet", "layout", "event", "period", "formats", "plugins"]>>;
+export declare const OPTION: import("#library/enumerate.library.js").Enum.wrap<import("#library/type.library.js").Index<["value", "mdyLocales", "mdyLayouts", "store", "discovery", "debug", "catch", "timeZone", "calendar", "locale", "pivot", "sphere", "timeStamp", "snippet", "layout", "event", "period", "formats", "plugins"]>>;
 export type OPTION = typeof OPTION;
 export type Option = KeyOf<OPTION>;
-export declare const PARSE: import("#core/shared/enumerate.library.js").Enum.wrap<import("#core/shared/type.library.js").Index<["mdyLocales", "mdyLayouts", "formats", "pivot", "snippet", "layout", "event", "period", "anchor", "value", "discovery", "plugins"]>>;
+export declare const PARSE: import("#library/enumerate.library.js").Enum.wrap<import("#library/type.library.js").Index<["mdyLocales", "mdyLayouts", "formats", "pivot", "snippet", "layout", "event", "period", "anchor", "value", "discovery", "plugins"]>>;
 export type PARSE = typeof PARSE;
 export type Parse = KeyOf<PARSE>;

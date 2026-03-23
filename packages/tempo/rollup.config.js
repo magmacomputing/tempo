@@ -1,6 +1,6 @@
-import resolve from '@rollup/plugin-node-resolve';
-import commonjs from '@rollup/plugin-commonjs';
 import alias from '@rollup/plugin-alias';
+import resolve from '@rollup/plugin-node-resolve';
+
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve as nodeResolve } from 'node:path';
 
@@ -27,14 +27,13 @@ export default {
 	plugins: [
 		alias({
 			entries: [
-				{ find: '#core/shared', replacement: nodeResolve(__dirname, '../shared/dist') },
-				{ find: '#core', replacement: nodeResolve(__dirname, './dist') }
+				{ find: '#library', replacement: nodeResolve(__dirname, '../library/dist') },
+				{ find: '#tempo', replacement: nodeResolve(__dirname, './dist') }
 			]
 		}),
 		resolve({
 			extensions: ['.js']
-		}),
-		commonjs()
+		})
 	],
 	external: ['@js-temporal/polyfill']
 };

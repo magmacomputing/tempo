@@ -1,16 +1,16 @@
 {
   "name": "@magma/tempo",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "The Tempo core library",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "imports": {
-    "#core/shared/*": {
-      "development": "../shared/src/*",
-      "default": "@magma/shared/*"
+    "#library/*": {
+      "development": "../library/src/*",
+      "default": "@magma/library/*"
     },
-    "#core/*": {
+    "#tempo/*": {
       "development": "./src/*",
       "default": "./dist/*"
     }
@@ -34,14 +34,18 @@
     "repl": "tsx -i --import ./test/repl.ts",
     "build": "tsc -b && npm run build:bundle",
     "build:bundle": "rollup -c",
-    "clean": "tsc -b --clean"
+    "clean": "tsc -b --clean",
+    "prepublishOnly": "npm run build"
   },
+  "files": [
+    "dist/",
+    "src/"
+  ],
   "dependencies": {
-    "@magma/shared": "1.1.0",
+    "@magma/library": "1.2.0",
     "tslib": "^2.8.1"
   },
   "devDependencies": {
-    "@js-temporal/polyfill": "^0.5.1",
     "@rollup/plugin-alias": "^6.0.0"
   }
 }

@@ -1,5 +1,5 @@
-import { enumify } from '#core/shared/enumerate.library.js';
-import { secure } from '#core/shared/utility.library.js';
+import { enumify } from '#library/enumerate.library.js';
+import { secure } from '#library/utility.library.js';
 /**
  * Various enumerations used throughout Tempo library.
  * These are exported and added as static getters of the Tempo class.
@@ -78,4 +78,5 @@ export const MUTATION = enumify(ELEMENT.values()).extend(['event', 'period', 'cl
 export const ZONED_DATE_TIME = enumify(['value', 'timeZoneId', 'calendarId', 'monthCode', 'offset', 'timeZone']).extend(ELEMENT.values());
 export const OPTION = enumify(['value', 'mdyLocales', 'mdyLayouts', 'store', 'discovery', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period', 'formats', 'plugins']);
 export const PARSE = enumify(['mdyLocales', 'mdyLayouts', 'formats', 'pivot', 'snippet', 'layout', 'event', 'period', 'anchor', 'value', 'discovery', 'plugins']);
+export const DISCOVERY = enumify(['options', 'timeZones', 'terms', 'plugins']);
 //# sourceMappingURL=tempo.enum.js.map

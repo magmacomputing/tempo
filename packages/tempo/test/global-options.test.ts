@@ -1,4 +1,4 @@
-import { Tempo, $Tempo } from '#core/tempo.class.js';
+import { Tempo, $Tempo } from '#tempo/tempo.class.js';
 
 describe('Global Configuration Discovery', () => {
 	beforeEach(() => {

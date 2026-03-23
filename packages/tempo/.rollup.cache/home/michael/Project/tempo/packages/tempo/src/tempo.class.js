@@ -1,23 +1,23 @@
 import { __classPrivateFieldGet, __classPrivateFieldSet, __esDecorate, __runInitializers, __setFunctionName } from "tslib";
-import '#core/shared/temporal.polyfill.js'; // side-effect runtime check for Temporal
+import '#library/temporal.polyfill.js'; // side-effect runtime check for Temporal
 // #region library modules~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-import { Logify } from '#core/shared/logify.class.js';
-import { ifDefined } from '#core/shared/object.library.js';
-import { secure } from '#core/shared/utility.library.js';
-import { Immutable, Serializable } from '#core/shared/class.library.js';
-import { asArray } from '#core/shared/array.library.js';
-import { cleanify, stringify } from '#core/shared/serialize.library.js';
-import { getStorage, setStorage } from '#core/shared/storage.library.js';
-import { ownKeys, ownEntries, getAccessors, omit } from '#core/shared/reflection.library.js';
-import { getProxy } from '#core/shared/proxy.library.js';
-import { getContext, CONTEXT } from '#core/shared/utility.library.js';
-import { asNumber, asInteger, isNumeric, ifNumeric } from '#core/shared/number.library.js';
-import { pad, singular, toProperCase, trimAll } from '#core/shared/string.library.js';
-import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction } from '#core/shared/type.library.js';
-import * as enums from '#core/tempo.config/tempo.enum.js';
-import registerTerms from '#core/tempo.config/terms/term.import.js';
-import { Match, Token, Snippet, Layout, Event, Period, Default, TimeZone } from '#core/tempo.config/tempo.default.js';
-import '#core/shared/prototype.library.js'; // patch prototypes
+import { Logify } from '#library/logify.class.js';
+import { ifDefined } from '#library/object.library.js';
+import { secure } from '#library/utility.library.js';
+import { Immutable, Serializable } from '#library/class.library.js';
+import { asArray } from '#library/array.library.js';
+import { cleanify, stringify } from '#library/serialize.library.js';
+import { getStorage, setStorage } from '#library/storage.library.js';
+import { ownKeys, ownEntries, getAccessors, omit } from '#library/reflection.library.js';
+import { getProxy } from '#library/proxy.library.js';
+import { getContext, CONTEXT } from '#library/utility.library.js';
+import { asNumber, asInteger, isNumeric, ifNumeric } from '#library/number.library.js';
+import { pad, singular, toProperCase, trimAll } from '#library/string.library.js';
+import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction } from '#library/type.library.js';
+import * as enums from '#tempo/tempo.config/tempo.enum.js';
+import registerTerms from '#tempo/tempo.config/terms/term.import.js';
+import { Match, Token, Snippet, Layout, Event, Period, Default, TimeZone } from '#tempo/tempo.config/tempo.default.js';
+import '#library/prototype.library.js'; // patch prototypes
 // #region Const variables
 /** key to use for storage / globalThis Symbol */ export const $Tempo = Symbol.for('$Tempo');
 /** current execution context*/ const Context = getContext();

@@ -1,4 +1,4 @@
-import { Tempo } from '#core/tempo.class.js';
+import { Tempo } from '#tempo/tempo.class.js';
 
 describe('Tempo Plugin System', () => {
 
@@ -7,7 +7,7 @@ describe('Tempo Plugin System', () => {
 			(TempoClass as any).staticMethod = () => 'static';
 		};
 
-		Tempo.extend(staticPlugin);
+		Tempo.load(staticPlugin);
 		expect((Tempo as any).staticMethod()).toBe('static');
 	});
 
@@ -18,7 +18,7 @@ describe('Tempo Plugin System', () => {
 			};
 		};
 
-		Tempo.extend(instancePlugin);
+		Tempo.load(instancePlugin);
 		const t = new Tempo();
 		expect((t as any).instanceMethod()).toBe('instance');
 	});
@@ -29,7 +29,7 @@ describe('Tempo Plugin System', () => {
 			receivedOptions = options;
 		};
 
-		Tempo.extend(optionsPlugin, { foo: 'bar' });
+		Tempo.load(optionsPlugin, { foo: 'bar' });
 		expect(receivedOptions).toEqual({ foo: 'bar' });
 	});
 
@@ -39,8 +39,8 @@ describe('Tempo Plugin System', () => {
 			installCount++;
 		};
 
-		Tempo.extend(singlePlugin);
-		Tempo.extend(singlePlugin);
+		Tempo.load(singlePlugin);
+		Tempo.load(singlePlugin);
 		expect(installCount).toBe(1);
 	});
 
@@ -50,7 +50,7 @@ describe('Tempo Plugin System', () => {
 			factoryResult = factory('2024-01-01');
 		};
 
-		Tempo.extend(factoryPlugin);
+		Tempo.load(factoryPlugin);
 		expect(factoryResult).toBeInstanceOf(Tempo);
 		expect(factoryResult.toString()).toContain('2024-01-01');
 	});
@@ -87,7 +87,7 @@ describe('Tempo Plugin System', () => {
 		const newPlugin: Tempo.Plugin = (_opts, _Class) => {
 			(_Class as any).freshMethod = () => 'fresh';
 		};
-		Tempo.extend(newPlugin);
+		Tempo.load(newPlugin);
 		expect((Tempo as any).freshMethod()).toBe('fresh');
 	});
 

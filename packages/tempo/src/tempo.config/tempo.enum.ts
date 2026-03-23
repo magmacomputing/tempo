@@ -1,7 +1,7 @@
-import { enumify } from '#core/shared/enumerate.library.js';
-import { secure } from '#core/shared/utility.library.js';
-import type { Enum } from '#core/shared/enumerate.library.js';
-import type { OwnOf, KeyOf, ValueOf, LooseUnion, Mutable } from '#core/shared/type.library.js';
+import { enumify } from '#library/enumerate.library.js';
+import { secure } from '#library/utility.library.js';
+import type { Enum } from '#library/enumerate.library.js';
+import type { OwnOf, KeyOf, ValueOf, LooseUnion, Mutable } from '#library/type.library.js';
 
 /**
  * Various enumerations used throughout Tempo library.
@@ -128,9 +128,10 @@ export type ZONED_DATE_TIME = ValueOf<typeof ZONED_DATE_TIME>
 export type ZonedDateTime = KeyOf<typeof ZONED_DATE_TIME>
 
 export const OPTION = enumify(['value', 'mdyLocales', 'mdyLayouts', 'store', 'discovery', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period', 'formats', 'plugins'])
-export type OPTION = typeof OPTION
-export type Option = KeyOf<OPTION>
+export type Option = KeyOf<typeof OPTION>
 
 export const PARSE = enumify(['mdyLocales', 'mdyLayouts', 'formats', 'pivot', 'snippet', 'layout', 'event', 'period', 'anchor', 'value', 'discovery', 'plugins'])
-export type PARSE = typeof PARSE
-export type Parse = KeyOf<PARSE>
+export type Parse = KeyOf<typeof PARSE>
+
+export const DISCOVERY = enumify(['options', 'timeZones', 'terms', 'plugins']);
+export type Discovery = KeyOf<typeof DISCOVERY>

@@ -1,5 +1,5 @@
-import { looseIndex } from '#core/shared/object.library.js';
-import { secure } from '#core/shared/utility.library.js';
+import { looseIndex } from '#library/object.library.js';
+import { secure } from '#library/utility.library.js';
 // BE VERY CAREFUL NOT TO BREAK THE REGEXP PATTERNS BELOW
 // TEMPO functionality heavily depends on these patterns
 /** common RegExp patterns */

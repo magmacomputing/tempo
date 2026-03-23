@@ -15,7 +15,7 @@ Working with dates in JavaScript has historically been painful. The new `Tempora
 - **Flexible Parsing**: Interprets almost any date string, including relative ones like "next Friday".
 - **Fluent API**: Chainable methods for adding, subtracting, and setting date-times (similar to Moment.js).
 - **Formatting**: Use custom tokens to format date-times in a way that is both intuitive and flexible.
-- **Plugins**: Extend core functionality safely with plugins (e.g. `TickerPlugin`).
+- **Plugins**: Extend core functionality safely with `Tempo.load()` (e.g. `TickerPlugin`).
 - **Terms**: Access complex date ranges (Quarters, Seasons, Fiscal Years) easily.
 - **Immutable**: Operations (like `set` and `add`) return a new `Tempo` instance, ensuring thread safety and predictability.
 
@@ -37,7 +37,7 @@ npm install @magmacomputing/tempo
 ### 💻 Node.js (Server-Side)
 Tempo is a native ESM package. In Node.js (20+), simply import the class.
 > [!NOTE]
-> Tempo uses native Node.js subpath imports (`#core/*`). This requires Node.js 14.6+ or 12.19+ in server-side environments.
+> Tempo uses native Node.js subpath imports (e.g. `#tempo/*`). This requires Node.js 14.6+ or 12.19+ in server-side environments.
 
 In Node.js:
 
@@ -105,7 +105,7 @@ For detailed technical guides, please refer to:
 - [Tempo Class Documentation](./doc/Tempo.md)
 - [Data In ~ Parsing Engine](./doc/Tempo.md#parsing)
 - [Data Out ~ Formatting Tokens](./doc/Tempo.md#formatting)
-- [Plugin System (Extending Tempo)](./doc/Tempo.md#plugin-system)
+- [Plugin System (Extending Tempo)](./doc/Tempo.md#plugin-system) (`Tempo.load`)
 - [Terms (Calculation Plugins)](./doc/Tempo.md#plugins-terms)
 - [Configuration Guide](./doc/tempo.config.md)
 - [Commercial Support & Consulting](./doc/commercial.md)

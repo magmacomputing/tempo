@@ -1,5 +1,5 @@
 import { type Range } from './term.utils.js';
-import type { Tempo } from '#core/tempo.class.js';
+import type { Tempo } from '#tempo/tempo.class.js';
 export declare const key = "per";
 export declare const scope = "period";
 export declare const description = "Daily time period";
