@@ -44,3 +44,4 @@ Thumbs.db
 ~*.xlsm
 .~*.xlsx#
 .~*.xlsm#
+.rollup.cache/

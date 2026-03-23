@@ -17,5 +17,17 @@ Tempo extends beyond simple date arithmetic through its **Terms** system. By pro
 ### 4. Lean but Robust
 Tempo is designed to be a thin, highly capable layer. It prioritizes a lightweight API surface for the developer while maintaining robust internal logic to handle the complexities of timezones, calendars, and durations.
 
+## Target Audience
+Tempo is designed for a broad spectrum of developers and teams who interact with date and time data in JavaScript:
+
+### 1. Modern JavaScript Developers
+For those who want to leverage the power of the native `Temporal` API today but find its raw implementation too verbose or strict for rapid development.
+
+### 2. Teams Migrating from Legacy Libraries
+Ideal for organizations looking to move away from **Moment.js**, **Day.js**, or **Luxon** without sacrificing the fluent, chainable API and flexible parsing on which they've come to rely.
+
+### 3. Enterprise Application Architects
+For those building complex, time-sensitive systems (such as financial platforms, scheduling engines, or global logistics trackers) that demand the precision of Temporal combined with a premium, type-safe developer experience.
+
 ## Conclusion
 Tempo is not intended to replace Temporal, but to humanize it. It is the tool for developers who want the future of JavaScript dates today, without the overhead of building their own high-level utility library from scratch.

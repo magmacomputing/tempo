@@ -42,4 +42,11 @@ describe('Pledge', () => {
 		expect(onReject).toHaveBeenCalled();
 	});
 
+	test('thenable', async () => {
+		const p = new Pledge<string>();
+		p.resolve('thenable');
+		const result = await p.then(val => val + ' works');
+		expect(result).toBe('thenable works');
+	});
+
 });
