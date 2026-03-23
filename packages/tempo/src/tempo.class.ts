@@ -773,7 +773,7 @@ export class Tempo {
 		} catch (err) {
 			console.error('Tempo Constructor Error:', err);
 			Tempo.#dbg.catch(this.config, `Cannot create Tempo: ${(err as Error).message}\n${(err as Error).stack}`);
-			return {} as Tempo;																		// return empty Object
+			throw err;																									// throw error
 		}
 	}
 

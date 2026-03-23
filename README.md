@@ -28,6 +28,9 @@ If you're looking for a **modern date library** that leverages the native power 
 - **Familiarity**: If you like the fluent syntax of **Moment** or **Day.js**, you'll feel right at home.
 - **Future-Proof**: Built on the TC39 `Temporal` standard.
 
+## 🎯 Target Audience
+Tempo is built for **modern JavaScript developers** who require a premium, type-safe, and developer-friendly interface over the native Temporal API. It is ideal for those migrating from legacy libraries like **Moment.js**, **Day.js**, or **Luxon**, as well as teams building complex, time-sensitive applications that demand reliability, immutability, and high-performance parsing.
+
 ## 📦 Installation
 
 ```bash

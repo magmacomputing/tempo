@@ -14,18 +14,18 @@ import { isString, isObject, assertCondition, assertString, nullToValue } from '
  */
 export function trimAll(str: string | number, pat?: RegExp) {
 	return str
-		.toString()																							// coerce to String
-		.replace(pat!, '')																			// remove regexp, if supplied
-		.replace(/\t/g, ' ')																		// replace <tab> with <space>
-		.replace(/(\r\n|\n|\r)/g, ' ')													// replace <return> & <newline>
-		.replace(/\s{2,}/g, ' ')																// trim multiple <space>
-		.trim()																									// leading/trailing <space>
+		.toString()                                               // coerce to String
+		.replace(pat!, '')                                        // remove regexp, if supplied
+		.replace(/\t/g, ' ')                                      // replace <tab> with <space>
+		.replace(/(\r\n|\n|\r)/g, ' ')                            // replace <return> & <newline>
+		.replace(/\s{2,}/g, ' ')                                  // trim multiple <space>
+		.trim()                                                   // leading/trailing <space>
 }
 
 /** every word has its first letter capitalized */
 export function toProperCase<T extends string>(...str: T[]) {
 	return str
-		.flat()																									// in case {str} was already an array
+		.flat()                                                   // in case {str} was already an array
 		.map(text => text.replace(/\w\S*/g,
 			word => word.charAt(0).toUpperCase() + word.substring(1).toLowerCase()))
 		.join(' ') as T
@@ -48,7 +48,7 @@ const HEX = 16;
 export const randomString = (len = 36) => {
 	let str = '';
 
-	do																												// generate random strings
+	do                                                         // generate random strings
 		str += Math.floor(Math.random() * 10 ** 16).toString(HEX).substring(2, 15);
 	while (str.length < len)
 
@@ -57,23 +57,23 @@ export const randomString = (len = 36) => {
 
 /** use sprintf-style formatting on a string */
 export function sprintf(fmt: string, ...msg: any[]): string;// either a format-string, followed by arguments
-export function sprintf(...msg: any[]): string;							// or just an array of arguments
+export function sprintf(...msg: any[]): string;             // or just an array of arguments
 export function sprintf(fmt: {}, ...msg: any[]) {
-	const regexp = /\$\{(\d)\}/g;															// pattern to find "${digit}" parameter markers
-	let sfmt = asString(fmt);																	// avoid mutate fmt
+	const regexp = /\$\{(\d)\}/g;                              // pattern to find "${digit}" parameter markers
+	let sfmt = asString(fmt);                                  // avoid mutate fmt
 
-	if (!isString(fmt)) {																			// might be an Object
-		msg.unshift(JSON.stringify(fmt));												// push to start of msg[]
-		sfmt = '';																							// reset the string-format
+	if (!isString(fmt)) {                                      // might be an Object
+		msg.unshift(JSON.stringify(fmt));                         // push to start of msg[]
+		sfmt = '';                                                // reset the string-format
 	}
 
-	let cnt = 0;																							// if the format does not contain a corresponding '${digit}' then re-construct the parameters
-	sfmt = sfmt.replace(/%[sj]/g, _ => `\${${cnt++}}`);				// flip all the %s or %j to a ${digit} parameter
+	let cnt = 0;                                               // if the format does not contain a corresponding '${digit}' then re-construct the parameters
+	sfmt = sfmt.replace(/%[sj]/g, _ => `\${${cnt++}}`);        // flip all the %s or %j to a ${digit} parameter
 
 	const params = Array.from(sfmt.matchAll(regexp))
-		.map(match => Number(match[1]))													// which parameters are in the fmt
+		.map(match => Number(match[1]))                           // which parameters are in the fmt
 	msg.forEach((_, idx) => {
-		if (!params.includes(idx))															// if more args than params
+		if (!params.includes(idx))                                // if more args than params
 			sfmt += `${sfmt.length === 0 ? '' : sfmt.endsWith(':') ? ' ' : ', '}\${${idx}}`	//  append a dummy params to fmt
 	})
 
@@ -95,10 +95,18 @@ export const plural = (val: string | number | Record<string, string>, word: stri
 export const singular = (val: string) =>
 	val.endsWith('s') ? val.slice(0, -1) : val;
 
-/** make an Object's values into a Template Literals, and evaluate */
-export const makeTemplate = (templateString: Object) =>
-	(templateData: Object) =>
-		new Function(`{${Object.keys(templateData).join(',')}}`, 'return `' + templateString + '`')(templateData);
+/**
+ * make an Object's values into a Template Literals, and evaluate
+ * @param		templateString	string containing ${key} placeholders
+ * @description	WARNING: should not be used with untrusted templateString inputs if any form of evaluation is expected.
+ * 							This implementation only supports simple ${key} substitutions from templateData.
+ */
+export const makeTemplate = (templateString: any) =>
+	(templateData: any) =>
+		String(templateString).replace(/\${(.*?)}/g, (_, key) => {
+			const val = (templateData as any)[key.trim()];
+			return val !== undefined ? String(val) : '';
+		});
 
 export const toLower = <T>(str: T) => isString(str) ? asString(str).toLowerCase().trim() : str;
 export const toUpper = <T>(str: T) => isString(str) ? asString(str).toUpperCase().trim() : str;
