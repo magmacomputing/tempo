@@ -7,7 +7,7 @@ export const $Target = Symbol.for('$Target');
 /** mutate Object | Array by excluding values with specified primitive 'types' */
 export function exclude<T extends Obj>(obj: T, ...types: (Primitives | Lowercase<Primitives>)[]) {
 	const exclusions = types
-		.map(item => item.toLowerCase())												// cast Primitives as Lowercase<Primitives> to aid in matching
+		.map(item => item.toLowerCase())																// cast Primitives
 		.distinct() as typeof types
 
 	if (obj && typeof obj === 'object') {																			// only works on Objects and Arrays
@@ -40,7 +40,7 @@ export function omit<T extends Obj>(obj: T, ...keys: PropertyKey[]) {
 	switch (type) {
 		case 'Array':
 			if (isEmpty(keys)) {
-				value.clear();																			// clear entire Array
+				value.length = 0;																								// clear Array
 				break;
 			}
 			keys

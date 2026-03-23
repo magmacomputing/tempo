@@ -4,7 +4,7 @@ import type { TValues } from '#library/type.library.js';
 /** show Hex value of a number */
 export const toHex = (num: TValues<number> = [], len?: number) =>
 	asArray(num)																							// ensure array
-		.flat(1_000_000)																				// flatten any arrays to arbitrary depth
+		.flat(1_000_000)																				// flatten
 		.filter(Number.isInteger)																// ensure integers	
 		.map(val => (val + 0x100).toString(16).slice(-2))
 		.join('')
@@ -13,7 +13,7 @@ export const toHex = (num: TValues<number> = [], len?: number) =>
 
 /** apply an Ordinal suffix */
 export const suffix = (idx: number) => {
-	const str = String(idx ?? '');														// so we can use 'endsWith'
+	const str = String(idx ?? '');														// so we can check 'endsWith'
 
 	switch (true) {
 		case str.endsWith('1') && !str.endsWith('11'):
@@ -45,4 +45,4 @@ export const asTime = (hhmi: string | number) =>
 
 /** format a value as currency */
 export const asCurrency = (str: string | number, scale = 2, currency = 'AUD') =>
-	str.toLocaleString(undefined, { style: 'currency', currency, maximumFractionDigits: scale });
+	asNumber(str).toLocaleString(undefined, { style: 'currency', currency, maximumFractionDigits: scale });
