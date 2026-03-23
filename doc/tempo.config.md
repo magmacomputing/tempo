@@ -37,7 +37,7 @@ This is the most secure and ergonomic method to provide configuration, and is co
 ```javascript
 import { Tempo } from '@magmacomputing/tempo';
 
-Tempo.discover({
+Tempo.load({
    options: { timeZone: 'Europe/Paris' },
    timeZones: { 'MYTZ': 'Asia/Dubai' },
    formats: { 'myFormat': '{dd}!!{mm}!!{yyyy}' },

@@ -1,93 +1,27 @@
 {
-  "name": "@magmacomputing/tempo",
-  "version": "1.1.0",
-  "description": "A premium, high-performance wrapper around the JavaScript Temporal API. A modern, immutable, and fluent alternative to Moment.js, Day.js, and Luxon.",
-  "main": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
-  "sideEffects": false,
-  "exports": {
-    ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
-    },
-    "./enums": {
-      "types": "./dist/src/tempo.config/tempo.enum.d.ts",
-      "import": "./dist/src/tempo.config/tempo.enum.js"
-    },
-    "./serialize": {
-      "types": "./dist/lib/serialize.library.d.ts",
-      "import": "./dist/lib/serialize.library.js"
-    },
-    "./pledge": {
-      "types": "./dist/lib/pledge.class.d.ts",
-      "import": "./dist/lib/pledge.class.js"
-    },
-    "./plugins/ticker": {
-      "types": "./dist/src/tempo.config/plugins/plugin.ticker.d.ts",
-      "import": "./dist/src/tempo.config/plugins/plugin.ticker.js"
-    }
-  },
-  "directories": {
-    "lib": "lib"
-  },
+  "name": "tempo-monorepo",
+  "private": true,
+  "description": "Monorepo for Tempo and its shared library component.",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "test": "vitest run",
-    "build": "tsc && tsc-alias && npm run build:bundle",
-    "build:bundle": "rollup -c",
+    "test": "npm run test --workspaces --if-present",
+    "build": "tsc -b",
+    "clean": "tsc -b --clean",
     "release": "release-it",
-    "publish": "npm run build && (npm whoami || npm login) && npm publish --access public",
-    "repl": "tsx -i --import ./test/repl.ts"
+    "repl": "npm run repl --workspace=@magma/tempo"
   },
-  "files": [
-    "dist"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/magmacomputing/tempo.git"
-  },
-  "keywords": [
-    "Temporal",
-    "Date",
-    "Time",
-    "Parsing",
-    "Formatting",
-    "Fluent API",
-    "Moment",
-    "Momentjs",
-    "Dayjs",
-    "Luxon",
-    "Date-fns",
-    "Immutable",
-    "Modern JavaScript",
-    "Temporal API",
-    "TC39 Temporal",
-    "TypeScript",
-    "ESM",
-    "Timezone"
-  ],
-  "author": "Michael <hello@magmacomputing.com.au>",
-  "license": "MIT",
-  "type": "module",
-  "bugs": {
-    "url": "https://github.com/magmacomputing/tempo/issues"
-  },
-  "homepage": "https://github.com/magmacomputing/tempo#readme",
   "devDependencies": {
     "@js-temporal/polyfill": "^0.5.1",
     "@release-it/keep-a-changelog": "^7.0.1",
-    "@rollup/plugin-alias": "^6.0.0",
-    "@rollup/plugin-commonjs": "^29.0.2",
     "@rollup/plugin-node-resolve": "^16.0.3",
-    "@rollup/plugin-terser": "^1.0.0",
-    "@rollup/plugin-typescript": "^12.3.0",
-    "@types/jest": "^30.0.0",
+    "@types/node": "^25.5.0",
     "@vitest/ui": "^4.0.18",
     "release-it": "^19.2.4",
     "rollup": "^4.59.0",
-    "tsc-alias": "^1.8.16",
     "tslib": "^2.8.1",
     "tsx": "^4.21.0",
-    "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.0.18"
   },
   "dependencies": {
