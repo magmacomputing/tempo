@@ -16,15 +16,13 @@ Initializes the global default configuration for all subsequent `Tempo` instance
 - **Returns:** `Tempo.Config` (The resolved global config).
 - **Note:** Settings are inherited from library defaults, persistent storage, and provided options.
 
-### `Tempo.discover(config: Tempo.Discovery)`
-Bootstraps the library with a Global Discovery object and automatically calls `Tempo.init()`.
-- **Returns:** `Tempo.Config` (The resolved global config).
-- **Note:** This is the recommended way to provide global configuration in ESM environments.
-
-### `Tempo.extend(...plugins: Tempo.Plugin[])`
-Extends the `Tempo` class and prototype with new functionality.
-- **Example:** `Tempo.extend(TickerPlugin)`
-- **Note:** Plugins are only installed once. Existing core members are protected from being overwritten.
+### `Tempo.load(arg, options?)`
+Unified loader for library extensions. Replaces `discover`, `extend`, and `addTerm`.
+- **Plugin:** `Tempo.load(TickerPlugin)` — Adds functional extensions.
+- **Term:** `Tempo.load(MyTerm)` — Registers grammar/parsing terms.
+- **Discovery:** `Tempo.load(config)` — Bootstraps global configuration.
+- **Returns:** `typeof Tempo` (for chaining).
+- **Note:** Plugins are only installed once. Existing core members are protected.
 
 ### `Tempo.from(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options)`
 Creates a new `Tempo` instance. A static alternative to `new Tempo()`.
@@ -34,8 +32,6 @@ Creates a new `Tempo` instance. A static alternative to `new Tempo()`.
 Compares two `Tempo` instances or date-time values for sorting.
 - **Returns:** `-1` (smaller), `0` (equal), or `1` (larger).
 
-### `Tempo.addTerm(...plugins: Tempo.TermPlugin[])`
-Registers new term plugins globally.
 
 ### `Tempo.now()`
 Returns the current Unix epoch in nanoseconds as a `BigInt`.

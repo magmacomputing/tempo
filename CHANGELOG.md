@@ -5,10 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-03-23
+
+### Added
+- **Monorepo Migration**: Successfully transitioned to a unified monorepo structure, naming `packages/tempo` and `packages/library` as npm workspaces.
+- **Publishing Optimizations**: Integrated `prepublishOnly` build hooks and `files` whitelisting in `package.json` for leaner and more reliable NPM distribution.
+- **Enhanced Type Resolution**: Fixed `node` type definition errors in nested test environments by explicitly configuring `typeRoots`.
+
+### Changed
+- **Dependency Rationalization**: Consolidated `tslib` and `@js-temporal/polyfill` at the project root while preserving `tslib` as a runtime dependency for published packages.
+- **Plugin Loading Refactor**: Refactored `static load` into a unified, single-pass dispatch logic for handling Plugins, TermPlugins, and Discovery configurations robustly.
+
 ## [1.1.0] - 2026-03-21
 
 ### Added
-- **Plugin System (`Tempo.extend`)**: Introduced a formal architecture for extending the `Tempo` class and prototype, allowing for modular feature injection (e.g., `TickerPlugin`).
+- **Plugin System (`Tempo.load`)**: Introduced a formal architecture for extending the `Tempo` class and prototype, allowing for modular feature injection (e.g., `TickerPlugin`).
 - **Auto-Plugin Discovery**: Plugins can now be automatically loaded via the `plugins` configuration in `Tempo.init()` or through the Global Discovery manifest (`Symbol.for($Tempo)`).
 - **Selective Immobility**: Enhanced the `@Immutable` decorator with a "Selective Immute" pattern. Core methods (including Symbols like `Symbol.dispose`) are now write-protected, while the class remains extensible for new plugins.
 - **Reactive Clock (Modularized)**: The `Tempo.ticker` logic has been extracted into an optional plugin available at `@magmacomputing/tempo/plugins/ticker`. This reduces core bundle size while offering high-performance Async Generators and countdown support.

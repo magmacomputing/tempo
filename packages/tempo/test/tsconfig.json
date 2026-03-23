@@ -1,0 +1,32 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "vitest/globals",
+      "node"
+    ],
+    "typeRoots": [
+      "../../../node_modules/@types"
+    ],
+    "rootDir": "../../",
+    "paths": {
+      "#library/*": [
+        "../../library/lib/*"
+      ],
+      "#tempo/*": [
+        "../src/*"
+      ]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "../src/**/*.ts",
+    "../../library/lib/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../../library"
+    }
+  ],
+  "exclude": []
+}
