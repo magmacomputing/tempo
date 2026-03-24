@@ -1,7 +1,7 @@
 import { Tempo, isTempo } from '#tempo/tempo.class.js';
 import { TickerPlugin } from '#tempo/tempo.config/plugins/plugin.ticker.js';
 
-Tempo.load(TickerPlugin);
+Tempo.extend(TickerPlugin);
 
 const label = 'ticker:';
 

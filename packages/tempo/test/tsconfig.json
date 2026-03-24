@@ -5,13 +5,11 @@
       "vitest/globals",
       "node"
     ],
-    "typeRoots": [
-      "../../../node_modules/@types"
-    ],
+    "noEmit": true,
     "rootDir": "../../",
     "paths": {
       "#library/*": [
-        "../../library/lib/*"
+        "../../library/src/*"
       ],
       "#tempo/*": [
         "../src/*"
@@ -21,12 +19,6 @@
   "include": [
     "**/*.ts",
     "../src/**/*.ts",
-    "../../library/lib/**/*.ts"
-  ],
-  "references": [
-    {
-      "path": "../../library"
-    }
-  ],
-  "exclude": []
+    "../../library/src/**/*.ts"
+  ]
 }

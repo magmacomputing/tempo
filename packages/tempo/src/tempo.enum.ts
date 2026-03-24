@@ -6,10 +6,6 @@ import type { OwnOf, KeyOf, ValueOf, LooseUnion, Mutable } from '#library/type.l
 /**
  * Various enumerations used throughout Tempo library.
  * These are exported and added as static getters of the Tempo class.
- * Usage example:
- * ```typescript
- * 			const dayNames = Tempo.WEEKDAY.keys();	// ['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
- * ```
  */
 
 /** */

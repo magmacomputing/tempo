@@ -16,10 +16,10 @@ import { pad, singular, toProperCase, trimAll } from '#library/string.library.js
 import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction, isArray } from '#library/type.library.js';
 import type { IntRange, LooseUnion, NonOptional, Property, Plural, Type } from '#library/type.library.js';
 
-import * as enums from '#tempo/tempo.config/tempo.enum.js';
+import * as enums from '#tempo/tempo.enum.js';
 import registerTerms from '#tempo/tempo.config/terms/term.import.js';
 
-import { Match, Token, Snippet, Layout, Event, Period, Default, TimeZone } from '#tempo/tempo.config/tempo.default.js';
+import { Match, Token, Snippet, Layout, Event, Period, Default, TimeZone } from '#tempo/tempo.default.js';
 
 import '#library/prototype.library.js';									// patch prototypes
 
@@ -346,7 +346,7 @@ export class Tempo {
 						break;
 
 					case 'plugins':
-						asArray(optVal).forEach(p => this.load(p));
+						asArray(optVal).forEach(p => this.extend(p));
 						break;
 
 					case 'anchor':
@@ -392,9 +392,26 @@ export class Tempo {
 		for (const [key, value] of Object.entries(timeZones))
 			TimeZone[key.toLowerCase()] = value;
 
+		// 1b. Process Numbers
+		const numbers = discovery.numbers ?? {}
+		for (const [key, value] of Object.entries(numbers))
+			enums.NUMBER[key.toLowerCase()] = value;
+
 		// 2. Process Terms
 		if (discovery.terms)
-			this.load(asArray(discovery.terms));
+			this.extend(asArray(discovery.terms));
+
+		// 3. Re-calculate {nbr} snippet and dependent snippets, then re-sync patterns
+		if (discovery.numbers || discovery.terms) {
+			const nbr = new RegExp(`(?<nbr>[0-9]+|${Object.keys(enums.NUMBER).join('|')})`);
+			shape.parse.snippet[Token.nbr] = nbr;
+			
+			// rebuild snippets that depend on {nbr}
+			shape.parse.snippet[Token.mod] = new RegExp(`((?<mod>${Match.modifier.source})?${nbr.source}? *)`);
+			shape.parse.snippet[Token.afx] = new RegExp(`((s)? (?<afx>${Match.affix.source}))?${shape.parse.snippet[Token.sep].source}?`);
+			
+			Tempo.#setPatterns(shape);
+		}
 
 		// 3. Process Formats
 		if (discovery.formats)
@@ -402,7 +419,7 @@ export class Tempo {
 
 		// 4. Process Plugins
 		if (discovery.plugins)
-			asArray(discovery.plugins).forEach(p => this.load(p));
+			asArray(discovery.plugins).forEach(p => this.extend(p));
 
 		// 4. Process Options
 		let opts = discovery.options || {}
@@ -438,10 +455,10 @@ export class Tempo {
 	 * @param options - Optional configuration for a standard `Plugin`.
 	 * @returns The `Tempo` class for chaining.
 	 */
-	static load(plugin: Tempo.Plugin | Tempo.Plugin[], options?: any): typeof Tempo;
-	static load(term: Tempo.TermPlugin | Tempo.TermPlugin[]): typeof Tempo;
-	static load(config: Tempo.Discovery | Tempo.Discovery[]): typeof Tempo;
-	static load(arg: any, options?: any) {
+	static extend(plugin: Tempo.Plugin | Tempo.Plugin[], options?: any): typeof Tempo;
+	static extend(term: Tempo.TermPlugin | Tempo.TermPlugin[]): typeof Tempo;
+	static extend(config: Tempo.Discovery | Tempo.Discovery[]): typeof Tempo;
+	static extend(arg: any, options?: any) {
 		asArray(arg).flat(1).forEach(item => {
 			if (isFunction(item)) {
 				if (!item.installed) {
@@ -505,7 +522,7 @@ export class Tempo {
 				if (key.startsWith('usr.'))													// only remove 'usr.' prefixed keys
 					delete Token[key];
 
-			this.load(registerTerms);											// register built-in term plugins
+			this.extend(registerTerms);															// register built-in term plugins
 
 			const storeKey = Symbol.keyFor($Tempo) as string;
 			Tempo.#setConfig(Tempo.#global,
@@ -682,6 +699,11 @@ export class Tempo {
 			mdyLocales: [...parse.mdyLocales],
 			mdyLayouts: [...parse.mdyLayouts],
 		}) as Tempo.Parse;
+	}
+
+	/** @deprecated use Tempo.extend() */
+	static load(arg: any, options?: any) {
+		return this.extend(arg, options);
 	}
 
 	/** iterate over Tempo properties */
@@ -1228,6 +1250,7 @@ export class Tempo {
 					: -(adjust - 1)
 			case '>':																							// period strictly after base-date
 			case 'hence':
+			case 'from now':
 				return (period >= offset)
 					? adjust
 					: (adjust - 1)
@@ -1256,7 +1279,7 @@ export class Tempo {
 	 * @returns  ZonedDateTime with computed date-offset  
 	 */
 	#parseWeekday(groups: Tempo.Groups, dateTime: Temporal.ZonedDateTime) {
-		const { wkd, mod, nbr = '1', sfx, ...rest } = groups as Internal.GroupWkd;
+		const { wkd, mod, nbr = '1', sfx, afx, ...rest } = groups as Internal.GroupWkd;
 		if (isUndefined(wkd))																		// this is not a true {weekDay} pattern match
 			return dateTime;
 
@@ -1276,12 +1299,12 @@ export class Tempo {
 		}
 
 		const weekday = Tempo.#prefix(wkd);											// conform weekday-name
-		const adjust = +nbr;																		// how many weeks to adjust
+		const { nbr: adjust = 1 } = this.#num({ nbr });					// how many weeks to adjust
 		const offset = Tempo.WEEKDAY.keys()											// how far weekday is from today
 			.findIndex((el: Tempo.WEEKDAY) => el === weekday);
 
 		const days = offset - dateTime.dayOfWeek								// number of days to offset from dateTime
-			+ (this.#parseModifier({ mod: mod ?? sfx, adjust, offset, period: dateTime.dayOfWeek }) * dateTime.daysInWeek);
+			+ (this.#parseModifier({ mod: mod ?? sfx ?? afx, adjust, offset, period: dateTime.dayOfWeek }) * dateTime.daysInWeek);
 		delete groups["wkd"];
 		delete groups["mod"];
 		delete groups["nbr"];
@@ -1313,7 +1336,7 @@ export class Tempo {
 
 		// handle {unt} relative offset (e.g. '2 days ago')
 		if (unt) {
-			const adjust = +nbr;
+			const { nbr: adjust = 1 } = this.#num({ nbr });
 			const direction = (mod === '<' || mod === '-' || afx === 'ago') ? -1 : 1;
 			const plural = singular(unt) + 's';
 			dateTime = dateTime.add({ [plural]: adjust * direction });
@@ -1336,7 +1359,7 @@ export class Tempo {
 		}
 
 		// adjust the {year} if a Modifier is present
-		const adjust = +nbr;																		// how many years to adjust
+		const { nbr: adjust = 1 } = this.#num({ nbr });					// how many years to adjust
 		const offset = Number(pad(month) + '.' + pad(day));			// the event month.day
 		const period = Number(pad(dateTime.month) + '.' + pad(dateTime.day + 1));
 
@@ -1463,8 +1486,11 @@ export class Tempo {
 	#num = (groups: Record<string, string | number>) => {
 		return ownEntries(groups)
 			.reduce((acc: Record<string, number>, [key, val]: [string, any]) => {
+				const low = isString(val) ? val.toLowerCase() : '';
 				if (isNumeric(val))
 					acc[key] = asNumber(val);
+				else if (low in enums.NUMBER)
+					acc[key] = enums.NUMBER[low];
 				return acc;
 			}, {} as Record<string, number>);
 	}
@@ -1961,6 +1987,7 @@ export namespace Tempo {
 	export interface Discovery {
 		/** pre-defined config options for Tempo.#global */			options?: Options | (() => Options);
 		/** aliases to merge in the TimeZone dictionary */			timeZones?: Record<string, string>;
+		/** aliases to merge in the Number-Word dictionary */		numbers?: Record<string, number>;
 		/** term plugins to be registered via Tempo.addTerm() */terms?: TermPlugin | TermPlugin[];
 		/** plugins to be automatically extended via Tempo.extend() */plugins?: Plugin | Plugin[];
 		/** custom format strings to merge in the FORMAT dictionary */formats?: Property<any>;
@@ -1989,7 +2016,7 @@ export namespace Tempo {
 	export type Terms = Property<any>;
 
 	export type Modifier = '=' | '-' | '+' | '<' | '<=' | '-=' | '>' | '>=' | '+=' | 'this' | 'next' | 'prev' | 'last' | 'first' | undefined
-	export type Relative = 'ago' | 'hence' | 'prior'
+	export type Relative = 'ago' | 'hence' | 'prior' | 'from now'
 
 	export type mm = IntRange<0, 12>
 	export type hh = IntRange<0, 24>
@@ -2024,7 +2051,7 @@ export namespace Tempo {
 
 // #region Namespace that doesn't need to be shared externally
 namespace Internal {
-	export type GroupWkd = { wkd?: Tempo.WEEKDAY; mod?: Tempo.Modifier; nbr?: string; sfx?: Tempo.Relative; hh?: string; mi?: string; ss?: string; ms?: string; us?: string; ns?: string; ff?: string; mer?: string; }
+	export type GroupWkd = { wkd?: Tempo.WEEKDAY; mod?: Tempo.Modifier; nbr?: string; sfx?: Tempo.Relative; afx?: Tempo.Relative; hh?: string; mi?: string; ss?: string; ms?: string; us?: string; ns?: string; ff?: string; mer?: string; }
 	export type GroupDate = { mod?: Tempo.Modifier; nbr?: string; afx?: Tempo.Relative; unt?: string; yy?: string; mm?: string; dd?: string; }
 	export type GroupModifier = { mod?: Tempo.Modifier | Tempo.Relative, adjust: number, offset: number, period: number }
 }

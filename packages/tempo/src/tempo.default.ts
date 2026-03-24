@@ -85,7 +85,7 @@ export const Snippet = looseIndex<symbol, RegExp>()({
 	[Token.tzd]: /(?<tzd>Z|(?:\+(?:(?:0[0-9]|1[0-3]):?[0-5][0-9]|14:00)|-(?:(?:0[0-9]|1[0-1]):?[0-5][0-9]|12:00)))/,// time-zone offset	+14:00 to -12:00
 	[Token.nbr]: new RegExp(`(?<nbr>[0-9]+|${Object.keys(NUMBER).join('|')})`),														// modifier count
 	[Token.afx]: new RegExp(`((s)? (?<afx>${Match.affix.source}))?{sep}?`),	// affix optional plural 's' and (ago|hence)
-	[Token.mod]: new RegExp(`((?<mod>${Match.modifier.source})?{nbr} *)`),	// modifier (+,-,<,<=,>,>=) plus optional offset-count
+	[Token.mod]: new RegExp(`((?<mod>${Match.modifier.source})?{nbr}? *)`),	// modifier (+,-,<,<=,>,>=) plus optional offset-count
 	[Token.sep]: new RegExp(`(?:${Match.separator.source})`),	// date-input separator character "/\\-., " (non-capture group)
 	[Token.unt]: /(?<unt>year|month|week|day|hour|minute|second|millisecond)(?:s)?/,	// useful for '2 days ago' etc
 	[Token.brk]: /(\[(?<brk>[^\]]+)\](?:\[(?<cal>[^\]]+)\])?)?/,	// timezone/calendar brackets [...]

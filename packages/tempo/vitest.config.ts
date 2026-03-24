@@ -8,6 +8,6 @@ export default defineConfig({
   plugins: [],
   test: {
     globals: true,
-    setupFiles: [resolve(__dirname, './test/setup.ts')],
+    setupFiles: [resolve(__dirname, './bin/setup.ts')],
   }
 })
