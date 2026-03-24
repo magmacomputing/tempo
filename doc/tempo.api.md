@@ -16,11 +16,12 @@ Initializes the global default configuration for all subsequent `Tempo` instance
 - **Returns:** `Tempo.Config` (The resolved global config).
 - **Note:** Settings are inherited from library defaults, persistent storage, and provided options.
 
-### `Tempo.load(arg, options?)`
-Unified loader for library extensions. Replaces `discover`, `extend`, and `addTerm`.
-- **Plugin:** `Tempo.load(TickerPlugin)` — Adds functional extensions.
-- **Term:** `Tempo.load(MyTerm)` — Registers grammar/parsing terms.
-- **Discovery:** `Tempo.load(config)` — Bootstraps global configuration.
+### `Tempo.extend(arg, options?)`
+Unified loader for library extensions.
+- **Plugin:** `Tempo.extend(TickerPlugin)` — Adds functional extensions.
+- **Term:** `Tempo.extend(MyTerm)` — Registers grammar/parsing terms.
+- **Numbers:** `Tempo.extend({ numbers: { uno: 1 } })` — Registers word-based number aliases.
+- **Discovery:** `Tempo.extend(config)` — Bootstraps global configuration.
 - **Returns:** `typeof Tempo` (for chaining).
 - **Note:** Plugins are only installed once. Existing core members are protected.
 

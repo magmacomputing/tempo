@@ -405,11 +405,11 @@ export class Tempo {
 		if (discovery.numbers || discovery.terms) {
 			const nbr = new RegExp(`(?<nbr>[0-9]+|${Object.keys(enums.NUMBER).join('|')})`);
 			shape.parse.snippet[Token.nbr] = nbr;
-			
+
 			// rebuild snippets that depend on {nbr}
 			shape.parse.snippet[Token.mod] = new RegExp(`((?<mod>${Match.modifier.source})?${nbr.source}? *)`);
 			shape.parse.snippet[Token.afx] = new RegExp(`((s)? (?<afx>${Match.affix.source}))?${shape.parse.snippet[Token.sep].source}?`);
-			
+
 			Tempo.#setPatterns(shape);
 		}
 
@@ -699,11 +699,6 @@ export class Tempo {
 			mdyLocales: [...parse.mdyLocales],
 			mdyLayouts: [...parse.mdyLayouts],
 		}) as Tempo.Parse;
-	}
-
-	/** @deprecated use Tempo.extend() */
-	static load(arg: any, options?: any) {
-		return this.extend(arg, options);
 	}
 
 	/** iterate over Tempo properties */

@@ -37,9 +37,12 @@ Keywords can be used for more natural language-like inputs.
 | `last` | Last week | `last Sunday` |
 
 ### 4. Count Modifiers
-You can specify a number of weeks to jump by adding a count after the modifier.
+You can specify a number of weeks to jump by adding a count (numeric or word-based) after the modifier.
 - `-3 Wed`: Three Wednesdays ago
 - `+2 Mon`: Two Mondays from now
+- `one Wednesday ago`: One Wednesday ago (word-based)
+- `two Mondays hence`: Two Mondays from now (word-based)
+- `zero Tuesdays from now`: This Tuesday (current week)
 
 ## Time Suffixes
 You can append time information to a Weekday string. Tempo will parse the Weekday first and then apply the time to that specific date.

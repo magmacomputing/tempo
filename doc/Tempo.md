@@ -131,7 +131,7 @@ You can extend these patterns a) globally (via `Tempo.init()`) or b) per instanc
 `Tempo` also supports **Event** and **Period** aliases. These can be simple strings or functions that return a value to be parsed. When using functions, ensure you use the `function` keyword to maintain proper `this` binding to the `Tempo` instance.
 
 ```typescript
-Tempo.load({
+Tempo.extend({
   event: {
     'birthday': '20 May',
     'tomorrow': function () { return this.toPlainDate().add({ days: 1 }) },
@@ -279,7 +279,7 @@ To add a plugin, use the static `extend()` method.
 import { Tempo } from '@magmacomputing/tempo';
 import { TickerPlugin } from '@magmacomputing/tempo/plugins/ticker';
 
-Tempo.load(TickerPlugin);
+Tempo.extend(TickerPlugin);
 ```
 
 > [!NOTE]

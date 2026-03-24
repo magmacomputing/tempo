@@ -15,7 +15,8 @@ Working with dates in JavaScript has historically been painful. The new `Tempora
 - **Flexible Parsing**: Interprets almost any date string, including relative ones like "next Friday".
 - **Fluent API**: Chainable methods for adding, subtracting, and setting date-times (similar to Moment.js).
 - **Formatting**: Use custom tokens to format date-times in a way that is both intuitive and flexible.
-- **Plugins**: Extend core functionality safely with `Tempo.load()` (e.g. `TickerPlugin`).
+- **Plugins**: Extend core functionality safely with `Tempo.extend()` (e.g. `TickerPlugin`).
+- **Natural Language**: Supports word-based numbers (0-10) in relative parsing (e.g., "two days ago").
 - **Terms**: Access complex date ranges (Quarters, Seasons, Fiscal Years) easily.
 - **Immutable**: Operations (like `set` and `add`) return a new `Tempo` instance, ensuring thread safety and predictability.
 
@@ -108,7 +109,7 @@ For detailed technical guides, please refer to:
 - [Tempo Class Documentation](./doc/Tempo.md)
 - [Data In ~ Parsing Engine](./doc/Tempo.md#parsing)
 - [Data Out ~ Formatting Tokens](./doc/Tempo.md#formatting)
-- [Plugin System (Extending Tempo)](./doc/Tempo.md#plugin-system) (`Tempo.load`)
+- [Plugin System (Extending Tempo)](./doc/Tempo.md#plugin-system) (`Tempo.extend`)
 - [Terms (Calculation Plugins)](./doc/Tempo.md#plugins-terms)
 - [Configuration Guide](./doc/tempo.config.md)
 - [Commercial Support & Consulting](./doc/commercial.md)

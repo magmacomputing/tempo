@@ -37,11 +37,13 @@ This is the most secure and ergonomic method to provide configuration, and is co
 ```javascript
 import { Tempo } from '@magmacomputing/tempo';
 
-Tempo.load({
+Tempo.extend({
    options: { timeZone: 'Europe/Paris' },
    timeZones: { 'MYTZ': 'Asia/Dubai' },
+   numbers: { 'uno': 1 },
    formats: { 'myFormat': '{dd}!!{mm}!!{yyyy}' },
-   terms: [ myCustomTermPlugin ]
+   terms: [ myCustomTermPlugin ],
+   plugins: [ myPlugin ]
  });
 ```
 
@@ -54,6 +56,7 @@ Tempo looks for the following structure:
 | `plugins` | `Plugin \| Plugin[]` | Modular plugins to be extended onto Tempo automatically. |
 | `terms` | `TermPlugin \| TermPlugin[]` | Custom term plugins to be registered. |
 | `timeZones` | `Record<string, string>` | Custom timezone aliases to be merged. |
+| `numbers` | `Record<string, number>` | Word-based number aliases (for relative parsing). |
 | `formats` | `Record<string, string>` | Custom format strings to be merged into `Tempo.FORMAT`. |
 
 ---
