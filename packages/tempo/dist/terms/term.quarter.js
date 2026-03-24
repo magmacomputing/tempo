@@ -1,0 +1,29 @@
+import { cloneify } from '.././lib/serialize.library.js';
+import { COMPASS } from '.././tempo.enum.js';
+import { getTermRange } from './term.utils.js';
+/** definition of fiscal quarter ranges */
+const ranges = [
+    [
+        { key: 'Q1', day: 1, month: 1, fiscal: 0, sphere: COMPASS.North },
+        { key: 'Q2', day: 1, month: 4, fiscal: 0, sphere: COMPASS.North },
+        { key: 'Q3', day: 1, month: 7, fiscal: 0, sphere: COMPASS.North },
+        { key: 'Q4', day: 1, month: 10, fiscal: 0, sphere: COMPASS.North },
+    ], [
+        { key: 'Q1', day: 1, month: 7, fiscal: 1, sphere: COMPASS.South },
+        { key: 'Q2', day: 1, month: 10, fiscal: 1, sphere: COMPASS.South },
+        { key: 'Q3', day: 1, month: 1, fiscal: 0, sphere: COMPASS.South },
+        { key: 'Q4', day: 1, month: 4, fiscal: 0, sphere: COMPASS.South },
+    ]
+];
+export const key = 'qtr';
+export const scope = 'quarter';
+export const description = 'Fiscal Quarter';
+/** determine where the current Tempo instance fits within the above range */
+export function define(keyOnly) {
+    const { yy, config: { sphere } } = this;
+    const south = sphere !== COMPASS.North; // false = North, true = South
+    const list = cloneify(ranges[+south]); // deep clone the range
+    list.forEach(itm => itm.fiscal += yy); // calc the fiscal-year for quarter
+    return getTermRange(this, list, keyOnly); // return the range
+}
+//# sourceMappingURL=term.quarter.js.map
