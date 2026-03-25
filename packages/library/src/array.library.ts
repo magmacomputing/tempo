@@ -108,3 +108,35 @@ export function byLkp<T extends Property<any>>(arr: T[], fnKey: GroupFn<T> | key
 	return ownEntries(group)
 		.reduce((acc, [key, grp]) => Object.assign(acc, { [key]: grp?.pop() }), {} as Record<PropertyKey, T>)
 }
+
+/** return an array with no repeated elements */
+export function distinct<T>(arr: T[]): T[];
+/** return a mapped array with no repeated elements */
+export function distinct<T, S>(arr: T[], mapfn: (value: T, index: number, array: T[]) => S, thisArg?: any): S[];
+export function distinct<T>(arr: T[], mapfn?: (value: any, index: number, array: any[]) => any) {
+	return mapfn
+		? distinct(arr.map(mapfn))
+		: Array.from(new Set(arr));
+}
+
+/** clear down an Array */
+export function clear<T>(arr: T[]) {
+	arr.fill(null as any).length = 0;
+	return arr;
+}
+
+/** return cartesian-product of Array of Arrays */
+export function cartesian<T>(...args: T[][]): T[][] {
+	const [a, b = [], ...c] = args;
+	const cartFn = (a: any[], b: any[]) => ([] as any[]).concat(...a.map(d => b.map(e => ([] as any[]).concat(d, e))));
+
+	return b.length
+		? cartesian(cartFn(a, b), ...c)
+		: (a || []) as T[][];
+}
+
+/** tap into an Array */
+export function tap<T>(arr: T[], fn: (value: T[]) => void) {
+	fn(arr);
+	return arr;
+}

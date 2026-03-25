@@ -1,3 +1,4 @@
+import { distinct } from '#library/array.library.js';
 import { asType, getType, isEmpty, isFunction, isPrimitive } from '#library/type.library.js';
 import type { Obj, KeyOf, ValueOf, EntryOf, Primitives } from '#library/type.library.js';
 
@@ -6,9 +7,7 @@ export const $Target = Symbol.for('$Target');
 
 /** mutate Object | Array by excluding values with specified primitive 'types' */
 export function exclude<T extends Obj>(obj: T, ...types: (Primitives | Lowercase<Primitives>)[]) {
-	const exclusions = types
-		.map(item => item.toLowerCase())																// cast Primitives
-		.distinct() as typeof types
+	const exclusions = distinct(types.map(item => item.toLowerCase())) as typeof types;
 
 	if (obj && typeof obj === 'object') {																			// only works on Objects and Arrays
 		const keys = [] as KeyOf<T>[];

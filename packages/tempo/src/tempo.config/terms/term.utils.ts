@@ -1,3 +1,4 @@
+import { sortKey } from '#library/array.library.js';
 import { isDefined } from '#library/type.library.js';
 import type { Tempo } from '#tempo/tempo.class.js';
 
@@ -30,8 +31,7 @@ const SCHEMA = [
  * find where a Tempo fits within a range of DateTime
  */
 export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true) {
-	const sorted = [...list]
-		.sortBy('year', 'month', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond')
+	const sorted = sortKey([...list], 'year', 'month', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond')
 		.toReversed()
 
 	const match = sorted

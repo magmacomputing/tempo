@@ -21,7 +21,7 @@ import registerTerms from '#tempo/tempo.config/terms/term.import.js';
 
 import { Match, Token, Snippet, Layout, Event, Period, Default, TimeZone } from '#tempo/tempo.default.js';
 
-import '#library/prototype.library.js';									// patch prototypes
+// import '#library/prototype.library.js';									// patch prototypes
 
 // #endregion
 
