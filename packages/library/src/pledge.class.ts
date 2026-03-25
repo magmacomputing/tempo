@@ -7,7 +7,7 @@ import { cleanify } from '#library/serialize.library.js';
 import { Immutable } from '#library/class.library.js';
 import { isEmpty, isObject } from '#library/type.library.js';
 
-declare module './type.library.js' {
+declare module '#library/type.library.js' {
 	interface TypeValueMap<T> {
 		Pledge: { type: 'Pledge', value: Pledge<T> };
 	}

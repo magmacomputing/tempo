@@ -1,4 +1,5 @@
-import { Tempo, $Tempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo/tempo.class.js';
+import { $Tempo } from '#library/symbol.library.js';
 
 describe('Global Discovery (Symbol.for($Tempo))', () => {
 	beforeEach(() => {

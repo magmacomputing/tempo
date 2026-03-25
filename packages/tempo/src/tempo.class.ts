@@ -11,9 +11,8 @@ import { cleanify, stringify } from '#library/serialize.library.js';
 import { getStorage, setStorage } from '#library/storage.library.js';
 import { getProxy } from '#library/proxy.library.js';
 import { getContext, CONTEXT } from '#library/utility.library.js';
-import { $Target, $Tempo } from '#library/symbol.library.js';
+import { $Tempo } from '#library/symbol.library.js';
 import { ownKeys, ownEntries, getAccessors, omit } from '#library/reflection.library.js';
-import { clearCache } from '#library/function.library.js';
 import { pad, singular, toProperCase, trimAll } from '#library/string.library.js';
 import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction, isArray } from '#library/type.library.js';
 import type { IntRange, LooseUnion, NonOptional, Property, Plural, Type } from '#library/type.library.js';
@@ -23,8 +22,6 @@ import registerTerms from '#tempo/terms/term.import.js';
 
 import { Match, Token, Snippet, Layout, Event, Period, Default, TimeZone } from '#tempo/tempo.default.js';
 
-// import '#library/prototype.library.js';									// patch prototypes
-
 // #endregion
 
 declare module '#library/type.library.js' {
@@ -33,13 +30,13 @@ declare module '#library/type.library.js' {
 	}
 }
 
-/** current execution context*/															const Context = getContext();
-
 declare global {
 	interface globalThis {
 		[$Tempo]?: Tempo.Discovery;
 	}
 }
+
+/** current execution context*/															const Context = getContext();
 
 // #region Const variables
 /**
@@ -274,7 +271,7 @@ export class Tempo {
 			switch (itm.type) {
 				case 'Object':
 					ownEntries(itm.value as Property<any>)
-						.forEach(([k, v]) => target[Tempo.getSymbol(k as string)] = convert(v));
+						.forEach(([k, v]) => target[Tempo.getSymbol(k)] = convert(v));
 					break;
 				case 'String':
 				case 'RegExp':
@@ -879,8 +876,8 @@ export class Tempo {
 
 	/** time elapsed since (with unit) */											since(until: Tempo.Until, opts?: Tempo.Options): string;
 	/** time elapsed since another date-time (with unit) */		since(dateTimeOrOpts: Tempo.DateTime | Tempo.Options, until: Tempo.Until): string;
-	/** time elapsed since (without unit) */									since(dateTimeOrOpts?: Tempo.DateTime | Tempo.Options, opts?: Tempo.Options): string;
-	/** time elapsed since another date-time */								since(optsOrDate?: Tempo.DateTime | Tempo.Until | Tempo.Options, optsOrUntil?: Tempo.Options | Tempo.Until): string { return this.#since(optsOrDate, optsOrUntil) }
+	/** time elapsed since another date-time (without unit) */since(dateTimeOrOpts?: Tempo.DateTime | Tempo.Options, opts?: Tempo.Options): string;
+	/** time elapsed since another date-time */								since(optsOrDate?: any, optsOrUntil?: any): string { return this.#since(optsOrDate, optsOrUntil) }
 
 	/** applies a format to the instance. See `doc/tempo.md`. */	format<K extends enums.Format>(fmt: K) { return this.#format(fmt) }
 	/** returns a new `Tempo` with specific duration added. */add(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return this.#add(tempo as Tempo.Add, options); }
@@ -1484,13 +1481,15 @@ export class Tempo {
 		return ownEntries(groups)
 			.reduce((acc: Record<string, number>, [key, val]: [string, any]) => {
 				const low = isString(val) ? val.toLowerCase() : '';
+
 				if (isNumeric(val))
 					acc[key] = asNumber(val);
 				else if (low in enums.NUMBER)
-					acc[key] = enums.NUMBER[low];
+					acc[key] = enums.NUMBER[low as enums.Number];
 				return acc;
 			}, {} as Record<string, number>);
 	}
+
 	/** mutate the date-time by adding a duration */
 	#add = (args?: any, options: Tempo.Options = {}) => {
 		const tz = options.timeZone ?? this.tz;

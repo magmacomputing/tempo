@@ -1,4 +1,5 @@
-import { Tempo, $Tempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo/tempo.class.js';
+import { $Tempo } from '#library/symbol.library.js';
 
 describe('static.options', () => {
 	const testKey = '$TempoTest';
@@ -46,7 +47,7 @@ describe('static.options', () => {
 
 	it('should reflect persistent storage in "storage" including the store key', () => {
 		Tempo.writeStore({ limit: 123 }); // Uses the testKey from config
-		
+
 		const storage = Tempo.options.storage;
 		expect(storage.key).toBe(testKey);
 		expect(storage.limit).toBe(123);
@@ -58,7 +59,7 @@ describe('static.options', () => {
 		const opts = Tempo.options;
 		// default is secured/frozen but not proxied by getProxy in its own getter
 		expect(Object.isFrozen(opts.default)).toBe(true);
-		
+
 		// discovery, global, and storage should be proxied
 		// We can check this by looking for the $Target symbol or testing toJSON behavior
 		const $Target = Symbol.for('$Target');

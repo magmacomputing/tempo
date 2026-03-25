@@ -1,5 +1,6 @@
-/** the primitive type reported by toStringTag() */
 import { $Extensible, $Target } from '#library/symbol.library.js';
+
+/** the primitive type reported by toStringTag() */
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
 
 /** 
@@ -68,11 +69,13 @@ export const isError = <T>(err?: T): err is Extract<T, Error> => isType(err, 'Er
 export const isTemporal = <T>(obj: T): obj is Extract<T, Temporals> => protoType(obj).startsWith('Temporal.');
 
 // non-standard Objects
-export const isTempo = <T>(obj?: T): obj is Extract<T, GetType<'Tempo'>> => isType(obj, 'Tempo' as any);
-export const isEnum = <T, E extends Property<any>>(obj?: T): obj is Extract<T, GetType<'Enumify', E>> => isType(obj, 'Enumify' as any);
-export const isPledge = <T, P = any>(obj?: T): obj is Extract<T, GetType<'Pledge', P>> => isType(obj, 'Pledge' as any);
-/** assert value is skip list for secure() */
+export const isTempo = <T>(obj?: T): obj is Extract<T, GetType<'Tempo'>> => isType(obj, 'Tempo');
+export const isEnum = <T, E extends Property<any>>(obj?: T): obj is Extract<T, GetType<'Enumify', E>> => isType(obj, 'Enumify');
+export const isPledge = <T, P = any>(obj?: T): obj is Extract<T, GetType<'Pledge', P>> => isType(obj, 'Pledge');
+
+/** assert value for secure() */
 export const isExtensible = (obj: any): obj is any => !!(obj?.[$Extensible]);
+export const isTarget = (obj: any): obj is any => !!(obj?.[$Target]);
 
 export const nullToZero = <T>(obj: T) => obj ?? 0;
 export const nullToEmpty = <T>(obj: T) => obj ?? '';
@@ -200,8 +203,9 @@ export interface TypeValueMap<T = any> {
 	'Temporal.PlainMonthDay': { type: 'Temporal.PlainMonthDay', value: Temporal.PlainMonthDay };
 }
 
-export type Type = keyof TypeValueMap<any>;
-export type TypeValue<T> = TypeValueMap<T>[keyof TypeValueMap<T>];
+/** add Special Type placeholders to the keyof TypeValueMap */
+export type Type = keyof TypeValueMap<any> | 'Enumify' | 'Pledge' | 'Tempo';
+export type TypeValue<T> = { [K in Type]: { type: K, value: GetType<K, T> } }[Type];
 
 /** late-binding Type utility for augmented modules */
 export type GetType<K extends string, T = any> = K extends keyof TypeValueMap<T> ? TypeValueMap<T>[K]['value'] : any;

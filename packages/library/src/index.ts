@@ -15,5 +15,6 @@ export * from './reflection.library.js';
 export * from './serialize.library.js';
 export * from './storage.library.js';
 export * from './string.library.js';
+export * from './symbol.library.js';
 export * from './type.library.js';
 export * from './utility.library.js';

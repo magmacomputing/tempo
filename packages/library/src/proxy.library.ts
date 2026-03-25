@@ -1,4 +1,4 @@
-import { $Target, $Inspect } from '#library/symbol.library.js';
+import { $Target, $Inspect } from './symbol.library.js';
 import { allObject } from '#library/reflection.library.js';
 import { secure } from '#library/utility.library.js';
 import { isFunction } from '#library/type.library.js';
