@@ -9,9 +9,11 @@ import { Immutable, Serializable } from '#library/class.library.js';
 import { asArray, asNumber, asInteger, isNumeric, ifNumeric } from '#library/coercion.library.js';
 import { cleanify, stringify } from '#library/serialize.library.js';
 import { getStorage, setStorage } from '#library/storage.library.js';
-import { ownKeys, ownEntries, getAccessors, omit } from '#library/reflection.library.js';
 import { getProxy } from '#library/proxy.library.js';
 import { getContext, CONTEXT } from '#library/utility.library.js';
+import { $Target, $Tempo } from '#library/symbol.library.js';
+import { ownKeys, ownEntries, getAccessors, omit } from '#library/reflection.library.js';
+import { clearCache } from '#library/function.library.js';
 import { pad, singular, toProperCase, trimAll } from '#library/string.library.js';
 import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction, isArray } from '#library/type.library.js';
 import type { IntRange, LooseUnion, NonOptional, Property, Plural, Type } from '#library/type.library.js';
@@ -31,7 +33,6 @@ declare module '#library/type.library.js' {
 	}
 }
 
-/** key to use for storage / globalThis Symbol */						export const $Tempo = Symbol.for('$Tempo');
 /** current execution context*/															const Context = getContext();
 
 declare global {
@@ -393,9 +394,8 @@ export class Tempo {
 			TimeZone[key.toLowerCase()] = value;
 
 		// 1b. Process Numbers
-		const numbers = discovery.numbers ?? {}
-		for (const [key, value] of Object.entries(numbers))
-			enums.NUMBER[key.toLowerCase()] = value;
+		if (discovery.numbers)
+			enums.registryUpdate('NUMBER', discovery.numbers);
 
 		// 2. Process Terms
 		if (discovery.terms)
@@ -414,8 +414,10 @@ export class Tempo {
 		}
 
 		// 3. Process Formats
-		if (discovery.formats)
+		if (discovery.formats) {
 			shape.config.formats = shape.config.formats.extend(discovery.formats) as Tempo.Format;
+			enums.registryUpdate('FORMAT', discovery.formats);
+		}
 
 		// 4. Process Plugins
 		if (discovery.plugins)

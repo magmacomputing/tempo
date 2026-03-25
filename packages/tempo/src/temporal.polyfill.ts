@@ -17,3 +17,5 @@ To add a polyfill to your project:
 	console.error(message);
 	throw new Error('Temporal API not found.');
 }
+
+export { }

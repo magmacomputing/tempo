@@ -1,4 +1,5 @@
 /** the primitive type reported by toStringTag() */
+import { $Extensible, $Target } from '#library/symbol.library.js';
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
 
 /** 
@@ -70,6 +71,8 @@ export const isTemporal = <T>(obj: T): obj is Extract<T, Temporals> => protoType
 export const isTempo = <T>(obj?: T): obj is Extract<T, GetType<'Tempo'>> => isType(obj, 'Tempo' as any);
 export const isEnum = <T, E extends Property<any>>(obj?: T): obj is Extract<T, GetType<'Enumify', E>> => isType(obj, 'Enumify' as any);
 export const isPledge = <T, P = any>(obj?: T): obj is Extract<T, GetType<'Pledge', P>> => isType(obj, 'Pledge' as any);
+/** assert value is skip list for secure() */
+export const isExtensible = (obj: any): obj is any => !!(obj?.[$Extensible]);
 
 export const nullToZero = <T>(obj: T) => obj ?? 0;
 export const nullToEmpty = <T>(obj: T) => obj ?? '';
@@ -155,6 +158,7 @@ export type Primitives = toName<Primitive>
 /** Generic constructor type */
 export type Constructor<T = any> = new (...args: any[]) => T;
 type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling issues)
+
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 export type Temporals = typeof Temporal extends { Now: any } ? Exclude<keyof typeof Temporal, 'Now'> : never;
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

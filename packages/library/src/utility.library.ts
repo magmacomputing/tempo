@@ -1,5 +1,5 @@
 import { ownValues } from '#library/reflection.library.js';
-import { isDefined, isReference } from '#library/type.library.js';
+import { isDefined, isReference, isExtensible } from '#library/type.library.js';
 import type { Secure, ValueOf } from '#library/type.library.js';
 
 /** General utility functions */
@@ -31,6 +31,7 @@ export const getScript = (nbr = 1) => {
  * @param msg			string to display on a timeout 
  * @param timeOut	how many milliseconds to sleep (default 2-seconds)  
  * @returns				Promise\<void>  
+ * @see Context.Browser
  */
 export const sleep = (msg = 'sleep: timed out', timeOut = 2000) =>
 	new Promise<Error>((_, reject) => setTimeout(() => reject(new Error(msg)), timeOut));
@@ -62,12 +63,11 @@ export const getContext = (): Context => {
 	return { global, type: CONTEXT.Unknown };
 }
 
-// useful for those times when a full Enumify object is not needed, but still lock the Object from mutations
 /** deep-freeze an Array | Object to make it immutable */
 export function secure<const T>(obj: T) {
-	if (isReference(obj))																			// skip primitive values
+	if (isReference(obj) && !isExtensible(obj))
 		ownValues(obj as any)																		// retrieve the properties on obj
 			.forEach(val => Object.isFrozen(val) || secure(val));	// secure each value, if not already Frozen
 
-	return Object.freeze(obj) as Secure<T>;										// freeze the object itself
+	return (isExtensible(obj) ? obj : Object.freeze(obj)) as Secure<T>;
 }

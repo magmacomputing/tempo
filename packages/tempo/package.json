@@ -39,7 +39,7 @@
   },
   "scripts": {
     "test": "vitest run",
-    "repl": "tsx -i --import ./bin/repl.ts",
+    "repl": "tsx -i --import ./bin/setup.ts --import ./bin/repl.ts",
     "build": "tsc -b && npm run build:bundle && bash bin/resolve-self.sh",
     "build:bundle": "rollup -c",
     "clean": "tsc -b --clean",
@@ -55,6 +55,7 @@
     "tslib": "^2.8.1"
   },
   "devDependencies": {
+    "@js-temporal/polyfill": "^0.5.1",
     "@rollup/plugin-alias": "^6.0.0"
   }
 }

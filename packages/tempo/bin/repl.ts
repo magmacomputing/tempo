@@ -1,5 +1,3 @@
-import './setup.js';
-
 import { Tempo, stringify, objectify, enumify, enums } from '#tempo/index.js';
 import { getType } from '#library/type.library.js';
 import { Token, Snippet } from '#tempo/tempo.default.js';
