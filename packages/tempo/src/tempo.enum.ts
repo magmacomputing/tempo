@@ -2,8 +2,9 @@ import { $Target, $Extensible } from '#library/symbol.library.js';
 import { enumify } from '#library/enumerate.library.js';
 import { getProxy } from '#library/proxy.library.js';
 import { clearCache } from '#library/function.library.js';
+import { isUndefined } from '#library/type.library.js';
 import type { Enum, Enumify } from '#library/enumerate.library.js';
-import type { OwnOf, Index, KeyOf, ValueOf, LooseUnion, Mutable } from '#library/type.library.js';
+import type { OwnOf, Index, KeyOf, ValueOf, LooseUnion, Mutable, Property } from '#library/type.library.js';
 
 /**
  * Various enumerations used throughout Tempo library.
@@ -27,6 +28,23 @@ export const STATE = {
 		/** number of seconds in a millisecond */								millisecond: .001,
 		/** number of seconds in a microsecond */								microsecond: .000_001,
 		/** number of seconds in a nanosecond */								nanosecond: .000_000_001,
+	},
+	TIMEZONE: {
+		'utc': 'UTC',
+		'gmt': 'Europe/London',
+		'est': 'America/New_York',
+		'cst': 'America/Chicago',
+		'mst': 'America/Denver',
+		'pst': 'America/Los_Angeles',
+		'aest': 'Australia/Sydney',
+		'acst': 'Australia/Adelaide',
+		'awst': 'Australia/Perth',
+		'nzt': 'Pacific/Auckland',
+		'cet': 'Europe/Paris',
+		'eet': 'Europe/Helsinki',
+		'ist': 'Asia/Kolkata',
+		'npt': 'Asia/Kathmandu',
+		'jst': 'Asia/Tokyo',
 	},
 	DURATIONS: {
 		/** approx number of milliseconds in a year */					years: 31_536_000_000,
@@ -64,6 +82,7 @@ export const STATE = {
 
 (STATE.NUMBER as any)[$Extensible] = true;
 (STATE.FORMAT as any)[$Extensible] = true;
+(STATE.TIMEZONE as any)[$Extensible] = true;
 
 // #endregion
 
@@ -96,19 +115,22 @@ export type SEASON = ValueOf<typeof SEASON>
 export type Season = KeyOf<typeof SEASON>
 
 /** number names (0-10) */
-export const NUMBER = getProxy(STATE.NUMBER, false);
+export const NUMBER = enumify(STATE.NUMBER, false);
 export type Number = KeyOf<typeof NUMBER>
 
+/** common time-zone aliases */
+export const TimeZone = getProxy(STATE.TIMEZONE, false);
+
 /** number of seconds in a time unit */
-export const DURATION = getProxy(enumify(STATE.DURATION, false), false);
+export const DURATION = enumify(STATE.DURATION, false);
 export type DURATION = KeyOf<typeof DURATION>
 
 /** number of milliseconds in a time unit */
-export const DURATIONS = getProxy(enumify(STATE.DURATIONS, false), false);
+export const DURATIONS = enumify(STATE.DURATIONS, false);
 export type DURATIONS = KeyOf<typeof DURATIONS>
 
 /** pre-defined Format code short-cuts */
-export const FORMAT = getProxy(enumify(STATE.FORMAT, false), false);
+export const FORMAT = enumify(STATE.FORMAT, false);
 export type FORMAT = ValueOf<typeof FORMAT>
 export type Format = LooseUnion<KeyOf<typeof FORMAT>>
 
@@ -168,13 +190,18 @@ export const DISCOVERY: Enumify<Index<['options', 'timeZones', 'terms', 'plugins
 export type Discovery = KeyOf<typeof DISCOVERY>
 
 /** update a global registry with new discoverable data */
-export function registryUpdate(name: 'NUMBER' | 'FORMAT', data: Record<string, any>) {
-	const registry = (name === 'NUMBER' ? NUMBER : FORMAT) as any;
-	const target = registry[$Target];
+export function registryUpdate(name: 'NUMBER' | 'FORMAT' | 'TIMEZONE', data: Record<string, any>) {
+	const registry = (name === 'NUMBER' ? NUMBER : (name === 'FORMAT' ? FORMAT : TimeZone)) as any;
+	const target = registry?.[$Target] as Property<any>;
+	const state = STATE[name] as Property<any>;
 
 	if (target) {
-		Object.assign(STATE[name], data);
-		Object.assign(target, data);
+		Object.entries(data).forEach(([key, val]) => {
+			if (isUndefined(state[key])) {												// only add if key does not exist
+				state[key] = val;
+				target[key] = val;
+			}
+		});
 		clearCache(target);
 	}
 }

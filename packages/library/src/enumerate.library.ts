@@ -109,7 +109,7 @@ export function enumify<T>(this: any, list: T, frozen = true): any {
 
 	const target = Object.create(proto, Object.getOwnPropertyDescriptors(stash));
 	if (!frozen) Object.defineProperty(target, $Extensible, { value: true, enumerable: false });
-	return getProxy(target, frozen);
+	return getProxy(target, true, frozen);	// proxy is ALWAYS frozen (read-only), but target is only 'locked' if requested
 }
 
 /** create an entry in the Serialization Registry to describe how to rebuild an Enum */

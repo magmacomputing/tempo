@@ -4,11 +4,11 @@ import { secure } from '#library/utility.library.js';
 import { isFunction } from '#library/type.library.js';
 
 /** Stealth Proxy pattern to allow for iteration and logging over a Frozen object */
-export function getProxy<T extends object>(target: T, frozen = true) {
+export function getProxy<T extends object>(target: T, frozen = true, lock = frozen) {
 	const tgt = (target as any)[$Target] ?? target;						// unwrap if it's already a proxy
 	let cachedJSON: any;
 
-	if (frozen) secure(tgt);
+	if (lock) secure(tgt);
 
 	return new Proxy(tgt, {
 		isExtensible: (t) => Reflect.isExtensible(t),

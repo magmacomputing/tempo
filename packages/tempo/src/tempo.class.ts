@@ -20,7 +20,8 @@ import type { IntRange, LooseUnion, NonOptional, Property, Plural, Type } from '
 import * as enums from '#tempo/tempo.enum.js';
 import registerTerms from '#tempo/terms/term.import.js';
 
-import { Match, Token, Snippet, Layout, Event, Period, Default, TimeZone } from '#tempo/tempo.default.js';
+import { Match, Token, Snippet, Layout, Event, Period, Default } from '#tempo/tempo.default.js';
+const { TimeZone } = enums;
 
 // #endregion
 
@@ -60,6 +61,8 @@ export class Tempo {
 
 	/** Tempo to Temporal DateTime Units map */								static get ELEMENT() { return enums.ELEMENT }
 	/** Pre-configured format {name -> string} pairs */				static get FORMAT() { return Tempo.#global.config.formats }
+	/** Number names (0-10) */																static get NUMBER() { return enums.NUMBER }
+	/** TimeZone aliases */																		static get TIMEZONE() { return enums.TimeZone }
 	/** some useful Dates */																	static get LIMIT() { return enums.LIMIT }
 
 	// #endregion
@@ -327,7 +330,7 @@ export class Tempo {
 						break;
 
 					case 'timeZone':
-						const zone = String(arg.value).toLowerCase();
+						const zone = String(arg.value).toLowerCase() as keyof typeof TimeZone;
 						shape.config.timeZone = TimeZone[zone] ?? arg.value;
 						break;
 
@@ -386,9 +389,12 @@ export class Tempo {
 		if (!isObject(discovery)) return {}
 
 		// 1. Process TimeZones (normalize to lowercase for lookup)
-		const timeZones = discovery.timeZones ?? {}
-		for (const [key, value] of Object.entries(timeZones))
-			TimeZone[key.toLowerCase()] = value;
+		if (discovery.timeZones) {
+			const tzs = Object.fromEntries(
+				ownEntries(discovery.timeZones, true).map(([k, v]) => [String(k).toLowerCase(), v])
+			);
+			enums.registryUpdate('TIMEZONE', tzs);
+		}
 
 		// 1b. Process Numbers
 		if (discovery.numbers)

@@ -1,6 +1,6 @@
 import { looseIndex } from '#library/object.library.js';
 import { secure } from '#library/utility.library.js';
-import { NUMBER } from '#tempo/tempo.enum.js';
+import { NUMBER, TimeZone } from '#tempo/tempo.enum.js';
 import type { Tempo } from '#tempo/tempo.class.js';
 
 // BE VERY CAREFUL NOT TO BREAK THE REGEXP PATTERNS BELOW
@@ -148,28 +148,6 @@ export const Period = looseIndex<string, string | Function>()({
 })
 export type Period = typeof Period
 
-/** 
- * a {timeZone} alias dictionary mapping common abbreviations to IANA strings.
- * Tempo will check this registry to convert abbreviations before passing them to Temporal.
- */
-export const TimeZone = looseIndex<string, string>()({
-	'utc': 'UTC',
-	'gmt': 'Europe/London',
-	'est': 'America/New_York',
-	'cst': 'America/Chicago',
-	'mst': 'America/Denver',
-	'pst': 'America/Los_Angeles',
-	'aest': 'Australia/Sydney',
-	'acst': 'Australia/Adelaide',
-	'awst': 'Australia/Perth',
-	'nzt': 'Pacific/Auckland',
-	'cet': 'Europe/Paris',
-	'eet': 'Europe/Helsinki',
-	'ist': 'Asia/Kolkata',
-	'npt': 'Asia/Kathmandu',
-	'jst': 'Asia/Tokyo',
-})
-export type TimeZone = typeof TimeZone
 
 /** Reasonable default options for initial Tempo config */
 export const Default = secure({
