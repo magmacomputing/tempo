@@ -34,7 +34,7 @@ using tickerA = Tempo.ticker({ limit: 5 }, (t) => console.log(t));
 
 // Pattern B: Stop when a specific virtual time is reached
 using tickerB = Tempo.ticker({ 
-  seconds: 10,               // Flattened DurationLike property
+  seconds: 10,               // Plural DurationLike property
   until: '2024-12-25T12:00:00' 
 }, (t) => console.log(t));
 ```
@@ -81,7 +81,7 @@ By providing a **negative** interval, you can create a ticker that moves backwar
 
 ```typescript
 // Count down from 10 seconds, moving backwards 1s at a time
-using countdown = Tempo.ticker({ interval: -1000, seed: "00:00:10" }, (t, stop) => {
+using countdown = Tempo.ticker({ seconds: -1, seed: "00:00:10" }, (t, stop) => {
   console.log(t.format('ss'));
   if (t.ss === 0) stop(); 
 });
@@ -91,14 +91,8 @@ using countdown = Tempo.ticker({ interval: -1000, seed: "00:00:10" }, (t, stop) 
 
 ## API Reference
 
-### `Tempo.ticker(interval?: number | DurationLike): AsyncGenerator<Tempo>`
-Creates an infinite stream of `Tempo` instances. Defaults to a **1-second** interval if omitted.
-
-### `Tempo.ticker(options: TickerOptions): AsyncGenerator<Tempo>`
-Creates a stream with advanced configuration (limit, until, seed). If no timing is provided, it defaults to a **1-second** interval.
-
-### `Tempo.ticker(callback?): TickerGenerator | TickerStop`
-Starts a recurring timer (defaulting to a 1-second pulse). If a callback is provided, it returns a `TickerStop` record; otherwise, it returns an `AsyncGenerator`.
+### `Tempo.ticker(arg1?: number | string | bigint | TickerOptions, arg2?: Callback): TickerResult`
+Creates a reactive stream of `Tempo` instances at regular intervals. Defaults to a **1-second** interval if omitted.
 
 #### `TickerOptions`
 | Property | Type | Description |

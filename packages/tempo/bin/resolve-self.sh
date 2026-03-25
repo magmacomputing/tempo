@@ -24,14 +24,14 @@ find dist -type f \( -name "*.js" -o -name "*.d.ts" \) | while read -r file; do
         lib_depth=$((depth - 1))
         lib_prefix="./"
         for ((i=0; i<lib_depth; i++)); do lib_prefix="../$lib_prefix"; done
-        perl -i -pe "s|#library/|${lib_prefix}|g" "$file"
+        perl -i -pe "s|#library/|${lib_prefix}|g; s|#library(['\"])|${lib_prefix}index.js\$1|g" "$file"
     else
         # Standard case for tempo files
-        perl -i -pe "s|#library/|${prefix}lib/|g" "$file"
+        perl -i -pe "s|#library/|${prefix}lib/|g; s|#library(['\"])|${prefix}lib/index.js\$1|g" "$file"
     fi
     
     # Replace #tempo/ with ./ (or relative equivalent)
-    perl -i -pe "s|#tempo/|${prefix}|g" "$file"
+    perl -i -pe "s|#tempo/|${prefix}|g; s|#tempo(['\"])|${prefix}index.js\$1|g" "$file"
 done
 
 # 4. Pristine package.json (Clean up for publication)
@@ -41,9 +41,9 @@ if [[ "$*" == *"--publish"* ]]; then
     cp package.json package.json.backup
     
     # Use perl -0777 to slurp the whole file for multi-line matching
-    # Strip internal devDependencies and imports
-    perl -0777 -i -pe 's/"\@magmacomputing\/library": ".*",?\s*//g' package.json
-    perl -0777 -i -pe 's/"#library\/\*": \{.*?\},\s*//sg' package.json
+    # Strip internal devDependencies and imports (all internal aliases)
+    perl -0777 -i -pe 's/"\@magma\/library": ".*",?\s*//g' package.json
+    perl -0777 -i -pe 's/"#(library|tempo)(\/\*)?": \{.*?\},\s*//sg' package.json
     
     # Cleanup trailing commas before }
     perl -0777 -i -pe 's/,\s*\}/ \}/g' package.json

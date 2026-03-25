@@ -27,9 +27,9 @@ export type SEASON = ValueOf<typeof SEASON>
 export type COMPASS = ValueOf<typeof COMPASS>
 
 /** number names (0-10) */
-export const NUMBER = ({
+export const NUMBER = {
 	zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10
-}) as Record<string, number>;
+} as Record<string, number>;
 // export type NUMBER = KeyOf<typeof NUMBER>
 
 /** number of seconds in a time unit */
@@ -101,10 +101,10 @@ export type Formats = {
 /** Enum registry of format strings */
 export type FormatEnum = Enum.wrap<OwnFormat & Record<string, string | number>>;
 
-export const LIMIT = secure({
+export const LIMIT = {
 		/** Tempo(31-Dec-9999.23:59:59).ns */										maxTempo: Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds,
 		/** Tempo(01-Jan-1000.00:00:00).ns */										minTempo: Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds,
-})
+}
 
 export const ELEMENT = enumify({
 	yy: 'year',

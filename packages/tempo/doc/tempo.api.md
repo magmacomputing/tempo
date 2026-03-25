@@ -41,10 +41,10 @@ Returns the current Unix epoch in nanoseconds as a `BigInt`.
 ### `Tempo.getSymbol(key?: string | symbol)`
 Retrieves or registers a `Symbol` for internal token mapping.
 
-### `Tempo.ticker(intervalMs, seed?, callback?)`
+### `Tempo.ticker(arg1?, arg2?)`
 (Plugin required) Creates a reactive stream of `Tempo` instances at regular intervals. 
 - **Returns:** An `AsyncGenerator` (if no callback) or a `stop` function (if callback provided).
-- **See:** [Tempo Ticker Guide](./tempo.ticker.md) for full usage patterns.
+- **See:** [Tempo Ticker Guide](./tempo.ticker.md) for the full polymorphic signature and usage patterns.
 
 ### `Tempo.regexp(layout, snippet?)`
 Translates a Tempo layout string into a compiled `RegExp`.

@@ -125,3 +125,16 @@ type TermPlugin = {
   define: (this: Tempo, keyOnly?: boolean) => any;
 }
 ```
+---
+
+## `Tempo.TickerOptions`
+Advanced configuration for `Tempo.ticker()`. Extends `Temporal.DurationLike` (plural keys only).
+
+```typescript
+type TickerOptions = Partial<Temporal.DurationLike> & {
+  interval?: number | string | bigint;    // Scalar interval (seconds if number)
+  limit?: number;                         // Total number of ticks to emit
+  until?: Tempo.DateTime;                 // Virtual deadline (inclusive)
+  seed?: Tempo.DateTime | Tempo.Options;  // Starting point for virtual clock
+}
+```

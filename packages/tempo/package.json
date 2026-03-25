@@ -6,9 +6,17 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "imports": {
+    "#library": {
+      "development": "../library/src/index.js",
+      "default": "@magma/library"
+    },
     "#library/*": {
       "development": "../library/src/*",
       "default": "@magma/library/*"
+    },
+    "#tempo": {
+      "development": "./src/index.js",
+      "default": "./dist/index.js"
     },
     "#tempo/*": {
       "development": "./src/*",
@@ -21,20 +29,21 @@
       "import": "./dist/index.js"
     },
     "./enums": {
-      "types": "./dist/tempo.config/tempo.enum.d.ts",
-      "import": "./dist/tempo.config/tempo.enum.js"
+      "types": "./dist/tempo.enum.d.ts",
+      "import": "./dist/tempo.enum.js"
     },
     "./plugins/ticker": {
-      "types": "./dist/tempo.config/plugins/plugin.ticker.d.ts",
-      "import": "./dist/tempo.config/plugins/plugin.ticker.js"
+      "types": "./dist/plugins/plugin.ticker.d.ts",
+      "import": "./dist/plugins/plugin.ticker.js"
     }
   },
   "scripts": {
     "test": "vitest run",
-    "repl": "tsx -i --import ./test/repl.ts",
-    "build": "tsc -b && npm run build:bundle",
+    "repl": "tsx -i --import ./bin/repl.ts",
+    "build": "tsc -b && npm run build:bundle && bash bin/resolve-self.sh",
     "build:bundle": "rollup -c",
     "clean": "tsc -b --clean",
+    "publish": "npm publish --access public",
     "prepublishOnly": "npm run build"
   },
   "files": [

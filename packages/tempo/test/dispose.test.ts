@@ -1,6 +1,6 @@
 import { Tempo } from '#tempo/tempo.class.js';
 import { Pledge } from '#library/pledge.class.js';
-import { TickerPlugin } from '#tempo/tempo.config/plugins/plugin.ticker.js';
+import { TickerPlugin } from '#tempo/plugins/plugin.ticker.js';
 
 Tempo.extend(TickerPlugin);
 
@@ -43,7 +43,7 @@ describe('Ticker Symbol.dispose', () => {
 
 	test('Ticker callback returns a disposable function', async () => {
 		let count = 0;
-		const stop = Tempo.ticker(50, () => { count++ });
+		const stop = Tempo.ticker(0.05, () => { count++ });
 
 		expect(typeof stop).toBe('function');
 
@@ -63,21 +63,21 @@ describe('Ticker Symbol.dispose', () => {
 	});
 
 	test('Ticker generator returns an async disposable', async () => {
-		const ticker = Tempo.ticker(20);
-		
+		const ticker = Tempo.ticker(0.02);
+
 		if (typeof Symbol.asyncDispose === 'symbol') {
 			expect(ticker[Symbol.asyncDispose]).toBeDefined();
 			expect(typeof ticker[Symbol.asyncDispose]).toBe('function');
-			
+
 			let i = 0;
 			for await (const t of ticker) {
 				expect(t).toBeDefined();
 				if (++i === 2) break;
 			}
-			
+
 			// Explicitly call asyncDispose (though break does it via .return())
 			await ticker[Symbol.asyncDispose]();
-			
+
 			const result = await ticker.next();
 			expect(result.done).toBe(true);
 		}
@@ -86,13 +86,13 @@ describe('Ticker Symbol.dispose', () => {
 	test('Ticker callback seeding (Virtual Clock)', async () => {
 		const seed = '2024-01-01T00:00:00';
 		const results: string[] = [];
-		const stop = Tempo.ticker(50, seed, (t) => {
+		const stop = Tempo.ticker({ seed, interval: 0.05 }, (t) => {
 			results.push(t.format('sortTime'));
 		});
-		
+
 		await new Promise(resolve => setTimeout(resolve, 125)); // Should have 3 ticks (0ms: seed, 50ms: +50, 100ms: +100)
 		stop();
-		
+
 		expect(results[0]).toBe(new Tempo(seed).format('sortTime'));
 		expect(results[1]).toBe(new Tempo(seed).add({ milliseconds: 50 }).format('sortTime'));
 		expect(results[2]).toBe(new Tempo(seed).add({ milliseconds: 100 }).format('sortTime'));
@@ -100,15 +100,15 @@ describe('Ticker Symbol.dispose', () => {
 
 	test('Ticker generator seeding (Virtual Clock)', async () => {
 		const seed = '2024-01-01T00:00:00';
-		const ticker = Tempo.ticker(50, seed);
+		const ticker = Tempo.ticker({ seed, interval: 0.05 });
 		const results: string[] = [];
-		
+
 		let i = 0;
 		for await (const t of ticker) {
 			results.push(t.format('sortTime'));
 			if (++i === 3) break;
 		}
-		
+
 		expect(results[0]).toBe(new Tempo(seed).format('sortTime'));
 		expect(results[1]).toBe(new Tempo(seed).add({ milliseconds: 50 }).format('sortTime'));
 		expect(results[2]).toBe(new Tempo(seed).add({ milliseconds: 100 }).format('sortTime'));
@@ -129,7 +129,7 @@ describe('Ticker Symbol.dispose', () => {
 		const seed = '2024-01-01T12:00:00';
 		const results: string[] = [];
 		{
-			await using ticker = Tempo.ticker(20, seed);
+			await using ticker = Tempo.ticker({ seed, interval: 0.02 });
 			let i = 0;
 			for await (const t of ticker) {
 				results.push(t.format('sortTime'));

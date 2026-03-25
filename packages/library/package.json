@@ -20,6 +20,10 @@
     "src/"
   ],
   "imports": {
+    "#library": {
+      "development": "./src/index.js",
+      "default": "./dist/index.js"
+    },
     "#library/*": {
       "development": "./src/*",
       "default": "./dist/*"

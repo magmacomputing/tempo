@@ -1,5 +1,5 @@
 import { Tempo } from '#tempo/tempo.class.js';
-import { Token } from '#tempo/tempo.config/tempo.default.js';
+import { Token } from '#tempo/tempo.default.js';
 
 describe('Tempo.regexp', () => {
   test('should expand snippets and handle nested named capture groups', () => {

@@ -1,10 +1,11 @@
-import { asNumber, isNumeric } from '#library/coercion.library.js';
-import { isNumber, isObject, isFunction } from '#library/type.library.js';
+import { isObject, isFunction, isDefined, isEmpty } from '#library/type.library.js';
+import { ifDefined } from '#library/object.library.js';
+import { DURATIONS } from '#tempo/tempo.enum.js';
 import type { Tempo } from '#tempo/tempo.class.js';
 
 declare module '#tempo/tempo.class.js' {
 	namespace Tempo {
-		/** ticker interval allowed types */										type TickerInterval = number | string | bigint | Temporal.DurationLike;
+		/** ticker interval allowed types */										type TickerInterval = number | string | bigint;
 		/** ticker stop condition options */										type TickerOptions = Partial<Temporal.DurationLike> & {
 		interval?: TickerInterval;
 		limit?: number;
@@ -17,9 +18,9 @@ declare module '#tempo/tempo.class.js' {
 		/** stop() function return type for Tempo.ticker() */		type TickerStop = (() => void) & Disposable;
 		/** combined return type for Tempo.ticker() */					type TickerResult = TickerGenerator | TickerStop;
 		function ticker(): TickerGenerator;
-		function ticker(callback: TickerCallback): TickerStop;
 		function ticker(interval: TickerInterval): TickerGenerator;
 		function ticker(options: TickerOptions): TickerGenerator;
+		function ticker(callback: TickerCallback): TickerStop;
 		function ticker(interval: TickerInterval, callback: TickerCallback): TickerStop;
 		function ticker(options: TickerOptions, callback: TickerCallback): TickerStop;
 	}
@@ -38,26 +39,34 @@ declare module '#tempo/tempo.class.js' {
  * - **Smart Defaults**: Defaults to a 1-second pulse if no interval is specified.
  */
 export const TickerPlugin: Tempo.Plugin = (_options, TempoClass, _factory) => {
-	const ticker = function (intervalOrOptionsOrCallback: any, callback?: any): Tempo.TickerResult {
-		const isFn = isFunction(intervalOrOptionsOrCallback);
-		const options = (isObject(intervalOrOptionsOrCallback) && !isFn && !('epochMilliseconds' in intervalOrOptionsOrCallback))
-			? intervalOrOptionsOrCallback as Tempo.TickerOptions
-			: { interval: isFn ? undefined : intervalOrOptionsOrCallback as Tempo.TickerInterval };
+	const ticker = function (arg1: any, arg2?: any): Tempo.TickerResult {
+		let options: Tempo.TickerOptions = {};
+		let cb: Tempo.TickerCallback | undefined;
 
-		const cb = isFn ? intervalOrOptionsOrCallback as Tempo.TickerCallback : callback;
-		let { interval, limit, until: stopAt, seed, ...duration } = options as any;
-
-		// Default to 1s interval if none provided, or use flattened duration keys
-		if (interval === undefined) {
-			if (Object.keys(duration).length > 0) interval = duration;
-			else interval = 1;
+		if (isFunction(arg1)) {
+			cb = arg1;
+		} else if (isObject(arg1) && !('epochMilliseconds' in arg1)) {
+			options = Object.assign({}, arg1);
+			cb = arg2;
+		} else {
+			options.interval = arg1;
+			cb = arg2;
 		}
 
-		const isDuration = isObject(interval) && !isNumeric(interval);
-		const intervalMs = !isDuration ? asNumber(interval as any) * 1000 : 0;
+		const { interval, limit, until: stopAt, seed, ...rest } = options;
 
-		if (!isDuration && !isNumber(intervalMs))
-			throw new RangeError('Tempo.ticker: interval must be a numeric value (seconds) or a Duration object');
+		// 1. Extract valid Duration fields from the options (flattened duration pattern)
+		const duration = DURATIONS.keys().reduce((acc, dur) =>
+			Object.assign(acc, ifDefined({ [dur]: rest[dur] })), {} as any);
+
+		// 2. Create a plain object payload and a Temporal.Duration for logic
+		const payload = !isEmpty(duration)
+			? duration
+			: { milliseconds: Math.round(Number(interval ?? 1) * 1000) };
+
+		const elapse = Temporal.Duration.from(payload as any);
+		const isForward = elapse.sign >= 0;
+		const isInstant = elapse.blank;
 
 		const until = stopAt ? new TempoClass(stopAt as Tempo.DateTime) : undefined;
 		const now = () => Temporal.Now.instant().epochMilliseconds;
@@ -65,21 +74,18 @@ export const TickerPlugin: Tempo.Plugin = (_options, TempoClass, _factory) => {
 
 		// Helper to check if we should stop
 		const shouldStop = (ticks: number) => {
-			if (limit !== undefined && ticks >= limit) return true;
-			if (until !== undefined) {
+			if (isDefined(limit) && ticks >= limit) return true;
+			if (isDefined(until)) {
 				const comparison = TempoClass.compare(current, until);
-				const isForward = isDuration ? (Temporal.Duration.from(interval as any).sign >= 0) : (intervalMs >= 0);
 				if (isForward && comparison >= 0) return true;
 				if (!isForward && comparison <= 0) return true;
 			}
 			return false;
-		};
-
-		const payload = isDuration ? (interval as any) : { milliseconds: intervalMs };
+		}
 
 		// Pattern 1 ~ Callbacks
 		if (isFunction(cb)) {
-			let id: ReturnType<typeof setTimeout> | undefined, stopped = (intervalMs === 0 && !isDuration);
+			let id: ReturnType<typeof setTimeout> | undefined, stopped = isInstant;
 			let ticks = 0;
 
 			const stop = Object.assign(() => {
@@ -88,13 +94,12 @@ export const TickerPlugin: Tempo.Plugin = (_options, TempoClass, _factory) => {
 			}, { [Symbol.dispose]: () => stop() }) as Tempo.TickerStop;
 
 			(function tick() {
-				cb(current.clone(), stop);													// unified emission
+				cb!(current.clone(), stop);													// unified emission
 				ticks++;
 
 				if (!stopped && !shouldStop(ticks)) {
 					const next = current.add(payload);
-					const nextMs = next.epoch.ms as number;
-					const delay = Math.max(0, nextMs - now());
+					const delay = Math.max(0, (next.epoch.ms as number) - now());
 
 					id = setTimeout(() => {
 						current = next;																	// advance virtual clock
@@ -114,11 +119,10 @@ export const TickerPlugin: Tempo.Plugin = (_options, TempoClass, _factory) => {
 				yield current.clone();															// emit immediately
 				ticks++;
 
-				if ((intervalMs === 0 && !isDuration) || shouldStop(ticks)) break;
+				if (isInstant || shouldStop(ticks)) break;
 
 				const next = current.add(payload);
-				const nextMs = next.epoch.ms as number;
-				const delay = Math.max(0, nextMs - now());
+				const delay = Math.max(0, (next.epoch.ms as number) - now());
 
 				await new Promise(resolve => setTimeout(resolve, delay));
 				current = next;																			// advance virtual clock

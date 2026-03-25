@@ -1,1 +1,0 @@
-{"version":3,"file":"temporal.polyfill.js","sourceRoot":"","sources":["../src/temporal.polyfill.ts"],"names":[],"mappings":"AAAA;;;GAGG;AAEH,aAAa;AACb,IAAI,CAAC,UAAU,CAAC,QAAQ,EAAE,CAAC;IAC1B,MAAM,OAAO,GAAG;;;;;;;;CAQhB,CAAC;IACD,OAAO,CAAC,KAAK,CAAC,OAAO,CAAC,CAAC;IACvB,MAAM,IAAI,KAAK,CAAC,yBAAyB,CAAC,CAAC;AAC5C,CAAC"}

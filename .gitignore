@@ -3,10 +3,10 @@
 # compiled output
 /public/
 /web
-/dist
+dist/
 /tmp
 /out-tsc
-.firebase/hosting.*.cache
+*.tsbuildinfo
 
 # dependencies
 node_modules/

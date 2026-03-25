@@ -1,7 +1,11 @@
 {
   "name": "tempo-monorepo",
   "private": true,
-  "description": "Monorepo for Tempo and its shared library component.",
+  "description": "Magma Computing Monorepo",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/magmacomputing/magma.git"
+  },
   "workspaces": [
     "packages/*"
   ],
@@ -10,6 +14,10 @@
     "build": "tsc -b",
     "clean": "tsc -b --clean",
     "release": "release-it",
+    "release:tempo": "npm run build --workspace=@magma/tempo && cd packages/tempo && bash resolve-self.sh && npm publish",
+    "version:patch": "npm version patch -w @magma/tempo -w @magma/library --no-git-tag-version",
+    "version:minor": "npm version minor -w @magma/tempo -w @magma/library --no-git-tag-version",
+    "version:major": "npm version major -w @magma/tempo -w @magma/library --no-git-tag-version",
     "repl": "npm run repl --workspace=@magma/tempo"
   },
   "devDependencies": {

@@ -17,7 +17,7 @@ import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndef
 import type { IntRange, LooseUnion, NonOptional, Property, Plural, Type } from '#library/type.library.js';
 
 import * as enums from '#tempo/tempo.enum.js';
-import registerTerms from '#tempo/tempo.config/terms/term.import.js';
+import registerTerms from '#tempo/terms/term.import.js';
 
 import { Match, Token, Snippet, Layout, Event, Period, Default, TimeZone } from '#tempo/tempo.default.js';
 
@@ -1832,10 +1832,9 @@ export class Tempo {
 			unit = `${singular(unit)}s` as Tempo.Unit;						// coerce to plural
 
 		if (isUndefined(unit) || since) {
-			const res = getAccessors(duration)
+			return getAccessors(duration)
 				.reduce((acc, dur) => Object.assign(acc, ifDefined({ [dur]: (duration as any)[dur] })),
-					{} as Record<string, any>);
-			return Object.assign(res, { iso: duration.toString(), unit }) as Tempo.Duration;
+					{ iso: duration.toString(), unit } as Record<string, any>);
 		}
 
 		return duration.total({ relativeTo: this.#zdt, unit });

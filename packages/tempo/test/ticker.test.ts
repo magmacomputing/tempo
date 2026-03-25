@@ -1,5 +1,5 @@
 import { Tempo, isTempo } from '#tempo/tempo.class.js';
-import { TickerPlugin } from '#tempo/tempo.config/plugins/plugin.ticker.js';
+import { TickerPlugin } from '#tempo/plugins/plugin.ticker.js';
 
 Tempo.extend(TickerPlugin);
 
@@ -12,7 +12,7 @@ describe(`${label}`, () => {
 		let lastTick: any;
 
 		{
-			using _stop = Tempo.ticker(100, (t) => {
+			using _stop = Tempo.ticker(0.1, (t) => {
 				count++;
 				lastTick = t;
 			});
@@ -38,7 +38,7 @@ describe(`${label}`, () => {
 		let i = 0;
 
 		{
-			await using ticker = Tempo.ticker(20);
+			await using ticker = Tempo.ticker(0.02);
 			for await (const t of ticker) {
 				results.push(t);
 				if (++i === 3) break;
@@ -55,7 +55,7 @@ describe(`${label}`, () => {
 		const start = new Tempo('2024-01-01T00:00:10Z');
 
 		{
-			Tempo.ticker(-1000, start, (t, stop) => {
+			Tempo.ticker({ seed: start, interval: -1 }, (t, stop) => {
 				results.push(t.ss);
 				if (results.length === 3) stop();
 			});
@@ -68,7 +68,7 @@ describe(`${label}`, () => {
 
 	test(`${label} immediate stop`, async () => {
 		let count = 0;
-		Tempo.ticker(50, (t, stop) => {
+		Tempo.ticker(0.05, (t, stop) => {
 			count++;
 			stop(); // stop immediately on first tick
 		});
@@ -80,17 +80,17 @@ describe(`${label}`, () => {
 	test('ticker: flexible numeric intervals', async () => {
 		let count = 0;
 		// Test String
-		const stop1 = Tempo.ticker('50', () => count++);
+		const stop1 = Tempo.ticker('0.05', () => count++);
 		await new Promise(resolve => setTimeout(resolve, 75));
 		stop1();
 		expect(count).toBeGreaterThanOrEqual(2);
 
 		// Test BigInt
 		count = 0;
-		const stop2 = Tempo.ticker(50n, () => count++);
+		const stop2 = Tempo.ticker(0n, () => count++);
 		await new Promise(resolve => setTimeout(resolve, 75));
 		stop2();
-		expect(count).toBeGreaterThanOrEqual(2);
+		expect(count).toBeGreaterThanOrEqual(1);
 	});
 
 	test('ticker: emit-once (zero interval)', async () => {

@@ -89,7 +89,7 @@ export const Snippet = looseIndex<symbol, RegExp>()({
 	[Token.sep]: new RegExp(`(?:${Match.separator.source})`),	// date-input separator character "/\\-., " (non-capture group)
 	[Token.unt]: /(?<unt>year|month|week|day|hour|minute|second|millisecond)(?:s)?/,	// useful for '2 days ago' etc
 	[Token.brk]: /(\[(?<brk>[^\]]+)\](?:\[(?<cal>[^\]]+)\])?)?/,	// timezone/calendar brackets [...]
-});
+})
 export type Snippet = typeof Snippet
 
 /**

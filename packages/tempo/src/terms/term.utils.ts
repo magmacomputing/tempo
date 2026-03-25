@@ -1,6 +1,5 @@
-import { sortKey } from '#library/array.library.js';
-import { isDefined } from '#library/type.library.js';
-import type { Tempo } from '#tempo/tempo.class.js';
+import { sortKey, isDefined } from '#library';
+import type { Tempo } from '#tempo';
 
 /** Tempo.Terms lets us know where a DateTime fits within pre-defined Ranges */
 /** use this type to define a Range with a DateTime qualifier */
