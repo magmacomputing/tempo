@@ -1,4 +1,4 @@
-import { getTermRange, type Range } from './term.utils.js';
+import { defineTerm, getTermRange, type Range } from '#tempo/plugins/tempo.plugin.js';
 import type { Tempo } from '#tempo';
 
 /** definition of daily time periods */
@@ -13,11 +13,13 @@ const ranges = [
 	{ key: 'night', hour: 20 },
 ] as Range[]
 
-export const key = 'per';
-export const scope = 'period';
-export const description = 'Daily time period';
+export const TimelineTerm = defineTerm({
+	key: 'per',
+	scope: 'period',
+	description: 'Daily time period',
 
-/** determine where the current Tempo instance fits within the above range */
-export function define(this: Tempo, keyOnly?: boolean) {
-	return getTermRange(this, ranges, keyOnly);
-}
+	/** determine where the current Tempo instance fits within the above range */
+	define(this: Tempo, keyOnly?: boolean) {
+		return getTermRange(this, ranges, keyOnly);
+	}
+});

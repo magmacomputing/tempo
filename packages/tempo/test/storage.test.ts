@@ -1,5 +1,4 @@
-import { Tempo } from '#tempo/tempo.class.js';
-import { $Tempo } from '#library/symbol.library.js';
+import { Tempo } from '#tempo/index.js';
 
 describe('Tempo storage functionality', () => {
 	const customKey = 'my-custom-key';

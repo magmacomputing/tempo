@@ -11,14 +11,14 @@ import { cleanify, stringify } from '#library/serialize.library.js';
 import { getStorage, setStorage } from '#library/storage.library.js';
 import { getProxy } from '#library/proxy.library.js';
 import { getContext, CONTEXT } from '#library/utility.library.js';
-import { $Tempo } from '#library/symbol.library.js';
-import { ownKeys, ownEntries, getAccessors, omit } from '#library/reflection.library.js';
-import { pad, singular, toProperCase, trimAll } from '#library/string.library.js';
-import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction, isArray } from '#library/type.library.js';
-import type { IntRange, LooseUnion, NonOptional, Property, Plural, Type } from '#library/type.library.js';
+import { $Tempo, $Plugins, $Register, registerPlugin, registerTerm } from './plugins/tempo.plugin.js'
+import { registerTerms } from './plugins/terms/index.js'
+import { ownKeys, ownEntries, getAccessors, omit } from '#library/reflection.library.js'
+import { pad, singular, toProperCase, trimAll } from '#library/string.library.js'
+import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction, isArray } from '#library/type.library.js'
+import type { IntRange, LooseUnion, NonOptional, Property, Plural, Type } from '#library/type.library.js'
 
-import * as enums from '#tempo/tempo.enum.js';
-import registerTerms from '#tempo/terms/term.import.js';
+import * as enums from '#tempo/tempo.enum.js'
 
 import { Match, Token, Snippet, Layout, Event, Period, Default } from '#tempo/tempo.default.js';
 const { TimeZone } = enums;
@@ -34,6 +34,7 @@ declare module '#library/type.library.js' {
 declare global {
 	interface globalThis {
 		[$Tempo]?: Tempo.Discovery;
+		[$Plugins]?: Tempo.Discovery;
 	}
 }
 
@@ -64,6 +65,8 @@ export class Tempo {
 	/** Number names (0-10) */																static get NUMBER() { return enums.NUMBER }
 	/** TimeZone aliases */																		static get TIMEZONE() { return enums.TimeZone }
 	/** some useful Dates */																	static get LIMIT() { return enums.LIMIT }
+	/** check if Tempo is currently initializing */						static get isInitializing() { return Tempo.#initializing }
+	/** check if Tempo is currently extending */							static get isExtending() { return Tempo.#extending }
 
 	// #endregion
 
@@ -77,6 +80,8 @@ export class Tempo {
 	/** a collection of parse rule-matches */									static #pending: Tempo.Match[] | undefined;
 	/** cache for next-available 'usr' Token key */						static #usrCount = 0;
 	/** mutable list of registered term plugins */						static #terms = [] as Tempo.TermPlugin[];
+	/** flag to prevent recursion during init */							static #initializing = false;
+	/** flag to prevent reactive hook during extend */				static #extending = false;
 
 	// #endregion
 
@@ -460,91 +465,112 @@ export class Tempo {
 	 * @param options - Optional configuration for a standard `Plugin`.
 	 * @returns The `Tempo` class for chaining.
 	 */
-	static extend(plugin: Tempo.Plugin | Tempo.Plugin[], options?: any): typeof Tempo;
-	static extend(term: Tempo.TermPlugin | Tempo.TermPlugin[]): typeof Tempo;
-	static extend(config: Tempo.Discovery | Tempo.Discovery[]): typeof Tempo;
+	static extend(plugin: Tempo.Plugin | Tempo.Plugin[], options?: any): typeof Tempo
+	static extend(term: Tempo.TermPlugin | Tempo.TermPlugin[]): typeof Tempo
+	static extend(config: Tempo.Discovery | Tempo.Discovery[], discovery?: symbol): typeof Tempo
 	static extend(arg: any, options?: any) {
-		asArray(arg).flat(1).forEach(item => {
-			if (isFunction(item)) {
-				if (!item.installed) {
-					item(options, this, (val: any) => new this(val));	// handle Plugins (Functional extension)
-					item.installed = true;
+		Tempo.#extending = true;
+		try {
+			asArray(arg).flat(1).forEach(item => {
+				if (isFunction(item)) {
+					registerPlugin(item)
+
+					if (!item.installed) {
+						item(options, this, (val: any) => new this(val))
+						item.installed = true
+					}
 				}
-			}
+				else if (isObject(item)) {
+					// 1. handle TermPlugin
+					if (isString((item as any).key) && isFunction((item as any).define)) {
+						registerTerm(item as Tempo.TermPlugin)
 
-			if (isObject(item) && isString(item.key) && isFunction(item.define)) {
-				if (!Tempo.#terms.some(term => term.key === item.key))
-					Tempo.#terms.push(item);													// handle TermPlugins (Grammar extension)
-			}
+						if (!Tempo.#terms.some(term => term.key === (item as any).key)) {
+							Tempo.#terms.push(item as Tempo.TermPlugin)
+						}
+					}
+					// 2. handle Discovery object (container)
+					else {
+						const discovery = item as any
+						if (discovery.plugins) this.extend(discovery.plugins, discovery.options)
+						if (discovery.terms) this.extend(discovery.terms)
 
-			if (isObject(item) && ownKeys(item).some(key => enums.DISCOVERY.has(key as any))) {
-				(globalThis as Record<symbol, any>)[$Tempo] = item;	// handle Discovery (Configuration bootstrapping)
-				this.init();
-			}
-		});
+						// only trigger init if we're assigning a new discovery object to a symbol
+						if (ownKeys(item).some(key => enums.DISCOVERY.has(key as any))) {
+							const discoverySymbol = (typeof options === 'symbol' ? options : options?.discovery) ?? $Tempo
+							if ((globalThis as any)[discoverySymbol] !== item) {
+								; (globalThis as Record<symbol, any>)[discoverySymbol] = item
+								this.init({ discovery: discoverySymbol })
+							}
+						}
+					}
+				}
+			})
+		} finally {
+			Tempo.#extending = false;
+		}
 
-		return this;
+		return this
 	}
 
-	/**
-	 * Initializes the global default configuration for all subsequent `Tempo` instances.
-	 * 
-	 * Settings are inherited in this priority:
-	 * 1. Reasonable library defaults (defined in tempo.config.js)
-	 * 2. Persistent storage (e.g. localStorage), if available.
-	 * 3. `options` provided to this method.
-	 * 
-	 * @param options - Configuration overrides to apply globally.
-	 * @returns The resolved global configuration.
-	 */
-	static init(options: Tempo.Options = {}) {
-		if (isEmpty(options)) {																	// if no options supplied, reset all
-			Tempo.#global.parse = {
-				snippet: Object.assign({}, Snippet),
-				layout: Object.assign({}, Layout),
-				event: Object.assign({}, Event),
-				period: Object.assign({}, Period),
-				mdyLocales: Tempo.#mdyLocales(Default.mdyLocales as Tempo.Options['mdyLocales']),
-				mdyLayouts: asArray(Default.mdyLayouts as Tempo.Options['mdyLayouts']) as Tempo.Pair[],
-				pivot: Default.pivot,
-			} as Tempo.Parse;
+	/** Reset Tempo to its default, built-in registration state */
+	static init(options: Tempo.Options = {}): typeof Tempo {
+		if (Tempo.#initializing) return this;
+		Tempo.#initializing = true;
 
-			const { timeZone, calendar } = Intl.DateTimeFormat().resolvedOptions();
-			Tempo.#global.config = Object.assign({},
-				omit({ ...Default }, ...enums.PARSE.keys()),				// use Default as base, omit parse-related
-				{
-					calendar,
-					timeZone,
-					locale: Tempo.#locale(),
-					discovery: Symbol.keyFor($Tempo) as string,
-					formats: Object.create(enums.FORMAT),
-					scope: 'global'
-				}
-			) as Tempo.Config;
+		try {
+			if (isEmpty(options)) {																	// if no options supplied, reset all
+				Tempo.#global.parse = {
+					snippet: Object.assign({}, Snippet),
+					layout: Object.assign({}, Layout),
+					event: Object.assign({}, Event),
+					period: Object.assign({}, Period),
+					mdyLocales: Tempo.#mdyLocales(Default.mdyLocales as Tempo.Options['mdyLocales']),
+					mdyLayouts: asArray(Default.mdyLayouts as Tempo.Options['mdyLayouts']) as Tempo.Pair[],
+					pivot: Default.pivot,
+				} as Tempo.Parse;
 
-			Tempo.#usrCount = 0;																	// reset user-key counter
-			for (const key of Object.keys(Token))									// purge user-allocated Tokens
-				if (key.startsWith('usr.'))													// only remove 'usr.' prefixed keys
-					delete Token[key];
+				const { timeZone, calendar } = Intl.DateTimeFormat().resolvedOptions();
+				Tempo.#global.config = Object.assign({},
+					omit({ ...Default }, ...enums.PARSE.keys()),				// use Default as base, omit parse-related
+					{
+						calendar,
+						timeZone,
+						locale: Tempo.#locale(),
+						discovery: Symbol.keyFor($Tempo) as string,
+						formats: Object.create(enums.FORMAT),
+						scope: 'global'
+					}
+				) as Tempo.Config;
 
-			this.extend(registerTerms);															// register built-in term plugins
+				Tempo.#usrCount = 0;																	// reset user-key counter
+				for (const key of Object.keys(Token))									// purge user-allocated Tokens
+					if (key.startsWith('usr.'))													// only remove 'usr.' prefixed keys
+						delete Token[key];
 
-			const storeKey = Symbol.keyFor($Tempo) as string;
-			Tempo.#setConfig(Tempo.#global,
-				{ store: storeKey, discovery: storeKey, scope: 'global' },
-				Tempo.readStore(storeKey),													// allow for storage-values to overwrite
-				Tempo.#setDiscovery(Tempo.#global, $Tempo),					// support "Global Discovery" of user-options
-			)
+				this.extend(registerTerms);															// register built-in term plugins
+
+				const storeKey = Symbol.keyFor($Tempo) as string;
+				Tempo.#setConfig(Tempo.#global,
+					{ store: storeKey, discovery: storeKey, scope: 'global' },
+					Tempo.readStore(storeKey),													// allow for storage-values to overwrite
+					Tempo.#setDiscovery(Tempo.#global, $Plugins),				// persistent library extensions
+					Tempo.#setDiscovery(Tempo.#global, $Tempo),					// user Discovery (Configuration bootstrapping)
+				)
+			}
+			else {
+				const discovery = options.discovery ?? Tempo.#global.config.discovery ?? Symbol.keyFor($Tempo) as string;
+				Tempo.#setConfig(Tempo.#global, Tempo.#setDiscovery(Tempo.#global, discovery), options);
+			}
+
+			if (Context.type === CONTEXT.Browser || options.debug === true)
+				Tempo.#dbg.info(Tempo.config, 'Tempo:', Tempo.#global.config);
+
+		} finally {
+			Tempo.#initializing = false;
 		}
-		else {
-			const discovery = options.discovery ?? Tempo.#global.config.discovery ?? Symbol.keyFor($Tempo);
-			Tempo.#setConfig(Tempo.#global, Tempo.#setDiscovery(Tempo.#global, discovery as string), options);
-		}
 
-		if (Context.type === CONTEXT.Browser || options.debug === true)
-			Tempo.#dbg.info(Tempo.config, 'Tempo:', Tempo.#global.config);
-
-		return Tempo.config;
+		return this
 	}
 
 	/** release global config and reset library to defaults */
@@ -644,23 +670,15 @@ export class Tempo {
 
 	/** global discovery configuration */
 	static get discovery() {
-		const sym = Symbol.for(this.config.discovery);
+		const discovery = this.config.discovery;
+		const sym = isString(discovery) ? Symbol.for(discovery) : discovery;
 		return Tempo.#getConfig(sym);
 	}
 
-	/**
- * Returns a snapshot of the configuration layers used by Tempo.
- * Useful for debugging how the final configuration is built.
- */
 	static get options() {
 		const keyFor = this.config.store ?? Symbol.keyFor($Tempo) as string;
-
-		return {
-			default: this.default,
-			discovery: this.discovery,
-			storage: getProxy(Object.assign({ key: keyFor, scope: 'storage' }, omit(Tempo.readStore(keyFor), 'value'))),
-			global: this.config,
-		}
+		const storage = getProxy(Object.assign({ key: keyFor, scope: 'storage' }, omit(Tempo.readStore(keyFor), 'value')));
+		return Object.assign({}, this.default, storage, this.discovery, this.config);
 	}
 
 	/** Creates a new `Tempo` instance. */
@@ -1903,7 +1921,7 @@ export namespace Tempo {
 	/** the Options object found in a config-module, or passed to a call to Tempo.init({}) or 'new Tempo({})' */
 	export interface BaseOptions {
 		/** localStorage key */																	store: string;
-		/** globalThis Discovery Symbol */											discovery: string;
+		/** globalThis Discovery Symbol */											discovery: string | symbol;
 		/** additional console.log for tracking */							debug: boolean | undefined;
 		/** catch or throw Errors */														catch: boolean | undefined;
 		/** Temporal timeZone */																timeZone: Temporal.TimeZoneLike;
@@ -2066,6 +2084,8 @@ type Fmt = {																								// used for the fmtTempo() shortcut
 	<F extends string>(fmt: F, tempo?: Tempo.DateTime, options?: Tempo.Options): enums.FormatType<F>;
 	<F extends string>(fmt: F, options: Tempo.Options): enums.FormatType<F>;
 }
+
+(globalThis as any)[$Register] = () => { if (!Tempo.isExtending) Tempo.init() };                                                  // reactive registration hook
 
 // shortcut functions to common Tempo properties / methods
 /** check valid Tempo */			export const isTempo = (tempo?: unknown) => isType<Tempo>(tempo, 'Tempo');

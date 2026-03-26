@@ -11,6 +11,3 @@ export const $Extensible = Symbol.for('$Extensible');
 
 /** Node.js custom inspection symbol for the Proxy pattern */
 export const $Inspect = Symbol.for('nodejs.util.inspect.custom');
-
-/** key to use for Global Discovery of Tempo configuration */
-export const $Tempo = Symbol.for('$Tempo');

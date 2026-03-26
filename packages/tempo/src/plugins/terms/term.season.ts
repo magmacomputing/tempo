@@ -1,10 +1,10 @@
-import { getTermRange, type Range } from './term.utils.js';
+import { getTermRange, type Range, defineTerm } from '#tempo/plugins/tempo.plugin.js';
 import { cloneify } from '#library';
 import { enums, type Tempo } from '#tempo';
 
 const { COMPASS } = enums;
 
-/** definition of meteorological season ranges */
+/** definition of fiscal season ranges */
 const ranges = [																						// @link https://www.timeanddate.com/calendar/aboutseasons.html
 	[																													// [0] = northern hemisphere
 		{ key: 'Spring', day: 20, month: 3, symbol: 'Flower', sphere: COMPASS.North },
@@ -24,20 +24,21 @@ const ranges = [																						// @link https://www.timeanddate.com/calen
 	]
 ] as Range[][]
 
-export const key = 'szn';
-export const scope = 'season';
-export const description = 'Meteorlogical season';
+export const SeasonTerm = defineTerm({
+	key: 'szn',
+	scope: 'season',
+	description: 'Meteorlogical season',
 
-/** determine where the current Tempo instance fits within the above range */
-export function define(this: Tempo, keyOnly?: boolean) {
-	const { config: { sphere } } = this;
-	const south = sphere !== COMPASS.North;										// false = North, true = South
-	const list = cloneify(ranges[+south]);
+	/** determine where the current Tempo instance fits within the above range */
+	define(this: Tempo, keyOnly?: boolean) {
+		const { config: { sphere } } = this;
+		const south = sphere !== COMPASS.North;										// false = North, true = South
+		const list = cloneify(ranges[+south]);
 
-	if (!keyOnly) {
-		const cn = getTermRange(this, ranges[2], false);				// get the chinese season for the current day/month
-		list.forEach(item => item['CN'] = cn)										// add the chinese season to each range item
+		if (!keyOnly)
+			list
+				.forEach(item => item['CN'] = getTermRange(this, ranges[2], false));
+
+		return getTermRange(this, list, keyOnly);
 	}
-
-	return getTermRange(this, list, keyOnly);
-}
+});

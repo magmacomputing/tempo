@@ -1,7 +1,8 @@
 import { Tempo, isTempo } from '#tempo/tempo.class.js';
-import { TickerPlugin } from '#tempo/plugins/plugin.ticker.js';
+import '#tempo/plugins/plugin.ticker.js';
 
-Tempo.extend(TickerPlugin);
+// TickerPlugin self-registers on import via definePlugin
+Tempo.init();
 
 const label = 'ticker:';
 

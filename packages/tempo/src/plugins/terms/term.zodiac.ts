@@ -1,11 +1,11 @@
-import { getTermRange, type Range } from './term.utils.js';
 import { cloneify } from '#library';
+import { defineTerm, getTermRange, type Range } from '#tempo/plugins/tempo.plugin.js';
 import type { Tempo } from '#tempo';
 
 /** definition of astrological zodiac ranges */
 const ranges = [																						// @link https://en.wikipedia.org/wiki/Astrological_sign
 	[																													// [0] = zodiac
-		{ key: 'Aquarius', day: 20, month: 1, symbol: 'Ram', longitude: 300, planet: 'Uranus' },
+		{ key: 'Aquarius', day: 20, month: 1, symbol: 'Water Bearer', longitude: 300, planet: 'Uranus' },
 		{ key: 'Pisces', day: 19, month: 2, symbol: 'Fish', longitude: 330, planet: 'Neptune' },
 		{ key: 'Aries', day: 21, month: 3, symbol: 'Ram', longitude: 0, planet: 'Mars' },
 		{ key: 'Taurus', day: 20, month: 4, symbol: 'Bull', longitude: 30, planet: 'Venus' },
@@ -39,21 +39,22 @@ const ranges = [																						// @link https://en.wikipedia.org/wiki/Ast
 	]
 ] as Range[][]
 
-export const key = 'zdc';
-export const scope = 'zodiac';
-export const description = 'Astrological Zodiac sign';
+export const ZodiacTerm = defineTerm({
+	key: 'zdc',
+	scope: 'zodiac',
+	description: 'Astrological Zodiac sign',
 
-/** determine where the current Tempo instance fits within the above ranges */
-export function define(this: Tempo, keyOnly?: boolean) {
-	const list = cloneify(ranges[0]);													// make a copy of the ranges array
+	/** determine where the current Tempo instance fits within the above range */
+	define(this: Tempo, keyOnly?: boolean) {
+		const list = cloneify(ranges[0]);
 
-	if (!keyOnly) {
-		const cn = getChineseZodiac(this.yy);										// get the chinese zodiac for the current year
-		list.forEach(item => item['CN'] = cn)										// add the chinese zodiac to each item
+		if (!keyOnly)
+			list
+				.forEach(itm => itm['CN'] = getChineseZodiac(this.yy));// add the chinese zodiac to each range item
+
+		return getTermRange(this, list, keyOnly);
 	}
-
-	return getTermRange(this, list, keyOnly);
-}
+});
 
 /** get the chinese zodiac for a given year */
 function getChineseZodiac(year: number) {

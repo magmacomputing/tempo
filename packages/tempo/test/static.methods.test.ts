@@ -1,4 +1,4 @@
-import { Tempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo/index.js';
 
 const label = 'static.methods:';
 const testKey = '$TempoTest';
@@ -16,10 +16,10 @@ beforeEach(() => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe(`${label} init`, () => {
 
-  test('returns the global config', () => {
-    const config = Tempo.init();
-    expect(config).toBeDefined();
-    expect(config.scope).toBe('global');
+  test('returns the class for chaining', () => {
+    const Class = Tempo.init();
+    expect(Class).toBe(Tempo);
+    expect(Tempo.config.scope).toBe('global');
   })
 
   test('reset to defaults when called with no args', () => {

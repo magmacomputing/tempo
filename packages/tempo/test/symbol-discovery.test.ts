@@ -1,79 +1,79 @@
-import { Tempo } from '#tempo/tempo.class.js';
-import { $Tempo } from '#library/symbol.library.js';
+import { Tempo } from '#tempo/index.js';
 
-describe('Global Discovery (Symbol.for($Tempo))', () => {
+// We use a private test symbol to avoid trampling on globalThis[$Tempo] during tests
+const $TestTempo = Symbol('TestTempoDiscovery');
+
+describe('Global Discovery (via Configurable Symbol)', () => {
 	beforeEach(() => {
-		// Clear all discovery mechanisms
-		delete (globalThis as any)[$Tempo];
+		// Clear our test discovery mechanism
+		delete (globalThis as any)[$TestTempo];
 		Tempo.init();
 	});
 
 	afterEach(() => {
-		delete (globalThis as any)[$Tempo];
+		delete (globalThis as any)[$TestTempo];
 		Tempo.init();
 	});
 
 	it('should discover and merge global options', () => {
-		(globalThis as any)[$Tempo] = {
+		(globalThis as any)[$TestTempo] = {
 			options: {
 				locale: 'en-AU',
 				limit: 42
 			}
-		};
+		}
 
-		Tempo.init();
+		Tempo.init({ discovery: $TestTempo });
 		expect(Tempo.config.locale).toBe('en-AU');
 		expect(Tempo.config.limit).toBe(42);
 	});
 
 	it('should support functional global options', () => {
-		(globalThis as any)[$Tempo] = {
+		(globalThis as any)[$TestTempo] = {
 			options: () => ({
 				locale: 'ja-JP'
 			})
-		};
+		}
 
-		Tempo.init();
+		Tempo.init({ discovery: $TestTempo });
 		expect(Tempo.config.locale).toBe('ja-JP');
 	});
 
 	it('should register global terms', () => {
 		const mockDefine = vi.fn();
-		(globalThis as any)[$Tempo] = {
+		(globalThis as any)[$TestTempo] = {
 			terms: [{
 				key: 'globalTerm',
 				description: 'A globally registered term',
 				define: mockDefine
 			}]
-		};
+		}
 
-		Tempo.init();
+		Tempo.init({ discovery: $TestTempo });
 		const terms = Tempo.terms;
 		expect(terms.find(t => t.key === 'globalTerm')).toBeDefined();
 	});
 
 	it('should merge global timezone aliases', () => {
-		(globalThis as any)[$Tempo] = {
+		(globalThis as any)[$TestTempo] = {
 			timeZones: {
 				'MYTZ': 'Australia/Brisbane'
 			}
-		};
+		}
 
-		Tempo.init();
-		// We can verify this indirectly via internal state if we had access, 
-		// or by parsing a date with that timezone alias.
+		Tempo.init({ discovery: $TestTempo });
 		const t = new Tempo('2024-01-01', { timeZone: 'MYTZ' });
 		expect(t.config.timeZone).toBe('Australia/Brisbane');
 	});
 
 	it('should merge global custom formats', () => {
-		(globalThis as any)[$Tempo] = {
+		(globalThis as any)[$TestTempo] = {
 			formats: {
 				'custom': '{yyyy}!!{mm}!!{dd}'
 			}
-		};
+		}
 
-		Tempo.init();
+		Tempo.init({ discovery: $TestTempo });
 		expect(Tempo.FORMAT.has('custom')).toBe(true);
 		expect((Tempo.FORMAT as any).custom).toBe('{yyyy}!!{mm}!!{dd}');
 

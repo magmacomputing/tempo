@@ -3,7 +3,7 @@ import { enumify } from '#library/enumerate.library.js';
 import { getProxy } from '#library/proxy.library.js';
 import { clearCache } from '#library/function.library.js';
 import { isUndefined } from '#library/type.library.js';
-import type { Enum, Enumify } from '#library/enumerate.library.js';
+import type { Enum } from '#library/enumerate.library.js';
 import type { OwnOf, Index, KeyOf, ValueOf, LooseUnion, Mutable, Property } from '#library/type.library.js';
 
 /**
@@ -132,7 +132,7 @@ export type DURATIONS = KeyOf<typeof DURATIONS>
 /** pre-defined Format code short-cuts */
 export const FORMAT = enumify(STATE.FORMAT, false);
 export type FORMAT = ValueOf<typeof FORMAT>
-export type Format = LooseUnion<KeyOf<typeof FORMAT>>
+export type Format = LooseUnion<KeyOf<typeof FORMAT> & string>
 
 /** patterns that return a number */
 type NumericPattern = '{yyyy}{mm}' | '{yyww}' | '{yyyy}{mm}{dd}' | '{wy}{ww}' | '{wy}'
@@ -155,9 +155,9 @@ export type FormatEnum = Enum.wrap<OwnFormat & Record<string, string | number>>;
 
 export const LIMIT = getProxy(STATE.LIMIT, false);
 
-export const ELEMENT: Enumify<{
-	yy: 'year', mm: 'month', ww: 'week', dd: 'day', hh: 'hour', mi: 'minute', ss: 'second', ms: 'millisecond', us: 'microsecond', ns: 'nanosecond',
-}> = getProxy(enumify({
+/** date-time element tokens */
+const elementKeys = ['yy', 'mm', 'ww', 'dd', 'hh', 'mi', 'ss', 'ms', 'us', 'ns'] as const;
+export const ELEMENT = getProxy(enumify({
 	yy: 'year',
 	mm: 'month',
 	ww: 'week',
@@ -172,26 +172,42 @@ export const ELEMENT: Enumify<{
 export type ELEMENT = ValueOf<typeof ELEMENT>
 export type Element = KeyOf<typeof ELEMENT>
 
-export const MUTATION: Enumify<Index<['yy', 'mm', 'ww', 'dd', 'hh', 'mi', 'ss', 'ms', 'us', 'ns', 'event', 'period', 'clock', 'time', 'date', 'start', 'mid', 'end']>> = getProxy(enumify(ELEMENT.values(), false).extend(['event', 'period', 'clock', 'time', 'date', 'start', 'mid', 'end'], false), false) as any;
+/** allowed mutation keys for .set() and .add() */
+const mutationKeys = [...elementKeys, 'event', 'period', 'clock', 'time', 'date', 'start', 'mid', 'end'] as const;
+export const MUTATION = getProxy(enumify(mutationKeys, false), false);
 export type MUTATION = ValueOf<typeof MUTATION>
 export type Mutation = KeyOf<typeof MUTATION>
 
-export const ZONED_DATE_TIME: Enumify<Index<['value', 'timeZoneId', 'calendarId', 'monthCode', 'offset', 'timeZone', 'yy', 'mm', 'ww', 'dd', 'hh', 'mi', 'ss', 'ms', 'us', 'ns']>> = getProxy(enumify(['value', 'timeZoneId', 'calendarId', 'monthCode', 'offset', 'timeZone'], false).extend(ELEMENT.values(), false), false) as any;
+/** allowed keys for ZonedDateTime-like objects */
+const zonedDateTimeKeys = ['value', 'timeZoneId', 'calendarId', 'monthCode', 'offset', 'timeZone', ...elementKeys] as const;
+export const ZONED_DATE_TIME = getProxy(enumify(zonedDateTimeKeys, false), false);
 export type ZONED_DATE_TIME = ValueOf<typeof ZONED_DATE_TIME>
 export type ZonedDateTime = KeyOf<typeof ZONED_DATE_TIME>
 
-export const OPTION: Enumify<Index<['value', 'mdyLocales', 'mdyLayouts', 'store', 'discovery', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period', 'formats', 'plugins']>> = getProxy(enumify(['value', 'mdyLocales', 'mdyLayouts', 'store', 'discovery', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period', 'formats', 'plugins'], false), false) as any;
+/** allowed keys for Tempo configuration options */
+const optionKeys = ['value', 'mdyLocales', 'mdyLayouts', 'store', 'discovery', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period', 'formats', 'plugins'] as const;
+export const OPTION = getProxy(enumify(optionKeys, false), false);
 export type Option = KeyOf<typeof OPTION>
 
-export const PARSE: Enumify<Index<['mdyLocales', 'mdyLayouts', 'formats', 'pivot', 'snippet', 'layout', 'event', 'period', 'anchor', 'value', 'discovery', 'plugins']>> = getProxy(enumify(['mdyLocales', 'mdyLayouts', 'formats', 'pivot', 'snippet', 'layout', 'event', 'period', 'anchor', 'value', 'discovery', 'plugins'], false), false) as any;
+/** allowed keys for internal parse state */
+const parseKeys = ['mdyLocales', 'mdyLayouts', 'formats', 'pivot', 'snippet', 'layout', 'event', 'period', 'anchor', 'value', 'discovery', 'plugins'] as const;
+export const PARSE = getProxy(enumify(parseKeys, false), false);
 export type Parse = KeyOf<typeof PARSE>
 
-export const DISCOVERY: Enumify<Index<['options', 'timeZones', 'terms', 'plugins', 'numbers', 'formats']>> = getProxy(enumify(['options', 'timeZones', 'terms', 'plugins', 'numbers', 'formats'], false), false) as any;
+/** allowed keys for global discovery objects */
+const discoveryKeys = ['options', 'timeZones', 'terms', 'plugins', 'numbers', 'formats'] as const;
+export const DISCOVERY = getProxy(enumify(discoveryKeys, false), false);
 export type Discovery = KeyOf<typeof DISCOVERY>
 
+
+/** @internal LIVE Registries mapping (STATE key -> Enum/Proxy) */
+const REGISTRIES: Record<string, any> = {
+	NUMBER, DURATION, TIMEZONE: TimeZone, DURATIONS, FORMAT, LIMIT,
+};
+
 /** update a global registry with new discoverable data */
-export function registryUpdate(name: 'NUMBER' | 'FORMAT' | 'TIMEZONE', data: Record<string, any>) {
-	const registry = (name === 'NUMBER' ? NUMBER : (name === 'FORMAT' ? FORMAT : TimeZone)) as any;
+export function registryUpdate(name: keyof typeof STATE, data: Record<string, any>) {
+	const registry = REGISTRIES[name];
 	const target = registry?.[$Target] as Property<any>;
 	const state = STATE[name] as Property<any>;
 

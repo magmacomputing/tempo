@@ -31,6 +31,9 @@ export function getStorage<T>(key?: string, dflt?: T): T | undefined {
 
 		case CONTEXT.NodeJS:
 			store = context.global.process.env[key];
+			if (key === '$Tempo' && !store) {
+				console.log('[getStorage] process.env keys starting with $: ', Object.keys(context.global.process.env).filter(k => k.startsWith('$')))
+			}
 			break;
 
 		case CONTEXT.GoogleAppsScript:

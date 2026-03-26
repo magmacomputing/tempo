@@ -61,6 +61,22 @@ declare module '@magmacomputing/tempo' {
 }
 ```
 
+> [!WARNING]
+> **Avoid Circular Dependencies**: When writing a plugin, **never** import the `Tempo` class directly from `@magmacomputing/tempo`. Doing so will create a circular dependency that breaks the library initialization. Instead, always use `import type { Tempo }` for type checking, and rely on the `TempoClass` argument passed to your plugin function for static method access.
+---
+
+## Self-Registering Plugins (Side-Effects)
+
+To simplify developer setup, many plugins support **self-registration** via side-effect imports. This allows a plugin to register itself with the global Tempo registry as soon as it's imported.
+
+```typescript
+import '@magmacomputing/tempo/plugins/ticker.js';
+import { Tempo } from '@magmacomputing/tempo';
+```
+
+> [!IMPORTANT]
+> **Import Order Matters**: To ensure self-registered plugins are processed by the automatic `Tempo.init()` at startup, the side-effect import must appear **above** the `Tempo` class import. If imported later, you must call `Tempo.init()` manually to refresh the internal registry.
+
 ---
 
 ## Best Practices
