@@ -56,9 +56,3 @@ Tempo provides a specialized wrapper around `Promise.withResolvers()` called `Pl
 
 👉 **[Read the full Pledge Guide](./tempo.pledge.md)** for advanced usage with callbacks, debugging tags, and lifecycle management.
 ---
-
-## 5. Architectural Patterns
-
-Tempo utilizes advanced JavaScript patterns to maintain strict immutability without sacrificing performance.
-
-👉 **[Read the Lazy Evaluation Pattern Guide](./lazy-evaluation-pattern.md)** for a deep dive into how Tempo uses private fields and prototype shadowing to lazy-load expensive properties.

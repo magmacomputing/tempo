@@ -1,5 +1,5 @@
-import { Tempo, stringify, objectify, enumify, enums } from '#tempo/index.js';
-import { getType } from '#library/type.library.js';
+import { Tempo, enums } from '#tempo';
+import { stringify, objectify, enumify, getType } from '#library';
 import { Token, Snippet } from '#tempo/tempo.default.js';
 
 // pre-load Tempo and Token to the global scope for ease of use in the REPL

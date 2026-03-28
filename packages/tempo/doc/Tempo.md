@@ -363,4 +363,4 @@ See the [Tempo Debugging guide](./tempo.debugging.md) for full details on using 
 - [API Reference](./tempo.api.md)
 - [Cookbook](./tempo.cookbook.md)
 - [Library Functionality](./tempo.library.md)
-- [Architecture: Lazy Evaluation Pattern](./lazy-evaluation-pattern.md)
+- [Architecture & Internal Protection](./architecture.md)

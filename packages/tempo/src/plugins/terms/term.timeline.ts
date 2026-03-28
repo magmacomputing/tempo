@@ -1,5 +1,5 @@
-import { defineTerm, getTermRange, type Range } from '#tempo/plugins/tempo.plugin.js';
-import type { Tempo } from '#tempo';
+import { defineTerm, getTermRange, type Range } from '../tempo.plugin.js';
+import type { Tempo } from '#tempo/tempo.class.js';
 
 /** definition of daily time periods */
 const ranges = [

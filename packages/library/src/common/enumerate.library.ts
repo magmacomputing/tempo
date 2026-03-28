@@ -4,7 +4,8 @@ import { $Extensible } from '#library/symbol.library.js';
 import { ownEntries } from '#library/reflection.library.js';
 import { getProxy } from '#library/proxy.library.js';
 import { memoizeMethod } from '#library/function.library.js';
-import type { Property, Index, Prettify, KeyOf, ValueOf, EntryOf, Invert, LooseKey, WellKnownSymbols } from '#library/type.library.js';
+import type { Property, Index, KeyOf, ValueOf, EntryOf, Invert, LooseKey } from '#library/type.library.js';
+import { Serializable } from '#library/class.library.js';
 
 declare module '#library/type.library.js' {
 	interface TypeValueMap<T = any> {
@@ -24,21 +25,21 @@ export type EnumMethods<T extends Property<any> = any> = {
 	/** check if a 'key' exists in the Enum */								has(key: LooseKey<KeyOf<T>>): boolean;
 	/** check if a 'value' exists in the Enum */							includes(search: LooseKey<ValueOf<T>>): boolean;
 	/** return the key for a given value */										keyOf(search: LooseKey<ValueOf<T>>): KeyOf<T>;
-	/** iterate through all Enum entries */										forEach(fn: (entry: EntryOf<T>, index: number, enumify: Enumify<any>) => void, thisArg?: any): void;
-	/** filter Enum entries and return a new Enum */					filter(fn: (entry: EntryOf<T>, index: number, enumify: Enumify<any>) => boolean, thisArg?: any): Enumify<Partial<T>>;
-	/** map Enum entries and return a new Enum */							map(fn: (entry: EntryOf<T>, index: number, enumify: Enumify<any>) => any, thisArg?: any): Enumify<Property<any>>;
-	/** extend an Enum with new entries */										extend<const E extends any[] | Property<any>>(list: E, frozen?: boolean): Enumify<any>;
+	/** iterate through all Enum entries */										forEach(fn: (entry: EntryOf<T>, index: number, enumify: EnumifyType<any>) => void, thisArg?: any): void;
+	/** filter Enum entries and return a new Enum */					filter(fn: (entry: EntryOf<T>, index: number, enumify: EnumifyType<any>) => boolean, thisArg?: any): EnumifyType<Partial<T>>;
+	/** map Enum entries and return a new Enum */							map(fn: (entry: EntryOf<T>, index: number, enumify: EnumifyType<any>) => any, thisArg?: any): EnumifyType<Property<any>>;
+	/** extend an Enum with new entries */										extend<const E extends any[] | Property<any>>(list: E, frozen?: boolean): EnumifyType<any>;
 	/** iterate through all Enum entries */										readonly [Symbol.iterator]: () => IterableIterator<EntryOf<T>>;
 	/** used to identify the Enumify type */									readonly [Symbol.toStringTag]: 'Enumify';
 }
 
 /** Enum properties & methods */
-export type Enumify<T extends Property<any> = any> = Readonly<T> & EnumMethods<T>;
+export type EnumifyType<T extends Property<any> = any> = Readonly<T> & EnumMethods<T>;
 
 /** namespace for Enum type-helpers */
 export declare namespace Enum {
-	/** Enum properties & methods */ type wrap<T = any> = T extends Property<any> ? Enumify<T> : any;
-	/** Enum methods (filtered) */ type methods<T = any> = keyof Enumify<any>;
+	/** Enum properties & methods */ type wrap<T = any> = T extends Property<any> ? EnumifyType<T> : any;
+	/** Enum methods (filtered) */ type methods<T = any> = keyof EnumifyType<any>;
 	/** Enum own properties */ type props<T = any> = Readonly<T>;
 }
 
@@ -113,10 +114,9 @@ export function enumify<T>(this: any, list: T, frozen = true): any {
 }
 
 /** create an entry in the Serialization Registry to describe how to rebuild an Enum */
-export function registryEnum(name: string, list: any) {
-	// Serialization is handled by the overall Library Registry in serialize.library.ts
+@Serializable
+export class Enumify {
+	constructor(list: Property<any>) {
+		return enumify(list);
+	}
 }
-
-// export namespace Enum {
-// 	export type wrap<T> = Readonly<T> & typeof ENUM;
-// }

@@ -1,7 +1,7 @@
-import { $Target, $Inspect } from './symbol.library.js';
+import { $Target, $Inspect, $Discover } from '#library/symbol.library.js';
 import { allObject } from '#library/reflection.library.js';
 import { secure } from '#library/utility.library.js';
-import { isFunction } from '#library/type.library.js';
+import { isFunction, isSymbol } from '#library/type.library.js';
 
 /** Stealth Proxy pattern to allow for iteration and logging over a Frozen object */
 export function getProxy<T extends object>(target: T, frozen = true, lock = frozen) {
@@ -49,3 +49,41 @@ export function getProxy<T extends object>(target: T, frozen = true, lock = froz
 		},
 	}) as T
 }
+
+/** Stealth Proxy pattern to allow for on-demand lazy property discovery and registration */
+export function getLazyDelegator<T extends object>(target: T, onGet: (key: string | symbol, target: T) => void) {
+	const pending = new Set<PropertyKey>();										// recursion guard
+
+	return new Proxy(target, {
+		ownKeys: (t) => {
+			if (!pending.has($Discover)) {
+				pending.add($Discover);
+				try {
+					onGet($Discover, t);																		// full discovery phase
+				} finally {
+					pending.delete($Discover);
+				}
+			}
+			return Reflect.ownKeys(t);
+		},
+		get: (t, key) => {
+			// bypass for symbols or properties already in the chain (or currently resolving)
+			if (isSymbol(key) || Reflect.has(t, key) || pending.has(key))
+				return Reflect.get(t, key);
+
+			pending.add(key);																			// mark as resolving
+			try {
+				onGet(key, t);																			// discovery phase
+			} finally {
+				pending.delete(key);																// resolve complete
+			}
+
+			// silently mark on target to avoid redundant discovery even if not found
+			if (Reflect.isExtensible(t) && !Reflect.has(t, key))
+				Object.defineProperty(t, key, { value: undefined, enumerable: false, configurable: true });
+
+			return Reflect.get(t, key);
+		}
+	}) as T;
+}
+

@@ -1,5 +1,5 @@
 import { $Target } from '#library/symbol.library.js';
-import { Tempo, enums } from '#tempo/index.js';
+import { Tempo, enums } from '#tempo';
 
 describe('Discovery Security (Direct Registry Check)', () => {
 

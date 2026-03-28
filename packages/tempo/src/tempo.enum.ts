@@ -1,10 +1,27 @@
 import { $Target, $Extensible } from '#library/symbol.library.js';
-import { enumify } from '#library/enumerate.library.js';
+import { enumify, Enum } from '#library/enumerate.library.js';
 import { getProxy } from '#library/proxy.library.js';
 import { clearCache } from '#library/function.library.js';
 import { isUndefined } from '#library/type.library.js';
-import type { Enum } from '#library/enumerate.library.js';
-import type { OwnOf, Index, KeyOf, ValueOf, LooseUnion, Mutable, Property } from '#library/type.library.js';
+import type { OwnOf, KeyOf, ValueOf, LooseUnion, Mutable, Property } from '#library/type.library.js';
+
+/** calendar seasons */
+export const SEASON = enumify({
+	Spring: 'spring',
+	Summer: 'summer',
+	Autumn: 'autumn',
+	Winter: 'winter'
+}, false);
+export type SEASON = ValueOf<typeof SEASON>
+
+/** cardinal directions */
+export const COMPASS = enumify({
+	North: 'north',
+	South: 'south',
+	East: 'east',
+	West: 'west'
+}, false);
+export type COMPASS = ValueOf<typeof COMPASS>
 
 /**
  * Various enumerations used throughout Tempo library.
@@ -75,8 +92,8 @@ export const STATE = {
 		/** just Time portion */																time: '{hh}:{mi}:{ss}',
 	},
 	LIMIT: {
-		/** Tempo(31-Dec-9999.23:59:59).ns */										maxTempo: Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds,
-		/** Tempo(01-Jan-1000.00:00:00).ns */										minTempo: Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds,
+		/** Tempo(31-Dec-9999.23:59:59).ns */										get maxTempo() { return Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds },
+		/** Tempo(01-Jan-1000.00:00:00).ns */										get minTempo() { return Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds },
 	},// as Record<string, bigint>,
 } as const;
 
@@ -86,8 +103,7 @@ export const STATE = {
 
 // #endregion
 
-export const COMPASS = enumify({ North: 'north', South: 'south', East: 'east', West: 'west' });
-export type COMPASS = ValueOf<typeof COMPASS>
+// #endregion
 
 /** Gregorian calendar week-days (short-form) */
 export const WEEKDAY = enumify(['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
@@ -109,11 +125,6 @@ export type Month = ValueOf<typeof MONTH>
 export type MONTHS = KeyOf<typeof MONTHS>
 export type Months = ValueOf<typeof MONTHS>
 
-/** calendar seasons */
-export const SEASON = enumify({ Spring: 'spring', Summer: 'summer', Autumn: 'autumn', Winter: 'winter' });
-export type SEASON = ValueOf<typeof SEASON>
-export type Season = KeyOf<typeof SEASON>
-
 /** number names (0-10) */
 export const NUMBER = enumify(STATE.NUMBER, false);
 export type Number = KeyOf<typeof NUMBER>
@@ -129,7 +140,7 @@ export type DURATION = KeyOf<typeof DURATION>
 export const DURATIONS = enumify(STATE.DURATIONS, false);
 export type DURATIONS = KeyOf<typeof DURATIONS>
 
-/** pre-defined Format code short-cuts */
+/** common format aliases */
 export const FORMAT = enumify(STATE.FORMAT, false);
 export type FORMAT = ValueOf<typeof FORMAT>
 export type Format = LooseUnion<KeyOf<typeof FORMAT> & string>

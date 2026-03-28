@@ -1,0 +1,23 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "../dist",
+    "rootDir": ".",
+    "composite": true,
+    "noEmit": false,
+    "paths": {
+      "#library": ["../../library/src/common/index.ts"],
+      "#library/*": ["../../library/src/common/*"],
+      "#browser/*": ["../../library/src/browser/*"],
+      "#server/*": ["../../library/src/server/*"],
+      "#tempo": ["./index.ts"],
+      "#tempo/*": ["./*"]
+    }
+  },
+  "include": [
+    "**/*.ts"
+  ],
+  "references": [
+    { "path": "../../library/src" }
+  ]
+}

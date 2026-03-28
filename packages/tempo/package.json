@@ -3,30 +3,36 @@
   "version": "1.2.0",
   "description": "The Tempo core library",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/tempo.index.js",
+  "types": "dist/tempo.index.d.ts",
   "imports": {
     "#library": {
-      "development": "../library/src/index.js",
+      "development": "../library/src/common/index.js",
       "default": "@magma/library"
     },
     "#library/*": {
-      "development": "../library/src/*",
+      "development": "../library/src/common/*",
       "default": "@magma/library/*"
     },
+    "#browser/*": {
+      "development": "../library/src/browser/*",
+      "default": "@magma/library/browser/*"
+    },
+    "#server/*": {
+      "development": "../library/src/server/*",
+      "default": "@magma/library/server/*"
+    },
     "#tempo": {
-      "development": "./src/index.js",
-      "default": "./dist/index.js"
+      "default": "./dist/tempo.index.js"
     },
     "#tempo/*": {
-      "development": "./src/*",
       "default": "./dist/*"
     }
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/tempo.index.d.ts",
+      "import": "./dist/tempo.index.js"
     },
     "./enums": {
       "types": "./dist/tempo.enum.d.ts",
@@ -35,6 +41,10 @@
     "./plugins/ticker": {
       "types": "./dist/plugins/plugin.ticker.d.ts",
       "import": "./dist/plugins/plugin.ticker.js"
+    },
+    "./library": {
+      "types": "./dist/library.index.d.ts",
+      "import": "./dist/library.index.js"
     }
   },
   "scripts": {

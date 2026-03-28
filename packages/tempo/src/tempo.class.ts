@@ -3,25 +3,27 @@ import '#tempo/temporal.polyfill.js';												// side-effect runtime check fo
 // #region library modules~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 import { Logify } from '#library/logify.class.js';
-import { ifDefined } from '#library/object.library.js';
 import { secure } from '#library/utility.library.js';
 import { Immutable, Serializable } from '#library/class.library.js';
 import { asArray, asNumber, asInteger, isNumeric, ifNumeric } from '#library/coercion.library.js';
 import { cleanify, stringify } from '#library/serialize.library.js';
 import { getStorage, setStorage } from '#library/storage.library.js';
-import { getProxy } from '#library/proxy.library.js';
+import { getProxy, getLazyDelegator } from '#library/proxy.library.js';
+import { $Discover } from '#library/symbol.library.js';
 import { getContext, CONTEXT } from '#library/utility.library.js';
-import { $Tempo, $Plugins, $Register, registerPlugin, registerTerm } from './plugins/tempo.plugin.js'
-import { registerTerms } from './plugins/terms/index.js'
-import { ownKeys, ownEntries, getAccessors, omit } from '#library/reflection.library.js'
-import { pad, singular, toProperCase, trimAll } from '#library/string.library.js'
-import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction, isArray } from '#library/type.library.js'
-import type { IntRange, LooseUnion, NonOptional, Property, Plural, Type } from '#library/type.library.js'
+import { $Tempo, $Plugins, $Register, registerPlugin, registerTerm } from '#tempo/plugins/tempo.plugin.js'
+import { registerTerms } from '#tempo/plugins/terms/index.js'
+import { ownKeys, ownEntries, getAccessors, omit } from '#library/reflection.library.js';
+import { ifDefined } from '#library/object.library.js';
+import { pad, singular, toProperCase, trimAll } from '#library/string.library.js';
+import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction, isNumber, Secure } from '#library/type.library.js';
+import { getHemisphere, getResolvedOptions, canonicalLocale, getRelativeTime } from '#library/international.library.js';
+import { now as libNow } from '#library/temporal.library.js';
+import type { IntRange, LooseUnion, NonOptional, Property, Plural, Type } from '#library/type.library.js';
 
 import * as enums from '#tempo/tempo.enum.js'
 
 import { Match, Token, Snippet, Layout, Event, Period, Default } from '#tempo/tempo.default.js';
-const { TimeZone } = enums;
 
 // #endregion
 
@@ -35,9 +37,11 @@ declare global {
 	interface globalThis {
 		[$Tempo]?: Tempo.Discovery;
 		[$Plugins]?: Tempo.Discovery;
+		[$Register]?: () => void;
 	}
 }
 
+const { TimeZone } = enums;
 /** current execution context*/															const Context = getContext();
 
 // #region Const variables
@@ -79,9 +83,11 @@ export class Tempo {
 	/** Tempo state for the global configuration */						static #global = {} as Tempo.State
 	/** a collection of parse rule-matches */									static #pending: Tempo.Match[] | undefined;
 	/** cache for next-available 'usr' Token key */						static #usrCount = 0;
-	/** mutable list of registered term plugins */						static #terms = [] as Tempo.TermPlugin[];
+	/** mutable list of registered term plugins */						static #terms: Tempo.TermPlugin[] = [];
+	static #termMap: Map<string, Tempo.TermPlugin> = new Map();
 	/** flag to prevent recursion during init */							static #initializing = false;
 	/** flag to prevent reactive hook during extend */				static #extending = false;
+	/** high-performance Master Guard regex built from all registries */		static #guard: RegExp;
 
 	// #endregion
 
@@ -176,21 +182,8 @@ export class Tempo {
 		if (isUndefined(shape.config.timeZone) || Tempo.#hasOwn(options, 'sphere'))
 			return shape.config.sphere;														// already specified or no timeZone to calculate from
 
-		// use a fixed date (2024-01-01) to compare offsets for hemisphere detection
-		const zdt = new Temporal.ZonedDateTime(BigInt(1_704_067_200) * BigInt(1_000_000_000), shape.config.timeZone as string);
-		const jan = zdt.with({ day: 1, month: 1 }).offsetNanoseconds;
-		const jun = zdt.with({ day: 1, month: 6 }).offsetNanoseconds;
-		const dst = Math.sign(jan - jun);												// timeZone offset difference between Jan and Jun
-
-		switch (dst) {
-			case -1:
-				return Tempo.COMPASS.North;													// clock moves backward in Northern hemisphere
-			case 1:
-				return Tempo.COMPASS.South;													// clock moves forward in Southern hemisphere
-			case 0:
-			default:
-				return void 0;																			// timeZone does not observe DST
-		}
+		const sphere = getHemisphere(shape.config.timeZone as string);
+		return isDefined(options.timeZone) ? sphere : (sphere ?? shape.config.sphere);
 	}
 
 	/** determine if we have a {timeZone} which prefers {mdy} date-order */
@@ -246,7 +239,7 @@ export class Tempo {
 		let language: string | undefined;
 
 		try {																										// lookup locale
-			language = Intl.getCanonicalLocales(locale!.replace('_', '-'))[0];
+			language = canonicalLocale(locale!);
 		} catch (error) { }																			// catch unknown locale
 
 		const global = Context.global;
@@ -452,6 +445,17 @@ export class Tempo {
 
 		for (const [sym, layout] of ownEntries(shape.parse.layout, true))
 			shape.parse.pattern.set(sym, Tempo.regexp(layout, snippet));
+
+		Tempo.#buildGuard();																	// build the high-performance 'Master Guard'
+	}
+
+	/** build the static Master Guard from all discovery registries */
+	static #buildGuard() {
+		const terms = Tempo.#terms.map(t => [t.key ?? '', t.scope ?? '']).flat().filter(isString);
+		const words = [...terms, ...Object.keys(Event), ...Object.keys(Period), ...Object.keys(enums.NUMBER)].join('|');
+		const dates = [Match.date.source, Match.time.source, Snippet[Token.yy].source].join('|');
+
+		Tempo.#guard = new RegExp(`^(${words}|${dates}|${Match.modifier.source}|[0-9-:\\s]+|Z)$`, 'i');
 	}
 
 	// #endregion Static private methods
@@ -483,10 +487,13 @@ export class Tempo {
 				else if (isObject(item)) {
 					// 1. handle TermPlugin
 					if (isString((item as any).key) && isFunction((item as any).define)) {
-						registerTerm(item as Tempo.TermPlugin)
+						const config = item as Tempo.TermPlugin;
+						registerTerm(config)
 
-						if (!Tempo.#terms.some(term => term.key === (item as any).key)) {
-							Tempo.#terms.push(item as Tempo.TermPlugin)
+						if (!Tempo.#terms.some(term => term.key === config.key)) {
+							Tempo.#terms.push(config);
+							Tempo.#termMap.set(config.key, config);
+							if (config.scope) Tempo.#termMap.set(config.scope, config);
 						}
 					}
 					// 2. handle Discovery object (container)
@@ -530,7 +537,7 @@ export class Tempo {
 					pivot: Default.pivot,
 				} as Tempo.Parse;
 
-				const { timeZone, calendar } = Intl.DateTimeFormat().resolvedOptions();
+				const { timeZone, calendar } = getResolvedOptions();
 				Tempo.#global.config = Object.assign({},
 					omit({ ...Default }, ...enums.PARSE.keys()),				// use Default as base, omit parse-related
 					{
@@ -538,7 +545,7 @@ export class Tempo {
 						timeZone,
 						locale: Tempo.#locale(),
 						discovery: Symbol.keyFor($Tempo) as string,
-						formats: Object.create(enums.FORMAT),
+						formats: enums.FORMAT.extend({}, false),
 						scope: 'global'
 					}
 				) as Tempo.Config;
@@ -686,20 +693,25 @@ export class Tempo {
 	static from(tempo: Tempo.DateTime | undefined, options?: Tempo.Options): Tempo;
 	static from(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return new this(tempo as NonNullable<Tempo.DateTime>, options); }
 
-	static now() { return Temporal.Now.instant().epochNanoseconds; }
+	static now() { return libNow().epochNanoseconds; }
 
 
 
-	/** static Tempo.terms getter */
-	static get terms() {
+	/** static Tempo.terms (registry) */
+	static get terms(): Secure<Omit<Tempo.TermPlugin, 'define'>[]> {
 		return secure(Tempo.#terms
 			.map(({ define, ...rest }) => rest));									// omit the 'define' method
 	}
 
+	/** static Tempo.formats (registry) */
+	static get formats() {
+		return secure(Tempo.config.formats);
+	}
+
 	/** static Tempo properties getter */
-	static get properties() {
+	static get properties(): Secure<string[]> {
 		return secure(getAccessors(Tempo)
-			.filter(acc => getType(acc) !== 'Symbol'));						// omit any Symbol properties
+			.filter(acc => getType(acc) !== 'Symbol') as string[]);						// omit any Symbol properties
 	}
 
 
@@ -745,7 +757,7 @@ export class Tempo {
 
 	/** iterate over instance formats */
 	[Symbol.iterator]() {
-		return ownEntries(this.#fmt)[Symbol.iterator]();				// instance Iterator over tuple of FormatType[]
+		return ownEntries(this.#fmt, true)[Symbol.iterator]();									// instance Iterator over tuple of FormatType[]
 	}
 
 	get [Symbol.toStringTag]() {															// default string description
@@ -761,8 +773,8 @@ export class Tempo {
 	/** instantiation Temporal Instant */											#now: Temporal.Instant;
 	/** underlying Temporal ZonedDateTime */									#zdt!: Temporal.ZonedDateTime;
 	/** temporary anchor used during parsing */								#anchor?: Temporal.ZonedDateTime | undefined;
-	/** prebuilt formats, for convenience */									#fmt = {} as Tempo.Formats;
-	/** instance term plugins */															#term = Object.create(null) as Tempo.Terms;
+	/** prebuilt formats, for convenience */									#fmt!: any;
+	/** mapping of terms to their resolved values */						#term!: any;
 	/** instance values to complement static values */				#local = {
 		/** instance configuration */															config: {} as Tempo.Config,
 		/** instance parse rules (only populated if provided) */	parse: { result: [] as Tempo.Match[] } as Tempo.Parse
@@ -780,63 +792,91 @@ export class Tempo {
 	constructor(options?: Tempo.Options);
 	constructor(tempo: Tempo.DateTime, options?: Tempo.Options);
 	constructor(tempo?: Tempo.DateTime | Tempo.Options, options: Tempo.Options = {}) {
-		this.#now = Temporal.Now.instant();											// stash current Instant
-		[this.#tempo, this.#options] = this.#swap(tempo, options);// swap arguments around, if arg1=Options or Temporal-like
+		this.#now = libNow();																		// stash current Instant
+		[this.#tempo, this.#options] = this.#swap(tempo, options); // swap arguments around, if arg1=Options or Temporal-like
 		this.#setLocal(this.#options);													// parse the local options looking for overrides to Tempo.#global.config
+		this.#fmt = this.#setDelegator('fmt');													// initialize the format-delegator (safe now that #local exists)
+		this.#term = this.#setDelegator('term');												// initialize the term-delegator
 
 		// we now have all the info we need to instantiate a new Tempo
 		try {
 			this.#anchor = this.#options.anchor;
 			this.#zdt = this.#parse(this.#tempo as Tempo.DateTime, this.#anchor);		// attempt to interpret the DateTime arg
 
-			const cal = this.#local.config.calendar;
-			if (isString(cal) && ['iso8601', 'gregory'].includes(cal)) {
-				for (const key of this.#local.config.formats.keys())
-					Object.assign(this.#fmt, { [key]: this.format(key as enums.Format) });
-			}
+			this.#local.parse.lazy = this.#options.lazy ?? true;			// transfer the 'lazy' rule to the instance (default: lazy)
 
-			Tempo.#terms																					// add the plug-in getters for the pre-defined Terms to the instance
-				.forEach(({ key, scope, define }) => {							// under 'Tempo.term' getter
-					this.#setTerm(this, key, define, true);						// add a getter which returns the key-field only
-					this.#setTerm(this, scope, define, false);				// add a getter which returns a range-object
-				})
-
-			if (isDefined(Tempo.#pending)) {											// are we mutating with 'set()' ?
-				this.#local.parse.result.unshift(...Tempo.#pending);// prepend collected parse-matches
-				Tempo.#pending = void 0;														// and reset mutating-flag
-			}
-
-			secure(this.#fmt);																		// prevent mutations
-			secure(this.#term);																		// secure the initial object with getters
+			// secure(this.#term);																		// secure the initial object with getters
 			secure(this.#local.config);
 			secure(this.#local.parse);
 		} catch (err) {
-			console.error('Tempo Constructor Error:', err);
 			Tempo.#dbg.catch(this.config, `Cannot create Tempo: ${(err as Error).message}\n${(err as Error).stack}`);
 			throw err;																									// throw error
 		}
 	}
 
-	// This function has be defined within the Tempo class (and not imported from another module) because it references a private-variable
-	/** this will add a getter on the instance #term private field */
-	#setTerm(self: Tempo, name: PropertyKey | undefined, define: (this: Tempo, key?: boolean) => any, isKeyOnly: boolean) {
+	/** this will add a getter on the instance host objects (#term | #fmt) */
+	#setLazy(target: any, name: PropertyKey | undefined, define: (keyOnly: boolean) => any, isKeyOnly = false) {
 		if (isDefined(name) && isDefined(define)) {
-			Object.defineProperty(self.#term, name, {
-				configurable: false,
-				enumerable: false,
-				get: function () {
-					const value = define.call(self, isKeyOnly);				// evaluate the term range-lookup
-					self.#term = secure(Object.create(self.#term, {		// prototype-shadow the getter with a frozen value
-						[name]: {
-							value,
-							configurable: false,
-							writable: false,
-							enumerable: true
-						}
-					}))
-					return secure(value);
+			let guard = false;
+			let memo: any;
+			let set = false;
+
+			const get = () => {
+				if (guard) return undefined;																		// recursion guard
+				guard = true;
+				try {
+					if (!set) {
+						memo = define.call(this, isKeyOnly);													// evaluate the property
+						set = true;
+					}
+					return memo;
+				} finally { guard = false; }
+			};
+
+			Object.defineProperty(target, name, {
+				get, enumerable: true, configurable: true
+			});
+		}
+	}
+
+	/** create a Proxy-based delegator that registers lazy properties on-demand */
+	#setDelegator(host: 'term' | 'fmt') {
+		const target = Object.create(null);
+		const proxy = getLazyDelegator(target, (key) => {
+			if (key === $Discover) return this.#discover(host, target);
+			if (!isString(key)) return;
+
+			// discovery phase
+			if (host === 'fmt') {
+				if (isDefined(this.#local.config.formats[key])) {
+					this.#setLazy(target, key, () => this.format(key as enums.Format));
 				}
-			})
+			} else {
+				const term = Tempo.#termMap.get(key);
+				if (term) {
+					const isKeyOnly = term.key === key;
+					this.#setLazy(target, key, (keyOnly) => term.define.call(this, keyOnly), isKeyOnly);
+				}
+			}
+		});
+
+		// Eager support during construction
+		if (host === 'term' && !this.#local.parse.lazy) this.#discover('term', target);
+		if (host === 'fmt' && !this.#local.parse.lazy) this.#discover('fmt', target);
+
+		return proxy;
+	}
+
+	#discover(host: 'term' | 'fmt', target: any) {
+		if (host === 'fmt') {
+			ownKeys(this.#local.config.formats).forEach(key => {
+				if (isString(key)) this.#setLazy(target, key, () => this.format(key as enums.Format));
+			});
+		} else {
+			Tempo.#terms.forEach(term => {
+				this.#setLazy(target, term.key, (keyOnly) => term.define.call(this, keyOnly), true);
+				if (term.scope) this.#setLazy(target, term.scope, (keyOnly) => term.define.call(this, keyOnly), false);
+			});
 		}
 	}
 
@@ -915,7 +955,7 @@ export class Tempo {
 	/** returns the underlying Temporal.Instant */						toInstant() { return this.toDateTime().toInstant() }
 
 	/** the date-time as a standard `Date` object. */					toDate() { return new Date(this.toDateTime().round({ smallestUnit: enums.ELEMENT.ms }).epochMilliseconds) }
-	/** the ISO8601 string representation of the date-time. */toString() { return this.toPlainDateTime().toString({ calendarName: 'never' }) }
+	/** ISO8601 string representation of the date-time. */		toString() { return this.toPlainDateTime().toString({ calendarName: 'never' }) }
 	/** Custom JSON serialization for `JSON.stringify`. */		toJSON() { return omit({ ...this.#local.config, value: this.toString() }, 'scope', 'store') }
 	/** `true` if the underlying date-time is valid. */				isValid() { return !isEmpty(this) }
 
@@ -1875,24 +1915,25 @@ export class Tempo {
 			.map(nbr => nbr.toString().padStart(3, '0'))
 			.join('')
 
-		const rtf = new Intl.RelativeTimeFormat(this.#local.config['locale'], { style: 'narrow' });
+		const locale = this.#local.config['locale'];
+		const style = 'narrow';
 
 		switch (dur.unit) {
 			case 'years':
-				return rtf.format(date[0], 'years');
+				return getRelativeTime(date[0], dur.unit, locale, style);
 			case 'months':
-				return rtf.format(date[1], 'months');
+				return getRelativeTime(date[1], dur.unit, locale, style);
 			case 'weeks':
-				return rtf.format(date[1], 'weeks')
+				return getRelativeTime(date[1], dur.unit, locale, style)
 			case 'days':
-				return rtf.format(date[2], 'days');
+				return getRelativeTime(date[2], dur.unit, locale, style);
 
 			case 'hours':
-				return rtf.format(time[0], 'hours');
+				return getRelativeTime(time[0], dur.unit, locale, style);
 			case 'minutes':
-				return rtf.format(time[1], 'minutes');
+				return getRelativeTime(time[1], dur.unit, locale, style);
 			case 'seconds':
-				return rtf.format(time[2], 'seconds');
+				return getRelativeTime(time[2], dur.unit, locale, style);
 
 			case 'milliseconds':
 			case 'microseconds':
@@ -1929,7 +1970,8 @@ export namespace Tempo {
 		/** locale (e.g. en-AU) */															locale: string;
 		/** pivot year for two-digit years */										pivot: number;
 		/** hemisphere for term.qtr or term.szn */							sphere: Tempo.COMPASS | undefined;
-		/** granularity of timestamps (ms | ns) */							timeStamp: Tempo.TimeStamp;
+		/** Precision to measure timestamps (ms | us) */					timeStamp?: Tempo.TimeStamp;
+		/** parsing is performed on-demand */										lazy?: boolean;
 		/** locale-names that prefer 'mm-dd-yy' date order */		mdyLocales: string | string[];
 		/** swap parse-order of layouts */											mdyLayouts: Tempo.Pair[];
 		/** date-time snippets to help compose a Layout */			snippet: Snippet | Tempo.PatternOption<Tempo.Pattern>;
@@ -1978,6 +2020,8 @@ export namespace Tempo {
 		/** configured Periods */																period: Period;
 		/** pivot year for two-digit years */										pivot?: number;
 		/** parsing match result */															result: Tempo.Match[];
+		/** was this a nested/anchored parse? */								isAnchored?: boolean;
+		/** parsing is performed on-demand */										lazy?: boolean;
 	}
 
 	/** debug a Tempo instantiation */
@@ -2055,6 +2099,7 @@ export namespace Tempo {
 	export type DURATION = enums.DURATION
 	export type DURATIONS = enums.DURATIONS
 	export type COMPASS = enums.COMPASS
+	export type SEASON = enums.SEASON
 	export type ELEMENT = enums.ELEMENT
 
 	export type Weekday = enums.Weekday

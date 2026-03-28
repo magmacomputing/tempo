@@ -1,4 +1,5 @@
-import { sortKey, isDefined } from '#library';
+import { sortKey } from '#library/array.library.js';
+import { isDefined } from '#library/type.library.js';
 import type { Tempo } from '#tempo/tempo.class.js';
 
 /** key to use for Global Discovery of Tempo configuration */
@@ -82,12 +83,15 @@ export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true) {
 		.find(range => {
 			for (const [rKey, sKey] of SCHEMA) {
 				const val = range[rKey];
+
 				if (isDefined(val)) {
 					const sVal = tempo[sKey];
+
 					if (sVal > val) return true;
 					if (sVal < val) return false;
 				}
 			}
+
 			return true;																					// fallback if DateTime exactly matches a range criteria
 		})
 		?? sorted.at(0)																					// fallback to wraparound at first item

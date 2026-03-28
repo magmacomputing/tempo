@@ -1,4 +1,4 @@
-import { Tempo } from '#tempo/index.js';
+import { Tempo } from '#tempo';
 
 const label = 'static.methods:';
 const testKey = '$TempoTest';

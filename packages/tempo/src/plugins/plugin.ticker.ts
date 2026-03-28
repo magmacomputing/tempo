@@ -1,5 +1,6 @@
-import { isObject, isFunction, isDefined, isEmpty } from '#library/type.library.js';
+import { now } from '#library/temporal.library.js';
 import { ifDefined } from '#library/object.library.js';
+import { isObject, isFunction, isDefined, isEmpty } from '#library/type.library.js';
 import { DURATIONS } from '#tempo/tempo.enum.js';
 import { definePlugin } from '#tempo/plugins/tempo.plugin.js';
 import type { Tempo } from '#tempo/tempo.class.js';
@@ -15,18 +16,19 @@ declare module '#tempo/tempo.class.js' {
 	}
 
 		/** callback function for Tempo.ticker() */							type TickerCallback = (t: Tempo, stop: () => void) => void;
-		/** AsyncGenerator return type for Tempo.ticker() */		type TickerGenerator = AsyncGenerator<Tempo> & AsyncDisposable;
+		/** AsyncGenerator return type for Tempo.ticker() */		type TickerGenerator = AsyncGenerator<Tempo, any> & AsyncDisposable & {
+		/** stop the generator with an optional return value */
+		return(value?: any): Promise<IteratorResult<Tempo, any>>;
+	};
 		/** stop() function return type for Tempo.ticker() */		type TickerStop = (() => void) & Disposable;
 		/** combined return type for Tempo.ticker() */					type TickerResult = TickerGenerator | TickerStop;
-		function ticker(): TickerGenerator;
-		function ticker(interval: TickerInterval): TickerGenerator;
+		function ticker(interval?: TickerInterval): TickerGenerator;
 		function ticker(options: TickerOptions): TickerGenerator;
 		function ticker(callback: TickerCallback): TickerStop;
 		function ticker(interval: TickerInterval, callback: TickerCallback): TickerStop;
 		function ticker(options: TickerOptions, callback: TickerCallback): TickerStop;
 	}
 }
-
 
 /**
  * # TickerPlugin
@@ -55,24 +57,24 @@ export const TickerPlugin = definePlugin((_options, TempoClass, _factory) => {
 			cb = arg2;
 		}
 
-		const { interval, limit, until: stopAt, seed, ...rest } = options;
+		const { interval, limit, until: stopAt, seed: startAt, ...rest } = options;
 
 		// 1. Extract valid Duration fields from the options (flattened duration pattern)
-		const duration = (DURATIONS.keys() as string[]).reduce((acc: Record<string, any>, dur) =>
-			Object.assign(acc, ifDefined({ [dur]: (rest as any)[dur] })), {} as Record<string, any>);
+		const duration = DURATIONS.keys().reduce((acc, dur) =>
+			Object.assign(acc, ifDefined({ [dur]: (rest as any)[dur] })), {} as Record<DURATIONS, number>);
 
 		// 2. Create a plain object payload and a Temporal.Duration for logic
 		const payload = !isEmpty(duration)
 			? duration
 			: { milliseconds: Math.round(Number(interval ?? 1) * 1000) };
 
-		const elapse = Temporal.Duration.from(payload as any);
+		const elapse = Temporal.Duration.from(payload);
 		const isForward = elapse.sign >= 0;
 		const isInstant = elapse.blank;
 
 		const until = stopAt ? new TempoClass(stopAt as Tempo.DateTime) : undefined;
-		const now = () => Temporal.Now.instant().epochMilliseconds;
-		let current = new TempoClass(seed as Tempo.DateTime);
+		const ms = () => now().epochMilliseconds;
+		let current = new TempoClass(startAt as Tempo.DateTime);
 
 		// Helper to check if we should stop
 		const shouldStop = (ticks: number) => {
@@ -101,7 +103,7 @@ export const TickerPlugin = definePlugin((_options, TempoClass, _factory) => {
 
 				if (!stopped && !shouldStop(ticks)) {
 					const next = current.add(payload);
-					const delay = Math.max(0, (next.epoch.ms as number) - now());
+					const delay = Math.max(0, (next.epoch.ms as number) - ms());
 
 					id = setTimeout(() => {
 						current = next;																	// advance virtual clock
@@ -124,7 +126,7 @@ export const TickerPlugin = definePlugin((_options, TempoClass, _factory) => {
 				if (isInstant || shouldStop(ticks)) break;
 
 				const next = current.add(payload);
-				const delay = Math.max(0, (next.epoch.ms as number) - now());
+				const delay = Math.max(0, (next.epoch.ms as number) - ms());
 
 				await new Promise(resolve => setTimeout(resolve, delay));
 				current = next;																			// advance virtual clock

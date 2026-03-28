@@ -24,10 +24,16 @@ find dist -type f \( -name "*.js" -o -name "*.d.ts" \) | while read -r file; do
         lib_depth=$((depth - 1))
         lib_prefix="./"
         for ((i=0; i<lib_depth; i++)); do lib_prefix="../$lib_prefix"; done
-        perl -i -pe "s|#library/|${lib_prefix}|g; s|#library(['\"])|${lib_prefix}index.js\$1|g" "$file"
+        
+        # #library/ -> common/ (since #library alias maps to common)
+        perl -i -pe "s|#library/|${lib_prefix}common/|g; s|#library(['\"])|${lib_prefix}common/index.js\$1|g" "$file"
+        perl -i -pe "s|#browser/|${lib_prefix}browser/|g" "$file"
+        perl -i -pe "s|#server/|${lib_prefix}server/|g" "$file"
     else
         # Standard case for tempo files
-        perl -i -pe "s|#library/|${prefix}lib/|g; s|#library(['\"])|${prefix}lib/index.js\$1|g" "$file"
+        perl -i -pe "s|#library/|${prefix}lib/common/|g; s|#library(['\"])|${prefix}lib/common/index.js\$1|g" "$file"
+        perl -i -pe "s|#browser/|${prefix}lib/browser/|g" "$file"
+        perl -i -pe "s|#server/|${prefix}lib/server/|g" "$file"
     fi
     
     # Replace #tempo/ with ./ (or relative equivalent)
@@ -43,7 +49,7 @@ if [[ "$*" == *"--publish"* ]]; then
     # Use perl -0777 to slurp the whole file for multi-line matching
     # Strip internal devDependencies and imports (all internal aliases)
     perl -0777 -i -pe 's/"\@magma\/library": ".*",?\s*//g' package.json
-    perl -0777 -i -pe 's/"#(library|tempo)(\/\*)?": \{.*?\},\s*//sg' package.json
+    perl -0777 -i -pe 's/"#(library|browser|server|tempo)(\/\*)?": \{.*?\},\s*//sg' package.json
     
     # Cleanup trailing commas before }
     perl -0777 -i -pe 's/,\s*\}/ \}/g' package.json

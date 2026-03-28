@@ -1,4 +1,4 @@
-import { Tempo } from '#tempo/index.js';
+import { Tempo } from '#tempo';
 import { $Plugins } from '#tempo/plugins/tempo.plugin.js';
 import { TickerPlugin } from '#tempo/plugins/plugin.ticker.js';
 

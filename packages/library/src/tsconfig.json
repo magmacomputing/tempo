@@ -1,0 +1,42 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "../dist",
+    "rootDir": ".",
+    "composite": true,
+    "lib": [
+      "ESNext",
+      "ESNext.Temporal",
+      "DOM"
+    ],
+    "types": [
+      "node",
+      "hammerjs",
+      "jquery",
+      "google.maps"
+    ],
+    "paths": {
+      "#library": [
+        "./common/index.ts"
+      ],
+      "#library/*": [
+        "./common/*"
+      ],
+      "#browser/*": [
+        "./browser/*"
+      ],
+      "#server/*": [
+        "./server/*"
+      ],
+      "#tempo": [
+        "../../tempo/src/tempo.index.ts"
+      ],
+      "#tempo/*": [
+        "../../tempo/src/*"
+      ]
+    }
+  },
+  "include": [
+    "**/*.ts"
+  ]
+}

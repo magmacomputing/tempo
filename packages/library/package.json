@@ -3,12 +3,24 @@
   "version": "1.2.0",
   "description": "Shared utility library for Tempo",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/common/index.js",
+  "types": "dist/common/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/common/index.d.ts",
+      "import": "./dist/common/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser/index.d.ts",
+      "import": "./dist/browser/index.js"
+    },
+    "./common": {
+      "types": "./dist/common/index.d.ts",
+      "import": "./dist/common/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js"
     },
     "./*": {
       "types": "./dist/*.d.ts",
@@ -21,12 +33,28 @@
   ],
   "imports": {
     "#library": {
-      "development": "./src/index.js",
-      "default": "./dist/index.js"
+      "development": "./src/common/index.js",
+      "default": "./dist/common/index.js"
     },
     "#library/*": {
-      "development": "./src/*",
-      "default": "./dist/*"
+      "development": "./src/common/*",
+      "default": "./dist/common/*"
+    },
+    "#browser/*": {
+      "development": "./src/browser/*",
+      "default": "./dist/browser/*"
+    },
+    "#server/*": {
+      "development": "./src/server/*",
+      "default": "./dist/server/*"
+    },
+    "#tempo": {
+      "development": "../tempo/src/index.js",
+      "default": "@magma/tempo"
+    },
+    "#tempo/*": {
+      "development": "../tempo/src/*",
+      "default": "@magma/tempo/*"
     }
   },
   "scripts": {

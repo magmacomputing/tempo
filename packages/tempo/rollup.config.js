@@ -27,7 +27,7 @@ export default {
 	plugins: [
 		alias({
 			entries: [
-				{ find: '#library', replacement: nodeResolve(__dirname, '../library/dist') },
+				{ find: '#library', replacement: nodeResolve(__dirname, '../library/dist/common') },
 				{ find: '#tempo', replacement: nodeResolve(__dirname, './dist') }
 			]
 		}),

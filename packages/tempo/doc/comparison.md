@@ -2,7 +2,7 @@
 
 If you are choosing a date library today, you are likely looking at **Day.js**, **Luxon**, or **date-fns**. While these are excellent tools, they were all built for the legacy `Date` era. 
 
-**Tempo** is the first premium wrapper built specifically for the **Temporal API** (Stage 3), giving it unique advantages that legacy libraries simply cannot match.
+**Tempo** is the first premium wrapper built specifically for the **Temporal API** (Stage 4), giving it unique advantages that legacy libraries simply cannot match.
 
 ---
 

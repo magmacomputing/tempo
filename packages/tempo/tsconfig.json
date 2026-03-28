@@ -1,24 +1,7 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "composite": true,
-    "paths": {
-      "#library/*": [
-        "../library/src/*"
-      ],
-      "#tempo/*": [
-        "./src/*"
-      ]
-    }
-  },
-  "include": [
-    "src/**/*.ts"
-  ],
+  "files": [],
   "references": [
-    {
-      "path": "../library"
-    }
+    { "path": "./src" },
+    { "path": "./test" }
   ]
 }

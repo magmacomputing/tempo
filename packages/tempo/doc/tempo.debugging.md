@@ -81,6 +81,16 @@ However, if you want `Tempo` to *throw* `Error` objects instead of swallowing th
 const t = new Tempo('invalid string', { catch: false });
 ```
 
+### ⚡ Fast-Fail (Master Guard) Debugging
+
+Tempo uses a **Master Guard** to avoid the expensive regex parsing phase for strings that are obviously not date-time inputs. If you find that a string is not being parsed as expected, it's possible that the guard is Rejecting it.
+
+1.  **Check characters**: The guard only allows digits, common symbols (`-`, `:`, `.`, `T`, `Z`, `/`, `+`, `#`), space, and standard Latin characters.
+2.  **Use `debug: true`**: If a string passes the guard but fails the parser, you will see "conformed groups" logs. If you see *nothing* and the input is returned as-is (falling back to a timestamp interpretation), then the guard likely rejected the string.
+3.  **Invalid String fallback**: If the guard rejects a string and it cannot be parsed as a numeric timestamp, it will result in an Invalid instance (see below).
+
+---
+
 ### Invalid Instances
 If a `Tempo` instance completely fails to instantiate (and `{ catch: false }` is not set), it returns an empty object. You can check for this using the `isValid()` method:
 ```typescript

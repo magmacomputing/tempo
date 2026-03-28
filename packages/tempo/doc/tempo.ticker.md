@@ -60,8 +60,34 @@ Using the `using` and `await using` keywords ensures that tickers are automatica
 } // generator is closed and interval stops here
 ```
 
+### 2. Manual Control (Programmatic Stop)
+
+If you are not using the `using` or `await using` keywords, or if you need to stop the ticker from outside its own loop (e.g., in a separate event handler), you can manually call the `stop()` function (for callbacks) or the `.return()` method (for generators).
+
+```typescript
+// Pattern A: Stop a callback-based ticker
+const stop = Tempo.ticker(1, (t) => console.log(t));
+// ... later
+stop();
+
+// Pattern B: Stop an async generator externally
+const ticker = Tempo.ticker(1);
+
+(async () => {
+    for await (const t of ticker) {
+        console.log(t.toString());
+    }
+    console.log('Ticker has been gracefully stopped.');
+})();
+
+// Close the generator from somewhere else
+setTimeout(async () => {
+    await ticker.return(); 
+}, 5000);
+```
+
 > [!WARNING]
-> If using `const` or `let` instead of `using` / `await using`, you **must** call the returned `stop()` function (or call `.return()` on the generator) to clear the interval manually.
+> If using `const` or `let` instead of `using` / `await using`, you **must** call the returned `stop()` function (or call `.return()` on the generator) to clear the interval manually and prevent memory leaks.
 
 ### 2. Virtual Clock (Seeding)
 

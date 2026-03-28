@@ -3,13 +3,13 @@
 **Tempo** is a premium, high-performance wrapper around the JavaScript `Temporal` API. It provides a modern, **immutable**, and **fluent** interface for date-time manipulation, and flexible parsing. It's designed as a better-performing, type-safe alternative to legacy libraries like **Moment.js**, **Day.js**, and **Luxon**.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Temporal](https://img.shields.io/badge/Temporal-Stage%203-blue)](https://tc39.es/proposal-temporal/)
+[![Temporal](https://img.shields.io/badge/Temporal-Stage%204-green)](https://tc39.es/proposal-temporal/)
 [![TypeScript Ready](https://img.shields.io/badge/TypeScript-Ready-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Native ESM](https://img.shields.io/badge/Native-ESM-green)](https://nodejs.org/api/esm.html)
 
 ## 🚀 Overview
 
-Working with dates in JavaScript has historically been painful. The new `Temporal` proposal (Stage 3) fixes this, but it can be verbose and strict when parsing strings. 
+Working with dates in JavaScript has historically been painful. The new `Temporal` standard (Stage 4) fixes this, but it can be verbose and strict when parsing strings. 
 
 **Tempo** bridges that gap by providing:
 - **Flexible Parsing**: Interprets almost any date string, including relative ones like "next Friday".
@@ -109,9 +109,10 @@ For detailed technical guides, please refer to:
 - [Tempo Class Documentation](./doc/Tempo.md)
 - [Data In ~ Parsing Engine](./doc/Tempo.md#parsing)
 - [Data Out ~ Formatting Tokens](./doc/Tempo.md#formatting)
-- [Plugin System (Extending Tempo)](./doc/Tempo.md#plugin-system) (`Tempo.extend`)
+- [Plugin System (Extending Tempo)](./doc/Tempo.md#plugin-system)
 - [Terms (Calculation Plugins)](./doc/Tempo.md#plugins-terms)
 - [Configuration Guide](./doc/tempo.config.md)
+- [Architecture & Internal Protection](./architecture.md)
 - [Commercial Support & Consulting](./doc/commercial.md)
 
 ## 💖 Support the Project

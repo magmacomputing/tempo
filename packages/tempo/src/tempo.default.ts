@@ -1,7 +1,8 @@
 import { looseIndex } from '#library/object.library.js';
 import { secure } from '#library/utility.library.js';
-import { NUMBER, TimeZone } from '#tempo/tempo.enum.js';
+import { NUMBER } from '#tempo/tempo.enum.js';
 import type { Tempo } from '#tempo/tempo.class.js';
+
 
 // BE VERY CAREFUL NOT TO BREAK THE REGEXP PATTERNS BELOW
 // TEMPO functionality heavily depends on these patterns
@@ -153,6 +154,7 @@ export type Period = typeof Period
 export const Default = secure({
 	/** log to console */																			debug: false,
 	/** catch or throw Errors */															catch: false,
+	/** lazy initialization */																lazy: true,
 	/** used to parse two-digit years*/												pivot: 75,										/** @link https://en.wikipedia.org/wiki/Date_windowing */
 	/** precision to measure timestamps (ms | us) */					timeStamp: 'ms',
 	/** calendaring system */																	calendar: 'iso8601',
