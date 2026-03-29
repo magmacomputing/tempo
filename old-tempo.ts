@@ -1,4 +1,4 @@
-import '#library/temporal.polyfill.js';											// side-effect runtime check for Temporal
+import '#tempo/temporal.polyfill.js';												// side-effect runtime check for Temporal
 
 // #region library modules~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -9,22 +9,21 @@ import { asArray, asNumber, asInteger, isNumeric, ifNumeric } from '#library/coe
 import { cleanify, stringify } from '#library/serialize.library.js';
 import { getStorage, setStorage } from '#library/storage.library.js';
 import { getProxy, getLazyDelegator } from '#library/proxy.library.js';
-import { $Register, $Discover, $Tempo, $Plugins, registerHook } from '#library/symbol.library.js';
+import { $Discover } from '#library/symbol.library.js';
 import { getContext, CONTEXT } from '#library/utility.library.js';
-import { enumify } from '#library/enumerate.library.js';
-import { STATE, FORMAT, PARSE, DISCOVERY, registryUpdate, registryReset } from '#tempo/tempo.enum.js'
-import { registerPlugin, registerTerm } from '#tempo/plugins/tempo.plugin.js'
+import { $Tempo, $Plugins, $Register, registerPlugin, registerTerm } from '#tempo/plugins/tempo.plugin.js'
 import { registerTerms } from '#tempo/plugins/terms/index.js'
 import { ownKeys, ownEntries, getAccessors, omit } from '#library/reflection.library.js';
 import { ifDefined } from '#library/object.library.js';
 import { pad, singular, toProperCase, trimAll } from '#library/string.library.js';
-import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction, isNumber, registerType, Secure } from '#library/type.library.js';
+import { getType, asType, isType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction, isNumber, Secure } from '#library/type.library.js';
 import { getHemisphere, getResolvedOptions, canonicalLocale, getRelativeTime } from '#library/international.library.js';
 import { now as libNow } from '#library/temporal.library.js';
 import type { IntRange, LooseUnion, NonOptional, Property, Plural, Type } from '#library/type.library.js';
 
-import { Match, Token, Snippet, Layout, Event, Period, Default } from '#tempo/tempo.default.js';
 import * as enums from '#tempo/tempo.enum.js'
+
+import { Match, Token, Snippet, Layout, Event, Period, Default } from '#tempo/tempo.default.js';
 
 // #endregion
 
@@ -70,8 +69,8 @@ export class Tempo {
 	/** Number names (0-10) */																static get NUMBER() { return enums.NUMBER }
 	/** TimeZone aliases */																		static get TIMEZONE() { return enums.TimeZone }
 	/** some useful Dates */																	static get LIMIT() { return enums.LIMIT }
-	/** check if Tempo is currently initializing */											static get isInitializing() { return Tempo.#lifecycle.extending || !Tempo.#lifecycle.ready }
-	/** check if Tempo is currently extending */													static get isExtending() { return Tempo.#lifecycle.extending }
+	/** check if Tempo is currently initializing */						static get isInitializing() { return Tempo.#initializing }
+	/** check if Tempo is currently extending */							static get isExtending() { return Tempo.#extending }
 
 	// #endregion
 
@@ -86,7 +85,8 @@ export class Tempo {
 	/** cache for next-available 'usr' Token key */						static #usrCount = 0;
 	/** mutable list of registered term plugins */						static #terms: Tempo.TermPlugin[] = [];
 	static #termMap: Map<string, Tempo.TermPlugin> = new Map();
-	/** flag to prevent recursion during init */													static #lifecycle = { bootstrap: true, initialising: false, extending: false, ready: false };
+	/** flag to prevent recursion during init */							static #initializing = false;
+	/** flag to prevent reactive hook during extend */				static #extending = false;
 	/** high-performance Master Guard regex built from all registries */		static #guard: RegExp;
 
 	// #endregion
@@ -473,29 +473,28 @@ export class Tempo {
 	static extend(term: Tempo.TermPlugin | Tempo.TermPlugin[]): typeof Tempo
 	static extend(config: Tempo.Discovery | Tempo.Discovery[], discovery?: symbol): typeof Tempo
 	static extend(arg: any, options?: any) {
-		const items = asArray(arg).flat(1);
-		if (isEmpty(items)) return this;
-
+		Tempo.#extending = true;
 		try {
-			items.forEach(item => {
-				if (isFunction(item)) {															// Standard Plugin registration
-					if (item.installed) return;
-					item.installed = true;														// mark as installed (BEFORE side-effects)
+			asArray(arg).flat(1).forEach(item => {
+				if (isFunction(item)) {
+					registerPlugin(item)
 
-					registerPlugin(item);
-					item(options, this, (val: any) => new this(val));
+					if (!item.installed) {
+						item(options, this, (val: any) => new this(val))
+						item.installed = true
+					}
 				}
 				else if (isObject(item)) {
 					// 1. handle TermPlugin
 					if (isString((item as any).key) && isFunction((item as any).define)) {
 						const config = item as Tempo.TermPlugin;
-						if (Tempo.#termMap.has(config.key)) return;
+						registerTerm(config)
 
-						Tempo.#terms.push(config);											// update registry (BEFORE side-effects)
-						Tempo.#termMap.set(config.key, config);
-						if (config.scope) Tempo.#termMap.set(config.scope, config);
-
-						registerTerm(config);
+						if (!Tempo.#terms.some(term => term.key === config.key)) {
+							Tempo.#terms.push(config);
+							Tempo.#termMap.set(config.key, config);
+							if (config.scope) Tempo.#termMap.set(config.scope, config);
+						}
 					}
 					// 2. handle Discovery object (container)
 					else {
@@ -504,7 +503,7 @@ export class Tempo {
 						if (discovery.terms) this.extend(discovery.terms)
 
 						// only trigger init if we're assigning a new discovery object to a symbol
-						if (ownKeys(item).some(key => DISCOVERY.has(key as any))) {
+						if (ownKeys(item).some(key => enums.DISCOVERY.has(key as any))) {
 							const discoverySymbol = (typeof options === 'symbol' ? options : options?.discovery) ?? $Tempo
 							if ((globalThis as any)[discoverySymbol] !== item) {
 								; (globalThis as Record<symbol, any>)[discoverySymbol] = item
@@ -515,7 +514,7 @@ export class Tempo {
 				}
 			})
 		} finally {
-			// per-item guards handle recursion
+			Tempo.#extending = false;
 		}
 
 		return this
@@ -523,11 +522,11 @@ export class Tempo {
 
 	/** Reset Tempo to its default, built-in registration state */
 	static init(options: Tempo.Options = {}): typeof Tempo {
-		if (Tempo.#lifecycle.initialising) return this;
-		Tempo.#lifecycle.initialising = true;
+		if (Tempo.#initializing) return this;
+		Tempo.#initializing = true;
 
 		try {
-			if (isEmpty(options)) {																// if no options supplied, reset all
+			if (isEmpty(options)) {																	// if no options supplied, reset all
 				Tempo.#global.parse = {
 					snippet: Object.assign({}, Snippet),
 					layout: Object.assign({}, Layout),
@@ -540,34 +539,30 @@ export class Tempo {
 
 				const { timeZone, calendar } = getResolvedOptions();
 				Tempo.#global.config = Object.assign({},
-					omit({ ...Default }, ...Object.keys(PARSE)), 			// use Default as base, omit parse-related
+					omit({ ...Default }, ...enums.PARSE.keys()),				// use Default as base, omit parse-related
 					{
 						calendar,
 						timeZone,
 						locale: Tempo.#locale(),
 						discovery: Symbol.keyFor($Tempo) as string,
-						formats: enumify(STATE.FORMAT, false),
+						formats: enums.FORMAT.extend({}, false),
 						scope: 'global'
 					}
-				) as unknown as Tempo.Config;
+				) as Tempo.Config;
 
-				Tempo.#usrCount = 0;																// reset user-key counter
-				for (const key of Object.keys(Token))								// purge user-allocated Tokens
-					if (key.startsWith('usr.'))												// only remove 'usr.' prefixed keys
+				Tempo.#usrCount = 0;																	// reset user-key counter
+				for (const key of Object.keys(Token))									// purge user-allocated Tokens
+					if (key.startsWith('usr.'))													// only remove 'usr.' prefixed keys
 						delete Token[key];
 
-				Tempo.#terms = [];																	// clear registered terms
-				Tempo.#termMap.clear();															// clear term lookup map
-				registryReset();																		// purge formats and numbers
-
-				this.extend(registerTerms);													// register built-in term plugins
+				this.extend(registerTerms);															// register built-in term plugins
 
 				const storeKey = Symbol.keyFor($Tempo) as string;
 				Tempo.#setConfig(Tempo.#global,
 					{ store: storeKey, discovery: storeKey, scope: 'global' },
-					Tempo.readStore(storeKey),												// allow for storage-values to overwrite
-					Tempo.#setDiscovery(Tempo.#global, $Plugins),			// persistent library extensions
-					Tempo.#setDiscovery(Tempo.#global, $Tempo),				// user Discovery (Configuration bootstrapping)
+					Tempo.readStore(storeKey),													// allow for storage-values to overwrite
+					Tempo.#setDiscovery(Tempo.#global, $Plugins),				// persistent library extensions
+					Tempo.#setDiscovery(Tempo.#global, $Tempo),					// user Discovery (Configuration bootstrapping)
 				)
 			}
 			else {
@@ -575,22 +570,15 @@ export class Tempo {
 				Tempo.#setConfig(Tempo.#global, Tempo.#setDiscovery(Tempo.#global, discovery), options);
 			}
 
-			if (options.plugins) this.extend(options.plugins);					// ensure init-plugins are processed before 'ready'
-
 			if (Context.type === CONTEXT.Browser || options.debug === true)
 				Tempo.#dbg.info(Tempo.config, 'Tempo:', Tempo.#global.config);
 
-			Tempo.#lifecycle.ready = true;
-
 		} finally {
-			Tempo.#lifecycle.initialising = false;
-			Tempo.#lifecycle.bootstrap = false;
+			Tempo.#initializing = false;
 		}
 
 		return this
 	}
-
-
 
 	/** release global config and reset library to defaults */
 	static [Symbol.dispose]() { Tempo.init() }
@@ -769,7 +757,7 @@ export class Tempo {
 
 	/** iterate over instance formats */
 	[Symbol.iterator]() {
-		return ownEntries(this.#fmt, true)[Symbol.iterator]();	// instance Iterator over tuple of FormatType[]
+		return ownEntries(this.#fmt, true)[Symbol.iterator]();									// instance Iterator over tuple of FormatType[]
 	}
 
 	get [Symbol.toStringTag]() {															// default string description
@@ -786,23 +774,13 @@ export class Tempo {
 	/** underlying Temporal ZonedDateTime */									#zdt!: Temporal.ZonedDateTime;
 	/** temporary anchor used during parsing */								#anchor?: Temporal.ZonedDateTime | undefined;
 	/** prebuilt formats, for convenience */									#fmt!: any;
-	/** mapping of terms to their resolved values */					#term!: any;
+	/** mapping of terms to their resolved values */						#term!: any;
 	/** instance values to complement static values */				#local = {
 		/** instance configuration */															config: {} as Tempo.Config,
 		/** instance parse rules (only populated if provided) */	parse: { result: [] as Tempo.Match[] } as Tempo.Parse
 	} as Tempo.State;
 
-	/** Static initialization block to sequence the bootstrap phase */
-	static {
-		registerType(Tempo, 'Tempo');														// register with runtime type system
-		// Define the reactive register hook
-		registerHook($Register, (plugin: Tempo.Plugin | Tempo.Plugin[]) => { if (!Tempo.isExtending) Tempo.extend(plugin) });
-
-		Tempo.init();																						// synchronously initialize the library
-	}
-
 	// #endregion Instance properties
-
 
 	// #region Constructor~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	/**
@@ -820,17 +798,14 @@ export class Tempo {
 		this.#fmt = this.#setDelegator('fmt');													// initialize the format-delegator (safe now that #local exists)
 		this.#term = this.#setDelegator('term');												// initialize the term-delegator
 
-		this.#anchor = this.#options.anchor;
-		this.#local.parse.lazy = this.#options.lazy ?? true;			// transfer the 'lazy' rule to the instance (default: lazy)
-
-		if (!this.#local.parse.lazy) this.#ensureParsed();			// attempt to interpret the DateTime arg (if not lazy)
-	}
-
-	/** Ensure the instance has been parsed (for deferred execution) */
-	#ensureParsed() {
-		if (this.#zdt) return;
+		// we now have all the info we need to instantiate a new Tempo
 		try {
-			this.#zdt = this.#parse(this.#tempo as Tempo.DateTime, this.#anchor);
+			this.#anchor = this.#options.anchor;
+			this.#zdt = this.#parse(this.#tempo as Tempo.DateTime, this.#anchor);		// attempt to interpret the DateTime arg
+
+			this.#local.parse.lazy = this.#options.lazy ?? true;			// transfer the 'lazy' rule to the instance (default: lazy)
+
+			// secure(this.#term);																		// secure the initial object with getters
 			secure(this.#local.config);
 			secure(this.#local.parse);
 		} catch (err) {
@@ -842,7 +817,6 @@ export class Tempo {
 	/** this will add a getter on the instance host objects (#term | #fmt) */
 	#setLazy(target: any, name: PropertyKey | undefined, define: (keyOnly: boolean) => any, isKeyOnly = false) {
 		if (isDefined(name) && isDefined(define)) {
-			if (Object.hasOwn(target, name)) return;
 			let guard = false;
 			let memo: any;
 			let set = false;
@@ -894,7 +868,6 @@ export class Tempo {
 	}
 
 	#discover(host: 'term' | 'fmt', target: any) {
-		if (!Tempo.#lifecycle.ready) return;
 		if (host === 'fmt') {
 			ownKeys(this.#local.config.formats).forEach(key => {
 				if (isString(key)) this.#setLazy(target, key, () => this.format(key as enums.Format));
@@ -935,11 +908,7 @@ export class Tempo {
 	get config() {
 		return getProxy(omit({ ...this.#local.config }, 'scope', 'value', 'anchor'));
 	}
-	/** Instance-specific parse rules (merged with global) */
-	get parse() {
-		this.#ensureParsed();
-		return this.#local.parse;
-	}
+	/** Instance-specific parse rules (merged with global) */	get parse() { return this.#local.parse }
 	/** Object containing results from all term plugins */		get term() { return getProxy(this.#term) }
 	/** Formatted results for all pre-defined format codes */	get fmt() { return this.#fmt }
 	/** units since epoch */																	get epoch() {
@@ -979,11 +948,7 @@ export class Tempo {
 	/** returns a new `Tempo` with specific offsets. */				set(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return this.#set(tempo as Tempo.Set, options); }
 	/** returns a clone of the current `Tempo` instance. */		clone() { return new this.#Tempo(this, this.config) }
 
-	/** returns the underlying Temporal.ZonedDateTime */
-	toDateTime() {
-		this.#ensureParsed();
-		return this.#zdt ?? this.#anchor ?? this.#now.toZonedDateTimeISO(this.#local.config.timeZone);
-	}
+	/** returns the underlying Temporal.ZonedDateTime */			toDateTime() { return this.#zdt ?? this.#anchor ?? this.#now.toZonedDateTimeISO(this.#local.config.timeZone) }
 	/** returns a Temporal.PlainDate representation */				toPlainDate() { return this.toDateTime().toPlainDate() }
 	/** returns a Temporal.PlainTime representation */				toPlainTime() { return this.toDateTime().toPlainTime() }
 	/** returns a Temporal.PlainDateTime representation */		toPlainDateTime() { return this.toDateTime().toPlainDateTime() }
@@ -1992,9 +1957,7 @@ export namespace Tempo {
 	export type Pair = [string, string]
 	export type Groups = Record<string, string>
 	export type Registry = Map<symbol, RegExp>
-
-	export interface PatternOptionArray<T> extends Array<PatternOption<T>> { }
-	export type PatternOption<T> = T | Record<string | symbol, T> | PatternOptionArray<T>
+	export type PatternOption<T> = T | Record<string | symbol, T> | PatternOption<T>[]
 
 	/** the Options object found in a config-module, or passed to a call to Tempo.init({}) or 'new Tempo({})' */
 	export interface BaseOptions {
@@ -2160,14 +2123,17 @@ namespace Internal {
 // #endregion Namespace
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Tempo.init();																								// initialize default global configuration
 
 type Fmt = {																								// used for the fmtTempo() shortcut
 	<F extends string>(fmt: F, tempo?: Tempo.DateTime, options?: Tempo.Options): enums.FormatType<F>;
 	<F extends string>(fmt: F, options: Tempo.Options): enums.FormatType<F>;
 }
 
+(globalThis as any)[$Register] = () => { if (!Tempo.isExtending) Tempo.init() };                                                  // reactive registration hook
+
 // shortcut functions to common Tempo properties / methods
 /** check valid Tempo */			export const isTempo = (tempo?: unknown) => isType<Tempo>(tempo, 'Tempo');
-/** current timestamp (ts) */	export const getStamp = ((tempo: Tempo.DateTime, options: Tempo.Options) => new Tempo(tempo, options).ts) as Tempo.Params<number | bigint>;
-/** create new Tempo */				export const getTempo = ((tempo: Tempo.DateTime, options: Tempo.Options) => new Tempo(tempo, options)) as Tempo.Params<Tempo>;
-/** format a Tempo */					export const fmtTempo = ((fmt: string, tempo: Tempo.DateTime, options: Tempo.Options) => new Tempo(tempo, options).format(fmt as any)) as Fmt;
+/** current timestamp (ts) */	export const getStamp = ((tempo, options) => new Tempo(tempo, options).ts) as Tempo.Params<number | bigint>;
+/** create new Tempo */				export const getTempo = ((tempo, options) => new Tempo(tempo, options)) as Tempo.Params<Tempo>;
+/** format a Tempo */					export const fmtTempo = ((fmt, tempo, options) => new Tempo(tempo, options).format(fmt)) as Fmt;
