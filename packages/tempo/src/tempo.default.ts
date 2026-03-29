@@ -1,7 +1,7 @@
 import { looseIndex } from '#library/object.library.js';
 import { secure } from '#library/utility.library.js';
 import { NUMBER } from '#tempo/tempo.enum.js';
-import type { Tempo } from '#tempo/tempo.class.js';
+import type { Options } from '#tempo/tempo.type.js';
 
 
 // BE VERY CAREFUL NOT TO BREAK THE REGEXP PATTERNS BELOW
@@ -160,4 +160,4 @@ export const Default = secure({
 	/** calendaring system */																	calendar: 'iso8601',
 	/** locales that prefer month-day order */								mdyLocales: ['en-US', 'en-AS'],	/** @link https://en.wikipedia.org/wiki/Date_format_by_country */
 	/** layouts that need to swap parse-order */							mdyLayouts: [['dayMonthYear', 'monthDayYear']],
-} as Tempo.Options)
+} as Options)

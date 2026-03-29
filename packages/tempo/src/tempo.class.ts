@@ -817,6 +817,7 @@ export class Tempo {
 	/** this will add a getter on the instance host objects (#term | #fmt) */
 	#setLazy(target: any, name: PropertyKey | undefined, define: (keyOnly: boolean) => any, isKeyOnly = false) {
 		if (isDefined(name) && isDefined(define)) {
+			if (Object.hasOwn(target, name)) return;
 			let guard = false;
 			let memo: any;
 			let set = false;

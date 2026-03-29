@@ -1,6 +1,6 @@
 /**
  * This file verifies native Temporal API support.
- * Tempo requires an environment with native Temporal support or a user-provided polyfill.
+ * Any library that depends on the Temporal API should ensure this is loaded first.
  */
 
 // @ts-ignore
@@ -9,8 +9,8 @@ if (!globalThis.Temporal) {
 		.then(({ Temporal }) => { (globalThis as any).Temporal = Temporal; })
 		.catch(() => {
 			console.warn(`
-[Tempo] Temporal API not found.
-This library requires the ECMAScript Temporal API. Please ensure your environment 
+[Library] Temporal API not found.
+This library requires the ECMAScript Temporal API. Please ensure your environment
 supports it natively (Node.js 20+, modern browsers) or provide your own polyfill.
 
 To add a polyfill to your project:

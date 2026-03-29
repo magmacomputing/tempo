@@ -1,4 +1,5 @@
 import { Tempo } from '#tempo';
+import type { Options } from '#tempo/tempo.type.js';
 
 describe('Tempo storage functionality', () => {
 	const customKey = 'my-custom-key';
@@ -15,7 +16,7 @@ describe('Tempo storage functionality', () => {
 	})
 
 	it('should write to and read from a custom storage key', () => {
-		const config: Tempo.Options = { timeZone: 'Australia/Perth', calendar: 'iso8601' };
+		const config: Options = { timeZone: 'Australia/Perth', calendar: 'iso8601' };
 		Tempo.writeStore(config, customKey);
 
 		expect(process.env[customKey]).toBeDefined();
@@ -25,7 +26,7 @@ describe('Tempo storage functionality', () => {
 	})
 
 	it('should use the "store" option in Tempo.from() to load config from custom key', () => {
-		const config: Tempo.Options = { timeZone: 'Europe/London' };
+		const config: Options = { timeZone: 'Europe/London' };
 		Tempo.writeStore(config, customKey);
 
 		const t = Tempo.from({ store: customKey });
@@ -35,7 +36,7 @@ describe('Tempo storage functionality', () => {
 	})
 
 	it('should load storage key during Tempo.init()', () => {
-		const config: Tempo.Options = { timeZone: 'Asia/Tokyo' };
+		const config: Options = { timeZone: 'Asia/Tokyo' };
 		Tempo.writeStore(config, testKey);
 
 		Tempo.init({ store: testKey, discovery: testDiscovery }); // Reset and load from testKey

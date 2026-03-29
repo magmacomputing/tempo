@@ -1,8 +1,9 @@
-
 /**
  * Temporal Cookbook  
  * (using 'Temporal' namespace object)
 */
+
+import '#library/temporal.polyfill.js';											// ensure Temporal is available
 
 /** return the current Temporal.Instant */
 export function now() {

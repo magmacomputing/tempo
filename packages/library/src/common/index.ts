@@ -21,5 +21,6 @@ export * from '#library/storage.library.js';
 export * from '#library/string.library.js';
 export * from '#library/symbol.library.js';
 export * from '#library/type.library.js';
+export * from '#library/temporal.polyfill.js';
 export * from '#library/temporal.library.js';
 export * from '#library/utility.library.js';

@@ -4,6 +4,7 @@ import { isObject, isFunction, isDefined, isEmpty } from '#library/type.library.
 import { DURATIONS } from '#tempo/tempo.enum.js';
 import { definePlugin } from '#tempo/plugins/tempo.plugin.js';
 import type { Tempo } from '#tempo/tempo.class.js';
+import type { DateTime, Options } from '#tempo/tempo.type.js';
 
 declare module '#tempo/tempo.class.js' {
 	namespace Tempo {
@@ -11,8 +12,8 @@ declare module '#tempo/tempo.class.js' {
 		/** ticker stop condition options */										type TickerOptions = Partial<Temporal.DurationLike> & {
 		interval?: TickerInterval;
 		limit?: number;
-		until?: Tempo.DateTime | Tempo.Options;
-		seed?: Tempo.DateTime | Tempo.Options;
+		until?: DateTime | Options;
+		seed?: DateTime | Options;
 	}
 
 		/** callback function for Tempo.ticker() */							type TickerCallback = (t: Tempo, stop: () => void) => void;
@@ -72,9 +73,9 @@ export const TickerPlugin = definePlugin((_options, TempoClass, _factory) => {
 		const isForward = elapse.sign >= 0;
 		const isInstant = elapse.blank;
 
-		const until = stopAt ? new TempoClass(stopAt as Tempo.DateTime) : undefined;
+		const until = stopAt ? new TempoClass(stopAt as DateTime) : undefined;
 		const ms = () => now().epochMilliseconds;
-		let current = new TempoClass(startAt as Tempo.DateTime);
+		let current = new TempoClass(startAt as DateTime);
 
 		// Helper to check if we should stop
 		const shouldStop = (ticks: number) => {

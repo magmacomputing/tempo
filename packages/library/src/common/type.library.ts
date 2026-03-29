@@ -334,17 +334,19 @@ export type UnionToTuple<T, Acc extends any[] = [], Last = LastInUnion<T>> =
 	UnionToTuple<Exclude<T, Last>, [Last, ...Acc]>
 
 /** Deep Readonly object for type safety */
-export type Secure<T> = T extends (infer R)[]
-	? SecureArray<R>
-	: T extends Function
+export type Secure<T, Acc extends any[] = []> =
+	Acc['length'] extends 5 ? T
+	: T extends Primitive | Function | Date | RegExp | Error | Map<any, any> | Set<any> | Promise<any>
 	? T
+	: T extends (infer R)[]
+	? SecureArray<R, [...Acc, any]>
 	: T extends object
-	? SecureObject<T>
+	? SecureObject<T, [...Acc, any]>
 	: T
 
-export interface SecureArray<T> extends ReadonlyArray<Secure<T>> { }
-export type SecureObject<T> = {
-	readonly [K in keyof T]: Secure<T[K]>;
+export interface SecureArray<T, Acc extends any[]> extends ReadonlyArray<Secure<T, Acc>> { }
+export type SecureObject<T, Acc extends any[]> = {
+	readonly [K in keyof T]: Secure<T[K], Acc>;
 }
 
 type LooseString = (string & {})

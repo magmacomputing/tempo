@@ -1,4 +1,5 @@
-import { Tempo } from '#tempo/tempo.class.js'
+import { Tempo } from '#tempo/tempo.class.js';
+import type { Plugin } from '#tempo/tempo.type.js';
 
 describe('Tempo Reactive Registration', () => {
 	test('late-imported plugin is automatically registered', async () => {
@@ -10,7 +11,7 @@ describe('Tempo Reactive Registration', () => {
 
 		// Mock a late-registering plugin
 		const $LateDiscovery = Symbol('LateDiscovery')
-		const myLatePlugin: Tempo.Plugin = (options, TempoClass) => {
+		const myLatePlugin: Plugin = (options, TempoClass) => {
 			(TempoClass as any).lateMethod = () => 'it works!'
 		}
 

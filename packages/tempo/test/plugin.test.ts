@@ -1,9 +1,10 @@
 import { Tempo } from '#tempo/tempo.class.js';
+import type { Plugin } from '#tempo/tempo.type.js';
 
 describe('Tempo Plugin System', () => {
 
 	test('should extend Tempo with a static method', () => {
-		const staticPlugin: Tempo.Plugin = (_options, TempoClass) => {
+		const staticPlugin: Plugin = (_options, TempoClass) => {
 			(TempoClass as any).staticMethod = () => 'static';
 		};
 
@@ -12,7 +13,7 @@ describe('Tempo Plugin System', () => {
 	});
 
 	test('should extend Tempo with an instance method', () => {
-		const instancePlugin: Tempo.Plugin = (_options, TempoClass) => {
+		const instancePlugin: Plugin = (_options, TempoClass) => {
 			(TempoClass.prototype as any).instanceMethod = function() {
 				return 'instance';
 			};
@@ -25,7 +26,7 @@ describe('Tempo Plugin System', () => {
 
 	test('should pass options to the plugin', () => {
 		let receivedOptions: any;
-		const optionsPlugin: Tempo.Plugin = (options) => {
+		const optionsPlugin: Plugin = (options) => {
 			receivedOptions = options;
 		};
 
@@ -35,7 +36,7 @@ describe('Tempo Plugin System', () => {
 
 	test('should not install the same plugin twice', () => {
 		let installCount = 0;
-		const singlePlugin: Tempo.Plugin = () => {
+		const singlePlugin: Plugin = () => {
 			installCount++;
 		};
 
@@ -46,7 +47,7 @@ describe('Tempo Plugin System', () => {
 
 	test('should provide a factory function to the plugin', () => {
 		let factoryResult: any;
-		const factoryPlugin: Tempo.Plugin = (_opts, _Class, factory) => {
+		const factoryPlugin: Plugin = (_opts, _Class, factory) => {
 			factoryResult = factory('2024-01-01');
 		};
 
@@ -57,7 +58,7 @@ describe('Tempo Plugin System', () => {
 
 	test('should auto-load plugins from init options', () => {
 		let loaded = false;
-		const initPlugin: Tempo.Plugin = () => { loaded = true; };
+		const initPlugin: Plugin = () => { loaded = true; };
 
 		Tempo.init({ plugins: [initPlugin] });
 		expect(loaded).toBe(true);
@@ -66,7 +67,7 @@ describe('Tempo Plugin System', () => {
 	test('should auto-load plugins from global discovery', () => {
 		const testDiscovery = '$TempoTestDiscovery';
 		let loaded = false;
-		const discoveryPlugin: Tempo.Plugin = () => { loaded = true; };
+		const discoveryPlugin: Plugin = () => { loaded = true; };
 
 		(globalThis as any)[Symbol.for(testDiscovery)] = {
 			plugins: [discoveryPlugin]
@@ -84,7 +85,7 @@ describe('Tempo Plugin System', () => {
 		}).toThrow();
 
 		// 2. Try to add new (should succeed)
-		const newPlugin: Tempo.Plugin = (_opts, _Class) => {
+		const newPlugin: Plugin = (_opts, _Class) => {
 			(_Class as any).freshMethod = () => 'fresh';
 		};
 		Tempo.extend(newPlugin);

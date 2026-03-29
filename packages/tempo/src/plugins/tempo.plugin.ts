@@ -1,6 +1,7 @@
 import { sortKey } from '#library/array.library.js';
 import { isDefined } from '#library/type.library.js';
 import type { Tempo } from '#tempo/tempo.class.js';
+import type { Plugin, TermPlugin } from '#tempo/tempo.type.js';
 
 /** key to use for Global Discovery of Tempo configuration */
 export const $Tempo = Symbol.for('$Tempo');
@@ -12,7 +13,7 @@ export const $Plugins = Symbol.for('$TempoPlugin');
 export const $Register = Symbol.for('$TempoRegister');
 
 /** helper to self-register a Plugin into the Global Discovery registry */
-export function registerPlugin(plugin: Tempo.Plugin) {
+export function registerPlugin(plugin: Plugin) {
 	const db = (globalThis as any)[$Plugins] ??= {};
 	db.plugins ??= [];
 	if (!db.plugins.includes(plugin)) db.plugins.push(plugin);
@@ -20,7 +21,7 @@ export function registerPlugin(plugin: Tempo.Plugin) {
 }
 
 /** helper to self-register a TermPlugin into the Global Discovery registry */
-export function registerTerm(term: Tempo.TermPlugin) {
+export function registerTerm(term: TermPlugin) {
 	const db = (globalThis as any)[$Plugins] ??= {};
 	db.terms ??= [];
 	if (!db.terms.some((t: any) => t.key === term.key)) db.terms.push(term);
@@ -32,7 +33,7 @@ export function registerTerm(term: Tempo.TermPlugin) {
  * Factory to create and self-register a Tempo Plugin.
  * Registration occurs immediately via side-effect.
  */
-export const definePlugin = <T extends Tempo.Plugin>(plugin: T): T => {
+export const definePlugin = <T extends Plugin>(plugin: T): T => {
 	registerPlugin(plugin);
 	return plugin;
 }
@@ -42,7 +43,7 @@ export const definePlugin = <T extends Tempo.Plugin>(plugin: T): T => {
  * Factory to create and self-register a Tempo TermPlugin.
  * Registration occurs immediately via side-effect.
  */
-export const defineTerm = <T extends Tempo.TermPlugin>(term: T): T => {
+export const defineTerm = <T extends TermPlugin>(term: T): T => {
 	registerTerm(term);
 	return term;
 }
