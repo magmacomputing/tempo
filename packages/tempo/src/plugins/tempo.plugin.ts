@@ -1,16 +1,8 @@
 import { sortKey } from '#library/array.library.js';
 import { isDefined } from '#library/type.library.js';
+import { $Tempo, $Plugins, $Register } from '#library/symbol.library.js';
 import type { Tempo } from '#tempo/tempo.class.js';
 import type { Plugin, TermPlugin } from '#tempo/tempo.type.js';
-
-/** key to use for Global Discovery of Tempo configuration */
-export const $Tempo = Symbol.for('$Tempo');
-
-/** key to use for Global Discovery of Tempo Plugins */
-export const $Plugins = Symbol.for('$TempoPlugin');
-
-/** key to use for Reactive Plugin Registration */
-export const $Register = Symbol.for('$TempoRegister');
 
 /** helper to self-register a Plugin into the Global Discovery registry */
 export function registerPlugin(plugin: Plugin) {

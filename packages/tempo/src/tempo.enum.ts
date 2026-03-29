@@ -29,8 +29,8 @@ export type COMPASS = ValueOf<typeof COMPASS>
  */
 
 // #region Private Mutable State Registry ~~~~~~~~~~~~~~~~~~
-/** @internal Centralized mutable state for all extendable registries */
-export const STATE = {
+/** @internal LIVE state for all registries */
+const DEFAULTS = {
 	NUMBER: {
 		zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10
 	},
@@ -81,7 +81,7 @@ export const STATE = {
 		/** useful for standard timestamps */										weekTime: '{www}, {yyyy}-{mmm}-{dd} {hh}:{mi}:{ss}',
 		/** useful for standard full timestamps */							weekStamp: '{www}, {yyyy}-{mmm}-{dd} {hh}:{mi}:{ss}.{ff}',
 		/** useful for readable month and day */								dayMonth: '{dd}-{mmm}',
-		/** useful for Date */																	dayDate: '{dd}-{mmm}-{yyyy}',
+		/** useful for readable year, month and day */					dayDate: '{dd}-{mmm}-{yyyy}',
 		/** display with Time */																dayTime: '{dd}-{mmm}-{yyyy} {hh}:{mi}:{ss}',
 		/** useful for stamping logs */													logStamp: '{yyyy}{mm}{dd}T{hhmiss}.{ff}',
 		/** useful for sorting display-strings */								sortTime: '{yyyy}-{mm}-{dd} {hh}:{mi}:{ss}',
@@ -95,6 +95,16 @@ export const STATE = {
 		/** Tempo(31-Dec-9999.23:59:59).ns */										get maxTempo() { return Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds },
 		/** Tempo(01-Jan-1000.00:00:00).ns */										get minTempo() { return Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds },
 	},// as Record<string, bigint>,
+} as const;
+
+/** @internal Centralized mutable state for all extendable registries */
+export const STATE = {
+	NUMBER: { ...DEFAULTS.NUMBER },
+	DURATION: { ...DEFAULTS.DURATION },
+	TIMEZONE: { ...DEFAULTS.TIMEZONE },
+	DURATIONS: { ...DEFAULTS.DURATIONS },
+	FORMAT: { ...DEFAULTS.FORMAT },
+	LIMIT: { ...DEFAULTS.LIMIT },
 } as const;
 
 (STATE.NUMBER as any)[$Extensible] = true;
@@ -231,4 +241,27 @@ export function registryUpdate(name: keyof typeof STATE, data: Record<string, an
 		});
 		clearCache(target);
 	}
+}
+
+/** Reset all extendable registries to their original built-in defaults */
+export function registryReset() {
+	Object.keys(STATE).forEach(name => {
+		const registry = REGISTRIES[name];
+		const target = registry?.[$Target] as Property<any>;
+		const state = STATE[name as keyof typeof STATE] as Property<any>;
+		const defaults = DEFAULTS[name as keyof typeof DEFAULTS] as Property<any>;
+
+		if (target) {
+			// 1. Purge all own-properties from state and target
+			[state, target].forEach(obj => Object.keys(obj).forEach(key => delete obj[key]));
+
+			// 2. Restore defaults
+			Object.entries(defaults).forEach(([key, val]) => {
+				state[key] = val;
+				target[key] = val;
+			});
+
+			clearCache(target);
+		}
+	});
 }

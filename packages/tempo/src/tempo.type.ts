@@ -27,7 +27,8 @@ export type Logic = string | number | Function
 export type Pair = [string, string]
 export type Groups = Record<string, string>
 export type Registry = Map<symbol, RegExp>
-export type PatternOption<T> = T | Record<string | symbol, T> | PatternOption<T>[]
+export interface PatternOptionArray<T> extends Array<PatternOption<T>> {}
+export type PatternOption<T> = T | Record<string | symbol, T> | PatternOptionArray<T>
 
 // #endregion
 

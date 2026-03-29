@@ -1,5 +1,5 @@
 import { ownValues } from '#library/reflection.library.js';
-import { isDefined, isReference, isExtensible } from '#library/type.library.js';
+import { isDefined, isPrimitive } from '#library/type.library.js';
 import type { Secure, ValueOf } from '#library/type.library.js';
 
 /** General utility functions */
@@ -63,11 +63,14 @@ export const getContext = (): Context => {
 	return { global, type: CONTEXT.Unknown };
 }
 
-/** deep-freeze an Array | Object to make it immutable */
-export function secure<const T>(obj: T) {
-	if (isReference(obj) && !isExtensible(obj))
-		ownValues(obj as any)																		// retrieve the properties on obj
-			.forEach(val => Object.isFrozen(val) || secure(val));	// secure each value, if not already Frozen
+/** deep-freeze an Array | Object to make it immutable (with recursion guard) */
+export function secure<const T extends object>(obj: T, seen = new WeakSet<object>()) {
+	if (isPrimitive(obj) || Object.isFrozen(obj) || seen.has(obj))
+		return obj as Secure<T>;
 
-	return (isExtensible(obj) ? obj : Object.freeze(obj)) as Secure<T>;
+	seen.add(obj);
+
+	ownValues(obj as any).forEach(val => secure(val, seen));
+
+	return Object.freeze(obj) as Secure<T>;
 }

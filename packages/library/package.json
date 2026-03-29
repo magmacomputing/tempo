@@ -25,6 +25,10 @@
     "./*": {
       "types": "./dist/*.d.ts",
       "import": "./dist/*"
+    },
+    "./*.js": {
+      "development": "./src/common/*.ts",
+      "default": "./dist/common/*.js"
     }
   },
   "files": [
@@ -36,17 +40,17 @@
       "development": "./src/common/index.js",
       "default": "./dist/common/index.js"
     },
-    "#library/*": {
-      "development": "./src/common/*",
-      "default": "./dist/common/*"
+    "#library/*.js": {
+      "development": "./src/common/*.ts",
+      "default": "./dist/common/*.js"
     },
-    "#browser/*": {
-      "development": "./src/browser/*",
-      "default": "./dist/browser/*"
+    "#browser/*.js": {
+      "development": "./src/browser/*.ts",
+      "default": "./dist/browser/*.js"
     },
-    "#server/*": {
-      "development": "./src/server/*",
-      "default": "./dist/server/*"
+    "#server/*.js": {
+      "development": "./src/server/*.ts",
+      "default": "./dist/server/*.js"
     },
     "#tempo": {
       "development": "../tempo/src/index.js",

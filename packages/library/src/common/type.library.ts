@@ -3,6 +3,8 @@ import { $Extensible, $Target } from '#library/symbol.library.js';
 /** the primitive type reported by toStringTag() */
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
 
+const registry: Instance[] = [];															// global types for getType
+
 /** 
  * return an object's type as a ProperCase string.  
  * if instance, return Class name
@@ -16,7 +18,7 @@ export const getType = (obj?: any, ...instances: Instance[]) => {
 				? 'ArrayLike'																				// special case Object: ArrayLike
 				: obj.constructor?.name ?? 'Object'									// some Objects do not have a constructor method
 
-			return (instances
+			return ([...instances, ...registry]
 				.find(inst => obj instanceof inst.class)?.type			// allow for 'real' name of Instance, after minification
 				?? name) as Type;																		// return Object name
 
@@ -160,7 +162,18 @@ export type Primitives = toName<Primitive>
 
 /** Generic constructor type */
 export type Constructor<T = any> = new (...args: any[]) => T;
-type Instance = { type: string, class: Function }						// allow for Class instance re-naming (to avoid minification mangling issues)
+export type Instance = { type: string, class: Function }		// allow for Class instance re-naming (to avoid minification mangling issues)
+
+/** register a class with the runtime type system */
+export const registerType = (cls: Function, type?: string) => {
+	const tag = (cls.prototype as any)?.[Symbol.toStringTag];	// toStringTag is the source-of-truth, if present
+	const name = tag ?? type ?? cls.name;
+
+	if (name && !['Object', 'Function', ''].includes(name)) {
+		if (!registry.some(inst => inst.class === cls))
+			registry.push({ class: cls, type: name });
+	}
+}
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 export type Temporals = typeof Temporal extends { Now: any } ? Exclude<keyof typeof Temporal, 'Now'> : never;
@@ -334,20 +347,16 @@ export type UnionToTuple<T, Acc extends any[] = [], Last = LastInUnion<T>> =
 	UnionToTuple<Exclude<T, Last>, [Last, ...Acc]>
 
 /** Deep Readonly object for type safety */
-export type Secure<T, Acc extends any[] = []> =
-	Acc['length'] extends 5 ? T
-	: T extends Primitive | Function | Date | RegExp | Error | Map<any, any> | Set<any> | Promise<any>
+export type Secure<T> = T extends Primitive | Function | Date | RegExp | Error | Map<any, any> | Set<any> | Promise<any>
 	? T
 	: T extends (infer R)[]
-	? SecureArray<R, [...Acc, any]>
+	? SecureArray<R>
 	: T extends object
-	? SecureObject<T, [...Acc, any]>
+	? SecureObject<T>
 	: T
 
-export interface SecureArray<T, Acc extends any[]> extends ReadonlyArray<Secure<T, Acc>> { }
-export type SecureObject<T, Acc extends any[]> = {
-	readonly [K in keyof T]: Secure<T[K], Acc>;
-}
+export interface SecureArray<T> extends ReadonlyArray<Secure<T>> { }
+export type SecureObject<T> = Readonly<T>;
 
 type LooseString = (string & {})
 type LooseSymbol = (symbol & {})
