@@ -40,7 +40,7 @@ export type Options = Partial<Internal.BaseOptions> & Record<string, any>;
 /** define a new term plugin */
 export type TermPlugin = {
 	key: string; scope?: string;
-	description: string;
+	description?: string;
 	define: (this: Tempo, keyOnly?: boolean) => any
 }
 

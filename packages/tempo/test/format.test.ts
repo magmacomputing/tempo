@@ -25,11 +25,11 @@ describe('Tempo.format() refinements', () => {
     expect(typeof t2.format('{dd}')).toBe('string');
   })
 
-  it('should handle wy for ISO year', () => {
+  it('should handle yw for ISO year', () => {
     const t3 = new Tempo('2024-12-30'); // Monday, Week 1 of 2025
     expect(t3.yw).toBe(2025);
-    expect(t3.format('{wy}{ww}')).toBe(202501);
-    expect(typeof t3.format('{wy}{ww}')).toBe('number');
+    expect(t3.format('{yw}{ww}')).toBe(202501);
+    expect(typeof t3.format('{yw}{ww}')).toBe('number');
   })
 
   describe('auto-meridiem', () => {

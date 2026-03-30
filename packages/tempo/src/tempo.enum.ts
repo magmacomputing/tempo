@@ -4,6 +4,7 @@ import { getProxy } from '#library/proxy.library.js';
 import { clearCache } from '#library/function.library.js';
 import { isUndefined } from '#library/type.library.js';
 import type { OwnOf, KeyOf, ValueOf, LooseUnion, Mutable, Property } from '#library/type.library.js';
+import { ownKeys } from '@magma/library';
 
 /** calendar seasons */
 export const SEASON = enumify({
@@ -243,26 +244,35 @@ export function registryUpdate(name: keyof typeof STATE, data: Record<string, an
 				target[key] = val;
 			}
 		});
+
 		clearCache(target);
 	}
 }
 
 /** Reset all extendable registries to their original built-in defaults */
 export function registryReset() {
-	Object.keys(STATE).forEach(name => {
+	ownKeys(STATE).forEach(name => {
 		const registry = REGISTRIES[name];
 		const target = registry?.[$Target] as Property<any>;
 		const state = STATE[name as keyof typeof STATE] as Property<any>;
 		const defaults = DEFAULTS[name as keyof typeof DEFAULTS] as Property<any>;
 
 		if (target) {
-			// 1. Purge all own-properties from state and target
-			[state, target].forEach(obj => Object.keys(obj).forEach(key => delete obj[key]));
+			// 1. Purge all own-properties from state and target (if configurable)
+			[state, target].forEach(obj => {
+				Object.keys(obj).forEach(key => {
+					const desc = Object.getOwnPropertyDescriptor(obj, key);
+					if (desc?.configurable) delete obj[key];
+				});
+			});
 
 			// 2. Restore defaults
 			Object.entries(defaults).forEach(([key, val]) => {
-				state[key] = val;
-				target[key] = val;
+				[state, target].forEach(obj => {
+					const desc = Object.getOwnPropertyDescriptor(obj, key);
+					if (!desc || desc.writable !== false || desc.configurable)
+						obj[key] = val;
+				});
 			});
 
 			clearCache(target);

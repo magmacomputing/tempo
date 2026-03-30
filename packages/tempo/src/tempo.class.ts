@@ -341,7 +341,7 @@ export class Tempo {
 
 					case 'mode':
 						shape.parse.mode = optVal as any;
-						shape.parse.lazy = (optVal === 'defer');				// if defer, set lazy true. if strict, set lazy false. if auto, constructor will decide.
+						shape.parse.lazy = (optVal === Tempo.MODE.Defer);// if defer, set lazy true. if strict, set lazy false. if auto, constructor will decide.
 						break;
 
 					case 'anchor':
@@ -445,7 +445,7 @@ export class Tempo {
 		Tempo.#buildGuard();																		// build the high-performance 'Master Guard'
 	}
 
-	/** build the static Master Guard from all discovery registries */
+	/** Access to registries */
 	static #buildGuard() {
 		const terms = Tempo.#terms.map(t => [t.key ?? '', t.scope ?? '']).flat().filter(isString);
 		const words = [...terms, ...Object.keys(Event), ...Object.keys(Period), ...Object.keys(enums.NUMBER)].join('|');
@@ -462,7 +462,7 @@ export class Tempo {
 	 * @returns The `Tempo` class for chaining.
 	 */
 	static extend(plugin: Tempo.Plugin | Tempo.Plugin[], options?: any): typeof Tempo
-	static extend(term: Tempo.TermPlugin | Tempo.TermPlugin[]): typeof Tempo
+	static extend(term: Tempo.TermPlugin | Tempo.TermPlugin[], discovery?: symbol): typeof Tempo
 	static extend(config: Internal.Discovery | Internal.Discovery[], discovery?: symbol): typeof Tempo
 	static extend(arg: any, options?: any) {
 		const items = asArray(arg).flat(1);
@@ -510,7 +510,8 @@ export class Tempo {
 			// per-item guards handle recursion
 		}
 
-		return this
+		Tempo.#buildGuard();																		// rebuild the Master Guard to include new terms/events
+		return this;
 	}
 
 	/** Reset Tempo to its default, built-in registration state */
@@ -627,7 +628,7 @@ export class Tempo {
 			if (source.startsWith('^') && source.endsWith('$'))
 				source = source.substring(1, source.length - 1);		// remove the leading/trailing anchors (^ $)
 
-			return source.replace(Match.braces, (match, name) => {// iterate over "{}" pairs in the source string
+			return source.replaceAll(new RegExp(Match.braces), (match, name) => {// iterate over "{}" pairs in the source string
 				const token = Tempo.getSymbol(name);								// get the symbol for this {name}
 				const customs = snippet?.[token as keyof Snippet]?.source ?? snippet?.[name as keyof Snippet]?.source;
 				const globals = Tempo.#global.parse.snippet[token as keyof Snippet]?.source ?? Tempo.#global.parse.snippet[name as keyof Snippet]?.source;
@@ -706,7 +707,7 @@ export class Tempo {
 
 	/** static Tempo.formats (registry) */
 	static get formats() {
-		return secure(Tempo.config.formats);
+		return Tempo.config.formats;
 	}
 
 	/** static Tempo properties getter */
@@ -717,7 +718,7 @@ export class Tempo {
 
 	/** Tempo initial default settings */
 	static get default() {
-		return secure({ ...Default, scope: 'default', timeZone: TimeZone });
+		return Object.freeze({ ...Default, scope: 'default', timeZone: TimeZone });
 	}
 
 	/** 
@@ -790,25 +791,25 @@ export class Tempo {
 	constructor(options?: Tempo.Options);
 	constructor(tempo: Tempo.DateTime, options?: Tempo.Options);
 	constructor(tempo?: Tempo.DateTime | Tempo.Options, options: Tempo.Options = {}) {
-		this.#now = instant();																						// stash current Instant
-		[this.#tempo, this.#options] = this.#swap(tempo, options);			// swap arguments around
-		this.#setLocal(this.#options);																	// parse local options
+		this.#now = instant();																	// stash current Instant
+		[this.#tempo, this.#options] = this.#swap(tempo, options);// swap arguments around
+		this.#setLocal(this.#options);													// parse local options
 
 		const { mode } = this.#local.parse;
 		const input = String(this.#tempo ?? '');
 
 		// 🏛️ Initialization Strategy ('auto' | 'strict' | 'defer')
-		if (mode === 'defer') this.#local.parse.lazy = true;
-		else if (mode === 'strict') this.#local.parse.lazy = false;
+		if (mode === Tempo.MODE.Defer) this.#local.parse.lazy = true;
+		else if (mode === Tempo.MODE.Strict) this.#local.parse.lazy = false;
 		else if (!isEmpty(input) && Tempo.#guard.test(trimAll(input))) {
-			this.#local.parse.lazy = true;											// auto-switch to lazy-mode for valid strings
+			this.#local.parse.lazy = true;												// auto-switch to lazy-mode for valid strings
 		}
 
-		this.#fmt = this.#setDelegator('fmt');													// initialize the format-delegator
-		this.#term = this.#setDelegator('term');												// initialize the term-delegator
+		this.#fmt = this.#setDelegator('fmt');									// initialize the format-delegator
+		this.#term = this.#setDelegator('term');								// initialize the term-delegator
 		this.#anchor = this.#options.anchor;
 
-		if (!this.#local.parse.lazy) this.#ensureParsed();							// attempt to interpret immediately (if not lazy)
+		if (!this.#local.parse.lazy) this.#ensureParsed();			// attempt to interpret immediately (if not lazy)
 	}
 
 	/** Ensure the instance has been parsed (for deferred execution) */
@@ -850,7 +851,10 @@ export class Tempo {
 				finally { guard = false; }
 			}
 
-			Object.defineProperty(target, name, { get, enumerable: true, configurable: true });
+			// shadowing chain
+			const shadow = Object.create(Object.getPrototypeOf(target));
+			Object.defineProperty(shadow, name, { get, enumerable: true, configurable: true });
+			Object.setPrototypeOf(target, shadow);
 		}
 	}
 
@@ -910,9 +914,9 @@ export class Tempo {
 	/** Fractional seconds (e.g., 0.123456789) */							get ff() { return +(`0.${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`) }
 	/** IANA Time Zone ID (e.g., 'Australia/Sydney') */				get tz() { return this.toDateTime().timeZoneId }
 	/** Unix timestamp (defaults to milliseconds) */					get ts() { return this.epoch[this.#local.config.timeStamp] }
-	/** Short month name (e.g., 'Jan') */											get mmm() { return Tempo.MONTH.keyOf(this.#zdt.month as Tempo.Month) }
-	/** Full month name (e.g., 'January') */									get mon() { return Tempo.MONTHS.keyOf(this.#zdt.month as Tempo.Month) }
-	/** Short weekday name (e.g., 'Mon') */										get www() { return Tempo.WEEKDAY.keyOf(this.#zdt.dayOfWeek as Tempo.Weekday) }
+	/** Short month name (e.g., 'Jan') */											get mmm() { this.#ensureParsed(); return Tempo.MONTH.keyOf(this.#zdt.month as Tempo.Month) }
+	/** Full month name (e.g., 'January') */									get mon() { this.#ensureParsed(); return Tempo.MONTHS.keyOf(this.#zdt.month as Tempo.Month) }
+	/** Short weekday name (e.g., 'Mon') */										get www() { this.#ensureParsed(); return Tempo.WEEKDAY.keyOf(this.#zdt.dayOfWeek as Tempo.Weekday) }
 	/** Full weekday name (e.g., 'Monday') */									get wkd() { return Tempo.WEEKDAYS.keyOf(this.toDateTime().dayOfWeek as Tempo.Weekday) }
 	/** ISO weekday number: Mon=1, Sun=7 */										get dow() { return this.toDateTime().dayOfWeek as Tempo.Weekday }
 	/** Nanoseconds since Unix epoch (BigInt) */							get nano() { return this.toDateTime().epochNanoseconds }
@@ -951,16 +955,16 @@ export class Tempo {
 	/** time duration until (with unit, returns number) */		until(until: Tempo.Until, opts?: Tempo.Options): number;
 	/** time duration until another date-time (with unit) */	until(dateTimeOrOpts: Tempo.DateTime | Tempo.Options, until: Tempo.Until): number;
 	/** time duration until (returns Duration) */							until(dateTimeOrOpts?: Tempo.DateTime | Tempo.Options, opts?: Tempo.Options): Tempo.Duration;
-	/** time duration until another date-time */							until(optsOrDate?: Tempo.DateTime | Tempo.Until | Tempo.Options, optsOrUntil?: Tempo.Options | Tempo.Until): number | Tempo.Duration { return this.#until(optsOrDate, optsOrUntil) }
+	/** time duration until another date-time */							until(optsOrDate?: Tempo.DateTime | Tempo.Until | Tempo.Options, optsOrUntil?: Tempo.Options | Tempo.Until): number | Tempo.Duration { this.#ensureParsed(); return this.#until(optsOrDate, optsOrUntil) }
 
 	/** time elapsed since (with unit) */											since(until: Tempo.Until, opts?: Tempo.Options): string;
 	/** time elapsed since another date-time (with unit) */		since(dateTimeOrOpts: Tempo.DateTime | Tempo.Options, until: Tempo.Until): string;
 	/** time elapsed since another date-time (without unit) */since(dateTimeOrOpts?: Tempo.DateTime | Tempo.Options, opts?: Tempo.Options): string;
-	/** time elapsed since another date-time */								since(optsOrDate?: any, optsOrUntil?: any): string { return this.#since(optsOrDate, optsOrUntil) }
+	/** time elapsed since another date-time */								since(optsOrDate?: any, optsOrUntil?: any): string { this.#ensureParsed(); return this.#since(optsOrDate, optsOrUntil) }
 
-	/** applies a format to the instance. See `doc/tempo.md`. */	format<K extends enums.Format>(fmt: K) { return this.#format(fmt) }
-	/** returns a new `Tempo` with specific duration added. */add(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return this.#add(tempo as Tempo.Add, options); }
-	/** returns a new `Tempo` with specific offsets. */				set(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return this.#set(tempo as Tempo.Set, options); }
+	/** applies a format to the instance. See `doc/tempo.md`. */	format<K extends enums.Format>(fmt: K) { this.#ensureParsed(); return this.#format(fmt) }
+	/** returns a new `Tempo` with specific duration added. */add(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { this.#ensureParsed(); return this.#add(tempo as Tempo.Add, options); }
+	/** returns a new `Tempo` with specific offsets. */				set(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { this.#ensureParsed(); return this.#set(tempo as Tempo.Set, options); }
 	/** returns a clone of the current `Tempo` instance. */		clone() { return new this.#Tempo(this, this.config) }
 
 	/** returns the underlying Temporal.ZonedDateTime */
@@ -1200,8 +1204,6 @@ export class Tempo {
 				return arg;
 			}
 		}
-
-		// const isSimpleIsoOrNumeric = typeof value === 'string' && (Match.date.test(value) || /^\d+$/.test(value));
 
 		const map = this.#local.parse.pattern;
 		for (const [sym, pat] of map) {
@@ -1808,7 +1810,6 @@ export class Tempo {
 		if (isNull(this.#tempo))
 			return undefined as unknown as enums.FormatType<K>;		// don't format <null> dates
 
-		this.#ensureParsed();
 		if (!this.isValid())
 			return '' as unknown as enums.FormatType<K>;			// return empty string for invalid dates (catch-mode)
 
@@ -1826,7 +1827,7 @@ export class Tempo {
 			}
 		}
 
-		const result = template.replace(Match.braces, (_match: string, token: string) => {
+		const result = template.replaceAll(new RegExp(Match.braces), (_match: string, token: string) => {
 			switch (token) {
 				case 'yw': return pad(this.yw, 4);
 				case 'yyww': return pad(this.yw, 4) + pad(this.ww);

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { Tempo } from '../src/tempo.class.js';
 
 describe('Tempo Core', () => {

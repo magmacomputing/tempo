@@ -3,12 +3,11 @@ import { secure } from '#library/utility.library.js';
 import { NUMBER, MODE } from '#tempo/tempo.enum.js';
 import type { Options } from '#tempo/tempo.type.js';
 
-
 // BE VERY CAREFUL NOT TO BREAK THE REGEXP PATTERNS BELOW
 // TEMPO functionality heavily depends on these patterns
 
 /** common RegExp patterns */
-export const Match = {
+export const Match = secure({
 	/** match all {} pairs, if they start with a word char */	braces: /{([\w]+(?:\.[\w]+)*)}/g,
 	/** named capture-group, if it starts with a letter */		captures: /\(\?<([a-zA-Z][\w]*)>(.*?)(?<!\\)\)/g,
 	/** event */																							event: /^(g|l)evt[0-9]+$/,
@@ -23,13 +22,14 @@ export const Match = {
 	/** strip out these characters from a string */						strips: /\(|\)/g,
 	/** whitespace characters */															spaces: /\s+/g,
 	/** Z character */																				zed: /^Z$/,
-	/** base guard characters (digits and common symbols) */	guard: /[0-9-:\s]+|Z/i,
-} as const
+	/** base guard characters (digits and common symbols) */	guard: /[\d\s\-\.\:T\/Z\+\-\(\)\[\]\,\=\#]+/i,
+})
 
 /** Tempo Symbol registry */
 export const Token = looseIndex<string, symbol>()({
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Snippet Symbols
 	/** year */																								yy: Symbol('yy'),
+	/** ISO yearOfWeek */																			yw: Symbol('yw'),
 	/** month */																							mm: Symbol('mm'),
 	/** day */																								dd: Symbol('dd'),
 	/** hour */																								hh: Symbol('hh'),

@@ -19,7 +19,7 @@ export const getType = (obj?: any, ...instances: Instance[]) => {
 				: obj.constructor?.name ?? 'Object'									// some Objects do not have a constructor method
 
 			return ([...instances, ...registry]
-				.find(inst => obj instanceof inst.class)?.type			// allow for 'real' name of Instance, after minification
+				.find(inst => obj === inst.class || obj instanceof inst.class)?.type			// allow for 'real' name of Class or Instance
 				?? name) as Type;																		// return Object name
 
 		case type === 'Function' && Function.prototype.toString.call(obj).startsWith('class '):

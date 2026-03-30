@@ -1,12 +1,14 @@
+import { getType } from '#library/type.library.js'
 import { Tempo, isTempo } from '../src/tempo.class.js'
 
 describe('Tempo Initialization Hang Repro', () => {
 	it('should initialize without hanging when accessed via Proxy', () => {
 		// This access triggers Proxy discovery and class initialization.
 		// Before the fix, this would cause infinite recursion and hang.
-		expect(isTempo(Tempo)).toBe(true)
+		expect(getType(Tempo)).toBe('Class')
+		expect(isTempo(new Tempo())).toBe(true)
 		expect(Tempo.NUMBER.zero).toBe(0)
-		expect(Tempo.FORMAT.iso).toBeDefined()
+		expect(Tempo.FORMAT.date).toBeDefined()
 	})
 
 	it('should be ready after initialization', () => {
