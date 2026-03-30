@@ -174,7 +174,7 @@ Formatting uses a placeholder syntax similar to many template engines:
 | Placeholder | Description | Type | Range | Example |
 | :--- | :--- | :--- | :--- | :--- |
 | `{yyyy}` | Year | `4-digit` | `0001-9999` | `2024` |
-| `{wy}` | ISO Week-numbering Year | `4-digit` | `0001-9999` | `2024` |
+| `{yw}` | ISO Week-numbering Year | `4-digit` | `0001-9999` | `2024` |
 | `{yy}` | Year | `2-digit` | `00-99` | `24` |
 | `{mm}` | Month | `2-digit` | `01-12` | `05` |
 | `{mon}` | Full Month Name | `string` | `January - December` | `June` |
@@ -203,19 +203,19 @@ t.format('{dd} {mon} {yyyy}');  // "24 January 2026"
 ```
 
 ### ISO 8601 Week Dates
-*(Note: `{wy}` represents the ISO week year, which may differ from `{yyyy}` at the start or end of a calendar year if the current date belongs to an ISO week from the adjacent year.)*
+*(Note: `{yw}` represents the ISO week year, which may differ from `{yyyy}` at the start or end of a calendar year if the current date belongs to an ISO week from the adjacent year.)*
 
 Tempo supports the **ISO 8601 Week Date** system, which is commonly used in business and logistics for unambiguous weekly scheduling.
 
 - **`{ww}`**: Represents the ISO week number (01–53).
-- **`{wy}`**: Represents the ISO week-numbering year.
+- **`{yw}`**: Represents the ISO week-numbering year.
 
 A week in this system always starts on a **Monday**. Week 01 is defined as the week with the year's first Thursday (or the week containing January 4th).
 
 To format a standard ISO week date (e.g., `2024-W21`), use both placeholders together:
 ```typescript
 const t = new Tempo('2024-05-20');
-t.format('{wy}-W{ww}');         // "2024-W21"
+t.format('{yw}-W{ww}');         // "2024-W21"
 ```
 
 ---

@@ -1,7 +1,7 @@
 import { asObject } from '#library/object.library.js';
 import { CONTEXT, getContext } from '#library/utility.library.js';
 import { isNull, isNullish } from '#library/type.library.js';
-import { now } from '#library/temporal.library.js';
+import { instant } from '#library/temporal.library.js';
 import { getHemisphere } from '#library/international.library.js';
 
 import { Logify } from '#library/logify.class.js';
@@ -58,7 +58,7 @@ export const geoLocation = (opts = {} as MapOpts) =>
 				(value) => {																				// on success
 					const test1 = value.coords.latitude.toFixed(3) !== mapStore.geolocation.coords.latitude.toFixed(3);
 					const test2 = value.coords.longitude.toFixed(3) !== mapStore.geolocation.coords.longitude.toFixed(3);
-					const test3 = mapStore.geolocation.timestamp < (now().epochMilliseconds - 3_600_000); // 1 hour ago
+					const test3 = mapStore.geolocation.timestamp < (instant().epochMilliseconds - 3_600_000); // 1 hour ago
 
 					if (test1 || test2 || test3) {										// position has moved, or timeout
 						Object.assign(mapStore, { georesponse: null });	// so remove stashed georesponse result

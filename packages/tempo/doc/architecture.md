@@ -16,6 +16,17 @@ Tempo employs two distinct methodologies for protecting its internal state. Thes
 
 ---
 
+## ⚡ The "Zero-Cost Constructor" Objective
+Tempo is built with a **"Performance First"** mindset, specifically targeting the overhead of the class constructor. In high-frequency applications (like Tickers or real-time Dashboards), creating thousands of objects must be nearly as cheap as a primitive assignment.
+
+This objective is achieved through two primary architectural pillars:
+1.  **Lazy Evaluation ([Section 1](#1-lazy-evaluation-shadowing))**: Deferring the expensive work of string parsing and term computation until the first property access.
+2.  **Master Guard ([Section 3](#3-master-guard-fast-fail-sync-point))**: Implementing a high-speed "fast-fail" gatekeeper to instantly reject invalid inputs when parsing *is* eventually triggered.
+
+Together, these ensure that `new Tempo()` maintains an $O(1)$ complexity, regardless of how many plugins or custom terms are registered in the global system.
+
+---
+
 ## 🔁 Iteration & Enumerability (The Shadowing Chain)
 
 When using prototype shadowing, the JavaScript behavior for property inspection changes significantly. This is a trade-off for the performance gains.
@@ -64,28 +75,22 @@ Global registries must be **live**. If a plugin adds a new timezone alias or dat
 
 ---
 
-## ⚡ 3. Master Guard (Fast-Fail Sync Point)
+## ⚡ 3. Master Guard (Guarded-Lazy Strategy)
 Used for: `new Tempo(string | number)`
 
-To maintain extreme performance even with invalid or complex inputs, Tempo employs a **Master Guard** regex that acts as a gatekeeper for the parsing engine.
+The **Guarded-Lazy** strategy is the final pillar of the "Zero-Cost Constructor". It ensures that even with massive extensibility, the entry point remains nearly instantaneous.
 
 ### How it works:
-1.  **Sync Point**: Before the engine attempts to iterate over dozens of registered layouts and snippets, it runs a single `O(1)` pass using `static #guard`.
-2.  **Character Validation**: The guard checks if the input string contains only characters known to be part of valid date-time representations (digits, common symbols like `-:./`, and letters A-Z).
-3.  **Fast-Fail**: If the string contains "exotic" characters (like emojis, special symbols, or non-Latin alphabets not registered in terms), the guard rejects it instantly.
-4.  **Result**: This prevents the expensive overhead of full regex parsing for obviously invalid strings, ensuring the "Zero-Cost Constructor" goal is met even for negative cases.
+1.  **High-Speed Gatekeeper**: Before the engine attempts to iterate over dozens of registered layouts, it runs a single $O(1)$ pass using a static `Master Guard` regex.
+2.  **Fast-Fail**: If the input contains obviously invalid characters (emojis, non-Latin scripts not registered, etc.), it fails immediately.
+3.  **Auto-Lazy**: If the input *passes* the guard, the constructor automatically switches the instance to `lazy: true` mode (even if the default was `false`). This defers the expensive $O(N)$ full-parse operation until the first property access.
+4.  **Sync Point**: This "Guarded-Lazy" approach ensures that valid inputs pay NO penalty at instantiation, while invalid inputs are caught early enough to maintain library robustness.
 
-> [!WARNING]
-> **Character Whitelist**: The Master Guard is strictly configured to digits, symbols (`-`, `:`, `.`, `T`, `Z`, `/`, `+`, `#`), and standard Latin characters. If you are extending Tempo with custom terms in a non-Latin script, you may need to ensure your terms are either registered as regex snippets or that the guard is updated to accommodate the character set.
+### 📈 Validation & Performance
+The efficiency of the Master Guard and the success of the Zero-Cost objective have been validated via local benchmarking:
 
----
-
-## 🚀 4. Performance Benchmarks
-
-The O(1) complexity of the constructor and the efficiency of the Master Guard have been validated via local benchmarking.
-
-- **Zero-Cost Constructor**: instantiation takes ~523µs on average.
-- **Master Guard Fast-Fail**: Rejected inputs are handled in ~359µs.
+- **Instantiation Overhead**: ~523µs on average (passing the Master Guard).
+- **Fast-Fail Rejection**: ~359µs on average (failing the Master Guard).
 
 > [!TIP]
 > For detailed timing results and methodology, see [Performance Benchmarks](./tempo.benchmarks.md).
@@ -96,3 +101,4 @@ The O(1) complexity of the constructor and the efficiency of the Master Guard ha
 The Tempo architecture follows the principle of **"Right Tool for the Job"**:
 - **Shadowing** provides the extreme performance and memory efficiency required for **per-instance computed state**.
 - **Proxies** provide the reference stability and controlled extensibility required for **global system registries**.
+- **Master Guard** ensures that even with massive extensibility, the entry point remains a "Zero-Cost Constructor".

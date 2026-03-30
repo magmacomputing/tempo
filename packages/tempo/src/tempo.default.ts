@@ -1,6 +1,6 @@
 import { looseIndex } from '#library/object.library.js';
 import { secure } from '#library/utility.library.js';
-import { NUMBER } from '#tempo/tempo.enum.js';
+import { NUMBER, MODE } from '#tempo/tempo.enum.js';
 import type { Options } from '#tempo/tempo.type.js';
 
 
@@ -23,6 +23,7 @@ export const Match = {
 	/** strip out these characters from a string */						strips: /\(|\)/g,
 	/** whitespace characters */															spaces: /\s+/g,
 	/** Z character */																				zed: /^Z$/,
+	/** base guard characters (digits and common symbols) */	guard: /[0-9-:\s]+|Z/i,
 } as const
 
 /** Tempo Symbol registry */
@@ -154,7 +155,7 @@ export type Period = typeof Period
 export const Default = secure({
 	/** log to console */																			debug: false,
 	/** catch or throw Errors */															catch: false,
-	/** lazy initialization */																lazy: true,
+	/** initialization strategy ('auto' | 'strict' | 'defer') */	mode: MODE.Auto,
 	/** used to parse two-digit years*/												pivot: 75,										/** @link https://en.wikipedia.org/wiki/Date_windowing */
 	/** precision to measure timestamps (ms | us) */					timeStamp: 'ms',
 	/** calendaring system */																	calendar: 'iso8601',

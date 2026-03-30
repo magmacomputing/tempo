@@ -26,40 +26,12 @@ export type Pattern = string | RegExp
 export type Logic = string | number | Function
 export type Pair = [string, string]
 export type Groups = Record<string, string>
-export type Registry = Map<symbol, RegExp>
-export interface PatternOptionArray<T> extends Array<PatternOption<T>> {}
-export type PatternOption<T> = T | Record<string | symbol, T> | PatternOptionArray<T>
 
 // #endregion
 
 // #region Options / Config
 
-/** the Options object found in a config-module, or passed to a call to Tempo.init({}) or 'new Tempo({})' */
-export interface BaseOptions {
-	/** localStorage key */																		store: string;
-	/** globalThis Discovery Symbol */												discovery: string | symbol;
-	/** additional console.log for tracking */								debug: boolean | undefined;
-	/** catch or throw Errors */															catch: boolean | undefined;
-	/** Temporal timeZone */																	timeZone: Temporal.TimeZoneLike;
-	/** Temporal calendar */																	calendar: Temporal.CalendarLike;
-	/** locale (e.g. en-AU) */																locale: string;
-	/** pivot year for two-digit years */											pivot: number;
-	/** hemisphere for term.qtr or term.szn */								sphere: COMPASS | undefined;
-	/** Precision to measure timestamps (ms | us) */					timeStamp?: TimeStamp;
-	/** parsing is performed on-demand */											lazy?: boolean;
-	/** locale-names that prefer 'mm-dd-yy' date order */			mdyLocales: string | string[];
-	/** swap parse-order of layouts */												mdyLayouts: Pair[];
-	/** date-time snippets to help compose a Layout */				snippet: Snippet | PatternOption<Pattern>;
-	/** patterns to help parse value */												layout: Layout | PatternOption<Pattern>;
-	/** custom date aliases (events). */											event: Event | PatternOption<Logic>;
-	/** custom time aliases (periods). */											period: Period | PatternOption<Logic>;
-	/** custom format strings to merge in the FORMAT enum */	formats: Property<any>;
-	/** plugins to be automatically Extended via Tempo.extend() */plugins: Plugin | Plugin[];
-	/** supplied value to parse */														value: DateTime;
-	/** @internal temporary anchor used during parsing */			anchor: Temporal.ZonedDateTime;
-}
-
-export type Options = Partial<BaseOptions> & Record<string, any>;
+export type Options = Partial<Internal.BaseOptions> & Record<string, any>;
 
 // #endregion
 
@@ -73,79 +45,11 @@ export type TermPlugin = {
 }
 
 /** plugin function that can extend the Tempo prototype or static space */
-export type Plugin = (options: any, TempoClass: any, factory: (val: any) => Tempo) => void;
-
-/** internal metadata for a plugin to track installation */
-export interface PluginContainer extends Plugin {
-	installed?: boolean;
-}
-
-// #endregion
-
-// #region State / Parse / Match
-
-/** the encapsulated state of a Tempo instance */
-export interface State {																		// 'global' and 'local' variables
-	/** current defaults for all Tempo instances */						config: Config;
-	/** parsing rules */																			parse: Parse;
-}
-
-/** Debugging results of a parse operation. See `doc/tempo.api.md`. */
-export interface Parse {
-	/** Locales which prefer 'mm-dd-yyyy' date-order */				mdyLocales: { locale: string, timeZones: string[] }[];
-	/** Layout names that are switched to mdy */							mdyLayouts: Pair[];
-	/** is a timeZone that prefers 'mmddyyyy' date order */		isMonthDay?: boolean;
-	/** Symbol registry */																		token: Token;
-	/** Tempo snippets to aid in parsing */										snippet: Snippet;
-	/** Tempo layout strings */																layout: Layout;
-	/** Map of regex-patterns to match input-string */				pattern: Registry;
-	/** configured Events */																	event: Event;
-	/** configured Periods */																	period: Period;
-	/** pivot year for two-digit years */											pivot?: number;
-	/** parsing match result */																result: Match[];
-	/** was this a nested/anchored parse? */									isAnchored?: boolean;
-	/** parsing is performed on-demand */											lazy?: boolean;
-}
-
-/** debug a Tempo instantiation */
-export interface Match {
-	/** pattern which matched the input */										match?: string | undefined;
-	/** groups from the pattern match */											groups?: Groups;
-	/** the type of the original input */											type: LooseUnion<Type>;
-	/** the value of the original input */										value: any;
-	/** was this a nested/anchored parse? */									isAnchored?: boolean;
-}
-
-/** drop the parse-only Options */
-type OptionsKeep = Omit<BaseOptions, "mdyLocales" | "mdyLayouts" | "pivot" | "snippet" | "layout" | "event" | "period" | "value">
-
-/** Instance configuration derived from supply, storage, and discovery. */
-export interface Config extends Required<Omit<OptionsKeep, "formats">> {
-	/** configuration (global | local) */											scope: 'global' | 'local';
-	/** pre-configured format strings */											formats: Format;
-	/** index-signature */																		readonly [key: string]: any;
-}
-
-// #endregion
-
-// #region Discovery
-
-/** structured configuration for Global Discovery via Symbol.for('$Tempo') */
-export interface Discovery {
-	/** pre-defined config options for Tempo.#global */				options?: Options | (() => Options);
-	/** aliases to merge in the TimeZone dictionary */				timeZones?: Record<string, string>;
-	/** aliases to merge in the Number-Word dictionary */			numbers?: Record<string, number>;
-	/** term plugins to be registered via Tempo.addTerm() */	terms?: TermPlugin | TermPlugin[];
-	/** plugins to be automatically extended via Tempo.extend() */plugins?: Plugin | Plugin[];
-	/** custom format strings to merge in the FORMAT dictionary */formats?: Property<any>;
-}
+export type Plugin = (options: any, TempoClass: typeof Tempo, factory: (val: any) => Tempo) => void;
 
 // #endregion
 
 // #region Date/time unit types
-
-/** Timestamp precision */
-export type TimeStamp = 'ss' | 'ms' | 'us' | 'ns'
 
 /** Configuration to use for #until() and #since() argument */
 export type Unit = Temporal.DateUnit | Temporal.TimeUnit | Plural<Temporal.DateUnit | Temporal.TimeUnit>
@@ -206,9 +110,105 @@ export type Element = enums.Element
 // #region Helper types
 
 /** Type for consistency in expected arguments for helper functions */
-export type Params<T> = {
+export interface Params<T> {
 	(tempo?: DateTime, options?: Options): T;									// parse DateTime, default to Temporal.Instance.now()
 	(options: Options): T;																		// provide just the Options (use {value:'XXX'} for specific DateTime)
+}
+
+// #endregion
+
+// #region INTERNAL namespace (hidden from standard API surface)
+
+export namespace Internal {
+	export type Registry = Map<symbol, RegExp>
+	export type PatternOptionArray<T> = Array<PatternOption<T>>
+	export type PatternOption<T> = T | Record<string | symbol, T> | PatternOptionArray<T>
+
+	/** the Options object found in a config-module, or passed to a call to Tempo.init({}) or 'new Tempo({})' */
+	export interface BaseOptions {
+		/** localStorage key */																	store: string;
+		/** globalThis Discovery Symbol */											discovery: string | symbol;
+		/** additional console.log for tracking */							debug: boolean | undefined;
+		/** catch or throw Errors */														catch: boolean | undefined;
+		/** Temporal timeZone */																timeZone: Temporal.TimeZoneLike;
+		/** Temporal calendar */																calendar: Temporal.CalendarLike;
+		/** locale (e.g. en-AU) */															locale: string;
+		/** pivot year for two-digit years */										pivot: number;
+		/** hemisphere for term.qtr or term.szn */							sphere: enums.COMPASS | undefined;
+		/** Precision to measure timestamps (ms | us) */				timeStamp?: TimeStamp;
+		/** initialization strategy ('auto' | 'strict' | 'defer') */	mode?: enums.Mode;
+		/** locale-names that prefer 'mm-dd-yy' date order */		mdyLocales: string | string[];
+		/** swap parse-order of layouts */											mdyLayouts: Pair[];
+		/** date-time snippets to help compose a Layout */			snippet: Snippet | PatternOption<Pattern>;
+		/** patterns to help parse value */											layout: Layout | PatternOption<Pattern>;
+		/** custom date aliases (events). */										event: Event | PatternOption<Logic>;
+		/** custom time aliases (periods). */										period: Period | PatternOption<Logic>;
+		/** custom format strings to merge in the FORMAT enum */formats: Property<any>;
+		/** plugins to be automatically Extended via Tempo.extend() */plugins: Plugin | Plugin[];
+		/** supplied value to parse */													value: DateTime;
+		/** @internal temporary anchor used during parsing */		anchor: Temporal.ZonedDateTime;
+	}
+
+	/** high-precision precision to measure timestamps (ms | us) */
+	export type TimeStamp = 'ss' | 'ms' | 'us' | 'ns'
+
+	/** internal metadata for a plugin to track installation */
+	export interface PluginContainer extends Plugin {
+		installed?: boolean;
+	}
+
+	/** the encapsulated state of a Tempo instance */
+	export interface State {																	// 'global' and 'local' variables
+		/** current defaults for all Tempo instances */					config: Config;
+		/** parsing rules */																		parse: Parse;
+	}
+
+	/** Debugging results of a parse operation. See `doc/tempo.api.md`. */
+	export interface Parse {
+		/** Locales which prefer 'mm-dd-yyyy' date-order */			mdyLocales: { locale: string, timeZones: string[] }[];
+		/** Layout names that are switched to mdy */						mdyLayouts: Pair[];
+		/** is a timeZone that prefers 'mmddyyyy' date order */	isMonthDay?: boolean;
+		/** Symbol registry */																	token: Token;
+		/** Tempo snippets to aid in parsing */									snippet: Snippet;
+		/** Tempo layout strings */															layout: Layout;
+		/** Map of regex-patterns to match input-string */			pattern: Registry;
+		/** configured Events */																event: Event;
+		/** configured Periods */																period: Period;
+		/** pivot year for two-digit years */										pivot?: number;
+		/** parsing match result */															result: Match[];
+		/** was this a nested/anchored parse? */								isAnchored?: boolean;
+		/** initialization strategy ('auto' | 'strict' | 'defer') */	mode: enums.Mode;
+		/** @internal is parsing currently deferred? */					lazy: boolean;
+	}
+
+	/** debug a Tempo instantiation */
+	export interface Match {
+		/** pattern which matched the input */									match?: string | undefined;
+		/** groups from the pattern match */										groups?: Groups;
+		/** the type of the original input */										type: LooseUnion<Type>;
+		/** the value of the original input */									value: any;
+		/** was this a nested/anchored parse? */								isAnchored?: boolean;
+	}
+
+	/** drop the parse-only Options */
+	export type OptionsKeep = Omit<BaseOptions, "mdyLocales" | "mdyLayouts" | "pivot" | "snippet" | "layout" | "event" | "period" | "value">
+
+	/** Instance configuration derived from supply, storage, and discovery. */
+	export interface Config extends Required<Omit<OptionsKeep, "formats">> {
+		/** configuration (global | local) */										scope: 'global' | 'local';
+		/** pre-configured format strings */										formats: Format;
+		/** index-signature */																	readonly [key: string]: any;
+	}
+
+	/** structured configuration for Global Discovery via Symbol.for('$Tempo') */
+	export interface Discovery {
+		/** pre-defined config options for Tempo.#global */			options?: Options | (() => Options);
+		/** aliases to merge in the TimeZone dictionary */			timeZones?: Record<string, string>;
+		/** aliases to merge in the Number-Word dictionary */		numbers?: Record<string, number>;
+		/** term plugins to be registered via Tempo.addTerm() */terms?: TermPlugin | TermPlugin[];
+		/** plugins to be automatically extended via Tempo.extend() */plugins?: Plugin | Plugin[];
+		/** custom format strings to merge in the FORMAT dictionary */formats?: Property<any>;
+	}
 }
 
 // #endregion

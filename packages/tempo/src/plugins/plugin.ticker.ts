@@ -1,4 +1,4 @@
-import { now } from '#library/temporal.library.js';
+import { instant } from '#library/temporal.library.js';
 import { ifDefined } from '#library/object.library.js';
 import { isObject, isFunction, isDefined, isEmpty } from '#library/type.library.js';
 import { DURATIONS } from '#tempo/tempo.enum.js';
@@ -74,7 +74,7 @@ export const TickerPlugin = definePlugin((_options, TempoClass, _factory) => {
 		const isInstant = elapse.blank;
 
 		const until = stopAt ? new TempoClass(stopAt as DateTime) : undefined;
-		const ms = () => now().epochMilliseconds;
+		const ms = () => instant().epochMilliseconds;
 		let current = new TempoClass(startAt as DateTime);
 
 		// Helper to check if we should stop

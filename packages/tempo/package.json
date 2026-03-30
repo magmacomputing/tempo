@@ -23,10 +23,12 @@
       "default": "@magma/library/server/*"
     },
     "#tempo": {
+      "development": "./src/tempo.index.ts",
       "default": "./dist/tempo.index.js"
     },
-    "#tempo/*": {
-      "default": "./dist/*"
+    "#tempo/*.js": {
+      "development": "./src/*.ts",
+      "default": "./dist/*.js"
     }
   },
   "exports": {

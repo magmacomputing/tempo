@@ -136,7 +136,7 @@ Returns a `Temporal.PlainDateTime` representation.
 
 ### Date & Time Accessors
 - `yy`: 4-digit year.
-- `wy`: 4-digit ISO week-numbering year.
+- `yw`: 4-digit ISO week-numbering year.
 - `mm`: Month (1-12).
 - `dd`: Day of month (1-31).
 - `ww`: ISO week number (1-53).

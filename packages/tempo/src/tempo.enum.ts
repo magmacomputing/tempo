@@ -85,7 +85,7 @@ const DEFAULTS = {
 		/** display with Time */																dayTime: '{dd}-{mmm}-{yyyy} {hh}:{mi}:{ss}',
 		/** useful for stamping logs */													logStamp: '{yyyy}{mm}{dd}T{hhmiss}.{ff}',
 		/** useful for sorting display-strings */								sortTime: '{yyyy}-{mm}-{dd} {hh}:{mi}:{ss}',
-		/** useful for sorting week order */										yearWeek: '{wy}{ww}',
+		/** useful for sorting week order */										yearWeek: '{yw}{ww}',
 		/** useful for sorting month order */										yearMonth: '{yyyy}{mm}',
 		/** useful for sorting date order */										yearMonthDay: '{yyyy}{mm}{dd}',
 		/** just Date portion */																date: '{yyyy}-{mm}-{dd}',
@@ -156,7 +156,7 @@ export type FORMAT = ValueOf<typeof FORMAT>
 export type Format = LooseUnion<KeyOf<typeof FORMAT> & string>
 
 /** patterns that return a number */
-type NumericPattern = '{yyyy}{mm}' | '{yyww}' | '{yyyy}{mm}{dd}' | '{wy}{ww}' | '{wy}'
+type NumericPattern = '{yyyy}{mm}' | '{yyww}' | '{yyyy}{mm}{dd}' | '{yw}{ww}' | '{yw}'
 
 /** pre-configured format strings */
 export type OwnFormat = Mutable<OwnOf<typeof FORMAT>>
@@ -210,8 +210,12 @@ const optionKeys = ['value', 'mdyLocales', 'mdyLayouts', 'store', 'discovery', '
 export const OPTION = getProxy(enumify(optionKeys, false), false);
 export type Option = KeyOf<typeof OPTION>
 
+/** initialization strategies */
+export const MODE = enumify({ Auto: 'auto', Strict: 'strict', Defer: 'defer', }, false);
+export type Mode = ValueOf<typeof MODE>
+
 /** allowed keys for internal parse state */
-const parseKeys = ['mdyLocales', 'mdyLayouts', 'formats', 'pivot', 'snippet', 'layout', 'event', 'period', 'anchor', 'value', 'discovery', 'plugins'] as const;
+const parseKeys = ['mdyLocales', 'mdyLayouts', 'formats', 'pivot', 'snippet', 'layout', 'event', 'period', 'anchor', 'value', 'discovery', 'plugins', 'mode'] as const;
 export const PARSE = getProxy(enumify(parseKeys, false), false);
 export type Parse = KeyOf<typeof PARSE>
 
