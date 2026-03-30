@@ -237,16 +237,14 @@ export function registryUpdate(name: keyof typeof STATE, data: Record<string, an
 	const target = registry?.[$Target] as Property<any>;
 	const state = STATE[name] as Property<any>;
 
-	if (target) {
-		Object.entries(data).forEach(([key, val]) => {
-			if (isUndefined(state[key])) {												// only add if key does not exist
-				state[key] = val;
-				target[key] = val;
-			}
-		});
+	Object.entries(data).forEach(([key, val]) => {
+		if (isUndefined(state[key])) {												// only add if key does not exist
+			state[key] = val;
+			if (target) target[key] = val;
+		}
+	});
 
-		clearCache(target);
-	}
+	if (target) clearCache(target);
 }
 
 /** Reset all extendable registries to their original built-in defaults */

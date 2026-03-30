@@ -136,7 +136,7 @@ export namespace Internal {
 		/** pivot year for two-digit years */										pivot: number;
 		/** hemisphere for term.qtr or term.szn */							sphere: enums.COMPASS | undefined;
 		/** Precision to measure timestamps (ms | us) */				timeStamp?: TimeStamp;
-		/** initialization strategy ('auto' | 'strict' | 'defer') */	mode?: enums.Mode;
+		/** initialization strategy ('auto'|'strict'|'defer') */mode?: enums.Mode;
 		/** locale-names that prefer 'mm-dd-yy' date order */		mdyLocales: string | string[];
 		/** swap parse-order of layouts */											mdyLayouts: Pair[];
 		/** date-time snippets to help compose a Layout */			snippet: Snippet | PatternOption<Pattern>;
@@ -144,9 +144,10 @@ export namespace Internal {
 		/** custom date aliases (events). */										event: Event | PatternOption<Logic>;
 		/** custom time aliases (periods). */										period: Period | PatternOption<Logic>;
 		/** custom format strings to merge in the FORMAT enum */formats: Property<any>;
-		/** plugins to be automatically Extended via Tempo.extend() */plugins: Plugin | Plugin[];
+		/** plugins to be automatically extended */							plugins: Plugin | Plugin[];
 		/** supplied value to parse */													value: DateTime;
 		/** @internal temporary anchor used during parsing */		anchor: Temporal.ZonedDateTime;
+		/** @internal accumulated parse results */							result?: Match[];
 	}
 
 	/** high-precision precision to measure timestamps (ms | us) */
@@ -177,8 +178,10 @@ export namespace Internal {
 		/** pivot year for two-digit years */										pivot?: number;
 		/** parsing match result */															result: Match[];
 		/** was this a nested/anchored parse? */								isAnchored?: boolean;
-		/** initialization strategy ('auto' | 'strict' | 'defer') */	mode: enums.Mode;
+		/** initialization strategy ('auto'|'strict'|'defer') */mode: enums.Mode;
 		/** @internal is parsing currently deferred? */					lazy: boolean;
+		/** @internal lazy delegator for formats */							format?: any;
+		/** @internal lazy delegator for terms */								term?: any;
 	}
 
 	/** debug a Tempo instantiation */

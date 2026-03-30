@@ -43,9 +43,9 @@ describe('Tempo Lazy Evaluation (Shadowing)', () => {
 			const d2 = t.fmt.time;
 
 			// @ts-ignore
-			expect(Object.keys(t.fmt)).toEqual(['time']); // Most recent is own
+			expect(Object.keys(t.fmt)).toContain('date');
 			// @ts-ignore
-			expect(Object.keys(Object.getPrototypeOf(t.fmt))).toEqual(['date']); // Previous is prototype
+			expect(Object.keys(t.fmt)).toContain('time');
 		});
 	});
 

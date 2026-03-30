@@ -52,8 +52,8 @@ The **Instance Shadowing** pattern is designed for massive scale. When a library
 ### How it works:
 - **Stage 0**: All instances initially point to the same base `#term` object containing un-evaluated getters.
 - **Stage 1**: When a term (e.g., `.qtr`) is accessed, the value is computed once.
-- **Stage 2**: Tempo creates a *new* frozen object containing that literal value and sets its `__proto__` to the original base object.
-- **Result**: The JS engine optimizes this via "Inline Caches," making lookups nearly as fast as raw property access while keeping the state strictly immutable.
+- **Stage 2**: Tempo uses a **Generic Lazy Delegator** Proxy (via `getLazyDelegator`) which catches property access and evaluates it on-demand.
+- **Result**: The JS engine executes lookups via an optimized Proxy handler, making lookups nearly as fast as raw property access while keeping the state strictly immutable.
 
 > [!TIP]
 > For more implementation details, see [Lazy Evaluation Pattern](./lazy-evaluation-pattern.md).

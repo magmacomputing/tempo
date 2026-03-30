@@ -51,7 +51,7 @@ export function getProxy<T extends object>(target: T, frozen = true, lock = froz
 }
 
 /** Stealth Proxy pattern to allow for on-demand lazy property discovery and registration */
-export function getLazyDelegator<T extends object>(target: T, onGet: (key: string | symbol, target: T) => void) {
+export function getLazyDelegator<T extends object>(target: T, onGet: (key: string | symbol, target: T) => any) {
 	const pending = new Set<PropertyKey>();										// recursion guard
 
 	return new Proxy(target, {
@@ -73,7 +73,8 @@ export function getLazyDelegator<T extends object>(target: T, onGet: (key: strin
 
 			pending.add(key);																			// mark as resolving
 			try {
-				onGet(key, t);																			// discovery phase
+				const val = onGet(key, t);													// discovery phase
+				if (val !== undefined) return val;									// return early if evaluation was handled
 			} finally {
 				pending.delete(key);																// resolve complete
 			}
