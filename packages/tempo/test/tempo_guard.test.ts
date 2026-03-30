@@ -10,7 +10,7 @@ describe('Master Guard Extension', () => {
     Tempo.extend({
       terms: [{
         key: 'apple',
-        define: (t) => t.month === 10
+        define: function () { return this.mm === 10 }
       }]
     });
 
@@ -20,7 +20,7 @@ describe('Master Guard Extension', () => {
     const t = new Tempo('apple');
     expect(t).toBeInstanceOf(Tempo);
     expect(t.config.lazy).toBe(true);
-    
+
     // 4. Accessing a property should now trigger parsing and throw (since 'apple' is still un-parseable by the engine)
     expect(() => t.yy).toThrow(/Cannot parse Date: "apple"/);
   });

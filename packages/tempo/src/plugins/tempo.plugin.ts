@@ -1,6 +1,6 @@
 import { sortKey } from '#library/array.library.js';
 import { isDefined } from '#library/type.library.js';
-import { $Tempo, $Plugins, $Register } from '#library/symbol.library.js';
+import { $Plugins, $Register } from '#tempo/tempo.symbol.js';
 import type { Tempo } from '#tempo/tempo.class.js';
 import type { Plugin, TermPlugin } from '#tempo/tempo.type.js';
 

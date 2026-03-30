@@ -7,7 +7,8 @@ import { asArray, asNumber, asInteger, isNumeric, ifNumeric } from '#library/coe
 import { cleanify, stringify } from '#library/serialize.library.js';
 import { getStorage, setStorage } from '#library/storage.library.js';
 import { getProxy, getLazyDelegator } from '#library/proxy.library.js';
-import { $Register, $Discover, $Tempo, $Plugins, registerHook } from '#library/symbol.library.js';
+import { $Register, $Tempo, $Plugins, registerHook } from '#tempo/tempo.symbol.js';
+import { $Discover } from '#library/symbol.library.js';
 import { getContext, CONTEXT } from '#library/utility.library.js';
 import { enumify } from '#library/enumerate.library.js';
 import { STATE, PARSE, DISCOVERY, registryReset } from '#tempo/tempo.enum.js'
@@ -1906,7 +1907,7 @@ export class Tempo {
 				value = arg as Tempo.DateTime;											// assume 'arg' is a DateTime
 		}
 
-		const offset = new this.#Tempo(value, opts);						// create the offset Tempo
+		const offset = new this.#Tempo(value, { ...opts, mode: enums.MODE.Strict });	// create the offset Tempo (strict: #zdt needed immediately)
 		const diffZone = this.#zdt.timeZoneId !== offset.#zdt.timeZoneId;
 		// Temporal restricts cross-timezone math to absolute units ('hours') to avoid DST ambiguity
 		const duration = this.#zdt.until(offset.#zdt.withCalendar(this.#zdt.calendarId), { largestUnit: diffZone ? 'hours' : (unit ?? 'years') });
