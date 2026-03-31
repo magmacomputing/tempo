@@ -53,7 +53,7 @@ export const geoLocation = (opts = {} as MapOpts) =>
 		opts = Object.assign({}, defaults, opts);
 		const fulfil = opts.catch ? resolve : reject;
 
-		if ('geolocation' in navigator) {
+		if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
 			navigator['geolocation'].getCurrentPosition(
 				(value) => {																				// on success
 					const coords = mapStore.geolocation?.coords;
@@ -115,7 +115,7 @@ export const mapQuery = (coords?: google.maps.GeocoderRequest, opts = {} as MapO
 		geoCoords(coords)																			// get a Location object
 			.then((loc) => {
 				switch (true) {
-					case (!(window && 'google' in window && 'maps' in window['google'])):
+					case (!(typeof window !== 'undefined' && 'google' in window && 'maps' in window['google'])):
 						throw new Error('Google Maps API not configured');
 
 					case isNullish(loc):															// unsuccessful geoLocation
@@ -153,7 +153,7 @@ export const mapQuery = (coords?: google.maps.GeocoderRequest, opts = {} as MapO
  * for supplied coordinates (else query current geolocation)
  */
 export const mapHemisphere = (coords?: google.maps.GeocoderRequest, opts = {} as MapOpts) =>
-	mapQuery(coords)																					// ask Google
+	mapQuery(coords, opts)																					// ask Google
 		.then((response) => {
 			opts = Object.assign({}, defaults, opts);
 
@@ -183,7 +183,7 @@ export const mapHemisphere = (coords?: google.maps.GeocoderRequest, opts = {} as
  * (default current location)
  */
 export const mapAddress = (coords?: google.maps.GeocoderRequest, opts = {} as MapOpts) =>
-	mapQuery(coords)
+	mapQuery(coords, opts)
 		.then((response) => {
 			if (!isNullish(response.error)) throw new Error(response.error);
 			return response.results[0];													// first result is 'best-guess'

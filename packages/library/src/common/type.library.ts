@@ -6,8 +6,19 @@ const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8
 const registry: Instance[] = [];														// global types for getType
 
 /** 
+ * # resetRegistry
+ * Clear the global type registry for test isolation and deterministic behavior.
+ */
+export const resetRegistry = () => { registry.length = 0; };
+
+/** 
+ * # getType
  * return an object's type as a ProperCase string.  
- * if instance, return Class name
+ * if instance, return Class name.
+ * 
+ * @NOTE Load-Order Dependency:
+ * Consumers must import modules that call registerType() (such as Tempo) 
+ * before calling getType() to ensure custom types are correctly identified.
  */
 export const getType = (obj?: any, ...instances: Instance[]) => {
 	const type = protoType(obj) as Type;
@@ -18,9 +29,13 @@ export const getType = (obj?: any, ...instances: Instance[]) => {
 				? 'ArrayLike'																			// special case Object: ArrayLike
 				: obj.constructor?.name ?? 'Object'								// some Objects do not have a constructor method
 
-			return ([...instances, ...registry]
-				.find(inst => obj === inst.class || obj instanceof inst.class)?.type	// allow for 'real' name of Class or Instance
-				?? name) as Type;																	// return Object name
+			for (const inst of instances)
+				if (obj === inst.class || obj instanceof inst.class) return inst.type as Type;	// allow for 'real' name of Class or Instance
+
+			for (const inst of registry)
+				if (obj === inst.class || obj instanceof inst.class) return inst.type as Type;	// allow for 'real' name of Class or Instance
+
+			return name as Type;																	// return Object name
 
 		case type === 'Function' && Function.prototype.toString.call(obj).startsWith('class '):
 			return 'Class';
@@ -355,9 +370,8 @@ export type Secure<T> = T extends Primitive | Function | Date | RegExp | Error |
 	: T extends object
 	? SecureObject<T>
 	: T
-
 export interface SecureArray<T> extends ReadonlyArray<Secure<T>> { }
-export type SecureObject<T> = Readonly<T>;
+export type SecureObject<T> = { readonly [K in keyof T]: Secure<T[K]> };
 
 type LooseString = (string & {})
 type LooseSymbol = (symbol & {})

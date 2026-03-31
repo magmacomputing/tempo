@@ -15,7 +15,7 @@ Working with dates in JavaScript has historically been painful. The new `Tempora
 - **Flexible Parsing**: Interprets almost any date string, including relative ones like "next Friday".
 - **Fluent API**: Chainable methods for adding, subtracting, and setting date-times (similar to Moment.js).
 - **Formatting**: Use custom tokens to format date-times in a way that is both intuitive and flexible.
-- **Plugins**: Extend core functionality safely with `Tempo.extend()` (e.g. `TickerPlugin`).
+- **Plugins**: Extend core functionality safely; built-ins (e.g., TickerPlugin) self-register on import (just import the module), while you should use `Tempo.extend(yourPlugin)` for custom plugins.
 - **Natural Language**: Supports word-based numbers (0-10) in relative parsing (e.g., "two days ago").
 - **Terms**: Access complex date ranges (Quarters, Seasons, Fiscal Years) easily.
 - **Immutable**: Operations (like `set` and `add`) return a new `Tempo` instance, ensuring thread safety and predictability.
@@ -36,8 +36,8 @@ Tempo v2.0.0 is a major milestone, delivering a more reactive architecture and r
 Tempo v2.0.0 introduces several architectural improvements that may require minor updates to your existing code:
 
 - **Token Refactor**: The `wy` (week-of-year) formatting token has been refactored to `yw` to better align with the native Temporal `yearOfWeek` getter.
-- **Method Consolidation**: `Tempo.load()` has been removed. Use `Tempo.extend()` for all plugin registration and global configuration tasks. 
-- **Automatic Registration**: You no longer need to manually call `Tempo.extend()` for built-in plugins. Registration now happens automatically upon import:
+- **Method Consolidation**: `Tempo.load()` has been removed. Use `Tempo.extend()` for custom plugin registration and global configuration tasks. 
+- **Automatic Registration**: Built-ins self-register on import (just import the module). You no longer need to manually call `Tempo.extend()` for these.
 
 ```javascript
 // v2.0.0 - Automatic registration via side-effect import

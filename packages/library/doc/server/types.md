@@ -23,5 +23,5 @@ Standard HTTP methods:
 
 ### `Config`
 Optional configuration for `httpRequest`:
-- `timeOut?: number` (Defaults to 2 seconds)
+- `timeout?: number` (Defaults to 2 seconds)
 - `prefix?: string` (Optional response wrapper prefix)

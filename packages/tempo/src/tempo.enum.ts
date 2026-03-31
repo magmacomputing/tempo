@@ -3,7 +3,7 @@ import { enumify, Enum } from '#library/enumerate.library.js';
 import { getProxy } from '#library/proxy.library.js';
 import { allDescriptors, ownKeys } from '#library/reflection.library.js';
 import { clearCache } from '#library/function.library.js';
-import { isUndefined } from '#library/type.library.js';
+import { isUndefined, isDefined } from '#library/type.library.js';
 import type { OwnOf, KeyOf, ValueOf, LooseUnion, Mutable, Property } from '#library/type.library.js';
 
 /** calendar seasons */
@@ -255,25 +255,26 @@ export function registryReset() {
 		const state = STATE[name as keyof typeof STATE] as Property<any>;
 		const defaults = DEFAULTS[name as keyof typeof DEFAULTS] as Property<any>;
 
-		if (target) {
-			// 1. Purge all own-properties from state and target (if configurable)
-			[state, target].forEach(obj => {
-				Object.keys(obj).forEach(key => {
-					const desc = Object.getOwnPropertyDescriptor(obj, key);
-					if (desc?.configurable) delete obj[key];
-				});
+		// 1. Purge all own-properties from state and target (if configurable)
+		[state, target].filter(isDefined).forEach(obj => {
+			Object.keys(obj).forEach(key => {
+				const desc = Object.getOwnPropertyDescriptor(obj, key);
+				if (desc?.configurable) delete obj[key];
 			});
+		});
 
-			// 2. Restore defaults
-			Object.entries(defaults).forEach(([key, val]) => {
-				[state, target].forEach(obj => {
-					const desc = Object.getOwnPropertyDescriptor(obj, key);
-					if (!desc || desc.writable !== false || desc.configurable)
-						obj[key] = val;
+		// 2. Restore defaults using property descriptors to preserve accessors/configurability
+		Object.keys(defaults).forEach(key => {
+			const desc = Object.getOwnPropertyDescriptor(defaults, key);
+
+			if (desc) {
+				[state, target].filter(isDefined).forEach(obj => {
+					Object.defineProperty(obj, key, desc);
 				});
-			});
+			}
+		});
 
-			clearCache(target);
-		}
+		if (target) clearCache(target);
+		clearCache(state);														// clear cache for state object
 	});
 }

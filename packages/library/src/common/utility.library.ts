@@ -26,15 +26,15 @@ export const getScript = (nbr = 1) => {
 }
 
 /**
- * introduce a wait-timer that will Error() on timeOut.  
+ * introduce a wait-timer that will Error() on timeout.  
  * best used with Promise.race([xxx(), sleep()]  
  * @param msg			string to display on a timeout 
- * @param timeOut	how many milliseconds to sleep (default 2-seconds)  
+ * @param timeout	how many milliseconds to sleep (default 2-seconds)  
  * @returns				Promise\<void>  
  * @see Context.Browser
  */
-export const sleep = (msg = 'sleep: timed out', timeOut = 2000) =>
-	new Promise<Error>((_, reject) => setTimeout(() => reject(new Error(msg)), timeOut));
+export const sleep = (msg = 'sleep: timed out', timeout = 2000) =>
+	new Promise<Error>((_, reject) => setTimeout(() => reject(new Error(msg)), timeout));
 
 /** Javascript Runtimes */
 export const CONTEXT = {

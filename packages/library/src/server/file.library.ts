@@ -47,7 +47,7 @@ export class File {
 		}
 	})
 
-	static write = (file: string, doc: any) => new Promise((resolve, reject) => {
+	static write = (file: string, doc: string | NodeJS.ArrayBufferView) => new Promise<string | NodeJS.ArrayBufferView>((resolve, reject) => {
 		try {
 			const target = File.#resolvePath(file);
 			fs.writeFile(target, doc, File.encoding, (err => err ? reject(err) : resolve(doc)));
@@ -69,8 +69,16 @@ export class File {
 		}
 	})
 
-	static remove = async (file: string) => {
-		const target = File.#resolvePath(file);
-		await fs.promises.unlink(target);
-	}
+	static remove = (file: string) => new Promise<void>((resolve, reject) => {
+		try {
+			const target = File.#resolvePath(file);
+			fs.unlink(target, (err =>
+				err && err.code !== 'ENOENT'
+					? reject(err)																			// anything other than 'file not-exists'
+					: resolve())
+			);
+		} catch (err) {
+			reject(err);
+		}
+	})
 }

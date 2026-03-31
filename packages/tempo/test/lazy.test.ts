@@ -21,10 +21,11 @@ describe('Tempo Lazy Evaluation (Shadowing)', () => {
 	});
 
 	describe('Instance Lazy-Loading', () => {
-		it('should start with an empty #fmt shadow-object', () => {
+		it('should start with discoverable keys in the #fmt shadow-object', () => {
 			const t = new Tempo('2024-05-20');
 			// @ts-ignore - accessing private-ish getter fmt
-			expect(Object.keys(t.fmt)).toHaveLength(0);
+			// Note: Object.keys() triggers discovery, but evaluation of values remains lazy
+			expect(Object.keys(t.fmt)).not.toHaveLength(0);
 		});
 
 		it('should evaluate a format on first access and make it an own property', () => {

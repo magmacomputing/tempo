@@ -35,12 +35,21 @@
       "import": "./dist/common/index.js"
     },
     "./server": {
-      "types": "./dist/server/index.d.ts",
-      "import": "./dist/server/index.js"
+      "node": {
+        "types": "./dist/server/index.d.ts",
+        "import": "./dist/server/index.js"
+      },
+      "browser": null
     },
     "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*"
+      "browser": {
+        "types": "./dist/common/*.d.ts",
+        "import": "./dist/common/*"
+      },
+      "node": {
+        "types": "./dist/*.d.ts",
+        "import": "./dist/*"
+      }
     },
     "./*.js": {
       "development": "./src/common/*.ts",
@@ -71,9 +80,7 @@
     "#server/*.js": {
       "development": "./src/server/*.ts",
       "default": "./dist/server/*.js"
-    },
-    "#tempo": "@magmacomputing/tempo",
-    "#tempo/*": "@magmacomputing/tempo/*"
+    }
   },
   "scripts": {
     "build": "tsc -b",

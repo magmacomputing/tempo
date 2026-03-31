@@ -93,10 +93,11 @@ export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true) {
 		?? chronological.at(-1)!
 
 	const i = chronological.indexOf(match);
-	const next = chronological[i + 1] ?? { ...chronological[0], fiscal: (chronological[0].fiscal ?? chronological[0].year) + 1, year: (chronological[0].year ?? chronological[0].fiscal) + 1 };
+	const yy = tempo.toDateTime().year;
+	const next = chronological[i + 1] ?? { ...chronological[0], fiscal: (chronological[0].fiscal ?? chronological[0].year ?? yy) + 1, year: (chronological[0].year ?? chronological[0].fiscal ?? yy) + 1 };
 
 	const start = tempo.toDateTime().with({
-		year: match.year ?? match.fiscal,
+		year: match.year ?? match.fiscal ?? yy,
 		month: match.month ?? 1,
 		day: match.day ?? 1,
 		hour: match.hour ?? 0,
@@ -108,7 +109,7 @@ export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true) {
 	}).startOfDay();
 
 	const end = tempo.toDateTime().with({
-		year: next.year ?? next.fiscal,
+		year: next.year ?? next.fiscal ?? yy,
 		month: next.month ?? 1,
 		day: next.day ?? 1,
 		hour: next.hour ?? 0,
@@ -178,6 +179,7 @@ export function resolveTermShift(tempo: Tempo, terms: TermPlugin[], name: string
 
 		let list = getRange(tempo);
 		let idx = list.findIndex(r => {
+			if (!r.start || !r.end) return false;
 			const start = r.start.toDateTime().epochNanoseconds;
 			const end = r.end.toDateTime().epochNanoseconds;
 			const now = currentZdt.epochNanoseconds;
@@ -187,11 +189,11 @@ export function resolveTermShift(tempo: Tempo, terms: TermPlugin[], name: string
 		// if we aren't "in" a term (e.g. in a gap), find the "next" or "prev" starting point
 		if (idx === -1) {
 			if (steps > 0) {
-				idx = list.findIndex(r => r.start.toDateTime().epochNanoseconds > currentZdt.epochNanoseconds);
+				idx = list.findIndex(r => r.start?.toDateTime().epochNanoseconds > currentZdt.epochNanoseconds);
 				if (idx !== -1) steps--; // we've already "found" the 1st one
 			} else {
 				const reversed = [...list].reverse();
-				const rIdx = reversed.findIndex(r => r.end.toDateTime().epochNanoseconds < currentZdt.epochNanoseconds);
+				const rIdx = reversed.findIndex(r => r.end?.toDateTime().epochNanoseconds < currentZdt.epochNanoseconds);
 				if (rIdx !== -1) {
 					idx = list.length - 1 - rIdx;
 					steps++;
@@ -202,14 +204,17 @@ export function resolveTermShift(tempo: Tempo, terms: TermPlugin[], name: string
 		if (idx === -1) return undefined; // Cannot find a reference point
 
 		const currentRange = list[idx];
+		if (!currentRange.start) return undefined;
 		const offset = currentRange.start.toDateTime().until(currentZdt);
 
 		// Traverse the blocks
 		let targetIdx = idx + steps;
 		while (targetIdx < 0 || targetIdx >= list.length) {
 			const pivotDate = targetIdx >= list.length
-				? list[list.length - 1].end.toDateTime().add({ nanoseconds: 1 })
-				: list[0].start.toDateTime().subtract({ nanoseconds: 1 });
+				? list[list.length - 1].end?.toDateTime().add({ nanoseconds: 1 })
+				: list[0].start?.toDateTime().subtract({ nanoseconds: 1 });
+
+			if (!pivotDate) return undefined;
 
 			const pivotTempo = new (tempo.constructor as any)(pivotDate, tempo.config);
 			const newList = getRange(pivotTempo);
@@ -226,6 +231,8 @@ export function resolveTermShift(tempo: Tempo, terms: TermPlugin[], name: string
 		}
 
 		const targetRange = list[targetIdx];
+		if (!targetRange.start) return undefined;
+
 		return targetRange.start.toDateTime().add(offset, { overflow: 'constrain' });
 	}
 

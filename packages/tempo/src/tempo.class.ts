@@ -945,11 +945,13 @@ export class Tempo {
 			}
 
 			// shadowing chain (only if extensible)
-			if (Reflect.isExtensible(target)) {
-				const shadow = Object.create(Object.getPrototypeOf(target));
-				Object.defineProperty(shadow, name, { get, enumerable: true, configurable: true });
-				Object.setPrototypeOf(target, shadow);
-			}
+			if (Reflect.isExtensible(target))
+				Object.defineProperty(target, name, { get, enumerable: true, configurable: true });
+			// if (Reflect.isExtensible(target)) {
+			// 	const shadow = Object.create(Object.getPrototypeOf(target));
+			// 	Object.defineProperty(shadow, name, { get, enumerable: true, configurable: true });
+			// 	Object.setPrototypeOf(target, shadow);
+			// }
 
 			return get;																					// return getter closure
 		}
@@ -1107,156 +1109,159 @@ export class Tempo {
 		const isRoot = isUndefined(this.#matches);
 		this.#matches ??= [...(this.#local.parse.result ?? [])];
 
-		let today: Temporal.ZonedDateTime;
 		try {
-			today = (dateTime ?? this.#local.config.anchor ?? this.#now.toZonedDateTimeISO(this.#local.config.timeZone))
-				.withTimeZone(this.#local.config.timeZone);
-		} catch (err) {
-			if (this.#local.config.catch === true) {
-				Tempo.#dbg.warn(this.#local.config, (err as Error).message);
-				today = this.#now.toZonedDateTimeISO('UTC');				// default to UTC if zone is invalid
-			} else throw err;
-		}
-		const { type, value } = this.#conform(tempo, today, isDefined(dateTime));
+			let today: Temporal.ZonedDateTime;
+			try {
+				today = (dateTime ?? this.#local.config.anchor ?? this.#now.toZonedDateTimeISO(this.#local.config.timeZone))
+					.withTimeZone(this.#local.config.timeZone);
+			} catch (err) {
+				if (this.#local.config.catch === true) {
+					Tempo.#dbg.warn(this.#local.config, (err as Error).message);
+					today = this.#now.toZonedDateTimeISO('UTC');				// default to UTC if zone is invalid
+				} else throw err;
+			}
+			const { type, value } = this.#conform(tempo, today, isDefined(dateTime));
 
-		// evaluate latest timezone / calendar (after #conform which might have updated them)
-		const { timeZone, calendar } = this.#local.config;
-		const tz = isString(timeZone) ? timeZone : (timeZone as unknown as { id: string }).id ?? (timeZone as any).timeZoneId;
-		const cal = isString(calendar) ? calendar : (calendar as unknown as { id: string }).id ?? (calendar as any).calendarId;
+			// evaluate latest timezone / calendar (after #conform which might have updated them)
+			const { timeZone, calendar } = this.#local.config;
+			const tz = isString(timeZone) ? timeZone : (timeZone as unknown as { id: string }).id ?? (timeZone as any).timeZoneId;
+			const cal = isString(calendar) ? calendar : (calendar as unknown as { id: string }).id ?? (calendar as any).calendarId;
 
-		if (isEmpty(this.#local.parse.result) && Reflect.isExtensible(this.#local.parse)) {
-			Object.defineProperty(this.#local.parse, 'result', {
-				value: [{ type, value }],
-				writable: true,
-				enumerable: true,
-				configurable: true
-			});
-		}
-		Tempo.#dbg.info(this.#local.config, 'parse', `{type: ${type}, value: ${value}}`);	// show what we're parsing
-
-		switch (type) {
-			case 'Null':
-			case 'Void':
-			case 'Empty':
-			case 'Undefined':
-				dateTime = today;
-				break;
-
-			case 'String':																				// String which didn't conform to a Tempo.pattern
-				try {
-					const str = value.replace(/Z$/, '');							// requested Z-stripping for adoption
-					const zdt = Temporal.ZonedDateTime.from(str.includes('[') ? str : `${str}[${tz}]`);
-					if (this.#local) this.#local.config.timeZone = zdt.timeZoneId;
-					dateTime = zdt;
-				} catch (err) {																		// else see if Date.parse can parse value
-					this.#result({ type: 'String', value }, { match: 'Date.parse' });
-					Tempo.#dbg.warn(this.#local.config, 'Cannot detect DateTime; fallback to Date.parse');
-
-					if (Match.date.test(value)) {
-						try {
-							dateTime = Temporal.PlainDate.from(value).toZonedDateTime(tz).withCalendar(cal);
-							break;
-						} catch { /* ignore and fallback */ }
-					}
-
-					try {
-						dateTime = Temporal.PlainDateTime.from(value).toZonedDateTime(tz).withCalendar(cal);
-					} catch (err2) {																	// else fallback to Date.parse
-						const date = new Date(value.toString());
-						if (isNaN(date.getTime())) {
-							Tempo.#dbg.catch(this.#local.config, `Cannot parse Date: "${value}"`);
-							dateTime = today;
-						} else {
-							dateTime = Temporal.ZonedDateTime						// adopt instance timezone
-								.from(`${date.toISOString().substring(0, 23)}[${tz}]`)
-								.withCalendar(cal)
-						}
-					}
-				}
-				break;
-
-			case 'Temporal.ZonedDateTime':												// ZonedDateTime object: convert to instance timezone
-				dateTime = (value.timeZoneId === tz && value.calendarId === cal)
-					? value
-					: value.withTimeZone(tz).withCalendar(cal);
-				break;
-
-			case 'Temporal.PlainDate':
-			case 'Temporal.PlainDateTime':
-				dateTime = value
-					.toZonedDateTime(tz)
-					.withCalendar(cal);
-				break;
-
-			case 'Temporal.PlainTime':
-				dateTime = today.withPlainTime(value);
-				break;
-
-			case 'Temporal.PlainYearMonth':											// assume current day, else end-of-month
-				dateTime = value
-					.toPlainDate({ day: Math.min(today.day, value.daysInMonth) })
-					.toZonedDateTime(tz)
-					.withCalendar(cal)
-				break;
-
-			case 'Temporal.PlainMonthDay':												// assume current year
-				dateTime = value
-					.toPlainDate({ year: today.year })
-					.toZonedDateTime(tz)
-					.withCalendar(cal)
-				break;
-
-			case 'Temporal.Instant':
-				dateTime = value
-					.toZonedDateTimeISO(tz)
-					.withCalendar(cal)
-				break;
-
-			case 'Tempo':
-				dateTime = value
-					.toDateTime()
-					.withTimeZone(tz)
-					.withCalendar(cal);															// apply instance timezone to cloned Tempo
-				break;
-
-			case 'Date':
-				dateTime = Temporal.Instant.fromEpochMilliseconds(value.getTime())
-					.toZonedDateTimeISO(tz)
-					.withCalendar(cal);
-				break;
-
-			case 'Number':																				// Number which didn't conform to a Tempo.pattern
-				{
-					const [seconds = BigInt(0), suffix = BigInt(0)] = value.toString().split('.').map(BigInt);
-					const nano = BigInt(suffix.toString().substring(0, 9).padEnd(9, '0'));
-
-					dateTime = Temporal.Instant.fromEpochNanoseconds(seconds * BigInt(1_000_000_000) + nano)
-						.toZonedDateTimeISO(tz)
-						.withCalendar(cal);
-					break;
-				}
-
-			case 'BigInt':																				// BigInt is not conformed against a Tempo.pattern
-				dateTime = Temporal.Instant.fromEpochNanoseconds(value)
-					.toZonedDateTimeISO(tz)
-					.withCalendar(cal);
-				break;
-
-			default:
-				Tempo.#dbg.catch(this.#local.config, `Unexpected Tempo parameter type: ${type}, ${String(value)}`);
-				dateTime = today;
-		}
-
-		if (isRoot) {
-			if (Reflect.isExtensible(this.#local.parse)) {
+			if (isEmpty(this.#local.parse.result) && Reflect.isExtensible(this.#local.parse)) {
 				Object.defineProperty(this.#local.parse, 'result', {
-					value: [...(this.#matches ?? [])],
+					value: [{ type, value }],
 					writable: true,
 					enumerable: true,
 					configurable: true
 				});
 			}
-			this.#matches = undefined;
+			Tempo.#dbg.info(this.#local.config, 'parse', `{type: ${type}, value: ${value}}`);	// show what we're parsing
+
+			switch (type) {
+				case 'Null':
+				case 'Void':
+				case 'Empty':
+				case 'Undefined':
+					dateTime = today;
+					break;
+
+				case 'String':																				// String which didn't conform to a Tempo.pattern
+					try {
+						const str = value.replace(/Z$/, '');							// requested Z-stripping for adoption
+						const zdt = Temporal.ZonedDateTime.from(str.includes('[') ? str : `${str}[${tz}]`);
+						if (this.#local) this.#local.config.timeZone = zdt.timeZoneId;
+						dateTime = zdt;
+					} catch (err) {																		// else see if Date.parse can parse value
+						this.#result({ type: 'String', value }, { match: 'Date.parse' });
+						Tempo.#dbg.warn(this.#local.config, 'Cannot detect DateTime; fallback to Date.parse');
+
+						if (Match.date.test(value)) {
+							try {
+								dateTime = Temporal.PlainDate.from(value).toZonedDateTime(tz).withCalendar(cal);
+								break;
+							} catch { /* ignore and fallback */ }
+						}
+
+						try {
+							dateTime = Temporal.PlainDateTime.from(value).toZonedDateTime(tz).withCalendar(cal);
+						} catch (err2) {																	// else fallback to Date.parse
+							const date = new Date(value.toString());
+							if (isNaN(date.getTime())) {
+								Tempo.#dbg.catch(this.#local.config, `Cannot parse Date: "${value}"`);
+								dateTime = today;
+							} else {
+								dateTime = Temporal.ZonedDateTime						// adopt instance timezone
+									.from(`${date.toISOString().substring(0, 23)}[${tz}]`)
+									.withCalendar(cal)
+							}
+						}
+					}
+					break;
+
+				case 'Temporal.ZonedDateTime':												// ZonedDateTime object: convert to instance timezone
+					dateTime = (value.timeZoneId === tz && value.calendarId === cal)
+						? value
+						: value.withTimeZone(tz).withCalendar(cal);
+					break;
+
+				case 'Temporal.PlainDate':
+				case 'Temporal.PlainDateTime':
+					dateTime = value
+						.toZonedDateTime(tz)
+						.withCalendar(cal);
+					break;
+
+				case 'Temporal.PlainTime':
+					dateTime = today.withPlainTime(value);
+					break;
+
+				case 'Temporal.PlainYearMonth':											// assume current day, else end-of-month
+					dateTime = value
+						.toPlainDate({ day: Math.min(today.day, value.daysInMonth) })
+						.toZonedDateTime(tz)
+						.withCalendar(cal)
+					break;
+
+				case 'Temporal.PlainMonthDay':												// assume current year
+					dateTime = value
+						.toPlainDate({ year: today.year })
+						.toZonedDateTime(tz)
+						.withCalendar(cal)
+					break;
+
+				case 'Temporal.Instant':
+					dateTime = value
+						.toZonedDateTimeISO(tz)
+						.withCalendar(cal)
+					break;
+
+				case 'Tempo':
+					dateTime = value
+						.toDateTime()
+						.withTimeZone(tz)
+						.withCalendar(cal);															// apply instance timezone to cloned Tempo
+					break;
+
+				case 'Date':
+					dateTime = Temporal.Instant.fromEpochMilliseconds(value.getTime())
+						.toZonedDateTimeISO(tz)
+						.withCalendar(cal);
+					break;
+
+				case 'Number':																				// Number which didn't conform to a Tempo.pattern
+					{
+						const [seconds = BigInt(0), suffix = BigInt(0)] = value.toString().split('.').map(BigInt);
+						const nano = BigInt(suffix.toString().substring(0, 9).padEnd(9, '0'));
+
+						dateTime = Temporal.Instant.fromEpochNanoseconds(seconds * BigInt(1_000_000_000) + nano)
+							.toZonedDateTimeISO(tz)
+							.withCalendar(cal);
+						break;
+					}
+
+				case 'BigInt':																				// BigInt is not conformed against a Tempo.pattern
+					dateTime = Temporal.Instant.fromEpochNanoseconds(value)
+						.toZonedDateTimeISO(tz)
+						.withCalendar(cal);
+					break;
+
+				default:
+					Tempo.#dbg.catch(this.#local.config, `Unexpected Tempo parameter type: ${type}, ${String(value)}`);
+					dateTime = today;
+			}
+
+			if (isRoot) {
+				if (Reflect.isExtensible(this.#local.parse)) {
+					Object.defineProperty(this.#local.parse, 'result', {
+						value: [...(this.#matches ?? [])],
+						writable: true,
+						enumerable: true,
+						configurable: true
+					});
+				}
+			}
+		} finally {
+			if (isRoot) this.#matches = undefined;
 		}
 
 		return dateTime!;
@@ -1744,52 +1749,53 @@ export class Tempo {
 			calendar: this.#zdt.calendarId,
 		} as Tempo.Options;
 
-		if (isDefined(args)) {
-			if (isObject(args) && args.constructor === Object) {
-				const mutate = 'add';
-				zdt = Object.entries(args ?? {})										// loop through each mutation
-					.reduce<Temporal.ZonedDateTime>((zdt, [unit, offset]) => {	// apply each mutation to preceding one
-						if (unit === 'timeZone' || unit === 'calendar') return zdt;
+		try {
+			if (isDefined(args)) {
+				if (isObject(args) && args.constructor === Object) {
+					const mutate = 'add';
+					zdt = Object.entries(args ?? {})										// loop through each mutation
+						.reduce<Temporal.ZonedDateTime>((zdt, [unit, offset]) => {	// apply each mutation to preceding one
+							if (unit === 'timeZone' || unit === 'calendar') return zdt;
 
-						if (unit.startsWith('#')) {
-							const res = resolveTermShift(this, Tempo.#terms, unit, offset as number);
-							if (isDefined(res)) return res;
-						}
+							if (unit.startsWith('#')) {
+								const res = resolveTermShift(new this.#Tempo(zdt, this.config), Tempo.#terms, unit, offset as number);
+								if (isDefined(res)) return res;
+							}
 
-						const single = singular(unit as string);
-						const plural = single + 's';
+							const single = singular(unit as string);
+							const plural = single + 's';
 
-						switch (`${mutate}.${single}`) {
-							case 'add.year':
-							case 'add.month':
-							case 'add.week':
-							case 'add.day':
-							case 'add.hour':
-							case 'add.minute':
-							case 'add.second':
-							case 'add.millisecond':
-							case 'add.microsecond':
-							case 'add.nanosecond':
-								return zdt
-									.add({ [plural]: offset });
+							switch (`${mutate}.${single}`) {
+								case 'add.year':
+								case 'add.month':
+								case 'add.week':
+								case 'add.day':
+								case 'add.hour':
+								case 'add.minute':
+								case 'add.second':
+								case 'add.millisecond':
+								case 'add.microsecond':
+								case 'add.nanosecond':
+									return zdt
+										.add({ [plural]: offset });
 
-							default:
-								Tempo.#dbg.catch(this.#local.config, `Unexpected method(${mutate}), unit(${unit}) and offset(${offset})`);
-								return zdt;
-						}
-					}, zdt)
+								default:
+									Tempo.#dbg.catch(this.#local.config, `Unexpected method(${mutate}), unit(${unit}) and offset(${offset})`);
+									return zdt;
+							}
+						}, zdt)
+				}
+				else {
+					return new this.#Tempo(args, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
+				}
 			}
-			else {
-				const res = new this.#Tempo(args, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
-				this.#matches = undefined;
-				return res;
-			}
+
+			return new this.#Tempo(zdt, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
+		} finally {
+			this.#matches = undefined;
 		}
-
-		const res = new this.#Tempo(zdt, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
-		this.#matches = undefined;
-		return res;
 	}
+
 	/** mutate the date-time by setting specific offsets */
 	#set = (args?: any, options: Tempo.Options = {}) => {
 		const tz = options.timeZone ?? this.tz;
@@ -1801,189 +1807,189 @@ export class Tempo {
 			calendar: this.#zdt.calendarId,
 		} as Tempo.Options;
 
-		if (isDefined(args)) {
-			if (isObject(args) && args.constructor === Object) {
+		try {
+			if (isDefined(args)) {
+				if (isObject(args) && args.constructor === Object) {
 
-				if ((args as Temporal.ZonedDateTimeLikeObject).timeZone) overrides.timeZone = (args as Temporal.ZonedDateTimeLikeObject).timeZone;
-				if ((args as Temporal.ZonedDateTimeLikeObject).calendar) overrides.calendar = (args as Temporal.ZonedDateTimeLikeObject).calendar;
+					if ((args as Temporal.ZonedDateTimeLikeObject).timeZone) overrides.timeZone = (args as Temporal.ZonedDateTimeLikeObject).timeZone;
+					if ((args as Temporal.ZonedDateTimeLikeObject).calendar) overrides.calendar = (args as Temporal.ZonedDateTimeLikeObject).calendar;
 
-				zdt = Object.entries(args ?? {})										// loop through each mutation
-					.reduce<Temporal.ZonedDateTime>((zdt, [key, adjust]) => {	// apply each mutation to preceding one
-						if (key === 'timeZone' || key === 'calendar') return zdt;
+					zdt = Object.entries(args ?? {})										// loop through each mutation
+						.reduce<Temporal.ZonedDateTime>((zdt, [key, adjust]) => {	// apply each mutation to preceding one
+							if (key === 'timeZone' || key === 'calendar') return zdt;
 
-						const { mutate, offset, single } = ((key) => {
-							switch (key) {
-								case 'start':
-								case 'mid':
-								case 'end':
-									{
-										const offset = adjust?.toString() ?? '';
-										const single = offset.startsWith('#') ? 'term' : singular(offset);
-										return { mutate: key as Tempo.Mutate, offset, single }
-									}
+							const { mutate, offset, single } = ((key) => {
+								switch (key) {
+									case 'start':
+									case 'mid':
+									case 'end':
+										{
+											const offset = adjust?.toString() ?? '';
+											const single = offset.startsWith('#') ? 'term' : singular(offset);
+											return { mutate: key as Tempo.Mutate, offset, single }
+										}
+									default:
+										return { mutate: 'set', offset: adjust, single: singular(key as string) }
+								}
+							})(key);																				// IIFE to analyze arguments
+
+							switch (`${mutate}.${single}`) {
+								case 'set.timeZone':
+									return zdt.withTimeZone(offset as Temporal.TimeZoneLike);
+								case 'set.calendar':
+									return zdt.withCalendar(offset as Temporal.CalendarLike);
+
+								case 'set.period':
+								case 'set.time':
+								case 'set.date':
+								case 'set.event':
+								case 'set.dow':															// set day-of-week by number
+								case 'set.wkd':															// set day-of-week by name
+									return this.#parse(offset as any, zdt);
+
+								case 'set.year':
+								case 'set.month':
+								// case 'set.week':																				// not defined
+								case 'set.day':
+								case 'set.hour':
+								case 'set.minute':
+								case 'set.second':
+								case 'set.millisecond':
+								case 'set.microsecond':
+								case 'set.nanosecond':
+									return zdt
+										.with({ [single]: offset });
+
+								case 'set.yy':
+								case 'set.mm':
+								// case 'set.ww':																					// not defined
+								case 'set.dd':
+								case 'set.hh':
+								case 'set.mi':
+								case 'set.ss':
+								case 'set.ms':
+								case 'set.us':
+								case 'set.ns':
+									const value = Tempo.ELEMENT[single as Tempo.Element];
+									return zdt
+										.with({ [value]: offset });
+
+								case 'start.year':
+									return zdt
+										.with({ month: Tempo.MONTH.Jan, day: 1 })
+										.startOfDay();
+
+								case 'start.month':
+									return zdt
+										.with({ day: 1 })
+										.startOfDay();
+
+								case 'start.week':
+									return zdt
+										.add({ days: -(this.dow - Tempo.WEEKDAY.Mon) })
+										.startOfDay();
+
+								case 'start.day':
+									return zdt
+										.startOfDay();
+
+								case 'start.hour':
+								case 'start.minute':
+								case 'start.second':
+									return zdt
+										.round({ smallestUnit: offset as 'hour' | 'minute' | 'second', roundingMode: 'trunc' });
+
+								// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+								case 'mid.year':
+									return zdt
+										.with({ month: Tempo.MONTH.Jul, day: 1 })
+										.startOfDay();
+
+								case 'mid.month':
+									return zdt
+										.with({ day: Math.trunc(zdt.daysInMonth / 2) })
+										.startOfDay();
+
+								case 'mid.week':
+									return zdt
+										.add({ days: -(this.dow - Tempo.WEEKDAY.Thu) })
+										.startOfDay();
+
+								case 'mid.day':
+									return zdt
+										.round({ smallestUnit: 'day', roundingMode: 'trunc' })
+										.add({ hours: 12 });
+
+								case 'mid.hour':
+									return zdt
+										.round({ smallestUnit: 'hour', roundingMode: 'trunc' })
+										.add({ minutes: 30 });
+
+								case 'mid.minute':
+									return zdt
+										.round({ smallestUnit: 'minute', roundingMode: 'trunc' })
+										.add({ seconds: 30 });
+
+								case 'mid.second':
+									return zdt
+										.round({ smallestUnit: 'second', roundingMode: 'trunc' })
+										.add({ milliseconds: 500 });
+
+								// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+								case 'end.year':
+									return zdt
+										.add({ years: 1 })
+										.with({ month: Tempo.MONTH.Jan, day: 1 })
+										.startOfDay()
+										.subtract({ nanoseconds: 1 });
+
+								case 'end.month':
+									return zdt
+										.add({ months: 1 })
+										.with({ day: 1 })
+										.startOfDay()
+										.subtract({ nanoseconds: 1 });
+
+								case 'end.week':
+									return zdt
+										.add({ days: (Tempo.WEEKDAY.Sun - this.dow) + 1 })
+										.startOfDay()
+										.subtract({ nanoseconds: 1 });
+
+								case 'end.day':
+								case 'end.hour':
+								case 'end.minute':
+								case 'end.second':
+									return zdt
+										.round({ smallestUnit: offset as 'day' | 'hour' | 'minute' | 'second', roundingMode: 'ceil' })
+										.subtract({ nanoseconds: 1 });
+
+								// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+								// Term anchors
+								case 'start.term':
+								case 'mid.term':
+								case 'end.term':
+									return resolveTermAnchor(new this.#Tempo(zdt, this.config), Tempo.#terms, offset as string, mutate as Tempo.Mutate) ??
+										(() => {
+											Tempo.#dbg.catch(this.#local.config, `Unexpected term(${offset})`);
+											return zdt;
+										})();
+
 								default:
-									return { mutate: 'set', offset: adjust, single: singular(key as string) }
+									Tempo.#dbg.catch(this.#local.config, `Unexpected method(${mutate}), unit(${adjust}) and offset(${single})`);
+									return zdt;
 							}
-						})(key);																				// IIFE to analyze arguments
-
-						switch (`${mutate}.${single}`) {
-							case 'set.timeZone':
-								return zdt.withTimeZone(offset as Temporal.TimeZoneLike);
-							case 'set.calendar':
-								return zdt.withCalendar(offset as Temporal.CalendarLike);
-
-							case 'set.period':
-							case 'set.time':
-							case 'set.date':
-							case 'set.event':
-							case 'set.dow':															// set day-of-week by number
-							case 'set.wkd':															// set day-of-week by name
-								return this.#parse(offset as any, zdt);
-
-							case 'set.year':
-							case 'set.month':
-							// case 'set.week':																				// not defined
-							case 'set.day':
-							case 'set.hour':
-							case 'set.minute':
-							case 'set.second':
-							case 'set.millisecond':
-							case 'set.microsecond':
-							case 'set.nanosecond':
-								return zdt
-									.with({ [single]: offset });
-
-							case 'set.yy':
-							case 'set.mm':
-							// case 'set.ww':																					// not defined
-							case 'set.dd':
-							case 'set.hh':
-							case 'set.mi':
-							case 'set.ss':
-							case 'set.ms':
-							case 'set.us':
-							case 'set.ns':
-								const value = Tempo.ELEMENT[single as Tempo.Element];
-								return zdt
-									.with({ [value]: offset });
-
-							case 'start.year':
-								return zdt
-									.with({ month: Tempo.MONTH.Jan, day: 1 })
-									.startOfDay();
-
-							case 'start.month':
-								return zdt
-									.with({ day: 1 })
-									.startOfDay();
-
-							case 'start.week':
-								return zdt
-									.add({ days: -(this.dow - Tempo.WEEKDAY.Mon) })
-									.startOfDay();
-
-							case 'start.day':
-								return zdt
-									.startOfDay();
-
-							case 'start.hour':
-							case 'start.minute':
-							case 'start.second':
-								return zdt
-									.round({ smallestUnit: offset as 'hour' | 'minute' | 'second', roundingMode: 'trunc' });
-
-							// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-							case 'mid.year':
-								return zdt
-									.with({ month: Tempo.MONTH.Jul, day: 1 })
-									.startOfDay();
-
-							case 'mid.month':
-								return zdt
-									.with({ day: Math.trunc(zdt.daysInMonth / 2) })
-									.startOfDay();
-
-							case 'mid.week':
-								return zdt
-									.add({ days: -(this.dow - Tempo.WEEKDAY.Thu) })
-									.startOfDay();
-
-							case 'mid.day':
-								return zdt
-									.round({ smallestUnit: 'day', roundingMode: 'trunc' })
-									.add({ hours: 12 });
-
-							case 'mid.hour':
-								return zdt
-									.round({ smallestUnit: 'hour', roundingMode: 'trunc' })
-									.add({ minutes: 30 });
-
-							case 'mid.minute':
-								return zdt
-									.round({ smallestUnit: 'minute', roundingMode: 'trunc' })
-									.add({ seconds: 30 });
-
-							case 'mid.second':
-								return zdt
-									.round({ smallestUnit: 'second', roundingMode: 'trunc' })
-									.add({ milliseconds: 500 });
-
-							// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-							case 'end.year':
-								return zdt
-									.add({ years: 1 })
-									.with({ month: Tempo.MONTH.Jan, day: 1 })
-									.startOfDay()
-									.subtract({ nanoseconds: 1 });
-
-							case 'end.month':
-								return zdt
-									.add({ months: 1 })
-									.with({ day: 1 })
-									.startOfDay()
-									.subtract({ nanoseconds: 1 });
-
-							case 'end.week':
-								return zdt
-									.add({ days: (Tempo.WEEKDAY.Sun - this.dow) + 1 })
-									.startOfDay()
-									.subtract({ nanoseconds: 1 });
-
-							case 'end.day':
-							case 'end.hour':
-							case 'end.minute':
-							case 'end.second':
-								return zdt
-									.round({ smallestUnit: offset as 'day' | 'hour' | 'minute' | 'second', roundingMode: 'ceil' })
-									.subtract({ nanoseconds: 1 });
-
-							// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-							// Term anchors
-							case 'start.term':
-							case 'mid.term':
-							case 'end.term':
-								return resolveTermAnchor(this, Tempo.#terms, offset as string, mutate as Tempo.Mutate) ??
-									(() => {
-										Tempo.#dbg.catch(this.#local.config, `Unexpected term(${offset})`);
-										return zdt;
-									})();
-
-							default:
-								Tempo.#dbg.catch(this.#local.config, `Unexpected method(${mutate}), unit(${adjust}) and offset(${single})`);
-								return zdt;
-						}
-					}, zdt)																						// start reduce with the shifted zonedDateTime
+						}, zdt)																						// start reduce with the shifted zonedDateTime
+				}
+				else {
+					return new this.#Tempo(args, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
+				}
 			}
-			else {
-				const res = new this.#Tempo(args, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
-				this.#matches = undefined;
-				return res;
-			}
+
+			return new this.#Tempo(zdt, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
+		} finally {
+			this.#matches = undefined;
 		}
-
-		const res = new this.#Tempo(zdt, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
-		this.#matches = undefined;
-		return res;
 	}
 
 	#format = <K extends string>(fmt: K): enums.FormatType<K> => {

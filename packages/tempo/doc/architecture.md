@@ -92,8 +92,8 @@ The **Guarded-Lazy** strategy is the final pillar of the "Zero-Cost Constructor"
 ### 📈 Validation & Performance
 The efficiency of the Master Guard and the success of the Zero-Cost objective have been validated via local benchmarking:
 
-- **Instantiation Overhead**: ~523µs on average (passing the Master Guard).
-- **Fast-Fail Rejection**: ~359µs on average (failing the Master Guard).
+- **Instantiation Overhead**: ~523µs on average (passing the Master Guard). *(Node.js v24.14.1, 12th Gen Intel i7-1255U, Linux x86_64; steady-state measured after 1k warm-up runs, n=10k. Validates the Zero-Cost objective on this hardware.)*
+- **Fast-Fail Rejection**: ~359µs on average (failing the Master Guard). *(Node.js v24.14.1, 12th Gen Intel i7-1255U, Linux x86_64; steady-state measured after 1k warm-up runs, n=10k. Demonstrates the Master Guard's low-latency rejection performance.)*
 
 > [!TIP]
 > For detailed timing results and methodology, see [Performance Benchmarks](./tempo.benchmarks.md).
