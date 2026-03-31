@@ -16,7 +16,7 @@
     "build:library": "npm run build --workspace=@magmacomputing/library",
     "clean": "tsc -b --clean",
     "release": "release-it",
-    "release:tempo": "npm run build --workspace=@magmacomputing/tempo && cd packages/tempo && bash resolve-self.sh && npm publish",
+    "release:tempo": "npm run build --workspace=@magmacomputing/tempo && npm run publish --workspace=@magmacomputing/tempo",
     "version:patch": "npm version patch -w @magmacomputing/tempo -w @magmacomputing/library --no-git-tag-version",
     "version:minor": "npm version minor -w @magmacomputing/tempo -w @magmacomputing/library --no-git-tag-version",
     "version:major": "npm version major -w @magmacomputing/tempo -w @magmacomputing/library --no-git-tag-version",

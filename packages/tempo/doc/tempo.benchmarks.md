@@ -41,4 +41,4 @@ The benchmark script used `performance.now()` within a Vitest environment to ens
 3. **Invalid Parse**: Passes a string that fails the Master Guard (e.g., includes emojis or exotic symbols) to measure rejection speed.
 
 > [!NOTE]
-> These benchmarks represent the library's performance under Node.js v24+. Results may vary based on the JS engine (V8, JavaScriptCore, etc.) but the O(1) complexity remains constant.
+> These benchmarks represent the library's performance under Node.js v22+. Results may vary based on the JS engine (V8, JavaScriptCore, etc.) but the O(1) complexity remains constant.

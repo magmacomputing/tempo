@@ -45,14 +45,11 @@ export function memoizeFunction<F extends (...args: any[]) => any>(fn: F) {
 
 	return function (...args: unknown[]) {
 		const key = JSON.stringify(args);											// create a unique key from arguments
-		console.log('memoize: ', key);
 		if (!cache.has(key)) {
 			// @ts-ignore
 			const result = fn.apply(this, args);									// call the original function with the correct context
-			console.log('set: ', result);
 			cache.set(key, Object.freeze(result));								// stash the result for subsequent calls
 		}
-		else console.log('get: ', cache.get(key));
 
 		return cache.get(key);
 	}

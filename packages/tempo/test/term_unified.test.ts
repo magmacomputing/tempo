@@ -4,6 +4,10 @@ describe('Term Unified Logic (Mutation & Identity)', () => {
 	// 2024-05-15 is in Q2 (Apr-Jun) in Northern hemisphere
 	const testDate = '2024-05-15T12:00:00+10:00[Australia/Sydney]';
 
+	beforeEach(async () => {
+		await Tempo.init()
+	})
+
 	it('should jump to the start of a term using #term syntax in set()', () => {
 		const t = new Tempo(testDate, { catch: true, sphere: 'north' });
 		const start = t.set({ start: '#quarter' });
@@ -43,7 +47,21 @@ describe('Term Unified Logic (Mutation & Identity)', () => {
 	});
 
 	it('should respect custom labels if provided in the Range object', () => {
-		// Mock logic is inside Tempo.class.ts handling {res.label}
+		// 1. Register a custom term that returns a labelled Range
+		Tempo.extend({
+			key: 'custom',
+			define() {
+				return {
+					start: new Tempo('2024-01-01'),
+					end: new Tempo('2024-12-31'),
+					label: 'Year 2024'
+				};
+			}
+		});
+
+		// 2. Format a string using the custom term placeholder
+		const t = new Tempo('2024-05-15');
+		expect(t.format('{#custom}')).toBe('Year 2024');
 	});
 
 	it('should return the original placeholder for unknown terms in format()', () => {
@@ -51,16 +69,10 @@ describe('Term Unified Logic (Mutation & Identity)', () => {
 		expect(t.format('{#nonexistent}')).toBe('{#nonexistent}');
 	});
 
-	it('should ignore invalid terms in set() but might throw if Logify is not runtime-aware', () => {
-		const t = new Tempo(testDate, { catch: true, sphere: 'north' });
-		// We expect the mutation to be ignored, but if it throws due to static Logify config, we handle it.
-		// For now, let's just ensure it DOES jump if valid, and DOESN'T jump if invalid.
-		try {
-			const result = t.set({ start: '#invalid' });
-			expect(result.toString()).toBe(t.toString());
-		} catch (e) {
-			expect((e as Error).message).toContain('Unexpected term(#invalid)');
-		}
+	it('should throw an error for invalid terms when catch is false', () => {
+		// Choose the STATIC behavior: explicitly set catch: false to expect internal Logify.catch to throw
+		const t = new Tempo(testDate, { catch: false, sphere: 'north' });
+		expect(() => t.set({ start: '#invalid' })).toThrow(/Unexpected term\(#invalid\)/);
 	});
 
 	it('should correctly resolve quarters in the Southern Hemisphere', () => {

@@ -117,6 +117,11 @@ export function allObject<T extends Obj>(json: T) {
 	return Object.fromEntries(ownEntries(json, true));
 }
 
+/** create a new object and shadow-copy all own-descriptors from the source */
+export const allDescriptors = <T extends object>(source: T) => {
+	return Object.defineProperties({}, Object.getOwnPropertyDescriptors(source)) as T;
+}
+
 /** get a string-array of 'getter' names for an object */
 export const getAccessors = (obj: any = {}) => {
 	return ownAccessors(obj, 'get');
@@ -133,9 +138,4 @@ const ownAccessors = (obj: any = {}, type: 'get' | 'set') => {
 	return ownEntries(accessors)
 		.filter(([_, descriptor]) => isFunction(descriptor[type]))
 		.map(([key, _]) => key)
-}
-
-/** copy all Own properties (including getters / setters) to a new object */
-export const copyObject = <T extends Obj>(target: T, source: T) => {
-	return Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)) as T;
 }

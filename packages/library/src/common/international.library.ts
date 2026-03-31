@@ -14,7 +14,7 @@ export function getResolvedOptions() {
 /** return the canonicalized locale string */
 export function canonicalLocale(locale: string) {
 	try {
-		return Intl.getCanonicalLocales(locale.replace('_', '-'))[0];
+		return Intl.getCanonicalLocales(locale.replace(/_/g, '-'))[0];
 	} catch (e) {
 		return locale;
 	}

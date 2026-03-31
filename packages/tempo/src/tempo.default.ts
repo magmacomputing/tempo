@@ -23,6 +23,7 @@ export const Match = secure({
 	/** whitespace characters */															spaces: /\s+/g,
 	/** Z character */																				zed: /^Z$/,
 	/** base guard characters (digits and common symbols) */	guard: /[\d\s\-\.\:T\/Z\+\-\(\)\[\]\,\=\#]+/i,
+	/** escape special regex characters in a string */				escape: (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 })
 
 /** Tempo Symbol registry */

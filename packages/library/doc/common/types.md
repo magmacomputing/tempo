@@ -19,7 +19,8 @@ Returns true if an object, array, set, or map has no values, or if a string is e
 A union of `string | number | bigint | boolean | symbol | void | undefined | null`.
 
 ### `Nullable<T>` / `Nullish`
-`Nullish` is defined as `null | undefined | void`.
+`Nullable<T>` is a generic for `T | null`.  
+`Nullish` is the bottom-value union: `null | undefined | void`.
 
 ### `Property<T>`
 A generic record: `Record<PropertyKey, T>`.

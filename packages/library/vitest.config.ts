@@ -14,6 +14,7 @@ export default defineConfig({
       { find: /^#library\/(.*)\.js$/, replacement: resolve(__dirname, './src/common/$1.ts') },
       { find: /^#library$/, replacement: resolve(__dirname, './src/common/index.ts') },
       { find: /^#browser\/(.*)\.js$/, replacement: resolve(__dirname, './src/browser/$1.ts') },
+      { find: /^#server\/(.*)\.js$/, replacement: resolve(__dirname, './src/server/$1.ts') },
       { find: /^#server\/(.*)$/, replacement: resolve(__dirname, './src/server/$1.ts') },
     ]
   }

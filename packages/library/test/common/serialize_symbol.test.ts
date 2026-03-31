@@ -30,9 +30,9 @@ describe(`${label}`, () => {
   })
 
   // local Symbols cannot be cloned
-  test(`${label} objectify Symbol(local) != ${sym2.toString()}`, () => {
+  test(`${label} cloneify Symbol(local) != ${sym2.toString()}`, () => {
     expect(cloneify(sym2))
-      .not.toEqual(sym2);
+      .not.toEqual(sym2)
   })
 
   // local Symbols are not equal

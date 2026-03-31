@@ -89,7 +89,7 @@ setTimeout(async () => {
 > [!WARNING]
 > If using `const` or `let` instead of `using` / `await using`, you **must** call the returned `stop()` function (or call `.return()` on the generator) to clear the interval manually and prevent memory leaks.
 
-### 2. Virtual Clock (Seeding)
+### 3. Virtual Clock (Seeding)
 
 To create a **Virtual Clock** that increments from a specific point rather than using the system time, use the `seed` option:
 
@@ -101,7 +101,7 @@ await using daily = Tempo.ticker({
 });
 ```
 
-### 3. Backwards Tickers (Countdowns)
+### 4. Backwards Tickers (Countdowns)
 
 By providing a **negative** interval, you can create a ticker that moves backwards in time. 
 

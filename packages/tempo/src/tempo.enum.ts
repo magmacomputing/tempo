@@ -1,7 +1,7 @@
 import { $Target, $Extensible } from '#library/symbol.library.js';
 import { enumify, Enum } from '#library/enumerate.library.js';
 import { getProxy } from '#library/proxy.library.js';
-import { ownKeys } from '#library/reflection.library.js';
+import { allDescriptors, ownKeys } from '#library/reflection.library.js';
 import { clearCache } from '#library/function.library.js';
 import { isUndefined } from '#library/type.library.js';
 import type { OwnOf, KeyOf, ValueOf, LooseUnion, Mutable, Property } from '#library/type.library.js';
@@ -95,17 +95,17 @@ const DEFAULTS = {
 	LIMIT: {
 		/** Tempo(31-Dec-9999.23:59:59).ns */										get maxTempo() { return Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds },
 		/** Tempo(01-Jan-1000.00:00:00).ns */										get minTempo() { return Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds },
-	},																												// as Record<string, bigint>,
+	},
 } as const;
 
 /** @internal Centralized mutable state for all extendable registries */
 export const STATE = {
-	NUMBER: { ...DEFAULTS.NUMBER },
-	DURATION: { ...DEFAULTS.DURATION },
-	TIMEZONE: { ...DEFAULTS.TIMEZONE },
-	DURATIONS: { ...DEFAULTS.DURATIONS },
-	FORMAT: { ...DEFAULTS.FORMAT },
-	LIMIT: { ...DEFAULTS.LIMIT },
+	NUMBER: allDescriptors(DEFAULTS.NUMBER),
+	DURATION: allDescriptors(DEFAULTS.DURATION),
+	TIMEZONE: allDescriptors(DEFAULTS.TIMEZONE),
+	DURATIONS: allDescriptors(DEFAULTS.DURATIONS),
+	FORMAT: allDescriptors(DEFAULTS.FORMAT),
+	LIMIT: allDescriptors(DEFAULTS.LIMIT),
 } as const;
 
 (STATE.NUMBER as any)[$Extensible] = true;
@@ -207,7 +207,7 @@ export type ZONED_DATE_TIME = ValueOf<typeof ZONED_DATE_TIME>
 export type ZonedDateTime = KeyOf<typeof ZONED_DATE_TIME>
 
 /** allowed keys for Tempo configuration options */
-const optionKeys = ['value', 'mdyLocales', 'mdyLayouts', 'store', 'discovery', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period', 'formats', 'plugins'] as const;
+const optionKeys = ['value', 'mode', 'mdyLocales', 'mdyLayouts', 'store', 'discovery', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period', 'formats', 'plugins'] as const;
 export const OPTION = getProxy(enumify(optionKeys, false), false);
 export type Option = KeyOf<typeof OPTION>
 

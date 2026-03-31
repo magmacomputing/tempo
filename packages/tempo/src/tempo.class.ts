@@ -148,8 +148,8 @@ export class Tempo {
 	/** initialization strategies */													static get MODE() { return enums.MODE }
 	/** some useful Dates */																	static get LIMIT() { return enums.LIMIT }
 
-	/** check if Tempo is currently initializing */						static get isInitializing() { return Tempo.#lifecycle.extending || !Tempo.#lifecycle.ready }
-	/** check if Tempo is currently extending */							static get isExtending() { return Tempo.#lifecycle.extending }
+	/** check if Tempo is currently initializing */						static get isInitializing() { return Tempo.#lifecycle.extendDepth > 0 || !Tempo.#lifecycle.ready }
+	/** check if Tempo is currently extending */							static get isExtending() { return Tempo.#lifecycle.extendDepth > 0 }
 
 	static #dbg = new Logify('Tempo', {
 		debug: Default?.debug ?? false,
@@ -162,7 +162,7 @@ export class Tempo {
 	/** cache for next-available 'usr' Token key */						static #usrCount = 0;
 	/** mutable list of registered term plugins */						static #terms: Tempo.TermPlugin[] = [];
 	static #termMap: Map<string, Tempo.TermPlugin> = new Map();
-	/** flag to prevent recursion during init */													static #lifecycle = { bootstrap: true, initialising: false, extending: false, ready: false };
+	/** flag to prevent recursion during init */													static #lifecycle = { bootstrap: true, initialising: false, extendDepth: 0, ready: false };
 	/** high-performance Master Guard regex built from all registries */		static #guard: RegExp;
 
 	//** prototype helpers */
@@ -528,7 +528,12 @@ export class Tempo {
 
 	/** Access to registries */
 	static #buildGuard() {
-		const terms = Tempo.#terms.map(t => [t.key ?? '', t.scope ?? '']).flat().filter(isString);
+		const terms = Tempo.#terms
+			.map(t => [Match.escape(t.key ?? ''), Match.escape(t.scope ?? '')])
+			.flat()
+			.filter(isString)
+			.filter(t => t.length > 0);
+
 		const words = [...terms, ...Object.keys(Event), ...Object.keys(Period), ...Object.keys(enums.NUMBER)].join('|');
 		const dates = [Match.date.source, Match.time.source, Snippet[Token.yy].source].join('|');
 
@@ -549,9 +554,10 @@ export class Tempo {
 		const items = asArray(arg).flat(1);
 		if (isEmpty(items)) return this;
 
+		Tempo.#lifecycle.extendDepth++;													// increment the re-entrant nesting counter
 		try {
 			items.forEach(item => {
-				if (isFunction(item)) {														// Standard Plugin registration
+				if (isFunction(item)) {															// Standard Plugin registration
 					if (item.installed) return;
 					item.installed = true;														// mark as installed (BEFORE side-effects)
 
@@ -588,10 +594,12 @@ export class Tempo {
 				}
 			})
 		} finally {
-			// per-item guards handle recursion
+			Tempo.#lifecycle.extendDepth--;												// decrement the re-entrant nesting counter
 		}
 
-		Tempo.#buildGuard();																		// rebuild the Master Guard to include new terms/events
+		if (Tempo.#lifecycle.extendDepth === 0)
+			Tempo.#buildGuard();																	// rebuild the Master Guard only when top-level is finished
+
 		return this;
 	}
 
@@ -601,7 +609,7 @@ export class Tempo {
 		Tempo.#lifecycle.initialising = true;
 
 		try {
-			if (isEmpty(options)) {															// if no options supplied, reset all
+			if (isEmpty(options)) {																// if no options supplied, reset all
 				Tempo.#global.parse = {
 					snippet: Object.assign({}, Snippet),
 					layout: Object.assign({}, Layout),
@@ -1003,9 +1011,9 @@ export class Tempo {
 	/** Fractional seconds (e.g., 0.123456789) */							get ff() { return +(`0.${pad(this.ms, 3)}${pad(this.us, 3)}${pad(this.ns, 3)}`) }
 	/** IANA Time Zone ID (e.g., 'Australia/Sydney') */				get tz() { return this.toDateTime().timeZoneId }
 	/** Unix timestamp (defaults to milliseconds) */					get ts() { return this.epoch[this.#local.config.timeStamp] }
-	/** Short month name (e.g., 'Jan') */											get mmm() { this.#ensureParsed(); return Tempo.MONTH.keyOf(this.#zdt.month as Tempo.Month) }
-	/** Full month name (e.g., 'January') */									get mon() { this.#ensureParsed(); return Tempo.MONTHS.keyOf(this.#zdt.month as Tempo.Month) }
-	/** Short weekday name (e.g., 'Mon') */										get www() { this.#ensureParsed(); return Tempo.WEEKDAY.keyOf(this.#zdt.dayOfWeek as Tempo.Weekday) }
+	/** Short month name (e.g., 'Jan') */											get mmm() { return Tempo.MONTH.keyOf(this.toDateTime().month as Tempo.Month) }
+	/** Full month name (e.g., 'January') */									get mon() { return Tempo.MONTHS.keyOf(this.toDateTime().month as Tempo.Month) }
+	/** Short weekday name (e.g., 'Mon') */										get www() { return Tempo.WEEKDAY.keyOf(this.toDateTime().dayOfWeek as Tempo.Weekday) }
 	/** Full weekday name (e.g., 'Monday') */									get wkd() { return Tempo.WEEKDAYS.keyOf(this.toDateTime().dayOfWeek as Tempo.Weekday) }
 	/** ISO weekday number: Mon=1, Sun=7 */										get dow() { return this.toDateTime().dayOfWeek as Tempo.Weekday }
 	/** Nanoseconds since Unix epoch (BigInt) */							get nano() { return this.toDateTime().epochNanoseconds }
@@ -1218,13 +1226,15 @@ export class Tempo {
 				break;
 
 			case 'Number':																				// Number which didn't conform to a Tempo.pattern
-				const [seconds = BigInt(0), suffix = BigInt(0)] = value.toString().split('.').map(BigInt);
-				const nano = BigInt(suffix.toString().substring(0, 9).padEnd(9, '0'));
+				{
+					const [seconds = BigInt(0), suffix = BigInt(0)] = value.toString().split('.').map(BigInt);
+					const nano = BigInt(suffix.toString().substring(0, 9).padEnd(9, '0'));
 
-				dateTime = Temporal.Instant.fromEpochNanoseconds(seconds * BigInt(1_000_000_000) + nano)
-					.toZonedDateTimeISO(tz)
-					.withCalendar(cal);
-				break;
+					dateTime = Temporal.Instant.fromEpochNanoseconds(seconds * BigInt(1_000_000_000) + nano)
+						.toZonedDateTimeISO(tz)
+						.withCalendar(cal);
+					break;
+				}
 
 			case 'BigInt':																				// BigInt is not conformed against a Tempo.pattern
 				dateTime = Temporal.Instant.fromEpochNanoseconds(value)
@@ -1806,10 +1816,11 @@ export class Tempo {
 								case 'start':
 								case 'mid':
 								case 'end':
-									const offset = adjust?.toString() ?? '';
-									const single = offset.startsWith('#') ? 'term' : singular(offset);
-									return { mutate: key as Tempo.Mutate, offset, single }
-
+									{
+										const offset = adjust?.toString() ?? '';
+										const single = offset.startsWith('#') ? 'term' : singular(offset);
+										return { mutate: key as Tempo.Mutate, offset, single }
+									}
 								default:
 									return { mutate: 'set', offset: adjust, single: singular(key as string) }
 							}
@@ -2117,7 +2128,7 @@ export class Tempo {
 			case 'months':
 				return getRelativeTime(date[1], dur.unit, locale, style);
 			case 'weeks':
-				return getRelativeTime(date[1], dur.unit, locale, style)
+				return getRelativeTime(dur.weeks, dur.unit, locale, style)
 			case 'days':
 				return getRelativeTime(date[2], dur.unit, locale, style);
 

@@ -33,9 +33,11 @@ Tempo v2.0.0 is a major milestone, delivering a more reactive architecture and r
 
 ## ⚠️ Migrating from v1.x
 
-If you are upgrading from a previous version, please note the following change in plugin handling:
+Tempo v2.0.0 introduces several architectural improvements that may require minor updates to your existing code:
 
-**Plugin Registration**: You no longer need to manually call `Tempo.extend()`. Registration now happens automatically upon import:
+- **Token Refactor**: The `wy` (week-of-year) formatting token has been refactored to `yw` to better align with the native Temporal `yearOfWeek` getter.
+- **Method Consolidation**: `Tempo.load()` has been removed. Use `Tempo.extend()` for all plugin registration and global configuration tasks. 
+- **Automatic Registration**: You no longer need to manually call `Tempo.extend()` for built-in plugins. Registration now happens automatically upon import:
 
 ```javascript
 // v2.0.0 - Automatic registration via side-effect import
@@ -134,7 +136,7 @@ For detailed technical guides, please refer to:
 - [Plugin System (Extending Tempo)](./doc/Tempo.md#plugin-system)
 - [Terms (Calculation Plugins)](./doc/Tempo.md#plugins-terms)
 - [Configuration Guide](./doc/tempo.config.md)
-- [Architecture & Internal Protection](./architecture.md)
+- [Architecture & Internal Protection](./doc/architecture.md)
 - [Commercial Support & Consulting](./doc/commercial.md)
 
 ## 💖 Support the Project

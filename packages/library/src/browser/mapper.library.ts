@@ -56,9 +56,14 @@ export const geoLocation = (opts = {} as MapOpts) =>
 		if ('geolocation' in navigator) {
 			navigator['geolocation'].getCurrentPosition(
 				(value) => {																				// on success
-					const test1 = value.coords.latitude.toFixed(3) !== mapStore.geolocation.coords.latitude.toFixed(3);
-					const test2 = value.coords.longitude.toFixed(3) !== mapStore.geolocation.coords.longitude.toFixed(3);
-					const test3 = mapStore.geolocation.timestamp < (instant().epochMilliseconds - 3_600_000);	// 1 hour ago
+					const coords = mapStore.geolocation?.coords;
+					const prevLat = coords?.latitude?.toFixed(3);
+					const prevLng = coords?.longitude?.toFixed(3);
+					const prevTime = mapStore.geolocation?.timestamp ?? 0;
+
+					const test1 = value.coords.latitude.toFixed(3) !== prevLat;
+					const test2 = value.coords.longitude.toFixed(3) !== prevLng;
+					const test3 = prevTime < (instant().epochMilliseconds - 3_600_000);	// 1 hour ago
 
 					if (test1 || test2 || test3) {										// position has moved, or timeout
 						Object.assign(mapStore, { georesponse: null });	// so remove stashed georesponse result
@@ -110,15 +115,16 @@ export const mapQuery = (coords?: google.maps.GeocoderRequest, opts = {} as MapO
 		geoCoords(coords)																			// get a Location object
 			.then((loc) => {
 				switch (true) {
-					case (!('maps' in window['google'])):
+					case (!(window && 'google' in window && 'maps' in window['google'])):
 						throw new Error('Google Maps API not configured');
 
 					case isNullish(loc):															// unsuccessful geoLocation
 						throw new Error('Cannot determine Coordinates');
 
 					case isNullish(coords):													// current location
-						const test1 = !isNullish(mapStore.geolocation) && !isNullish(mapStore.georesponse);
-						const test2 = isNullish(mapStore.geolocation.error) && isNullish(mapStore.georesponse.error);
+						const test1 = mapStore.geolocation && mapStore.georesponse;
+						const test2 = isNullish(mapStore.geolocation?.error) && isNullish(mapStore.georesponse?.error);
+
 						if (test1 && test2) {													// if we already have geocoder
 							if (opts.debug)
 								console.log('mapQuery: cache');
@@ -137,7 +143,7 @@ export const mapQuery = (coords?: google.maps.GeocoderRequest, opts = {} as MapO
 	})
 		.finally(() => {
 			if (opts.debug)
-				console[mapStore.georesponse.error ? 'error' : 'log']('mapQuery: ', mapStore.georesponse);
+				console[mapStore.georesponse?.error ? 'error' : 'log']('mapQuery: ', mapStore.georesponse);
 
 			store?.set(MAP_KEY, mapStore);												// stash current georesponse to localStorage
 		})
@@ -159,7 +165,7 @@ export const mapHemisphere = (coords?: google.maps.GeocoderRequest, opts = {} as
 
 			const sphere = getHemisphere();											// use the timezone offset to determine hemisphere
 
-			if (isNull(sphere) && opts.catch === false)
+			if (isNullish(sphere) && opts.catch === false)
 				throw new Error('Cannot determine Hemisphere');
 
 			return sphere;

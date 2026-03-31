@@ -1,4 +1,4 @@
-import { Tempo } from '#tempo'
+import { Tempo } from '#tempo/tempo.class.js';
 
 // Use a private test symbol to avoid trashing globalThis[$Tempo]
 const $TestTempo = Symbol('TestGlobalOptionsDiscovery')

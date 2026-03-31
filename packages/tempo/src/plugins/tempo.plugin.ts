@@ -181,7 +181,7 @@ export function resolveTermShift(tempo: Tempo, terms: TermPlugin[], name: string
 			const start = r.start.toDateTime().epochNanoseconds;
 			const end = r.end.toDateTime().epochNanoseconds;
 			const now = currentZdt.epochNanoseconds;
-			return now >= start && now <= end;
+			return now >= start && now < end;
 		});
 
 		// if we aren't "in" a term (e.g. in a gap), find the "next" or "prev" starting point

@@ -11,26 +11,36 @@ const STORAGE = {
 type STORAGE = ValueOf<typeof STORAGE>
 
 /**
- * Wrapper around local / session Browser Storage
+ * Wrapper around local / session Browser Storage.
+ * Refactored for lazy-initialization to ensure side-effect free imports.
  */
 export class WebStore {
-	static #local = new WebStore(STORAGE.Local);							// static reference to localStorage
-	static #session = new WebStore(STORAGE.Session);					// static reference to sessionStorage
+	static #localInstance?: WebStore;
+	static #sessionInstance?: WebStore;
+
+	/** Lazy getter for localStorage wrapper */
 	static get local() {
-		return WebStore.#local;
-	}
-	static get session() {
-		return WebStore.#session;
+		return WebStore.#localInstance ??= new WebStore(STORAGE.Local);
 	}
 
-	#storage: globalThis.Storage;
+	/** Lazy getter for sessionStorage wrapper */
+	static get session() {
+		return WebStore.#sessionInstance ??= new WebStore(STORAGE.Session);
+	}
+
+	#type: STORAGE;
+
+	/** Resolved Storage object (resolved only on access) */
+	get #storage(): globalThis.Storage {
+		return this.#type === STORAGE.Local
+			? globalThis.localStorage
+			: globalThis.sessionStorage;
+	}
 
 	[Symbol.toStringTag] = 'WebStore';
 
 	constructor(storage: STORAGE = STORAGE.Local) {
-		this.#storage = storage === STORAGE.Local							// default to localStorage
-			? globalThis.localStorage
-			: globalThis.sessionStorage
+		this.#type = storage;
 	}
 
 	public get<T>(key: PropertyKey): T | null;
@@ -38,7 +48,7 @@ export class WebStore {
 	public get<T>(key: PropertyKey, dflt?: T) {
 		const str = this.#storage.getItem(stringify(key));
 		return isString(str)
-			? objectify<T>(str)																	// rebuild the object
+			? objectify<T>(str)																		// rebuild the object
 			: (dflt ?? null)
 	}
 
@@ -51,7 +61,7 @@ export class WebStore {
 
 		switch (arg.type) {
 			case 'Undefined':
-				return this.del(key);															// synonym for 'removeItem'
+				return this.del(key);																// synonym for 'removeItem'
 
 			case 'Object':
 				prev ??= {};
@@ -63,26 +73,26 @@ export class WebStore {
 				prev ??= [];
 				return this.#upd(key, opt.merge
 					? distinct((prev as unknown[])										// assume prev is Array
-						.concat(arg.value))														// remove duplicates
+						.concat(arg.value))															// remove duplicates
 					: obj)
 
 			case 'Map':
 				prev ??= new Map();
 				if (opt.merge) {
-					arg.value																				// merge into prev Map
+					arg.value																					// merge into prev Map
 						.forEach((val, key) => (prev as Map<any, any>).set(key, val));
 					return this.#upd(key, prev);
 				}
-				return this.#upd(key, arg.value);									// else overwrite new Map
+				return this.#upd(key, arg.value);										// else overwrite new Map
 
 			case 'Set':
 				prev ??= new Set();
 				if (opt.merge) {
 					arg.value
-						.forEach(itm => (prev as Set<any>).add(itm));	// merge into prev Set
+						.forEach(itm => (prev as Set<any>).add(itm));		// merge into prev Set
 					return this.#upd(key, prev);
 				}
-				return this.#upd(key, arg.value);									// else overwrite new Set
+				return this.#upd(key, arg.value);										// else overwrite new Set
 
 			default:
 				return this.#upd(key, arg.value);
@@ -100,7 +110,7 @@ export class WebStore {
 		return this;
 	}
 
-	public keys(...keys: PropertyKey[]) {										// list of keys (or all)
+	public keys(...keys: PropertyKey[]) {											// list of keys (or all)
 		return this.entries(...keys)
 			.map(([key,]) => key)
 	}
@@ -110,10 +120,12 @@ export class WebStore {
 			.map(([, val]) => val)
 	}
 
-	public entries<T>(...keys: PropertyKey[]) {							// list of keys (or all) to lookup
+	public entries<T>(...keys: PropertyKey[]) {								// list of keys (or all) to lookup
+		const wanted = new Set(keys.map(key => stringify(key)));
+
 		return ownEntries<Record<string, string>>(this.#storage)
 			.map(([key, val]) => [objectify(key), objectify(val)] as [PropertyKey, T])
-			.filter(([key]) => isEmpty(keys) || keys.toString().includes(key.toString()))
+			.filter(([key]) => isEmpty(keys) || wanted.has(stringify(key)))
 	}
 
 	public from(store: Property<any>) {

@@ -80,12 +80,11 @@ const deadline = new Tempo().add({ days: 7, hours: 2 });
 const past = new Tempo().add({ months: -1 });
 ```
 
-### Jump to Start/End of a Period
-Use `.set()` with the `start` or `end` keywords.
+### How do I jump to Term boundaries?
+Use the `#` prefix with `start` or `end` to jump to semantic boundaries like Quarters or Seasons.
 ```typescript
-const monthStart = new Tempo().set({ start: 'month' });
-const weekEnd = new Tempo().set({ end: 'week' });
-const midnight = new Tempo().set({ hour: 0 });
+const qtrStart = new Tempo().set({ start: '#quarter' });
+const sznEnd = new Tempo().set({ end: '#season' });
 ```
 
 ### How long until a deadline?
@@ -142,6 +141,20 @@ console.log(london.term.szn); // "Summer"
 // or even via the timeZone setting
 console.log(new Tempo({ timeZone: 'America/New_York' }).term.szn); // "Summer"
 console.log(new Tempo({ timeZone: 'Australia/Sydney' }).term.szn); // "Winter"
+```
+
+### Unified Term Math
+Tempo allows you to shift dates by semantic "steps" while preserving your relative position within the term.
+```typescript
+const t1 = new Tempo('2024-05-15'); // Middle of Q2
+const t2 = t1.add({ '#quarter': 1 }); // Middle of Q3: "2024-08-14" (approx)
+```
+
+### Semantic Formatting
+Use the `{#term}` token to automatically embed the current active Term's label into a string.
+```typescript
+const t = new Tempo();
+console.log(t.format('We are currently in the {#term}')); // "We are currently in the First Quarter"
 ```
 
 ---

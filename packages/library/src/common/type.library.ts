@@ -104,6 +104,7 @@ export function assertNever(val: never): asserts val is never { throw new Error(
 /** cast <T | undefined> as <T | T[]> */										export type TValues<T> = TValue<T> | Array<TValue<T>> | Extract<T, undefined>;
 /** cast <T | T[]> as T[] */																export type TArray<T> = Array<TValue<T>>;
 
+/** generic value which may be NULL */											export type Nullable<T> = T | null;
 /** bottom value */																					export type Nullish = null | undefined | void;
 /** Generic Record */																				export type Property<T> = Record<PropertyKey, T>;
 /** Generic Record or Array */															export type Obj = Property<any> | Array<any>

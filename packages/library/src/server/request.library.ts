@@ -27,12 +27,25 @@ type Config = {
 
 /** get data from a resource-url */
 export const httpRequest = <T>(url: string | URL, init = {} as RequestInit, config = {} as Config) => {
-	init.signal = AbortSignal.timeout(config.timeOut ?? TWO_SECONDS);
+	const signallingInit = {
+		...init,
+		signal: AbortSignal.timeout(config.timeOut ?? TWO_SECONDS)
+	};
 
-	return fetch(url, init)																	// caller will handle the 'catch' if error
-		.then(res => {
-			if (res.ok)
-				return res.json() as T;
+	return fetch(url, signallingInit)													// caller will handle the 'catch' if error
+		.then(async res => {
+			if (res.ok) {
+				if (config.prefix) {
+					const text = await res.text();										// read raw text first
+					const json = text.startsWith(config.prefix)				// if it starts with the specified prefix
+						? text.substring(config.prefix.length).replace(/\);?$/, '')	// then strip the prefix AND any trailing closure
+						: text;
+
+					return JSON.parse(json) as T;											// parse the unwrapped string
+				}
+
+				return res.json() as T;															// default JSON parsing
+			}
 
 			throw new Error(`${res.status}: ${res.statusText}`);	// fetch not successful
 		})

@@ -1,8 +1,8 @@
 import { Tempo } from '../src/tempo.class.js';
 
 describe('Tempo Lazy Evaluation (Shadowing)', () => {
-	beforeEach(async () => {
-		await Tempo.init();
+	beforeEach(() => {
+		Tempo.init();
 	});
 
 	describe('Static Registries', () => {

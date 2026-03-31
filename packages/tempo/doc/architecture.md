@@ -38,9 +38,11 @@ When using prototype shadowing, the JavaScript behavior for property inspection 
 - **After 2nd Access** (e.g., `.time`): Returns `['time']`. The `.date` property is now located on the **immediate prototype** of the current object.
 
 ### 🛡️ The Flattening Iterator
-To ensure that tools like `for...in` loops, spread operators, and `Object.fromEntries(t)` work correctly, Tempo implements a **Flattening Iterator** on the instance.
-- **`[Symbol.iterator]`**: Traverses the entire shadowing chain (using `Object.getPrototypeOf`) to collect all evaluated properties across all links.
-- **`Tempo.formats` & `Tempo.terms`**: Static getters provide a registry-wide view of **available** keys, regardless of whether they have been evaluated on a specific instance.
+Tempo implements a **Flattening Iterator** via `[Symbol.iterator]` which enables iterable consumers like `for...of`, array spread (`[...instance]`), and `Object.fromEntries(instance)` to traverse the shadowing chain (using `Object.getPrototypeOf`) and collect evaluated property entries.
+
+- **`[Symbol.iterator]`**: Traverses the shadowing chain to provide a flattened view of all computed state.
+- **⚠️ Important**: `for...in` and object spread (`{...instance}`) **do not** use the iterator; instead, they rely on enumerable own/inherited properties and are not supported by the flattening logic.
+- **`Tempo.formats` & `Tempo.terms`**: These static getters continue to provide a registry-wide view of **available** keys across the entire system, regardless of their evaluation state.
 
 ---
 
@@ -75,6 +77,7 @@ Global registries must be **live**. If a plugin adds a new timezone alias or dat
 
 ---
 
+<a id="3-master-guard-fast-fail-sync-point"></a>
 ## ⚡ 3. Master Guard (Guarded-Lazy Strategy)
 Used for: `new Tempo(string | number)`
 

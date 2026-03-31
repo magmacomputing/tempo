@@ -82,7 +82,7 @@ export class Tapper {
 
 		this.#hammer
 			.forEach(hammer => events														// for each Hammer
-				.forEach(event => hammer.get(event).set({ enable }))	// for each Event
+				.forEach(event => hammer.get(event)?.set({ enable }))	// for each Event
 			)
 
 		return this;

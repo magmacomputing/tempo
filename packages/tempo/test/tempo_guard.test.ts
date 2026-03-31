@@ -1,6 +1,10 @@
 import { Tempo } from '../src/tempo.class.js';
 
 describe('Master Guard Extension', () => {
+  beforeEach(() => {
+    Tempo.init()
+  });
+
   it('should rebuild the guard after extension via Discovery', () => {
     // 1. Initially, 'apple' should FAIL the guard and throw immediately (since lazy: false by default)
     expect(() => new Tempo('apple')).toThrow(/Cannot parse Date: "apple"/);

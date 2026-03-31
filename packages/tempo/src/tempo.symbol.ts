@@ -13,7 +13,14 @@
  * Define a reactive registration hook on a global symbol.
  * Allows Tempo to listen for side-effect plugin registrations
  * from plugins loaded later in the lifecycle.
+ * @returns any previous callback already registered for this symbol
  */
 export function registerHook(sym: symbol, cb: (val: any) => void) {
+	const existing = (globalThis as any)[sym];
+
+	if (existing !== undefined && typeof existing === 'function')
+		console.warn(`Overwriting existing hook for symbol: ${sym.description}`);
+
 	(globalThis as any)[sym] = cb;
+	return existing;																					// allow chaining or cleanup
 }
