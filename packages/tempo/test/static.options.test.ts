@@ -1,4 +1,4 @@
-import { Tempo } from '#tempo/index.js'
+import { Tempo } from '#tempo'
 
 describe('Tempo Static Options', () => {
     // Unique symbol for test discovery

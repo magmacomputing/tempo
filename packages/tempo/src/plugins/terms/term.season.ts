@@ -1,8 +1,7 @@
-import { getTermRange, type Range, defineTerm } from '#tempo/plugins/tempo.plugin.js';
-import { cloneify } from '#library';
-import { enums, type Tempo } from '#tempo';
-
-const { COMPASS } = enums;
+import { getTermRange, type Range, defineTerm } from '../tempo.plugin.js';
+import { cloneify } from '#library/serialize.library.js';
+import { COMPASS } from '#tempo/tempo.enum.js';
+import type { Tempo } from '#tempo/tempo.class.js';
 
 /** definition of fiscal season ranges */
 const ranges = [																						// @link https://www.timeanddate.com/calendar/aboutseasons.html

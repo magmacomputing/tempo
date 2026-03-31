@@ -1,19 +1,36 @@
 import { $Target, $Extensible } from '#library/symbol.library.js';
-import { enumify } from '#library/enumerate.library.js';
+import { enumify, Enum } from '#library/enumerate.library.js';
 import { getProxy } from '#library/proxy.library.js';
+import { allDescriptors, ownKeys } from '#library/reflection.library.js';
 import { clearCache } from '#library/function.library.js';
-import { isUndefined } from '#library/type.library.js';
-import type { Enum } from '#library/enumerate.library.js';
-import type { OwnOf, Index, KeyOf, ValueOf, LooseUnion, Mutable, Property } from '#library/type.library.js';
+import { isUndefined, isDefined } from '#library/type.library.js';
+import type { OwnOf, KeyOf, ValueOf, LooseUnion, Mutable, Property } from '#library/type.library.js';
+
+/** calendar seasons */
+export const SEASON = enumify({
+	Spring: 'spring',
+	Summer: 'summer',
+	Autumn: 'autumn',
+	Winter: 'winter'
+}, false);
+export type SEASON = ValueOf<typeof SEASON>
+
+/** cardinal directions */
+export const COMPASS = enumify({
+	North: 'north',
+	South: 'south',
+	East: 'east',
+	West: 'west'
+}, false);
+export type COMPASS = ValueOf<typeof COMPASS>
 
 /**
  * Various enumerations used throughout Tempo library.
  * These are exported and added as static getters of the Tempo class.
  */
 
-// #region Private Mutable State Registry ~~~~~~~~~~~~~~~~~~
-/** @internal Centralized mutable state for all extendable registries */
-export const STATE = {
+/** @internal LIVE state for all registries */
+const DEFAULTS = {
 	NUMBER: {
 		zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10
 	},
@@ -64,30 +81,35 @@ export const STATE = {
 		/** useful for standard timestamps */										weekTime: '{www}, {yyyy}-{mmm}-{dd} {hh}:{mi}:{ss}',
 		/** useful for standard full timestamps */							weekStamp: '{www}, {yyyy}-{mmm}-{dd} {hh}:{mi}:{ss}.{ff}',
 		/** useful for readable month and day */								dayMonth: '{dd}-{mmm}',
-		/** useful for Date */																	dayDate: '{dd}-{mmm}-{yyyy}',
+		/** useful for readable year, month and day */					dayDate: '{dd}-{mmm}-{yyyy}',
 		/** display with Time */																dayTime: '{dd}-{mmm}-{yyyy} {hh}:{mi}:{ss}',
 		/** useful for stamping logs */													logStamp: '{yyyy}{mm}{dd}T{hhmiss}.{ff}',
 		/** useful for sorting display-strings */								sortTime: '{yyyy}-{mm}-{dd} {hh}:{mi}:{ss}',
-		/** useful for sorting week order */										yearWeek: '{wy}{ww}',
+		/** useful for sorting week order */										yearWeek: '{yw}{ww}',
 		/** useful for sorting month order */										yearMonth: '{yyyy}{mm}',
 		/** useful for sorting date order */										yearMonthDay: '{yyyy}{mm}{dd}',
 		/** just Date portion */																date: '{yyyy}-{mm}-{dd}',
 		/** just Time portion */																time: '{hh}:{mi}:{ss}',
 	},
 	LIMIT: {
-		/** Tempo(31-Dec-9999.23:59:59).ns */										maxTempo: Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds,
-		/** Tempo(01-Jan-1000.00:00:00).ns */										minTempo: Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds,
-	},// as Record<string, bigint>,
+		/** Tempo(31-Dec-9999.23:59:59).ns */										get maxTempo() { return Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds },
+		/** Tempo(01-Jan-1000.00:00:00).ns */										get minTempo() { return Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds },
+	},
+} as const;
+
+/** @internal Centralized mutable state for all extendable registries */
+export const STATE = {
+	NUMBER: allDescriptors(DEFAULTS.NUMBER),
+	DURATION: allDescriptors(DEFAULTS.DURATION),
+	TIMEZONE: allDescriptors(DEFAULTS.TIMEZONE),
+	DURATIONS: allDescriptors(DEFAULTS.DURATIONS),
+	FORMAT: allDescriptors(DEFAULTS.FORMAT),
+	LIMIT: allDescriptors(DEFAULTS.LIMIT),
 } as const;
 
 (STATE.NUMBER as any)[$Extensible] = true;
 (STATE.FORMAT as any)[$Extensible] = true;
 (STATE.TIMEZONE as any)[$Extensible] = true;
-
-// #endregion
-
-export const COMPASS = enumify({ North: 'north', South: 'south', East: 'east', West: 'west' });
-export type COMPASS = ValueOf<typeof COMPASS>
 
 /** Gregorian calendar week-days (short-form) */
 export const WEEKDAY = enumify(['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
@@ -109,11 +131,6 @@ export type Month = ValueOf<typeof MONTH>
 export type MONTHS = KeyOf<typeof MONTHS>
 export type Months = ValueOf<typeof MONTHS>
 
-/** calendar seasons */
-export const SEASON = enumify({ Spring: 'spring', Summer: 'summer', Autumn: 'autumn', Winter: 'winter' });
-export type SEASON = ValueOf<typeof SEASON>
-export type Season = KeyOf<typeof SEASON>
-
 /** number names (0-10) */
 export const NUMBER = enumify(STATE.NUMBER, false);
 export type Number = KeyOf<typeof NUMBER>
@@ -129,13 +146,13 @@ export type DURATION = KeyOf<typeof DURATION>
 export const DURATIONS = enumify(STATE.DURATIONS, false);
 export type DURATIONS = KeyOf<typeof DURATIONS>
 
-/** pre-defined Format code short-cuts */
+/** common format aliases */
 export const FORMAT = enumify(STATE.FORMAT, false);
 export type FORMAT = ValueOf<typeof FORMAT>
 export type Format = LooseUnion<KeyOf<typeof FORMAT> & string>
 
 /** patterns that return a number */
-type NumericPattern = '{yyyy}{mm}' | '{yyww}' | '{yyyy}{mm}{dd}' | '{wy}{ww}' | '{wy}'
+type NumericPattern = '{yyyy}{mm}' | '{yyww}' | '{yyyy}{mm}{dd}' | '{yw}{ww}' | '{yw}'
 
 /** pre-configured format strings */
 export type OwnFormat = Mutable<OwnOf<typeof FORMAT>>
@@ -185,12 +202,16 @@ export type ZONED_DATE_TIME = ValueOf<typeof ZONED_DATE_TIME>
 export type ZonedDateTime = KeyOf<typeof ZONED_DATE_TIME>
 
 /** allowed keys for Tempo configuration options */
-const optionKeys = ['value', 'mdyLocales', 'mdyLayouts', 'store', 'discovery', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period', 'formats', 'plugins'] as const;
+const optionKeys = ['value', 'mode', 'mdyLocales', 'mdyLayouts', 'store', 'discovery', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period', 'formats', 'plugins'] as const;
 export const OPTION = getProxy(enumify(optionKeys, false), false);
 export type Option = KeyOf<typeof OPTION>
 
+/** initialization strategies */
+export const MODE = enumify({ Auto: 'auto', Strict: 'strict', Defer: 'defer', }, false);
+export type Mode = ValueOf<typeof MODE>
+
 /** allowed keys for internal parse state */
-const parseKeys = ['mdyLocales', 'mdyLayouts', 'formats', 'pivot', 'snippet', 'layout', 'event', 'period', 'anchor', 'value', 'discovery', 'plugins'] as const;
+const parseKeys = ['mdyLocales', 'mdyLayouts', 'formats', 'pivot', 'snippet', 'layout', 'event', 'period', 'anchor', 'value', 'discovery', 'plugins', 'mode'] as const;
 export const PARSE = getProxy(enumify(parseKeys, false), false);
 export type Parse = KeyOf<typeof PARSE>
 
@@ -211,13 +232,43 @@ export function registryUpdate(name: keyof typeof STATE, data: Record<string, an
 	const target = registry?.[$Target] as Property<any>;
 	const state = STATE[name] as Property<any>;
 
-	if (target) {
-		Object.entries(data).forEach(([key, val]) => {
-			if (isUndefined(state[key])) {												// only add if key does not exist
-				state[key] = val;
-				target[key] = val;
+	Object.entries(data).forEach(([key, val]) => {
+		if (isUndefined(state[key])) {													// only add if key does not exist
+			state[key] = val;
+			if (target) target[key] = val;
+		}
+	});
+
+	if (target) clearCache(target);
+}
+
+/** Reset all extendable registries to their original built-in defaults */
+export function registryReset() {
+	ownKeys(STATE).forEach(name => {
+		const state = STATE[name as keyof typeof STATE] as Property<any>;
+		const target = REGISTRIES[name]?.[$Target] as Property<any>;
+		const defaults = DEFAULTS[name as keyof typeof DEFAULTS] as Property<any>;
+
+		// 1. Purge all own-properties from state and target (if configurable)
+		[state, target].filter(isDefined).forEach(obj => {
+			Reflect.ownKeys(obj).forEach(key => {
+				const desc = Object.getOwnPropertyDescriptor(obj, key);
+				if (desc?.configurable) delete obj[key];
+			});
+		});
+
+		// 2. Restore defaults using property descriptors to preserve accessors/configurability
+		Reflect.ownKeys(defaults).forEach(key => {
+			const desc = Object.getOwnPropertyDescriptor(defaults, key);
+
+			if (desc) {
+				[state, target].filter(isDefined).forEach(obj => {
+					Object.defineProperty(obj, key, desc);
+				});
 			}
 		});
-		clearCache(target);
-	}
+
+		if (target) clearCache(target);
+		clearCache(state);																			// clear cache for state object
+	});
 }

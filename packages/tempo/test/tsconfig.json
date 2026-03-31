@@ -1,15 +1,28 @@
 {
-  "extends": "../tsconfig.json",
+  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
+    "rootDir": "..",
+    "noEmit": true,
+    "composite": true,
     "types": [
       "vitest/globals",
       "node"
     ],
-    "noEmit": true,
-    "rootDir": "../../",
     "paths": {
+      "#library": [
+        "../../library/src/common/index.ts"
+      ],
       "#library/*": [
-        "../../library/src/*"
+        "../../library/src/common/*"
+      ],
+      "#browser/*": [
+        "../../library/src/browser/*"
+      ],
+      "#server/*": [
+        "../../library/src/server/*"
+      ],
+      "#tempo": [
+        "../src/tempo.index.ts"
       ],
       "#tempo/*": [
         "../src/*"
@@ -17,8 +30,11 @@
     }
   },
   "include": [
-    "**/*.ts",
-    "../src/**/*.ts",
-    "../../library/src/**/*.ts"
+    "**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../src/tsconfig.json"
+    }
   ]
 }

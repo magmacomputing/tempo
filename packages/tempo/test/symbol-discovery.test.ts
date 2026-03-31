@@ -1,4 +1,4 @@
-import { Tempo } from '#tempo/index.js';
+import { Tempo } from '#tempo';
 
 // We use a private test symbol to avoid trampling on globalThis[$Tempo] during tests
 const $TestTempo = Symbol('TestTempoDiscovery');
@@ -51,7 +51,7 @@ describe('Global Discovery (via Configurable Symbol)', () => {
 
 		Tempo.init({ discovery: $TestTempo });
 		const terms = Tempo.terms;
-		expect(terms.find(t => t.key === 'globalTerm')).toBeDefined();
+		  expect(terms.find((t: any) => t.key === 'globalTerm')).toBeDefined();
 	});
 
 	it('should merge global timezone aliases', () => {

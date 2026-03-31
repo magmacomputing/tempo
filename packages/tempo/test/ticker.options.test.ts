@@ -34,7 +34,7 @@ describe('Tempo.ticker Options & Enhancements', () => {
 
 	test('ticker with until (virtual deadline)', async () => {
 		const seed = '2024-01-01T12:00:00';
-		const until = '2024-01-01T12:00:01'; // 1 second later
+		const until = '2024-01-01T12:00:01';										// 1 second later
 		const results: string[] = [];
 		
 		// 200ms interval, should tick at 0ms, 200ms, 400ms, 600ms, 800ms, 1000ms
@@ -46,10 +46,10 @@ describe('Tempo.ticker Options & Enhancements', () => {
 			results.push(t.format('sortTime') as string);
 		});
 
-		await new Promise(resolve => setTimeout(resolve, 300)); // enough for virtual time to pass, but real time is fast
+		await new Promise(resolve => setTimeout(resolve, 300));	// enough for virtual time to pass, but real time is fast
 		stop();
 
-		expect(results.length).toBe(6); // 0, 0.2, 0.4, 0.6, 0.8, 1.0
+		expect(results.length).toBe(6);												// 0, 0.2, 0.4, 0.6, 0.8, 1.0
 		expect(results[results.length - 1]).toContain('12:00:01');
 	});
 

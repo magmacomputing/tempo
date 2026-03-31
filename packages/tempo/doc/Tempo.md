@@ -174,7 +174,7 @@ Formatting uses a placeholder syntax similar to many template engines:
 | Placeholder | Description | Type | Range | Example |
 | :--- | :--- | :--- | :--- | :--- |
 | `{yyyy}` | Year | `4-digit` | `0001-9999` | `2024` |
-| `{wy}` | ISO Week-numbering Year | `4-digit` | `0001-9999` | `2024` |
+| `{yw}` | ISO Week-numbering Year | `4-digit` | `0001-9999` | `2024` |
 | `{yy}` | Year | `2-digit` | `00-99` | `24` |
 | `{mm}` | Month | `2-digit` | `01-12` | `05` |
 | `{mon}` | Full Month Name | `string` | `January - December` | `June` |
@@ -194,7 +194,7 @@ Formatting uses a placeholder syntax similar to many template engines:
 | `{ns}` | Nanoseconds | `3-digit` | `000-999` | `000` |
 | `{ff}` | Fractional Seconds | `9-digit` | `0-999999999` | `005000000` |
 | `{ts}` | Unix Timestamp | `digits` | `n/a` | `1716163200000` |
-| `{term.*}` | Evaluated Term Plugin | `dynamic` | `n/a` | `{term.qtr}` |
+| `{#term}` | Unified Term Identity | `string` | `n/a` | `{#qtr}` or `{#quarter}` |
 
 Example:
 ```typescript
@@ -203,19 +203,19 @@ t.format('{dd} {mon} {yyyy}');  // "24 January 2026"
 ```
 
 ### ISO 8601 Week Dates
-*(Note: `{wy}` represents the ISO week year, which may differ from `{yyyy}` at the start or end of a calendar year if the current date belongs to an ISO week from the adjacent year.)*
+*(Note: `{yw}` represents the ISO week year, which may differ from `{yyyy}` at the start or end of a calendar year if the current date belongs to an ISO week from the adjacent year.)*
 
 Tempo supports the **ISO 8601 Week Date** system, which is commonly used in business and logistics for unambiguous weekly scheduling.
 
 - **`{ww}`**: Represents the ISO week number (01–53).
-- **`{wy}`**: Represents the ISO week-numbering year.
+- **`{yw}`**: Represents the ISO week-numbering year.
 
 A week in this system always starts on a **Monday**. Week 01 is defined as the week with the year's first Thursday (or the week containing January 4th).
 
 To format a standard ISO week date (e.g., `2024-W21`), use both placeholders together:
 ```typescript
 const t = new Tempo('2024-05-20');
-t.format('{wy}-W{ww}');         // "2024-W21"
+t.format('{yw}-W{ww}');         // "2024-W21"
 ```
 
 ---
@@ -236,6 +236,7 @@ Sets the instance to a specific point or relative position.
 ```typescript
 t.set({ hour: 0 }); // Midnight
 t.set({ start: 'month' }); // Start of the current month
+t.set({ end: '#quarter' }); // End of the current fiscal quarter
 ```
 
 ### `until(dateTime, unit?)`
@@ -309,12 +310,40 @@ See the [Tempo Ticker guide](./tempo.ticker.md) for full details and API signatu
 
 ## Plugins (Terms)
 
-`Tempo` can be extended with "terms" – plugins that calculate complex date ranges. These are accessible via the `t.term` getter.
+`Tempo` can be extended with "terms" – plugins that calculate complex date ranges. 
 
-Inbuilt terms include:
-- `t.term.qtr`: Returns the current fiscal calendar quarter.
-- `t.term.szn`: Returns the current meteorological season (North/South hemisphere-aware).
-- `t.term.zdc`: Returns the current Western/Chinese astrological sign.
+### Unified Term Logic (v2.0.0)
+
+Terms are now fully integrated into the core `set()` and `format()` methods via the `#` indicator:
+
+1. **Anchored Mutations**: Jump to the `start`, `mid`, or `end` of any term:
+   ```typescript
+   t.set({ start: '#quarter' }); // April 1st (if in Q2)
+   t.set({ end: '#season' });    // Nov 30th (if in Autumn)
+   ```
+2. **Identity Placeholders**: Embed term identities into formatting strings:
+   - `{#qtr}`: Returns the technical key (e.g., `"Q2"`).
+   - `{#quarter}`: Returns the semantic label (e.g., `"Second Quarter"`), falling back to the key if no label exists.
+
+3. **Term Traversal (Math)**: Shift the date by semantic "steps" using `#term` units in `.add()`:
+   ```typescript
+   t.add({ '#quarter': 1 });  // Move to the same day/time in the NEXT quarter
+   t.add({ '#season': -1 });   // Move back one season
+   t.add({ '#morning': 1 });   // Jump across gaps to the next morning period
+   ```
+   *Note: Relational math preserves your relative duration from the start of the term and applies overflow constraints.*
+
+### Persistent Access
+Terms remain accessible via the `t.term` getter for programmatic use. The `start` and `end` boundaries are returned as **fluent, immutable Tempo instances**:
+- `t.term.qtr`: Current fiscal calendar quarter object.
+- `t.term.szn`: Current meteorological season (North/South hemisphere-aware).
+- `t.term.zdc`: Current Western/Chinese astrological sign.
+
+```typescript
+const q = t.term.qtr;
+console.log(q.start.format('{dd} {mmm}')); // Fluent formatting directly from the term!
+console.log(q.end.since(t, 'days'));        // Calculate days remaining in the quarter
+```
 
 See the [Tempo Terms guide](./tempo.terms.md) for full details and plugin development.
 
@@ -363,4 +392,4 @@ See the [Tempo Debugging guide](./tempo.debugging.md) for full details on using 
 - [API Reference](./tempo.api.md)
 - [Cookbook](./tempo.cookbook.md)
 - [Library Functionality](./tempo.library.md)
-- [Architecture: Lazy Evaluation Pattern](./lazy-evaluation-pattern.md)
+- [Architecture & Internal Protection](./architecture.md)

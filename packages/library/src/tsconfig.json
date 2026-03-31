@@ -1,0 +1,45 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "../dist",
+    "rootDir": ".",
+    "composite": true,
+    "lib": [
+      "ESNext",
+      "ESNext.Temporal",
+      "DOM"
+    ],
+    "types": [
+      "node",
+      "hammerjs",
+      "jquery",
+      "google.maps"
+    ],
+    "paths": {
+      "#library": [
+        "./common/index.ts"
+      ],
+      "#library/*.js": [
+        "./common/*.ts"
+      ],
+      "#library/*": [
+        "./common/*"
+      ],
+      "#browser/*.js": [
+        "./browser/*.ts"
+      ],
+      "#browser/*": [
+        "./browser/*"
+      ],
+      "#server/*.js": [
+        "./server/*.ts"
+      ],
+      "#server/*": [
+        "./server/*"
+      ]
+    }
+  },
+  "include": [
+    "**/*.ts"
+  ]
+}

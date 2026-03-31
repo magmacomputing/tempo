@@ -1,32 +1,83 @@
 {
-  "name": "@magma/library",
-  "version": "1.2.0",
+  "name": "@magmacomputing/library",
+  "version": "2.0.0",
   "description": "Shared utility library for Tempo",
-  "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*"
-    }
+  "author": "Magma Computing Solutions",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/magmacomputing/magma.git",
+    "directory": "packages/library"
   },
+  "homepage": "https://github.com/magmacomputing/magma/tree/main/packages/library#readme",
+  "bugs": {
+    "url": "https://github.com/magmacomputing/magma/issues"
+  },
+  "keywords": [
+    "utility",
+    "temporal",
+    "monorepo"
+  ],
+  "type": "module",
+  "main": "dist/common/index.js",
+  "types": "dist/common/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/common/index.d.ts",
+        "import": "./dist/common/index.js"
+      },
+      "./browser": {
+        "types": "./dist/browser/index.d.ts",
+        "import": "./dist/browser/index.js"
+      },
+      "./common": {
+        "types": "./dist/common/index.d.ts",
+        "import": "./dist/common/index.js"
+      },
+      "./server": {
+        "node": {
+          "types": "./dist/server/index.d.ts",
+          "import": "./dist/server/index.js"
+        },
+        "browser": null
+      },
+      "./browser/*.js": {
+        "development": "./src/browser/*.ts",
+        "default": "./dist/browser/*.js"
+      },
+      "./server/*.js": {
+        "development": "./src/server/*.ts",
+        "default": "./dist/server/*.js"
+      },
+      "./common/*.js": {
+        "development": "./src/common/*.ts",
+        "default": "./dist/common/*.js"
+      },
+      "./*.js": {
+        "development": "./src/common/*.ts",
+        "default": "./dist/common/*.js"
+      }
+    },
   "files": [
     "dist/",
     "src/"
   ],
   "imports": {
     "#library": {
-      "development": "./src/index.js",
-      "default": "./dist/index.js"
+      "development": "./src/common/index.ts",
+      "default": "./dist/common/index.js"
     },
-    "#library/*": {
-      "development": "./src/*",
-      "default": "./dist/*"
+    "#library/*.js": {
+      "development": "./src/common/*.ts",
+      "default": "./dist/common/*.js"
+    },
+    "#browser/*.js": {
+      "development": "./src/browser/*.ts",
+      "default": "./dist/browser/*.js"
+    },
+    "#server/*.js": {
+      "development": "./src/server/*.ts",
+      "default": "./dist/server/*.js"
     }
   },
   "scripts": {
@@ -36,5 +87,8 @@
   },
   "dependencies": {
     "tslib": "^2.8.1"
+  },
+  "optionalDependencies": {
+    "@js-temporal/polyfill": "^0.5.1"
   }
 }

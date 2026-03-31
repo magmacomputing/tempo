@@ -2,7 +2,7 @@ import { Tempo } from '../src/tempo.class.js';
 
 describe('Number-Word Pilot (0-10)', () => {
 	it('should resolve word-based counts in weekday patterns', () => {
-		const base = new Tempo('2024-03-20'); // A Wednesday
+		const base = new Tempo('2024-03-20');									// A Wednesday
 		
 		// "one Wednesday ago" -> 2024-03-13
 		const res = base.add('one Wednesday ago');

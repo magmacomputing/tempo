@@ -1,4 +1,3 @@
-import '#tempo/temporal.polyfill.js';
 import { Tempo } from '#tempo/tempo.class.js';
 
 describe('Tempo smoke tests', () => {

@@ -8,7 +8,7 @@ const label = 'term:';
 describe(`${label}`, () => {
 
   test(`${label} check for the {quarter} plugin`, () => {
-    const qtr = Tempo.terms.find(({ key }) => key === 'qtr');
+    const qtr = (Tempo.terms as any[]).find(({ key }) => key === 'qtr');
 
     expect(qtr)
       .toBeDefined()
@@ -16,8 +16,8 @@ describe(`${label}`, () => {
 
   test(`${label} check the term contains {quarter}`, () => {
     const tempo = new Tempo('01-Jan', { sphere: 'south' });
-    const quarter = tempo.term.quarter;                     // evaluate {quarter} on tempo.term
-    const qtr = tempo.term.qtr;                             // evaluate {qtr} on tempo.term  
+    const quarter = tempo.term.quarter;										// evaluate {quarter} on tempo.term
+    const qtr = tempo.term.qtr;														// evaluate {qtr} on tempo.term  
 
     const keys = [];
     for (const key in tempo.term) keys.push(key);
@@ -30,7 +30,7 @@ describe(`${label}`, () => {
 
   test(`${label} check the {daily} term`, () => {
     const tempo = new Tempo('1pm');
-    const period = tempo.term.per;                          // evaluate {per} on tempo.term
+    const period = tempo.term.per;													// evaluate {per} on tempo.term
 
     expect(period)
       .toBe('midday')

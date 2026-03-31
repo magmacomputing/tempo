@@ -56,9 +56,9 @@ describe('Ticker Symbol.dispose', () => {
 
 			const finalCount = count;
 			await new Promise(resolve => setTimeout(resolve, 150));
-			expect(count).toBe(finalCount); // Should have stopped
+			expect(count).toBe(finalCount);											// Should have stopped
 		} else {
-			stop(); // Fallback for environments without the symbol
+			stop();																							// Fallback for environments without the symbol
 		}
 	});
 
@@ -66,8 +66,8 @@ describe('Ticker Symbol.dispose', () => {
 		const ticker = Tempo.ticker(0.02);
 
 		if (typeof Symbol.asyncDispose === 'symbol') {
-			expect(ticker[Symbol.asyncDispose]).toBeDefined();
-			expect(typeof ticker[Symbol.asyncDispose]).toBe('function');
+			expect((ticker as any)[Symbol.asyncDispose]).toBeDefined();
+			expect(typeof (ticker as any)[Symbol.asyncDispose]).toBe('function');
 
 			let i = 0;
 			for await (const t of ticker) {
@@ -87,10 +87,10 @@ describe('Ticker Symbol.dispose', () => {
 		const seed = '2024-01-01T00:00:00';
 		const results: string[] = [];
 		const stop = Tempo.ticker({ seed, interval: 0.05 }, (t) => {
-			results.push(t.format('sortTime'));
+			results.push(t.format('sortTime') as string);
 		});
 
-		await new Promise(resolve => setTimeout(resolve, 125)); // Should have 3 ticks (0ms: seed, 50ms: +50, 100ms: +100)
+		await new Promise(resolve => setTimeout(resolve, 125));	// Should have 3 ticks (0ms: seed, 50ms: +50, 100ms: +100)
 		stop();
 
 		expect(results[0]).toBe(new Tempo(seed).format('sortTime'));
@@ -105,7 +105,7 @@ describe('Ticker Symbol.dispose', () => {
 
 		let i = 0;
 		for await (const t of ticker) {
-			results.push(t.format('sortTime'));
+			results.push(t.format('sortTime') as string);
 			if (++i === 3) break;
 		}
 
@@ -132,7 +132,7 @@ describe('Ticker Symbol.dispose', () => {
 			await using ticker = Tempo.ticker({ seed, interval: 0.02 });
 			let i = 0;
 			for await (const t of ticker) {
-				results.push(t.format('sortTime'));
+				results.push(t.format('sortTime') as string);
 				if (++i === 2) break;
 			}
 		}

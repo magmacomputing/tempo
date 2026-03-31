@@ -4,4 +4,4 @@ import { ZodiacTerm } from './term.zodiac.js'
 import { TimelineTerm } from './term.timeline.js'
 
 /** collection of built-in terms for initial registration */
-export const registerTerms = [QuarterTerm, SeasonTerm, ZodiacTerm, TimelineTerm]
+export const registerTerms = [QuarterTerm, SeasonTerm, ZodiacTerm, TimelineTerm];

@@ -1,5 +1,5 @@
 import { $Target } from '#library/symbol.library.js';
-import { Tempo, enums } from '#tempo/index.js';
+import { Tempo, enums } from '#tempo';
 
 describe('Discovery Security (Direct Registry Check)', () => {
 
@@ -27,7 +27,7 @@ describe('Discovery Security (Direct Registry Check)', () => {
 		enums.registryUpdate('FORMAT', { date: 'BROKEN', custom: 'YYYY' });
 
 		expect(Tempo.FORMAT.date).toBe(originalDate);
-		expect(Tempo.FORMAT.custom).toBe('YYYY');
+		expect((Tempo.FORMAT as any).custom).toBe('YYYY');
 	});
 
 	test('registries are read-only to the public (Soft Freeze check)', () => {

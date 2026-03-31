@@ -1,0 +1,76 @@
+import { ownValues } from '#library/reflection.library.js';
+import { isDefined, isPrimitive } from '#library/type.library.js';
+import type { Secure, ValueOf } from '#library/type.library.js';
+
+/** General utility functions */
+
+/** analyze the Call Stack to determine calling Function's name */
+export const getCaller = () => {
+	const stackTrace = new Error().stack											// only tested in latest FF and Chrome
+		?.split('\n')
+		?.map(itm => itm.trim())
+		?.filter(itm => !itm.startsWith('Error'))
+		?? []
+
+	const callerName = stackTrace[2].split(' ');
+
+	return (callerName[1] === 'new') ? callerName[2] : callerName[1].split('.')[0];
+}
+
+/** analyze the Call Stack to determine calling Function's name */
+export const getScript = (nbr = 1) => {
+	const stackTrace = new Error().stack
+		?.match(/([^ \n\(@])*([a-z]*:\/\/\/?)*?[a-z0-9\/\\]*\.js/ig)
+		?.[nbr]
+	return decodeURI(stackTrace ?? '');											// decodeURI is needed to handle spaces in file-names
+}
+
+/**
+ * introduce a wait-timer that will Error() on timeout.  
+ * best used with Promise.race([xxx(), sleep()]  
+ * @param msg			string to display on a timeout 
+ * @param timeout	how many milliseconds to sleep (default 2-seconds)  
+ * @returns				Promise\<void>  
+ * @see Context.Browser
+ */
+export const sleep = (msg = 'sleep: timed out', timeout = 2000) =>
+	new Promise<Error>((_, reject) => setTimeout(() => reject(new Error(msg)), timeout));
+
+/** Javascript Runtimes */
+export const CONTEXT = {
+	'Unknown': 'unknown',
+	'Browser': 'browser',
+	'NodeJS': 'nodejs',
+	'Deno': 'deno',
+	'GoogleAppsScript': 'google-apps-script',
+} as const
+export type CONTEXT = ValueOf<typeof CONTEXT>
+type Context = { global: any, type: CONTEXT }
+
+/** determine JavaScript environment context */
+export const getContext = (): Context => {
+	const global = globalThis as any;
+
+	if (isDefined(global.SpreadsheetApp))
+		return { global, type: CONTEXT.GoogleAppsScript };
+
+	if (isDefined(global.window?.document))
+		return { global, type: CONTEXT.Browser };
+
+	if (isDefined(global.process?.versions?.node))
+		return { global, type: CONTEXT.NodeJS };
+
+	return { global, type: CONTEXT.Unknown };
+}
+
+/** deep-freeze an Array | Object to make it immutable (with recursion guard) */
+export function secure<const T extends object>(obj: T, seen = new WeakSet<object>()) {
+	if (isPrimitive(obj) || Object.isFrozen(obj) || seen.has(obj))
+		return obj as Secure<T>;
+
+	seen.add(obj);
+
+	ownValues(obj as any).forEach(val => secure(val, seen));
+
+	return Object.freeze(obj) as Secure<T>;
+}

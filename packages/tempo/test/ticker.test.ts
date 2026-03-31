@@ -18,12 +18,12 @@ describe(`${label}`, () => {
 				lastTick = t;
 			});
 
-			await new Promise(resolve => setTimeout(resolve, 0)); // check immediate
+			await new Promise(resolve => setTimeout(resolve, 0));	// check immediate
 			expect(count).toBe(1);
 			expect(lastTick).toBeDefined();
 
 			await new Promise(resolve => setTimeout(resolve, 500));	// wait for ~5 total ticks
-		} // stop() is called automatically here
+		}																											// stop() is called automatically here
 
 		expect(count).toBeGreaterThanOrEqual(4);
 		expect(lastTick).toBeDefined();
@@ -31,7 +31,7 @@ describe(`${label}`, () => {
 
 		const finalCount = count;
 		await new Promise(resolve => setTimeout(resolve, 100));
-		expect(count).toBe(finalCount);											// check it stopped
+		expect(count).toBe(finalCount);												// check it stopped
 	});
 
 	test(`${label} async generator pattern`, async () => {
@@ -44,7 +44,7 @@ describe(`${label}`, () => {
 				results.push(t);
 				if (++i === 3) break;
 			}
-		} // asyncDispose() is called automatically here
+		}																											// asyncDispose() is called automatically here
 
 		expect(results.length).toBe(3);
 		expect(results[0]).toBeDefined();
@@ -71,11 +71,11 @@ describe(`${label}`, () => {
 		let count = 0;
 		Tempo.ticker(0.05, (t, stop) => {
 			count++;
-			stop(); // stop immediately on first tick
+			stop();																							// stop immediately on first tick
 		});
 
 		await new Promise(resolve => setTimeout(resolve, 200));
-		expect(count).toBe(1); // should only have the immediate tick
+		expect(count).toBe(1);																	// should only have the immediate tick
 	});
 
 	test('ticker: flexible numeric intervals', async () => {
@@ -99,7 +99,7 @@ describe(`${label}`, () => {
 		const stop = Tempo.ticker(0, () => count++);
 		await new Promise(resolve => setTimeout(resolve, 100));
 		stop();
-		expect(count).toBe(1); // Only initial emit
+		expect(count).toBe(1);																	// Only initial emit
 	});
 
 	test('ticker: validation', () => {

@@ -18,7 +18,7 @@ describe(`${label} WEEKDAY / WEEKDAYS`, () => {
   })
 
   test('WEEKDAY keys are abbreviations (3 chars)', () => {
-    Tempo.WEEKDAY.keys().forEach(k => expect(k.length).toBeLessThanOrEqual(3));
+    Tempo.WEEKDAY.keys().forEach((k: any) => expect(k.length).toBeLessThanOrEqual(3));
   })
 
   test('WEEKDAYS keys are full names', () => {
@@ -66,7 +66,7 @@ describe(`${label} DURATION / DURATIONS`, () => {
   })
 
   test('DURATION values are numbers (seconds)', () => {
-    Tempo.DURATION.keys().forEach(k => expect(typeof Tempo.DURATION[k]).toBe('number'));
+    Tempo.DURATION.keys().forEach((k: any) => expect(typeof (Tempo.DURATION as any)[k]).toBe('number'));
   })
 
   test('year in DURATIONS is larger than month', () => {
@@ -97,8 +97,8 @@ describe(`${label} COMPASS`, () => {
   })
 
   test('COMPASS values are lowercase strings', () => {
-    Tempo.COMPASS.keys().forEach(k => {
-      const val = String(Tempo.COMPASS[k]);
+    Tempo.COMPASS.keys().forEach((k: string) => {
+      const val = String((Tempo.COMPASS as any)[k]);
       expect(typeof val).toBe('string');
       expect(val).toBe(val.toLowerCase());
     })
@@ -130,8 +130,8 @@ describe(`${label} FORMAT`, () => {
   })
 
   test('FORMAT values are strings', () => {
-    Tempo.FORMAT.keys().forEach(k => {
-      expect(typeof Tempo.FORMAT[k]).toBe('string');
+    Tempo.FORMAT.keys().forEach((k: string) => {
+      expect(typeof (Tempo.FORMAT as any)[k]).toBe('string');
     })
   })
 
@@ -159,11 +159,11 @@ describe(`${label} terms`, () => {
   })
 
   test('terms contains objects with at least a name', () => {
-    Tempo.terms.forEach(t => expect(typeof t.key).toBe('string'));
+    Tempo.terms.forEach((t: any) => expect(typeof t.key).toBe('string'));
   })
 
   test('terms does not expose the "define" function', () => {
-    Tempo.terms.forEach(t => expect((t as any).define).toBeUndefined());
+    Tempo.terms.forEach((t: any) => expect((t as any).define).toBeUndefined());
   })
 
 })
@@ -172,7 +172,7 @@ describe(`${label} properties`, () => {
 
   test('properties is an array of strings', () => {
     expect(Array.isArray(Tempo.properties)).toBe(true);
-    Tempo.properties.forEach(p => expect(typeof p).toBe('string'));
+    Tempo.properties.forEach((p: string) => expect(typeof p).toBe('string'));
   })
 
   test('properties includes core instance getters', () => {
@@ -182,7 +182,7 @@ describe(`${label} properties`, () => {
   })
 
   test('properties does not include Symbol keys', () => {
-    Tempo.properties.forEach(p => expect(typeof p).not.toBe('symbol'));
+    Tempo.properties.forEach((p: string) => expect(typeof p).not.toBe('symbol'));
   })
 
 })

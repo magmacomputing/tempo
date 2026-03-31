@@ -1,5 +1,5 @@
-import { Tempo } from '#tempo/index.js';
-import { $Plugins } from '#tempo/plugins/tempo.plugin.js';
+import { Tempo } from '#tempo';
+import { $Plugins } from '#tempo/tempo.symbol.js';
 import { TickerPlugin } from '#tempo/plugins/plugin.ticker.js';
 
 describe('Self-Registering Plugins', () => {
@@ -9,7 +9,7 @@ describe('Self-Registering Plugins', () => {
 		const db = (globalThis as any)[$Plugins];
 		expect(db).toBeDefined();
 		expect(db.plugins).toContain(TickerPlugin);
-		
+
 		// 2. We must call init() to "activate" the registered plugins
 		Tempo.init();
 		expect(Tempo.ticker).toBeDefined();
@@ -21,7 +21,7 @@ describe('Self-Registering Plugins', () => {
 		expect(Tempo.ticker).toBeDefined();
 
 		// 2. Perform a hard reset (empty init)
-		Tempo.init(); 
+		Tempo.init();
 
 		// 3. Verify it's STILL installed (init() should have re-extended from $Plugins)
 		expect(Tempo.ticker).toBeDefined();

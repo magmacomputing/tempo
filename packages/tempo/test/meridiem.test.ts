@@ -14,10 +14,10 @@ describe('Meridiem (AM/PM) parsing and formatting', () => {
 		})
 
 		test('12-hour clock with meridiem', () => {
-			const t1 = new Tempo('2024-05-20 00:00'); // Midnight
+			const t1 = new Tempo('2024-05-20 00:00');						// Midnight
 			expect(t1.format('{HH}{mer}')).toBe('12am');
 
-			const t2 = new Tempo('2024-05-20 12:00'); // Midday
+			const t2 = new Tempo('2024-05-20 12:00');						// Midday
 			expect(t2.format('{HH}{mer}')).toBe('12pm');
 		})
 	})
