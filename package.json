@@ -12,15 +12,15 @@
   "scripts": {
     "test": "npm run test --workspaces --if-present",
     "build": "tsc -b",
-    "build:tempo": "npm run build --workspace=@magma/tempo",
-    "build:library": "npm run build --workspace=@magma/library",
+    "build:tempo": "npm run build --workspace=@magmacomputing/tempo",
+    "build:library": "npm run build --workspace=@magmacomputing/library",
     "clean": "tsc -b --clean",
     "release": "release-it",
-    "release:tempo": "npm run build --workspace=@magma/tempo && cd packages/tempo && bash resolve-self.sh && npm publish",
-    "version:patch": "npm version patch -w @magma/tempo -w @magma/library --no-git-tag-version",
-    "version:minor": "npm version minor -w @magma/tempo -w @magma/library --no-git-tag-version",
-    "version:major": "npm version major -w @magma/tempo -w @magma/library --no-git-tag-version",
-    "repl": "npm run repl --workspace=@magma/tempo"
+    "release:tempo": "npm run build --workspace=@magmacomputing/tempo && cd packages/tempo && bash resolve-self.sh && npm publish",
+    "version:patch": "npm version patch -w @magmacomputing/tempo -w @magmacomputing/library --no-git-tag-version",
+    "version:minor": "npm version minor -w @magmacomputing/tempo -w @magmacomputing/library --no-git-tag-version",
+    "version:major": "npm version major -w @magmacomputing/tempo -w @magmacomputing/library --no-git-tag-version",
+    "repl": "npm run repl --workspace=@magmacomputing/tempo"
   },
   "devDependencies": {
     "@js-temporal/polyfill": "^0.5.1",

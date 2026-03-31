@@ -1,7 +1,46 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "types": ["vitest/globals", "node"]
+    "types": [
+      "vitest/globals",
+      "node"
+    ],
+    "paths": {
+      "#library": [
+        "../src/common/index.ts"
+      ],
+      "#library/*.js": [
+        "../src/common/*.ts"
+      ],
+      "#library/*": [
+        "../src/common/*"
+      ],
+      "#browser/*.js": [
+        "../src/browser/*.ts"
+      ],
+      "#browser/*": [
+        "../src/browser/*"
+      ],
+      "#server/*.js": [
+        "../src/server/*.ts"
+      ],
+      "#server/*": [
+        "../src/server/*"
+      ],
+      "#tempo": [
+        "../../tempo/src/tempo.index.ts"
+      ],
+      "#tempo/*": [
+        "../../tempo/src/*"
+      ]
+    }
   },
-  "include": ["**/*.test.ts"]
+  "include": [
+    "**/*.test.ts"
+  ],
+  "references": [
+    {
+      "path": "../src/tsconfig.json"
+    }
+  ]
 }

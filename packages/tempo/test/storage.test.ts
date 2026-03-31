@@ -39,7 +39,7 @@ describe('Tempo storage functionality', () => {
 		const config: Options = { timeZone: 'Asia/Tokyo' };
 		Tempo.writeStore(config, testKey);
 
-		Tempo.init({ store: testKey, discovery: testDiscovery }); // Reset and load from testKey
+		Tempo.init({ store: testKey, discovery: testDiscovery });	// Reset and load from testKey
 		expect(Tempo.config.timeZone).toBe('Asia/Tokyo');
 	})
 })

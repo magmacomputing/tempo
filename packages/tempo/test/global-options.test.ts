@@ -49,8 +49,8 @@ describe('Global Configuration Discovery', () => {
 			options: { timeZone: 'Europe/Paris' }
 		}
 
-		Tempo.init({ discovery: $TestTempo }) // Picks up test global
-		Tempo.init({ timeZone: 'America/New_York' }) // Explicit override
+		Tempo.init({ discovery: $TestTempo })									// Picks up test global
+		Tempo.init({ timeZone: 'America/New_York' })						// Explicit override
 
 		expect(Tempo.config.timeZone).toBe('America/New_York')
 	})

@@ -19,11 +19,20 @@
       "#library": [
         "./common/index.ts"
       ],
+      "#library/*.js": [
+        "./common/*.ts"
+      ],
       "#library/*": [
         "./common/*"
       ],
+      "#browser/*.js": [
+        "./browser/*.ts"
+      ],
       "#browser/*": [
         "./browser/*"
+      ],
+      "#server/*.js": [
+        "./server/*.ts"
       ],
       "#server/*": [
         "./server/*"

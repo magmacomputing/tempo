@@ -1,7 +1,7 @@
 /**
  * Centralized registry for all Tempo-specific Global Symbols.
  * These symbols utilize Symbol.for() to ensure consistency across module boundaries.
- * Tempo-specific symbols are kept here (rather than @magma/library) to maintain
+ * Tempo-specific symbols are kept here (rather than @magmacomputing/library) to maintain
  * clean separation of concerns.
  */
 

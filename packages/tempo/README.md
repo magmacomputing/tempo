@@ -20,6 +20,28 @@ Working with dates in JavaScript has historically been painful. The new `Tempora
 - **Terms**: Access complex date ranges (Quarters, Seasons, Fiscal Years) easily.
 - **Immutable**: Operations (like `set` and `add`) return a new `Tempo` instance, ensuring thread safety and predictability.
 
+## ✨ New in v2.0.0
+
+Tempo v2.0.0 is a major milestone, delivering a more reactive architecture and rock-solid stability.
+
+- **Side-Effect Registration**: Plugins and Terms now support self-registration. Simply importing a plugin is now sufficient to extend the Tempo core automatically.
+- **100% Reliability**: The engine now passes 304/304 regression tests, ensuring complete stability across all parsing, calculation, and formatting routines.
+- **Unified Term Logic**: Terms (like Quarters and Seasons) are now fully integrated. Use `#` in `set()` to jump to boundaries, and `{#term}` in `format()` to embed semantic labels (e.g. "Second Quarter") directly into strings.
+- **Relational Term Math**: A category-first feature. Shift dates by semantic "steps" with `.add({ '#quarter': 1 })`. Tempo preserves your relative duration within the term, jumping across gaps and handling overflows with mathematical precision.
+- **Fluent Immutable Boundaries**: Term ranges now return fully-functional, frozen `Tempo` instances for `start` and `end`, allowing for seamless chaining like `t.term.qtr.start.format('{dd} {mmm}')`.
+- **Enhanced Parsing**: Significant refinements to the natural language engine for even more intuitive relative-date handling.
+
+## ⚠️ Migrating from v1.x
+
+If you are upgrading from a previous version, please note the following change in plugin handling:
+
+**Plugin Registration**: You no longer need to manually call `Tempo.extend()`. Registration now happens automatically upon import:
+
+```javascript
+// v2.0.0 - Automatic registration via side-effect import
+import '@magmacomputing/tempo/plugins/ticker';
+```
+
 ## 🤔 Why Tempo?
 
 If you're looking for a **modern date library** that leverages the native power of the browser's `Temporal` API, Tempo is for you.
@@ -125,8 +147,8 @@ If you find **Tempo** useful and want to support its development, please conside
 
 If you have a question, find a bug, or want to suggest a new feature:
 
-1. **Bug Reports & Features**: Please open an [Issue](https://github.com/magmacomputing/magma/tempo/issues).
-2. **Questions & Ideas**: Start a thread in [Discussions](https://github.com/magmacomputing/magma/tempo/discussions).
+1. **Bug Reports & Features**: Please open an [Issue](https://github.com/magmacomputing/magma/issues).
+2. **Questions & Ideas**: Start a thread in [Discussions](https://github.com/magmacomputing/magma/discussions).
 3. **Direct Contact**: You can reach me at `hello@magmacomputing.com.au`.
 
 ## 🛡️ Privacy & Transparency
@@ -142,21 +164,21 @@ We value your privacy. **Tempo** does not include any runtime telemetry or "phon
 How are we doing? Let us know with a simple reaction!  
 *(This will open a pre-filled GitHub Issue)*
 
-[🚀 Premium!](https://github.com/magmacomputing/magma/tempo/issues/new?title=Feedback:%20🚀%20Premium!) &nbsp; | &nbsp; 
-[⭐ Loving it!](https://github.com/magmacomputing/magma/tempo/issues/new?title=Feedback:%20⭐%20Loving%20it!) &nbsp; | &nbsp; 
-[💡 Needs work](https://github.com/magmacomputing/magma/tempo/issues/new?title=Feedback:%20💡%20Needs%20work) &nbsp; | &nbsp; 
-[🐞 Found a bug](https://github.com/magmacomputing/magma/tempo/issues/new?title=Feedback:%20🐞%20Found%20a%20bug)
+[🚀 Premium!](https://github.com/magmacomputing/magma/issues/new?title=Feedback:%20🚀%20Premium!) &nbsp; | &nbsp; 
+[⭐ Loving it!](https://github.com/magmacomputing/magma/issues/new?title=Feedback:%20⭐%20Loving%20it!) &nbsp; | &nbsp; 
+[💡 Needs work](https://github.com/magmacomputing/magma/issues/new?title=Feedback:%20💡%20Needs%20work) &nbsp; | &nbsp; 
+[🐞 Found a bug](https://github.com/magmacomputing/magma/issues/new?title=Feedback:%20🐞%20Found%20a%20bug)
 
 ### ⚡ Quick Reactions
-*(Native reactions available in [Discussions](https://github.com/magmacomputing/magma/tempo/discussions/categories/feedback))*
+*(Native reactions available in [Discussions](https://github.com/magmacomputing/magma/discussions/categories/feedback))*
 
-[👍 Like](https://github.com/magmacomputing/magma/tempo/discussions/categories/feedback) &nbsp; | &nbsp;
-[❤️ Love](https://github.com/magmacomputing/magma/tempo/discussions/categories/feedback) &nbsp; | &nbsp;
-[😄 Haha](https://github.com/magmacomputing/magma/tempo/discussions/categories/feedback) &nbsp; | &nbsp;
-[😮 Wow](https://github.com/magmacomputing/magma/tempo/discussions/categories/feedback) &nbsp; | &nbsp;
-[😢 Sad](https://github.com/magmacomputing/magma/tempo/discussions/categories/feedback) &nbsp; | &nbsp;
-[😡 Angry](https://github.com/magmacomputing/magma/tempo/discussions/categories/feedback) &nbsp; | &nbsp;
-[💩 Poop](https://github.com/magmacomputing/magma/tempo/discussions/categories/feedback)
+[👍 Like](https://github.com/magmacomputing/magma/discussions/categories/feedback) &nbsp; | &nbsp;
+[❤️ Love](https://github.com/magmacomputing/magma/discussions/categories/feedback) &nbsp; | &nbsp;
+[😄 Haha](https://github.com/magmacomputing/magma/discussions/categories/feedback) &nbsp; | &nbsp;
+[😮 Wow](https://github.com/magmacomputing/magma/discussions/categories/feedback) &nbsp; | &nbsp;
+[😢 Sad](https://github.com/magmacomputing/magma/discussions/categories/feedback) &nbsp; | &nbsp;
+[😡 Angry](https://github.com/magmacomputing/magma/discussions/categories/feedback) &nbsp; | &nbsp;
+[💩 Poop](https://github.com/magmacomputing/magma/discussions/categories/feedback)
 
 ## ⚖️ License
 

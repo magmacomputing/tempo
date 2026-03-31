@@ -28,7 +28,7 @@ export class WebStore {
 	[Symbol.toStringTag] = 'WebStore';
 
 	constructor(storage: STORAGE = STORAGE.Local) {
-		this.#storage = storage === STORAGE.Local								// default to localStorage
+		this.#storage = storage === STORAGE.Local							// default to localStorage
 			? globalThis.localStorage
 			: globalThis.sessionStorage
 	}
@@ -38,12 +38,12 @@ export class WebStore {
 	public get<T>(key: PropertyKey, dflt?: T) {
 		const str = this.#storage.getItem(stringify(key));
 		return isString(str)
-			? objectify<T>(str)																		// rebuild the object
+			? objectify<T>(str)																	// rebuild the object
 			: (dflt ?? null)
 	}
 
 	public set(key?: PropertyKey, obj?: unknown, opt = { merge: true }) {
-		if (isNullish(key))																			// synonym for 'clear'
+		if (isNullish(key))																		// synonym for 'clear'
 			return this.clear();
 
 		let prev = this.get<string | any[] | {}>(key);					// needed if merge is true
@@ -51,7 +51,7 @@ export class WebStore {
 
 		switch (arg.type) {
 			case 'Undefined':
-				return this.del(key);																// synonym for 'removeItem'
+				return this.del(key);															// synonym for 'removeItem'
 
 			case 'Object':
 				prev ??= {};
@@ -62,27 +62,27 @@ export class WebStore {
 			case 'Array':
 				prev ??= [];
 				return this.#upd(key, opt.merge
-					? distinct((prev as unknown[])															// assume prev is Array
-						.concat(arg.value))																			// remove duplicates
+					? distinct((prev as unknown[])										// assume prev is Array
+						.concat(arg.value))														// remove duplicates
 					: obj)
 
 			case 'Map':
 				prev ??= new Map();
 				if (opt.merge) {
-					arg.value																					// merge into prev Map
+					arg.value																				// merge into prev Map
 						.forEach((val, key) => (prev as Map<any, any>).set(key, val));
 					return this.#upd(key, prev);
 				}
-				return this.#upd(key, arg.value);										// else overwrite new Map
+				return this.#upd(key, arg.value);									// else overwrite new Map
 
 			case 'Set':
 				prev ??= new Set();
 				if (opt.merge) {
 					arg.value
-						.forEach(itm => (prev as Set<any>).add(itm));		// merge into prev Set
+						.forEach(itm => (prev as Set<any>).add(itm));	// merge into prev Set
 					return this.#upd(key, prev);
 				}
-				return this.#upd(key, arg.value);										// else overwrite new Set
+				return this.#upd(key, arg.value);									// else overwrite new Set
 
 			default:
 				return this.#upd(key, arg.value);
@@ -100,7 +100,7 @@ export class WebStore {
 		return this;
 	}
 
-	public keys(...keys: PropertyKey[]) {											// list of keys (or all)
+	public keys(...keys: PropertyKey[]) {										// list of keys (or all)
 		return this.entries(...keys)
 			.map(([key,]) => key)
 	}
@@ -110,7 +110,7 @@ export class WebStore {
 			.map(([, val]) => val)
 	}
 
-	public entries<T>(...keys: PropertyKey[]) {								// list of keys (or all) to lookup
+	public entries<T>(...keys: PropertyKey[]) {							// list of keys (or all) to lookup
 		return ownEntries<Record<string, string>>(this.#storage)
 			.map(([key, val]) => [objectify(key), objectify(val)] as [PropertyKey, T])
 			.filter(([key]) => isEmpty(keys) || keys.toString().includes(key.toString()))

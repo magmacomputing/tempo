@@ -20,7 +20,7 @@ export class Tapper {
 	}
 
 	[Symbol.dispose]() {
-		this.destroy();																					// destroy Hammer instances
+		this.destroy();																				// destroy Hammer instances
 	}
 
 	#hammer: HammerManager[] = [];
@@ -57,7 +57,7 @@ export class Tapper {
 					this.#hammer.forEach(hammer => hammer.on(Tapper.EVENT.SingleTap, arg));
 				} else {
 					const [event, cb] = arg;
-					this.#hammer.forEach(hammer => hammer.off(event));		// just in case, turn off old listener
+					this.#hammer.forEach(hammer => hammer.off(event));	// just in case, turn off old listener
 					this.#hammer.forEach(hammer => hammer.on(event, cb));	// start new listener
 				}
 			})
@@ -81,8 +81,8 @@ export class Tapper {
 			events.push(...Tapper.EVENT.values());
 
 		this.#hammer
-			.forEach(hammer => events															// for each Hammer
-				.forEach(event => hammer.get(event).set({ enable }))// for each Event
+			.forEach(hammer => events														// for each Hammer
+				.forEach(event => hammer.get(event).set({ enable }))	// for each Event
 			)
 
 		return this;

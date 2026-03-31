@@ -11,9 +11,9 @@ export function extract<T>(obj: any, path: string | number, dflt?: T): T {
 
 	return path
 		.toString()
-		.replace(/\[([^\[\]]*)\]/g, '.$1.')											// convert [indexes] to properties
+		.replace(/\[([^\[\]]*)\]/g, '.$1.')										// convert [indexes] to properties
 		.split('.')
-		.filter(field => !isEmpty(field))												// remove empty fields
+		.filter(field => !isEmpty(field))											// remove empty fields
 		.reduce((acc, field) => acc?.[field] ?? null, obj) ?? dflt
 }
 
@@ -52,7 +52,7 @@ export const isEqual = (obj1: any = {}, obj2: any = {}): boolean => {
 			const val2 = obj2[key];
 
 			return isReference(val1) && isReference(val2)
-				? isEqual(val1, val2)																// recurse into object
+				? isEqual(val1, val2)															// recurse into object
 				: val1 === val2
 		})
 }

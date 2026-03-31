@@ -27,7 +27,7 @@ describe(`${label}`, () => {
 
 	test(`${label} test {default} dow`, () => {
 		expect(tempo.dow)
-			.toBe(date.getDay() || Sun)														// Tempo.Sun = 7, Date.Sun = 0
+			.toBe(date.getDay() || Sun)													// Tempo.Sun = 7, Date.Sun = 0
 	})
 
 	test(`${label} test {default} dd`, () => {

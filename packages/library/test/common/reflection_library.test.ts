@@ -18,7 +18,7 @@ describe('Reflection Library', () => {
 
 		it('should omit specific keys from an array', () => {
 			const arr = ['a', 'b', 'c'];
-			omit(arr, 1); // remove index 1
+			omit(arr, 1);																				// remove index 1
 			expect(arr).toEqual(['a', 'c']);
 		});
 	});

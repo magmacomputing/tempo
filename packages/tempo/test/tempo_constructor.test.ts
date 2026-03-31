@@ -36,7 +36,7 @@ describe('Tempo Core', () => {
 				try {
 					expect(() => new Tempo('Invalid Date')).toThrow();
 				} finally {
-					Tempo.init(); // Reset to defaults
+					Tempo.init();																		// Reset to defaults
 				}
 			});
 		});
@@ -62,7 +62,7 @@ describe('Tempo Core', () => {
 
 			it('should suppress deferred throws in defer mode', () => {
 				const t = new Tempo('2024-01-01', { mode: Tempo.MODE.Defer, timeZone: 'Invalid/Zone', catch: true });
-				expect(t.isValid()).toBe(false); // Validates on call
+				expect(t.isValid()).toBe(false);										// Validates on call
 				expect(t.format('{yyyy}')).toBe('');
 			});
 		});

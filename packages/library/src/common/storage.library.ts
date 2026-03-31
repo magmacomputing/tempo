@@ -4,7 +4,7 @@ import { isDefined, isUndefined, isString } from '#library/type.library.js';
 
 const context = getContext();
 let storage = context.type === CONTEXT.Browser
-	? context.global?.localStorage //as globalThis.Storage		// default to localStorage in a browser
+	? context.global?.localStorage														//as globalThis.Storage		// default to localStorage in a browser
 	: undefined;
 
 /** select local | session storage */
@@ -45,7 +45,7 @@ export function getStorage<T>(key?: string, dflt?: T): T | undefined {
 	}
 
 	return isString(store)
-		? objectify<T>(store)																		// rebuild object from its stringified representation
+		? objectify<T>(store)																	// rebuild object from its stringified representation
 		: dflt;
 }
 

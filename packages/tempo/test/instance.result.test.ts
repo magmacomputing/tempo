@@ -15,7 +15,7 @@ describe(`${label} parse result accumulation`, () => {
     const t2 = t1.set({ time: '10:00' });
     const t3 = t2.set({ period: 'afternoon' });
 
-    expect(t3.parse.result.length).toBe(4); // 1 (constr) + 1 (set.time) + 2 (set.period pushes once in #conform and once in #parsePeriod)
+    expect(t3.parse.result.length).toBe(4);								// 1 (constr) + 1 (set.time) + 2 (set.period pushes once in #conform and once in #parsePeriod)
     // Also ensure it meets the minimum
     expect(t3.parse.result.length).toBeGreaterThanOrEqual(3);
   });

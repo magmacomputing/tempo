@@ -78,9 +78,9 @@ function value(val: any) {
  * @example
  * ```typescript
  * const Status = enumify(['Active', 'Inactive', 'Pending']);
- * console.log(Status.Active); // 0
- * console.log(Status.has('Active')); // true
- * console.log(Status.keys()); // ['Active', 'Inactive', 'Pending']
+ * console.log(Status.Active);															// 0
+ * console.log(Status.has('Active'));											// true
+ * console.log(Status.keys());															// ['Active', 'Inactive', 'Pending']
  * ```
  */
 export function enumify<const T extends readonly any[]>(list: T, frozen?: boolean): Enum.wrap<Index<T>>;
@@ -110,7 +110,7 @@ export function enumify<T>(this: any, list: T, frozen = true): any {
 
 	const target = Object.create(proto, Object.getOwnPropertyDescriptors(stash));
 	if (!frozen) Object.defineProperty(target, $Extensible, { value: true, enumerable: false });
-	return getProxy(target, true, frozen);	// proxy is ALWAYS frozen (read-only), but target is only 'locked' if requested
+	return getProxy(target, true, frozen);										// proxy is ALWAYS frozen (read-only), but target is only 'locked' if requested
 }
 
 /** create an entry in the Serialization Registry to describe how to rebuild an Enum */

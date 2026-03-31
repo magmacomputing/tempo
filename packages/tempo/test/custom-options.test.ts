@@ -18,9 +18,9 @@ describe('Custom Configuration Options', () => {
 		})
 
 		const t1 = new Tempo('now', { pluginOption: 'active' } as any);
-		expect(t1.format('{term.customTerm}')).toBe('active');
+		expect(t1.format('{#customTerm}')).toBe('active');
 
 		const t2 = new Tempo('now');
-		expect(t2.format('{term.customTerm}')).toBe('default');
+		expect(t2.format('{#customTerm}')).toBe('default');
 	})
 })

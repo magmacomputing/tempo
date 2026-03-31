@@ -16,7 +16,7 @@ export function clone<T>(obj: T, opts?: { transfer: any[] }) {
 	try {
 		return globalThis.structuredClone(obj, opts);
 	} catch {
-		return cleanify(obj);																		// fallback to JSON functions
+		return cleanify(obj);																	// fallback to JSON functions
 	}
 }
 
@@ -73,7 +73,7 @@ function decode(val: string) {
 		}
 	}
 
-	return val;																								// return original value
+	return val;																							// return original value
 }
 
 /** check type can be stringify'd */
@@ -93,22 +93,22 @@ function fromSymbol(key: PropertyKey) {
 		: key)
 }
 
-const symKey = /^@(@)?\(([^\)]*)\)$/;												// pattern to match a stringify'd Symbol
+const symKey = /^@(@)?\(([^\)]*)\)$/;											// pattern to match a stringify'd Symbol
 
 /** reconstruct a Symbol from a string-representation of a key */
 function toSymbol(value: PropertyKey) {
 	const [pat, keyFor, desc] = value.toString().match(symKey) || [null, undefined, undefined];
 
 	switch (true) {
-		case isSymbol(value):																		// already a Symbol
+		case isSymbol(value):																	// already a Symbol
 		case isNullish(pat):																		// incorrectly encoded Symbol
 		case isDefined(keyFor) && isUndefined(desc):						// incorrectly encoded global Symbol
 			return value;
 
-		case isDefined(keyFor):																	// global Symbol
+		case isDefined(keyFor):																// global Symbol
 			return Symbol.for(desc!);
 
-		case isUndefined(keyFor):																// local Symbol
+		case isUndefined(keyFor):															// local Symbol
 		default:
 			return Symbol(desc);
 	}
@@ -136,13 +136,13 @@ export function stringify<T>(obj: T) {
  * where first argument is the object to stringify, and  
  * the second argument is a boolean to indicate if function is being called recursively
  */
-function stringize<T>(obj: T, recurse = true): string {			// hide the second parameter: for internal use only
+function stringize<T>(obj: T, recurse = true): string {		// hide the second parameter: for internal use only
 	const arg = asType(obj);
 	const one = curry(oneKey)(arg.type);											// curry the oneKey() function
 
 	switch (arg.type) {
 		case 'String':
-			if (!recurse) {																				// if a top-level string (e.g. 'true' or '1234')
+			if (!recurse) {																			// if a top-level string (e.g. 'true' or '1234')
 				recurse = arg.value === 'true'											// ensure true|false|null|1234 are quoted by JSON.stringify
 					|| arg.value === 'false'													// so they will be correctly identified during objectify()
 					|| arg.value === 'null'
@@ -150,20 +150,20 @@ function stringize<T>(obj: T, recurse = true): string {			// hide the second par
 			}
 
 			return recurse
-				? JSON.stringify(encode(arg.value))									// encode string for safe-storage
+				? JSON.stringify(encode(arg.value))								// encode string for safe-storage
 				: encode(arg.value);																// dont JSON.stringify a top-level string
 
 		case 'Boolean':
 		case 'Null':
 		case 'Number':
-			return JSON.stringify(arg.value);											// JSON.stringify will correctly handle these
+			return JSON.stringify(arg.value);										// JSON.stringify will correctly handle these
 
 		case 'Void':
 		case 'Undefined':
-			return one(JSON.stringify('void'));										// preserve 'undefined' values		
+			return one(JSON.stringify('void'));									// preserve 'undefined' values		
 
 		case 'BigInt':
-			return one(arg.value.toString());											// even though BigInt has a toString method, it is not supported in JSON.stringify
+			return one(arg.value.toString());										// even though BigInt has a toString method, it is not supported in JSON.stringify
 
 		case 'Object':
 			const obj = ownEntries(arg.value)
@@ -215,7 +215,7 @@ function stringize<T>(obj: T, recurse = true): string {			// hide the second par
 						? str
 						: JSON.stringify(str));
 
-				case isFunction(value.valueOf):											// Object has its own valueOf method		
+				case isFunction(value.valueOf):										// Object has its own valueOf method		
 					return one(JSON.stringify(value.valueOf()));
 
 				default:																						// else standard stringify
@@ -227,15 +227,15 @@ function stringize<T>(obj: T, recurse = true): string {			// hide the second par
 /** rebuild an Object from its stringified representation */
 export function objectify<T>(str: any, sentinel?: Function): T {
 	if (!isString(str))
-		return str;																							// skip parsing
+		return str;																						// skip parsing
 
 	let parse: any;
 	try {
-		parse = JSON.parse(str, reviver);												// catch if cannot parse
+		parse = JSON.parse(str, reviver);											// catch if cannot parse
 	} catch (error) {
 		if (str.startsWith('"') && str.endsWith('"')) {
 			console.warn(`objectify.parse: -> ${str}, ${(error as Error).message}`);
-			return str as unknown as T;														// bail-out
+			return str as unknown as T;													// bail-out
 		}
 		else return objectify(`"${str}"`, sentinel);						// have another try, quoted
 	}
@@ -243,7 +243,7 @@ export function objectify<T>(str: any, sentinel?: Function): T {
 	switch (true) {
 		case str.startsWith('{') && str.endsWith('}'):					// looks like Object
 		case str.startsWith('[') && str.endsWith(']'):					// looks like Array
-			return traverse(parse, sentinel);											// recurse into object
+			return traverse(parse, sentinel);										// recurse into object
 
 		default:
 			return parse;
@@ -282,7 +282,7 @@ function typeify(json: any, sentinel?: Function) {
 		case 'Boolean':
 		case 'Object':
 		case 'Array':
-			return value;																					// these types are already handled by traverse()
+			return value;																				// these types are already handled by traverse()
 
 		case 'Number':
 			return Number(value);

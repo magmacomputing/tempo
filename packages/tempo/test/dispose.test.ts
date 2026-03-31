@@ -56,9 +56,9 @@ describe('Ticker Symbol.dispose', () => {
 
 			const finalCount = count;
 			await new Promise(resolve => setTimeout(resolve, 150));
-			expect(count).toBe(finalCount); // Should have stopped
+			expect(count).toBe(finalCount);											// Should have stopped
 		} else {
-			stop(); // Fallback for environments without the symbol
+			stop();																							// Fallback for environments without the symbol
 		}
 	});
 
@@ -90,7 +90,7 @@ describe('Ticker Symbol.dispose', () => {
 			results.push(t.format('sortTime') as string);
 		});
 
-		await new Promise(resolve => setTimeout(resolve, 125)); // Should have 3 ticks (0ms: seed, 50ms: +50, 100ms: +100)
+		await new Promise(resolve => setTimeout(resolve, 125));	// Should have 3 ticks (0ms: seed, 50ms: +50, 100ms: +100)
 		stop();
 
 		expect(results[0]).toBe(new Tempo(seed).format('sortTime'));

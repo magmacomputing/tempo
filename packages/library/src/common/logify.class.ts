@@ -29,11 +29,11 @@ export class Logify {
 	catch(...msg: any[]) {
 		if (this.#opts.catch) {
 			this.warn(...msg);																		// show a warning on the console
-			return;																								// safe-return
+			return;																							// safe-return
 		}
 
-		this.error(...msg);																			// this goes to the console
-		throw new Error(`${this.#name}${msg.map(m => isObject(m) ? JSON.stringify(m) : String(m)).join(' ')}`); // catch will be loud or silent, based on #catch config
+		this.error(...msg);																		// this goes to the console
+		throw new Error(`${this.#name}${msg.map(m => isObject(m) ? JSON.stringify(m) : String(m)).join(' ')}`);	// catch will be loud or silent, based on #catch config
 	}
 
 	/** console.log */																				log = (...msg: any[]) => this.#log(Method.Log, ...msg);
@@ -55,8 +55,8 @@ export class Logify {
 				this.#name = (self ?? this).constructor.name.concat(': ') ?? '';
 		}
 
-		this.#opts.debug = opts.debug ?? false;									// default debug to 'false'
-		this.#opts.catch = opts.catch ?? false;									// default catch to 'false'								
+		this.#opts.debug = opts.debug ?? false;								// default debug to 'false'
+		this.#opts.catch = opts.catch ?? false;								// default catch to 'false'								
 	}
 }
 

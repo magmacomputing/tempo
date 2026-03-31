@@ -7,25 +7,25 @@ import type { Obj, KeyOf, ValueOf, EntryOf, Primitives } from '#library/type.lib
 export function exclude<T extends Obj>(obj: T, ...types: (Primitives | Lowercase<Primitives>)[]) {
 	const exclusions = distinct(types.map(item => item.toLowerCase())) as typeof types;
 
-	if (obj && typeof obj === 'object') {																			// only works on Objects and Arrays
+	if (obj && typeof obj === 'object') {										// only works on Objects and Arrays
 		const keys = [] as KeyOf<T>[];
 
 		(ownEntries(obj) as [KeyOf<T>, Obj][])
 			.forEach(([key, value]) => {
 				const type = getType(value);
 
-				if (['Object', 'Array'].includes(type))							// recurse into object
+				if (['Object', 'Array'].includes(type))						// recurse into object
 					exclude(value, ...exclusions);
 
 				if (isPrimitive(value) && exclusions.includes(type.toLowerCase() as Primitives))
 					keys.push(key)
 			})
 
-		if (!isEmpty(keys))																			// if any values to be excluded
+		if (!isEmpty(keys))																		// if any values to be excluded
 			omit(obj, ...keys);
 	}
 
-	return obj;																								// return Object reference, even though Object has been mutated
+	return obj;																							// return Object reference, even though Object has been mutated
 }
 
 /** mutate Object | Array reference with properties removed */
@@ -37,7 +37,7 @@ export function omit<T extends Obj>(obj: T, ...keys: PropertyKey[]) {
 	switch (type) {
 		case 'Array':
 			if (isEmpty(keys)) {
-				value.length = 0;																								// clear Array
+				value.length = 0;																	// clear Array
 				break;
 			}
 			keys
@@ -47,11 +47,11 @@ export function omit<T extends Obj>(obj: T, ...keys: PropertyKey[]) {
 			break;
 
 		case 'Object':
-			(isEmpty(keys) ? ownKeys(value) : keys)								// if no {keys}, assume all ownKeys
+			(isEmpty(keys) ? ownKeys(value) : keys)							// if no {keys}, assume all ownKeys
 				.forEach(key => Reflect.deleteProperty(value, key));
 	}
 
-	return value;																							// return Object reference, even though Object has been mutated
+	return value;																						// return Object reference, even though Object has been mutated
 }
 
 /** remove all ownKeys from an Object | Array */
@@ -96,7 +96,7 @@ export function ownEntries<T extends Obj>(json: T, all = false) {
 	// all=true: collect per-level bottom-up, reverse to top-down, dedup via Map
 	// Map preserves first-insertion position but allows value update (own key shadows ancestor)
 	const levels: [PropertyKey, any][][] = [];
-	const limit = 50;																					// prevent infinite loops (increased from 10)
+	const limit = 50;																				// prevent infinite loops (increased from 10)
 	let depth = 0;
 	let proto: any = json;
 

@@ -3,7 +3,7 @@ import { $Extensible, $Target } from '#library/symbol.library.js';
 /** the primitive type reported by toStringTag() */
 const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
 
-const registry: Instance[] = [];															// global types for getType
+const registry: Instance[] = [];														// global types for getType
 
 /** 
  * return an object's type as a ProperCase string.  
@@ -15,12 +15,12 @@ export const getType = (obj?: any, ...instances: Instance[]) => {
 	switch (true) {
 		case type === 'Object':
 			const name = isArrayLike(obj)
-				? 'ArrayLike'																				// special case Object: ArrayLike
-				: obj.constructor?.name ?? 'Object'									// some Objects do not have a constructor method
+				? 'ArrayLike'																			// special case Object: ArrayLike
+				: obj.constructor?.name ?? 'Object'								// some Objects do not have a constructor method
 
 			return ([...instances, ...registry]
-				.find(inst => obj === inst.class || obj instanceof inst.class)?.type			// allow for 'real' name of Class or Instance
-				?? name) as Type;																		// return Object name
+				.find(inst => obj === inst.class || obj instanceof inst.class)?.type	// allow for 'real' name of Class or Instance
+				?? name) as Type;																	// return Object name
 
 		case type === 'Function' && Function.prototype.toString.call(obj).startsWith('class '):
 			return 'Class';
@@ -111,7 +111,7 @@ type SafeRecursion = 50;
 type SafeCount<T, Acc extends any[] = [], Last = LastInUnion<T>> =
 	Acc['length'] extends SafeRecursion ? number :						// limit of recursive depth
 	0 extends (1 & T) ? number :															// detect 'number'
-	[T] extends [never] ? Acc['length'] :											// detect 'never'
+	[T] extends [never] ? Acc['length'] :										// detect 'never'
 	SafeCount<Exclude<T, Last>, [...Acc, any]>								// count remaining
 
 /** Own properties of an Array, Object, Map or Enum */
@@ -157,7 +157,7 @@ type toName<T extends Primitive> =
 	T extends undefined ? "Undefined" :
 	T extends null ? "Null" :
 	never
-type Primitive = string | number | bigint | boolean | symbol | void | undefined | null // TODO: add  composite (record & tuple) ?
+type Primitive = string | number | bigint | boolean | symbol | void | undefined | null	// TODO: add  composite (record & tuple) ?
 export type Primitives = toName<Primitive>
 
 /** Generic constructor type */
@@ -265,7 +265,7 @@ type EnumerateMin<N extends number, Acc extends number[] = []> = Acc["length"] e
 	? Acc[number]
 	: EnumerateMin<N, [...Acc, Acc["length"]]>
 type EnumerateMax<N extends number, Acc extends number[] = []> = Acc["length"] extends N
-	? ([...Acc, Acc["length"]])[number]												// add one more element to make 'inclusive' upper-range
+	? ([...Acc, Acc["length"]])[number]											// add one more element to make 'inclusive' upper-range
 	: EnumerateMax<N, [...Acc, Acc["length"]]>
 
 /** declare expected range of values */
@@ -287,11 +287,11 @@ type Length<T extends string, Count extends number[] = []> =
 
 type Compare<First extends number, Second extends number, Count extends number[] = []> =
 	First extends Second
-	? 0																												// equal
+	? 0																											// equal
 	: Count["length"] extends First
 	? -1																											// first less than second
 	: Count["length"] extends Second
-	? 1																												// first more than second
+	? 1																											// first more than second
 	: Compare<First, Second, [...Count, 0]>
 
 export type MaxLength<T extends string, Max extends number> =
@@ -320,11 +320,11 @@ export type Substring<U extends string, Max extends number, Start extends number
 type Substr<U, Max, Start, Str extends string = '', Offset extends number[] = [0]> =
 	U extends `${infer NextChar}${infer Rest}`								// if there is a next-char (and optional trail-chars)
 	? Offset["length"] extends Start													// if offset beginning of U reached
-	? Length<Str> extends Max																	// if length of Str is equal to Max
-	? Str																											// return Str, all done
-	: Substr<Rest, Start, Max, `${Str}${NextChar}`, Offset>		// else Str less than Max; recurse & append NextChar to Str
-	: Substr<Rest, Start, Max, Str, [...Offset, 0]>						// else offset not reached; recurse & increment offset-Count
-	: Str																											// else no more chars; return Str
+	? Length<Str> extends Max																// if length of Str is equal to Max
+	? Str																										// return Str, all done
+	: Substr<Rest, Start, Max, `${Str}${NextChar}`, Offset>	// else Str less than Max; recurse & append NextChar to Str
+	: Substr<Rest, Start, Max, Str, [...Offset, 0]>					// else offset not reached; recurse & increment offset-Count
+	: Str																										// else no more chars; return Str
 
 // https://stackoverflow.com/questions/69571110/how-to-turn-union-into-a-tuple-in-typescript
 // UnionToIntersection<A | B> = A & B
@@ -342,7 +342,7 @@ type LastInUnion<U> = UnionToIntersection<U extends unknown ? (x: U) => 0 : neve
  * usage: UnionToTuple<A | B> = [A, B]
  */
 export type UnionToTuple<T, Acc extends any[] = [], Last = LastInUnion<T>> =
-	Acc['length'] extends SafeRecursion ? T[] :								// limit of recursive depth
+	Acc['length'] extends SafeRecursion ? T[] :							// limit of recursive depth
 	[T] extends [never] ? Acc :
 	UnionToTuple<Exclude<T, Last>, [Last, ...Acc]>
 

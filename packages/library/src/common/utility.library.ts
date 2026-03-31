@@ -22,7 +22,7 @@ export const getScript = (nbr = 1) => {
 	const stackTrace = new Error().stack
 		?.match(/([^ \n\(@])*([a-z]*:\/\/\/?)*?[a-z0-9\/\\]*\.js/ig)
 		?.[nbr]
-	return decodeURI(stackTrace ?? '');												// decodeURI is needed to handle spaces in file-names
+	return decodeURI(stackTrace ?? '');											// decodeURI is needed to handle spaces in file-names
 }
 
 /**

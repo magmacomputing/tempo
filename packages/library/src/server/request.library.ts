@@ -1,6 +1,6 @@
 import type { ValueOf } from '#library/type.library.js';
 
-const TWO_SECONDS = 2000;																		// default time-out for requests, in milliseconds
+const TWO_SECONDS = 2000;																	// default time-out for requests, in milliseconds
 
 export const HTTP = {
 	Ok: 200,
@@ -29,7 +29,7 @@ type Config = {
 export const httpRequest = <T>(url: string | URL, init = {} as RequestInit, config = {} as Config) => {
 	init.signal = AbortSignal.timeout(config.timeOut ?? TWO_SECONDS);
 
-	return fetch(url, init)																		// caller will handle the 'catch' if error
+	return fetch(url, init)																	// caller will handle the 'catch' if error
 		.then(res => {
 			if (res.ok)
 				return res.json() as T;
@@ -46,7 +46,7 @@ export const headRequest = (url: string | URL) => {
 	const signal = AbortSignal.timeout(TWO_SECONDS);
 	const init = { method: METHOD.Head, signal }							// only interested in verifying that url responds
 
-	return fetch(url, init)																		// caller will handle the 'catch' if error
+	return fetch(url, init)																	// caller will handle the 'catch' if error
 		.then(({ ok, status, statusText, headers }) => {
 			if (ok || status === HTTP.Forbidden)									// forbidden, but at least we know url responds
 				return { status, headers }

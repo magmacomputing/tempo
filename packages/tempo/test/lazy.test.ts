@@ -67,7 +67,7 @@ describe('Tempo Lazy Evaluation (Shadowing)', () => {
 			const t = new Tempo('2024-05-20');
 			const json = t.toJSON();
 			expect(json).toHaveProperty('value', '2024-05-20T00:00:00');
-			expect(json).not.toHaveProperty('fmt'); // fmt should NOT be in toJSON
+			expect(json).not.toHaveProperty('fmt');							// fmt should NOT be in toJSON
 		});
 	});
 });

@@ -7,7 +7,7 @@ describe('#setConfig refactor verification', () => {
 	})
 
 	test('should handle snippet as a single RegExp', () => {
-		using _ = Tempo;																			// ensure cleanup after test
+		using _ = Tempo;																				// ensure cleanup after test
 		Tempo.init({ snippet: { 'test': /test-regex/ } });
 		const parse = Tempo.parse;
 		// Symbol.for('test') or whatever Token['test'] returns
@@ -41,7 +41,7 @@ describe('#setConfig refactor verification', () => {
     Tempo.init({
       snippet: [
         { 'snip1': 'val1' },
-        'val2' // Unnamed
+        'val2'																							// Unnamed
       ]
     });
     expect(Tempo.parse.snippet[Tempo.getSymbol('snip1')].source).toBe('val1');

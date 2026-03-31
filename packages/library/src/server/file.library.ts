@@ -10,7 +10,7 @@ export class File {
 	static read = (file: string) => new Promise((resolve, reject) =>
 		fs.readFile(File.tmpDir + file, File.encoding, (err, data) =>
 			err && err.code !== 'ENOENT'
-				? reject(err)																				// anything other than 'file-not-exists'
+				? reject(err)																			// anything other than 'file-not-exists'
 				: resolve(ifNumeric(data))													// coerce to number if possible
 		)
 	)
@@ -22,7 +22,7 @@ export class File {
 	static exist = (file: string) => new Promise<boolean>((resolve, reject) =>
 		fs.access(File.tmpDir + file, (err =>
 			err && err.code !== 'ENOENT'
-				? reject(err)																				// anything other than 'file not-exists'
+				? reject(err)																			// anything other than 'file not-exists'
 				: resolve(!err))
 		))
 

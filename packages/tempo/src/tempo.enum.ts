@@ -1,10 +1,10 @@
 import { $Target, $Extensible } from '#library/symbol.library.js';
 import { enumify, Enum } from '#library/enumerate.library.js';
 import { getProxy } from '#library/proxy.library.js';
+import { ownKeys } from '#library/reflection.library.js';
 import { clearCache } from '#library/function.library.js';
 import { isUndefined } from '#library/type.library.js';
 import type { OwnOf, KeyOf, ValueOf, LooseUnion, Mutable, Property } from '#library/type.library.js';
-import { ownKeys } from '@magma/library';
 
 /** calendar seasons */
 export const SEASON = enumify({
@@ -95,7 +95,7 @@ const DEFAULTS = {
 	LIMIT: {
 		/** Tempo(31-Dec-9999.23:59:59).ns */										get maxTempo() { return Temporal.Instant.from('9999-12-31T23:59:59.999999999+00:00').epochNanoseconds },
 		/** Tempo(01-Jan-1000.00:00:00).ns */										get minTempo() { return Temporal.Instant.from('1000-01-01T00:00+00:00').epochNanoseconds },
-	},// as Record<string, bigint>,
+	},																												// as Record<string, bigint>,
 } as const;
 
 /** @internal Centralized mutable state for all extendable registries */
@@ -238,7 +238,7 @@ export function registryUpdate(name: keyof typeof STATE, data: Record<string, an
 	const state = STATE[name] as Property<any>;
 
 	Object.entries(data).forEach(([key, val]) => {
-		if (isUndefined(state[key])) {												// only add if key does not exist
+		if (isUndefined(state[key])) {													// only add if key does not exist
 			state[key] = val;
 			if (target) target[key] = val;
 		}

@@ -7,6 +7,9 @@
       "#library": [
         "./src/common/index.ts"
       ],
+      "#library/*.js": [
+        "./src/common/*.ts"
+      ],
       "#library/*": [
         "./src/common/*"
       ],

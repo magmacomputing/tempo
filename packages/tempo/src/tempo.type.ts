@@ -91,6 +91,19 @@ export type FormatType<K extends PropertyKey> = enums.FormatType<K>;
 /** mapping of terms to their resolved values */
 export type Terms = Property<any>;
 
+/** resolved Term range */
+export interface Range {
+	key: string; scope: string;
+	fiscal?: number; year?: number;
+	month?: number; day?: number;
+	hour?: number; minute?: number;
+	second?: number;
+	label?: string;
+	start: Tempo;
+	end: Tempo;
+	[str: PropertyKey]: any;
+}
+
 export type WEEKDAY = enums.WEEKDAY
 export type WEEKDAYS = enums.WEEKDAYS
 export type MONTH = enums.MONTH
@@ -111,7 +124,7 @@ export type Element = enums.Element
 
 /** Type for consistency in expected arguments for helper functions */
 export interface Params<T> {
-	(tempo?: DateTime, options?: Options): T;									// parse DateTime, default to Temporal.Instance.now()
+	(tempo?: DateTime, options?: Options): T;								// parse DateTime, default to Temporal.Instance.now()
 	(options: Options): T;																		// provide just the Options (use {value:'XXX'} for specific DateTime)
 }
 

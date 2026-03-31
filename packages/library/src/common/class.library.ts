@@ -13,7 +13,7 @@ export function Immutable<T extends Constructor>(value: T, { kind, name, addInit
 	switch (kind) {
 		case 'class':
 			const wrapper = {
-				[name]: class extends value {												// anonymous class infers name from property
+				[name]: class extends value {											// anonymous class infers name from property
 					constructor(...args: any[]) {
 						super(...args);
 						Object.freeze(this);														// freeze the instance
@@ -24,20 +24,20 @@ export function Immutable<T extends Constructor>(value: T, { kind, name, addInit
 			addInitializer(() => {																// wait for construction to complete
 				const protect = (obj: object) => {									// protect existing members
 					ownEntries(Object.getOwnPropertyDescriptors(obj))
-						.filter(([name]) => name !== 'constructor')			// dont touch the constructor
+						.filter(([name]) => name !== 'constructor')		// dont touch the constructor
 						.forEach(([name, { configurable, writable }]) => {
 							if (configurable) {
 								const update: PropertyDescriptor = { configurable: false };
-								if (writable) update.writable = false; 			// only data descriptors have 'writable'
+								if (writable) update.writable = false;			// only data descriptors have 'writable'
 								Object.defineProperty(obj, name, update);
 							}
 						});
 				};
 
-				protect(value);																			// protect original static members
-				protect(value.prototype);														// protect original prototype members
-				protect(wrapper);																		// protect wrapper static members
-				protect(wrapper.prototype);													// protect wrapper prototype members
+				protect(value);																		// protect original static members
+				protect(value.prototype);													// protect original prototype members
+				protect(wrapper);																	// protect wrapper static members
+				protect(wrapper.prototype);												// protect wrapper prototype members
 			});
 
 			return wrapper;
@@ -53,7 +53,7 @@ export function Serializable<T extends Constructor>(value: T, { kind, name, addI
 
 	switch (kind) {
 		case 'class':
-			addInitializer(() => Registry.set(`$${name}`, value));// register the class for serialization, via its toString() method
+			addInitializer(() => Registry.set(`$${name}`, value));	// register the class for serialization, via its toString() method
 
 			return value;
 

@@ -1,7 +1,23 @@
 {
-  "name": "@magma/library",
+  "name": "@magmacomputing/library",
   "version": "1.2.0",
   "description": "Shared utility library for Tempo",
+  "author": "Magma Computing Solutions",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/magmacomputing/magma.git",
+    "directory": "packages/library"
+  },
+  "homepage": "https://github.com/magmacomputing/magma/tree/main/packages/library#readme",
+  "bugs": {
+    "url": "https://github.com/magmacomputing/magma/issues"
+  },
+  "keywords": [
+    "utility",
+    "temporal",
+    "monorepo"
+  ],
   "type": "module",
   "main": "dist/common/index.js",
   "types": "dist/common/index.d.ts",
@@ -29,6 +45,10 @@
     "./*.js": {
       "development": "./src/common/*.ts",
       "default": "./dist/common/*.js"
+    },
+    "./common/*.js": {
+      "development": "./src/common/*.ts",
+      "default": "./dist/common/*.js"
     }
   },
   "files": [
@@ -52,14 +72,8 @@
       "development": "./src/server/*.ts",
       "default": "./dist/server/*.js"
     },
-    "#tempo": {
-      "development": "../tempo/src/index.js",
-      "default": "@magma/tempo"
-    },
-    "#tempo/*": {
-      "development": "../tempo/src/*",
-      "default": "@magma/tempo/*"
-    }
+    "#tempo": "@magmacomputing/tempo",
+    "#tempo/*": "@magmacomputing/tempo/*"
   },
   "scripts": {
     "build": "tsc -b",

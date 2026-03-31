@@ -38,7 +38,7 @@ export class Pledge<T> {
 	static init(arg?: Pledge.Constructor | string) {
 		if (isObject(arg)) {
 			if (isEmpty(arg))
-				Pledge.#static = {};                                    // reset static values
+				Pledge.#static = {};																// reset static values
 
 			Object.assign(Pledge.#static,
 				ifDefined({ tag: arg.tag, debug: arg.debug, catch: arg.catch, }),
@@ -49,7 +49,7 @@ export class Pledge<T> {
 		}
 
 		if (Pledge.#static.debug)
-			console.log('Pledge: ', Pledge.#static);                 // debug
+			console.log('Pledge: ', Pledge.#static);							// debug
 
 		return Pledge.status;
 	}
@@ -64,11 +64,11 @@ export class Pledge<T> {
 	/** use catch:boolean to determine whether to throw or return  */
 	#catch(...msg: any[]) {
 		if (this.status.catch) {
-			this.#dbg.warn(...msg);                                  // catch, but warn {error}
+			this.#dbg.warn(...msg);															// catch, but warn {error}
 			return;
 		}
 
-		this.#dbg.error(...msg);                                  // assume {error}
+		this.#dbg.error(...msg);																// assume {error}
 		throw new Error(sprintf('pledge: ', ...msg));
 	}
 
@@ -105,7 +105,7 @@ export class Pledge<T> {
 
 	[Symbol.dispose]() {
 		if (this.isPending)
-			this.reject(new Error(`Pledge disposed`));               // dispose
+			this.reject(new Error(`Pledge disposed`));						// dispose
 	}
 
 	get status() {
@@ -141,7 +141,7 @@ export class Pledge<T> {
 		if (this.isPending) {
 			this.#status.settled = value;
 			this.#status.state = Pledge.STATE.Resolved;
-			this.#pledge.resolve(value);                             // resolve
+			this.#pledge.resolve(value);													// resolve
 		}
 		else this.#dbg.warn(this.#status, `Pledge was already ${this.state}`);
 
@@ -152,7 +152,7 @@ export class Pledge<T> {
 		if (this.isPending) {
 			this.#status.error = error;
 			this.#status.state = Pledge.STATE.Rejected;
-			this.#pledge.reject(error);                              // reject
+			this.#pledge.reject(error);													// reject
 		}
 		else this.#dbg.warn(this.#status, `Pledge was already ${this.state}`);
 
@@ -169,9 +169,9 @@ export class Pledge<T> {
 }
 
 export namespace Pledge {
-	export type Resolve = (val?: any) => any;                  // function to call after Pledge resolves
-	export type Reject = (err: Error) => any;                  // function to call after Pledge rejects
-	export type Settle = () => void;                           // function to call after Pledge settles
+	export type Resolve = (val?: any) => any;								// function to call after Pledge resolves
+	export type Reject = (err: Error) => any;								// function to call after Pledge rejects
+	export type Settle = () => void;													// function to call after Pledge settles
 
 	export type Constructor = {
 		tag?: string;

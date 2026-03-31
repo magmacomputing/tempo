@@ -160,7 +160,7 @@ describe(`${label} compare`, () => {
   test('returns 0 for equal dates', () => {
     const t1 = new Tempo('2024-06-01');
     const t2 = new Tempo('2024-06-01');
-    expect(Tempo.compare(t1, t2)).toEqual(0);								// toEqual treats -0 === 0
+    expect(Tempo.compare(t1, t2)).toEqual(0);							// toEqual treats -0 === 0
   })
 
   test('returns -1 when t1 < t2', () => {
@@ -251,15 +251,15 @@ describe(`${label} now`, () => {
 describe(`${label} readStore / writeStore`, () => {
 
   test('readStore returns an object (empty when nothing stored)', () => {
-    const result = Tempo.readStore(); // Uses testKey from config
+    const result = Tempo.readStore();											// Uses testKey from config
     expect(typeof result).toBe('object');
   })
 
   test('writeStore and readStore round-trip an options object', () => {
-    Tempo.writeStore({ pivot: 42 }); // Uses testKey from config
+    Tempo.writeStore({ pivot: 42 });												// Uses testKey from config
     const result = Tempo.readStore();
     expect(result?.pivot).toBe(42);
-    Tempo.writeStore(void 0);        // clean up (uses testKey)
+    Tempo.writeStore(void 0);															// clean up (uses testKey)
   })
 
 })

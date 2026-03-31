@@ -3,7 +3,7 @@
  * (using 'Temporal' namespace object)
 */
 
-import '#library/temporal.polyfill.js';											// ensure Temporal is available
+import '#library/temporal.polyfill.js';										// ensure Temporal is available
 
 /** return the current Temporal.Now.instant */
 export function instant() {

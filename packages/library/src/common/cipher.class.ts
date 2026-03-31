@@ -15,7 +15,7 @@ const keys = {
 
 /** Static-only cryptographic methods */
 @Immutable
-@Static																											// prevent instantiation
+@Static																										// prevent instantiation
 export class Cipher {
 	static #cryptoKey = subtle.generateKey({ name: keys.TypeKey, length: 128 }, false, ['encrypt', 'decrypt']);
 	static #vector = crypto.getRandomValues(new Uint8Array(16));
@@ -39,10 +39,10 @@ export class Cipher {
 
 	/** encode object into base64 */
 	static encodeBase64 = (buf: unknown) => {
-		const str = stringify(buf);															// first, stringify the incoming buffer
+		const str = stringify(buf);														// first, stringify the incoming buffer
 		const uint8 = strToUTF8Arr(str);												// convert to Uint8Array
 
-		return base64EncArr(uint8);															// convert to string
+		return base64EncArr(uint8);														// convert to string
 	}
 
 	static hmac = async (source: string | Object, secret: string, alg = 'SHA-512', len?: number) => {

@@ -34,7 +34,7 @@ describe('Tempo Issue Fixes', () => {
       const expectedDate = new Tempo().add({ days: -1 }).format('{yyyy}-{mm}-{dd}')
 
       expect(t.format('{yyyy}-{mm}-{dd}')).toBe(expectedDate)
-      expect(t.format('{HH}')).toBe('03pm') // afternoon is 3:00pm
+      expect(t.format('{HH}')).toBe('03pm')								// afternoon is 3:00pm
     })
   })
 
@@ -93,7 +93,7 @@ describe('Tempo Issue Fixes', () => {
       const t = new Tempo('2024-05-20 10:00', { timeZone: 'UTC' })
       const lon = t.set({ timeZone: 'Europe/London' })
       expect(lon.tz).toBe('Europe/London')
-      expect(lon.format('{hh}:{mi}')).toBe('11:00') // London is DST (+01:00) in May
+      expect(lon.format('{hh}:{mi}')).toBe('11:00')				// London is DST (+01:00) in May
     })
 
     test('set() accepts two arguments (value, options)', () => {

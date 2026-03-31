@@ -30,7 +30,7 @@ describe('Serializer Library', () => {
 		it('should serialize Maps into safe identifier signatures', () => {
 			const map = new Map<any, any>([
 				['key1', 1],
-				[123n, 'value2'], // Map with BigInt key
+				[123n, 'value2'],																	// Map with BigInt key
 			]);
 			const json = stringify(map);
 			expect(json).toBe('{"$Map":[["key1", 1],[{"$BigInt":123}, "value2"]]}');

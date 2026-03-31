@@ -194,7 +194,7 @@ Formatting uses a placeholder syntax similar to many template engines:
 | `{ns}` | Nanoseconds | `3-digit` | `000-999` | `000` |
 | `{ff}` | Fractional Seconds | `9-digit` | `0-999999999` | `005000000` |
 | `{ts}` | Unix Timestamp | `digits` | `n/a` | `1716163200000` |
-| `{term.*}` | Evaluated Term Plugin | `dynamic` | `n/a` | `{term.qtr}` |
+| `{#term}` | Unified Term Identity | `string` | `n/a` | `{#qtr}` or `{#quarter}` |
 
 Example:
 ```typescript
@@ -236,6 +236,7 @@ Sets the instance to a specific point or relative position.
 ```typescript
 t.set({ hour: 0 }); // Midnight
 t.set({ start: 'month' }); // Start of the current month
+t.set({ end: '#quarter' }); // End of the current fiscal quarter
 ```
 
 ### `until(dateTime, unit?)`
@@ -309,12 +310,40 @@ See the [Tempo Ticker guide](./tempo.ticker.md) for full details and API signatu
 
 ## Plugins (Terms)
 
-`Tempo` can be extended with "terms" – plugins that calculate complex date ranges. These are accessible via the `t.term` getter.
+`Tempo` can be extended with "terms" – plugins that calculate complex date ranges. 
 
-Inbuilt terms include:
-- `t.term.qtr`: Returns the current fiscal calendar quarter.
-- `t.term.szn`: Returns the current meteorological season (North/South hemisphere-aware).
-- `t.term.zdc`: Returns the current Western/Chinese astrological sign.
+### Unified Term Logic (v2.0.0)
+
+Terms are now fully integrated into the core `set()` and `format()` methods via the `#` indicator:
+
+1. **Anchored Mutations**: Jump to the `start`, `mid`, or `end` of any term:
+   ```typescript
+   t.set({ start: '#quarter' }); // April 1st (if in Q2)
+   t.set({ end: '#season' });    // Nov 30th (if in Autumn)
+   ```
+2. **Identity Placeholders**: Embed term identities into formatting strings:
+   - `{#qtr}`: Returns the technical key (e.g., `"Q2"`).
+   - `{#quarter}`: Returns the semantic label (e.g., `"Second Quarter"`), falling back to the key if no label exists.
+
+3. **Term Traversal (Math)**: Shift the date by semantic "steps" using `#term` units in `.add()`:
+   ```typescript
+   t.add({ '#quarter': 1 });  // Move to the same day/time in the NEXT quarter
+   t.add({ '#season': -1 });   // Move back one season
+   t.add({ '#morning': 1 });   // Jump across gaps to the next morning period
+   ```
+   *Note: Relational math preserves your relative duration from the start of the term and applies overflow constraints.*
+
+### Persistent Access
+Terms remain accessible via the `t.term` getter for programmatic use. The `start` and `end` boundaries are returned as **fluent, immutable Tempo instances**:
+- `t.term.qtr`: Current fiscal calendar quarter object.
+- `t.term.szn`: Current meteorological season (North/South hemisphere-aware).
+- `t.term.zdc`: Current Western/Chinese astrological sign.
+
+```typescript
+const q = t.term.qtr;
+console.log(q.start.format('{dd} {mmm}')); // Fluent formatting directly from the term!
+console.log(q.end.since(t, 'days'));        // Calculate days remaining in the quarter
+```
 
 See the [Tempo Terms guide](./tempo.terms.md) for full details and plugin development.
 
