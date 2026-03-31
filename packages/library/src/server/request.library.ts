@@ -29,7 +29,9 @@ type Config = {
 export const httpRequest = <T>(url: string | URL, init = {} as RequestInit, config = {} as Config) => {
 	const signallingInit = {
 		...init,
-		signal: AbortSignal.timeout(config.timeout ?? TWO_SECONDS)
+		signal: init.signal
+			? AbortSignal.any([init.signal, AbortSignal.timeout(config.timeout ?? TWO_SECONDS)])
+			: AbortSignal.timeout(config.timeout ?? TWO_SECONDS)
 	};
 
 	return fetch(url, signallingInit)													// caller will handle the 'catch' if error

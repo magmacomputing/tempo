@@ -1,10 +1,4 @@
-import alias from '@rollup/plugin-alias';
 import resolve from '@rollup/plugin-node-resolve';
-
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve as nodeResolve } from 'node:path';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default {
 	input: 'dist/index.js',
@@ -25,12 +19,6 @@ export default {
 		}
 	],
 	plugins: [
-		alias({
-			entries: [
-				{ find: '#library', replacement: nodeResolve(__dirname, '../library/dist/common') },
-				{ find: '#tempo', replacement: nodeResolve(__dirname, './dist') }
-			]
-		}),
 		resolve({
 			extensions: ['.js']
 		})

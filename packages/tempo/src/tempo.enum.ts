@@ -250,21 +250,20 @@ export function registryUpdate(name: keyof typeof STATE, data: Record<string, an
 /** Reset all extendable registries to their original built-in defaults */
 export function registryReset() {
 	ownKeys(STATE).forEach(name => {
-		const registry = REGISTRIES[name];
-		const target = registry?.[$Target] as Property<any>;
 		const state = STATE[name as keyof typeof STATE] as Property<any>;
+		const target = REGISTRIES[name]?.[$Target] as Property<any>;
 		const defaults = DEFAULTS[name as keyof typeof DEFAULTS] as Property<any>;
 
 		// 1. Purge all own-properties from state and target (if configurable)
 		[state, target].filter(isDefined).forEach(obj => {
-			Object.keys(obj).forEach(key => {
+			Reflect.ownKeys(obj).forEach(key => {
 				const desc = Object.getOwnPropertyDescriptor(obj, key);
 				if (desc?.configurable) delete obj[key];
 			});
 		});
 
 		// 2. Restore defaults using property descriptors to preserve accessors/configurability
-		Object.keys(defaults).forEach(key => {
+		Reflect.ownKeys(defaults).forEach(key => {
 			const desc = Object.getOwnPropertyDescriptor(defaults, key);
 
 			if (desc) {

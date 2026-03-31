@@ -31,14 +31,14 @@ export class File {
 		return targetPath;
 	}
 
-	static read = (file: string) => new Promise((resolve, reject) => {
+	static read = (file: string): Promise<string | number> => new Promise<string | number>((resolve, reject) => {
 		try {
 			const target = File.#resolvePath(file);
 			fs.readFile(target, File.encoding, (err, data) => {
 				if (err)
 					return (err.code === 'ENOENT')
-						? reject(new Error(`ENOENT: file not found: ${target}`))  // anything other than 'file-not-exists'
-						: reject(err);                                  // coerce to number if possible
+						? reject(new Error(`ENOENT: file not found: ${target}`))		// file not found
+						: reject(err);																							// coerce to number if possible
 
 				resolve(ifNumeric(data));
 			});
