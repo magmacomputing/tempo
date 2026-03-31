@@ -154,8 +154,9 @@ export function resolveTermAnchor(tempo: Tempo, terms: TermPlugin[], name: strin
 
 				case 'mid': {
 					const midNano = (start.epochNanoseconds + end.epochNanoseconds) / 2n;
-					const diff = Number(midNano - start.epochNanoseconds);
-					return start.add({ nanoseconds: diff });
+					return new Temporal.ZonedDateTime(midNano, start.timeZoneId, start.calendarId);
+					// const diff = Number(midNano - start.epochNanoseconds);
+					// return start.add({ nanoseconds: diff });
 				}
 
 				case 'end':
