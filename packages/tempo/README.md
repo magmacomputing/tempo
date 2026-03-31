@@ -24,11 +24,11 @@ Working with dates in JavaScript has historically been painful. The new `Tempora
 
 Tempo v2.0.0 is a major milestone, delivering a more reactive architecture and rock-solid stability.
 
-- **Side-Effect Registration**: Plugins and Terms now support self-registration. Simply importing a plugin is now sufficient to extend the Tempo core automatically.
+- **Side Effect Registration**: Plugins and Terms now support self-registration. Simply importing a plugin is now sufficient to extend the Tempo core automatically.
 - **100% Reliability**: The engine now passes 304/304 regression tests, ensuring complete stability across all parsing, calculation, and formatting routines.
 - **Unified Term Logic**: Terms (like Quarters and Seasons) are now fully integrated. Use `#` in `set()` to jump to boundaries, and `{#term}` in `format()` to embed semantic labels (e.g. "Second Quarter") directly into strings.
 - **Relational Term Math**: A category-first feature. Shift dates by semantic "steps" with `.add({ '#quarter': 1 })`. Tempo preserves your relative duration within the term, jumping across gaps and handling overflows with mathematical precision.
-- **Fluent Immutable Boundaries**: Term ranges now return fully-functional, frozen `Tempo` instances for `start` and `end`, allowing for seamless chaining like `t.term.qtr.start.format('{dd} {mmm}')`.
+- **Fluent Immutable Boundaries**: Term ranges now return fully functional, frozen `Tempo` instances for `start` and `end`, allowing for seamless chaining like `t.term.qtr.start.format('{dd} {mmm}')`.
 - **Enhanced Parsing**: Significant refinements to the natural language engine for even more intuitive relative-date handling.
 
 ## ⚠️ Migrating from v1.x

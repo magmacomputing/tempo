@@ -24,18 +24,17 @@ export const getType = (obj?: any, ...instances: Instance[]) => {
 	const type = protoType(obj) as Type;
 
 	switch (true) {
-		case type === 'Object':
-			const name = isArrayLike(obj)
-				? 'ArrayLike'																			// special case Object: ArrayLike
-				: obj.constructor?.name ?? 'Object'								// some Objects do not have a constructor method
+		case type === 'Object': {
+			if (isArrayLike(obj)) return 'ArrayLike';
 
 			for (const inst of instances)
-				if (obj === inst.class || obj instanceof inst.class) return inst.type as Type;	// allow for 'real' name of Class or Instance
+				if (obj === inst.class || obj instanceof inst.class) return inst.type;
 
 			for (const inst of registry)
-				if (obj === inst.class || obj instanceof inst.class) return inst.type as Type;	// allow for 'real' name of Class or Instance
+				if (obj === inst.class || obj instanceof inst.class) return inst.type;
 
-			return name as Type;																	// return Object name
+			return 'Object';
+		}
 
 		case type === 'Function' && Function.prototype.toString.call(obj).startsWith('class '):
 			return 'Class';
@@ -178,14 +177,17 @@ export type Primitives = toName<Primitive>
 
 /** Generic constructor type */
 export type Constructor<T = any> = new (...args: any[]) => T;
-export type Instance = { type: string, class: Function }		// allow for Class instance re-naming (to avoid minification mangling issues)
+export type Instance = { type: Type, class: Constructor }		// allow for Class instance re-naming (to avoid minification mangling issues)
 
-/** register a class with the runtime type system */
-export const registerType = (cls: Function, type?: string) => {
+/** 
+ * register a class with the runtime type system.
+ * @NOTE Custom types must augment `TypeValueMap` to be recognized by the type system!
+ */
+export const registerType = (cls: Constructor, type?: Type) => {
 	const tag = (cls.prototype as any)?.[Symbol.toStringTag];	// toStringTag is the source-of-truth, if present
-	const name = tag ?? type ?? cls.name;
+	const name = (tag ?? type ?? cls.name) as Type;
 
-	if (name && !['Object', 'Function', ''].includes(name)) {
+	if (name && !['Object', 'Function', ''].includes(name as string)) {
 		if (!registry.some(inst => inst.class === cls))
 			registry.push({ class: cls, type: name });
 	}

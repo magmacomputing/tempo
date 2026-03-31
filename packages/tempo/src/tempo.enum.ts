@@ -29,7 +29,6 @@ export type COMPASS = ValueOf<typeof COMPASS>
  * These are exported and added as static getters of the Tempo class.
  */
 
-// #region Private Mutable State Registry ~~~~~~~~~~~~~~~~~~
 /** @internal LIVE state for all registries */
 const DEFAULTS = {
 	NUMBER: {
@@ -111,10 +110,6 @@ export const STATE = {
 (STATE.NUMBER as any)[$Extensible] = true;
 (STATE.FORMAT as any)[$Extensible] = true;
 (STATE.TIMEZONE as any)[$Extensible] = true;
-
-// #endregion
-
-// #endregion
 
 /** Gregorian calendar week-days (short-form) */
 export const WEEKDAY = enumify(['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
@@ -274,6 +269,6 @@ export function registryReset() {
 		});
 
 		if (target) clearCache(target);
-		clearCache(state);														// clear cache for state object
+		clearCache(state);																			// clear cache for state object
 	});
 }

@@ -23,7 +23,7 @@ This objective is achieved through two primary architectural pillars:
 1.  **Lazy Evaluation ([Section 1](#1-lazy-evaluation-shadowing))**: Deferring the expensive work of string parsing and term computation until the first property access.
 2.  **Master Guard ([Section 3](#3-master-guard-fast-fail-sync-point))**: Implementing a high-speed "fast-fail" gatekeeper to instantly reject invalid inputs when parsing *is* eventually triggered.
 
-Together, these ensure that `new Tempo()` maintains an $O(1)$ complexity, regardless of how many plugins or custom terms are registered in the global system.
+Together, these ensure that `new Tempo()` maintains an O(1) constructor execution time by deferring O(N) full-parse work until the first property access, regardless of how many plugins or custom terms are registered in the global system.
 
 ---
 

@@ -74,6 +74,9 @@ const SCHEMA = [
  */
 export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true) {
 	const chronological = sortKey([...list], 'fiscal', 'year', 'month', 'day', 'hour', 'minute', 'second');
+
+	if (chronological.length === 0) return undefined;
+
 	const match = chronological
 		.toReversed()
 		.find((range: any) => {
@@ -106,7 +109,7 @@ export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true) {
 		millisecond: match.millisecond ?? 0,
 		microsecond: match.microsecond ?? 0,
 		nanosecond: match.nanosecond ?? 0,
-	}).startOfDay();
+	});
 
 	const end = tempo.toDateTime().with({
 		year: next.year ?? next.fiscal ?? yy,
@@ -118,7 +121,7 @@ export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true) {
 		millisecond: next.millisecond ?? 0,
 		microsecond: next.microsecond ?? 0,
 		nanosecond: next.nanosecond ?? 0,
-	}).startOfDay();
+	});
 
 	// Pre-build the Range object with Tempo instances
 	const resolved = secure({
@@ -140,7 +143,7 @@ export function resolveTermAnchor(tempo: Tempo, terms: TermPlugin[], name: strin
 	const term = terms.find((t: TermPlugin) => t.key === ident || t.scope === ident);
 
 	if (term) {
-		const range = term.define.call(tempo, false);
+		const [range] = getRange(term, tempo);
 		if (range && range.start && range.end) {
 			const start = range.start.toDateTime();
 			const end = range.end.toDateTime();
@@ -149,10 +152,11 @@ export function resolveTermAnchor(tempo: Tempo, terms: TermPlugin[], name: strin
 				case 'start':
 					return start;
 
-				case 'mid':
+				case 'mid': {
 					const midNano = (start.epochNanoseconds + end.epochNanoseconds) / 2n;
 					const diff = Number(midNano - start.epochNanoseconds);
 					return start.add({ nanoseconds: diff });
+				}
 
 				case 'end':
 					return end.subtract({ nanoseconds: 1 })
@@ -161,6 +165,13 @@ export function resolveTermAnchor(tempo: Tempo, terms: TermPlugin[], name: strin
 	}
 
 	return undefined;
+}
+
+/** helper to normalize term definition ranges */
+function getRange(term: TermPlugin, t: Tempo): Range[] {
+	const res = term.define.call(t, false);
+	const list = (res == null) ? [] : (Array.isArray(res) ? res : [res]);
+	return list.filter((r): r is Range => Boolean(r));
 }
 
 /**
@@ -172,12 +183,8 @@ export function resolveTermShift(tempo: Tempo, terms: TermPlugin[], name: string
 
 	if (term && steps !== 0) {
 		const currentZdt = tempo.toDateTime();
-		const getRange = (t: Tempo) => {
-			const res = term.define.call(t, false);
-			return Array.isArray(res) ? res : [res];
-		};
 
-		let list = getRange(tempo);
+		let list = getRange(term, tempo);
 		let idx = list.findIndex(r => {
 			if (!r.start || !r.end) return false;
 			const start = r.start.toDateTime().epochNanoseconds;
@@ -189,11 +196,11 @@ export function resolveTermShift(tempo: Tempo, terms: TermPlugin[], name: string
 		// if we aren't "in" a term (e.g. in a gap), find the "next" or "prev" starting point
 		if (idx === -1) {
 			if (steps > 0) {
-				idx = list.findIndex(r => r.start?.toDateTime().epochNanoseconds > currentZdt.epochNanoseconds);
-				if (idx !== -1) steps--; // we've already "found" the 1st one
+				idx = list.findIndex(r => r.start && r.start.toDateTime().epochNanoseconds > currentZdt.epochNanoseconds);
+				if (idx !== -1) steps--;															// we've already "found" the 1st one
 			} else {
 				const reversed = [...list].reverse();
-				const rIdx = reversed.findIndex(r => r.end?.toDateTime().epochNanoseconds < currentZdt.epochNanoseconds);
+				const rIdx = reversed.findIndex(r => r.end && r.end.toDateTime().epochNanoseconds < currentZdt.epochNanoseconds);
 				if (rIdx !== -1) {
 					idx = list.length - 1 - rIdx;
 					steps++;
@@ -211,13 +218,13 @@ export function resolveTermShift(tempo: Tempo, terms: TermPlugin[], name: string
 		let targetIdx = idx + steps;
 		while (targetIdx < 0 || targetIdx >= list.length) {
 			const pivotDate = targetIdx >= list.length
-				? list[list.length - 1].end?.toDateTime().add({ nanoseconds: 1 })
-				: list[0].start?.toDateTime().subtract({ nanoseconds: 1 });
+				? list[list.length - 1]?.end?.toDateTime().add({ nanoseconds: 1 })
+				: list[0]?.start?.toDateTime().subtract({ nanoseconds: 1 });
 
 			if (!pivotDate) return undefined;
 
 			const pivotTempo = new (tempo.constructor as any)(pivotDate, tempo.config);
-			const newList = getRange(pivotTempo);
+			const newList = getRange(term, pivotTempo);
 
 			if (targetIdx >= list.length) {
 				targetIdx -= list.length;
@@ -231,7 +238,7 @@ export function resolveTermShift(tempo: Tempo, terms: TermPlugin[], name: string
 		}
 
 		const targetRange = list[targetIdx];
-		if (!targetRange.start) return undefined;
+		if (!targetRange?.start) return undefined;
 
 		return targetRange.start.toDateTime().add(offset, { overflow: 'constrain' });
 	}

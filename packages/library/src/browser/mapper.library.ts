@@ -1,6 +1,6 @@
 import { asObject } from '#library/object.library.js';
 import { CONTEXT, getContext } from '#library/utility.library.js';
-import { isNull, isNullish } from '#library/type.library.js';
+import { isNullish } from '#library/type.library.js';
 import { instant } from '#library/temporal.library.js';
 import { getHemisphere } from '#library/international.library.js';
 
@@ -121,15 +121,16 @@ export const mapQuery = (coords?: google.maps.GeocoderRequest, opts = {} as MapO
 					case isNullish(loc):															// unsuccessful geoLocation
 						throw new Error('Cannot determine Coordinates');
 
-					case isNullish(coords):													// current location
+					case isNullish(coords): {												 // current location
 						const test1 = mapStore.geolocation && mapStore.georesponse;
 						const test2 = isNullish(mapStore.geolocation?.error) && isNullish(mapStore.georesponse?.error);
 
-						if (test1 && test2) {													// if we already have geocoder
+						if (test1 && test2) {													 // if we already have geocoder
 							if (opts.debug)
 								console.log('mapQuery: cache');
 							return resolve(mapStore.georesponse!);				// return previous geocoder
-						}																							// drop through to default:
+						}
+					}																												 // drop through to default:
 
 					default:
 						new window['google']['maps'].Geocoder().geocode(loc!)
@@ -170,11 +171,11 @@ export const mapHemisphere = (coords?: google.maps.GeocoderRequest, opts = {} as
 
 			return sphere;
 		})
-		.catch((error) => {																		// cannot query coordinates
+		.catch((error) => {																		 // cannot query coordinates
 			if (opts.debug)
 				console.warn('mapHemisphere: ', error.message);
 			if (opts.catch === false)
-				throw new Error(error)
+				throw error;
 			return null;
 		})
 
@@ -201,6 +202,6 @@ export const mapAddress = (coords?: google.maps.GeocoderRequest, opts = {} as Ma
 			if (opts.debug)
 				console.warn('mapAddress: ', error.message);
 			if (opts.catch === false)
-				throw new Error(error);
+				throw error;
 			return null;
 		})

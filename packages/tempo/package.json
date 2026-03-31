@@ -26,9 +26,9 @@
   "types": "dist/tempo.index.d.ts",
   "imports": {
     "#library": "@magmacomputing/library",
-    "#library/*": "@magmacomputing/library/common/*",
-    "#browser/*": "@magmacomputing/library/browser/*",
-    "#server/*": "@magmacomputing/library/server/*",
+    "#library/*.js": "@magmacomputing/library/common/*.js",
+    "#browser/*.js": "@magmacomputing/library/browser/*.js",
+    "#server/*.js": "@magmacomputing/library/server/*.js",
     "#tempo": {
       "development": "./src/tempo.index.ts",
       "default": "./dist/tempo.index.js"

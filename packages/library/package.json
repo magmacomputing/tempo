@@ -21,45 +21,43 @@
   "type": "module",
   "main": "dist/common/index.js",
   "types": "dist/common/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/common/index.d.ts",
-      "import": "./dist/common/index.js"
-    },
-    "./browser": {
-      "types": "./dist/browser/index.d.ts",
-      "import": "./dist/browser/index.js"
-    },
-    "./common": {
-      "types": "./dist/common/index.d.ts",
-      "import": "./dist/common/index.js"
-    },
-    "./server": {
-      "node": {
-        "types": "./dist/server/index.d.ts",
-        "import": "./dist/server/index.js"
+    "exports": {
+      ".": {
+        "types": "./dist/common/index.d.ts",
+        "import": "./dist/common/index.js"
       },
-      "browser": null
-    },
-    "./*": {
-      "browser": {
-        "types": "./dist/common/*.d.ts",
-        "import": "./dist/common/*"
+      "./browser": {
+        "types": "./dist/browser/index.d.ts",
+        "import": "./dist/browser/index.js"
       },
-      "node": {
-        "types": "./dist/*.d.ts",
-        "import": "./dist/*"
+      "./common": {
+        "types": "./dist/common/index.d.ts",
+        "import": "./dist/common/index.js"
+      },
+      "./server": {
+        "node": {
+          "types": "./dist/server/index.d.ts",
+          "import": "./dist/server/index.js"
+        },
+        "browser": null
+      },
+      "./browser/*.js": {
+        "development": "./src/browser/*.ts",
+        "default": "./dist/browser/*.js"
+      },
+      "./server/*.js": {
+        "development": "./src/server/*.ts",
+        "default": "./dist/server/*.js"
+      },
+      "./common/*.js": {
+        "development": "./src/common/*.ts",
+        "default": "./dist/common/*.js"
+      },
+      "./*.js": {
+        "development": "./src/common/*.ts",
+        "default": "./dist/common/*.js"
       }
     },
-    "./*.js": {
-      "development": "./src/common/*.ts",
-      "default": "./dist/common/*.js"
-    },
-    "./common/*.js": {
-      "development": "./src/common/*.ts",
-      "default": "./dist/common/*.js"
-    }
-  },
   "files": [
     "dist/",
     "src/"
