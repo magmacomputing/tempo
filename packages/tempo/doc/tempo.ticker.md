@@ -4,13 +4,13 @@
 
 ## Installation
 
-To use the ticker, you must first extend the core `Tempo` class with the `TickerPlugin`:
+To use the ticker, simply import the plugin as a side-effect. This automatically registers the `Tempo.ticker()` method with the core library:
 
 ```typescript
+import '@magmacomputing/tempo/plugins/ticker';
 import { Tempo } from '@magmacomputing/tempo';
-import { TickerPlugin } from '@magmacomputing/tempo/plugins/ticker';
 
-Tempo.extend(TickerPlugin);
+// Ticker is now available!
 ```
 
 ## 🚀 Enhancements
@@ -18,18 +18,18 @@ Tempo.extend(TickerPlugin);
 The ticker now supports a unified **Options** object, enabling professional resource management and semantic duration-based intervals.
 
 ### 1. Semantic Intervals (Duration Objects)
-Instead of raw milliseconds, you can use `Temporal.DurationLike` objects for clarity. This is especially powerful for variable-length intervals like **months**.
+Instead of raw numeric seconds, you can use `Temporal.DurationLike` objects for clarity. This is especially powerful for variable-length intervals like **months**.
 
 ```typescript
 // Pulse exactly once a month
-await using monthly = Tempo.ticker({ interval: { months: 1 } });
+await using monthly = Tempo.ticker({ months: 1 });
 ```
 
 ### 2. Stop Conditions (Resource Management)
 Prevent memory leaks and runaway processes by setting a built-in termination condition.
 
 ```typescript
-// Pattern A: Stop after exactly 5 ticks (defaults to 1s interval)
+// Pattern A: Stop after exactly 5 ticks (defaults to 1-second interval)
 using tickerA = Tempo.ticker({ limit: 5 }, (t) => console.log(t));
 
 // Pattern B: Stop when a specific virtual time is reached
@@ -96,7 +96,7 @@ To create a **Virtual Clock** that increments from a specific point rather than 
 ```typescript
 // Starts at '2024-01-01', then increments by 1 day per pulse
 await using daily = Tempo.ticker({ 
-  interval: { days: 1 }, 
+  days: 1, 
   seed: '2024-01-01' 
 });
 ```
@@ -118,16 +118,16 @@ using countdown = Tempo.ticker({ seconds: -1, seed: "00:00:10" }, (t, stop) => {
 ## API Reference
 
 ### `Tempo.ticker(arg1?: number | string | bigint | TickerOptions, arg2?: Callback): TickerResult`
-Creates a reactive stream of `Tempo` instances at regular intervals. Defaults to a **1-second** interval if omitted.
+Creates a reactive stream of `Tempo` instances at regular intervals. Defaults to a **1-second** interval if no duration or interval properties are specified.
 
 #### `TickerOptions`
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| `interval` | `number \| DurationLike` | Pulse frequency (**seconds** if number). Defaults to 1s. |
-| `seed` | `DateTime \| Options` | Starting point for the virtual clock. |
-| `limit` | `number` | Stop after X number of ticks. |
-| `until` | `DateTime` | Stop when virtual clock reaches this point. |
-| `...Duration` | `DurationLike` | Flattened duration keys (seconds, minutes, etc.) |
+| `interval` | `number \| string \| bigint` | Pulse frequency (**seconds** if number). Defaults to 1s. |
+| `seed` | `DateTime \| Options` | The starting point for the virtual clock. |
+| `limit` | `number` | Auto-stop after X number of ticks. |
+| `until` | `DateTime \| Options` | Auto-stop when virtual clock reaches this point. |
+| `...Duration` | `Partial<DurationLike>` | Flattened duration keys (e.g., `seconds: 5`, `minutes: 1`). |
 
 ---
 

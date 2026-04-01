@@ -31,6 +31,18 @@
       "development": "./src/tempo.index.ts",
       "default": "./dist/tempo.index.js"
     },
+    "#tempo/plugins/plugin.*.js": {
+      "development": "./src/plugins/extend/plugin.*.ts",
+      "default": "./dist/plugins/extend/plugin.*.js"
+    },
+    "#tempo/plugins/term.*.js": {
+      "development": "./src/plugins/term/term.*.ts",
+      "default": "./dist/plugins/term/term.*.js"
+    },
+    "#tempo/plugins/term/index.js": {
+      "development": "./src/plugins/term/index.ts",
+      "default": "./dist/plugins/term/index.js"
+    },
     "#tempo/*.js": {
       "development": "./src/*.ts",
       "default": "./dist/*.js"
@@ -45,9 +57,17 @@
       "types": "./dist/tempo.enum.d.ts",
       "import": "./dist/tempo.enum.js"
     },
+    "./plugins": {
+      "types": "./dist/plugins/tempo.plugin.d.ts",
+      "import": "./dist/plugins/tempo.plugin.js"
+    },
     "./plugins/ticker": {
-      "types": "./dist/plugins/plugin.ticker.d.ts",
-      "import": "./dist/plugins/plugin.ticker.js"
+      "types": "./dist/plugins/extend/plugin.ticker.d.ts",
+      "import": "./dist/plugins/extend/plugin.ticker.js"
+    },
+    "./plugins/plugin.*": {
+      "types": "./dist/plugins/extend/plugin.*.d.ts",
+      "import": "./dist/plugins/extend/plugin.*.js"
     },
     "./library": {
       "types": "./dist/library.index.d.ts",

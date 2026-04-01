@@ -73,7 +73,7 @@ const SCHEMA = [
  * find where a Tempo fits within a range of DateTime
  */
 export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true) {
-	const chronological = sortKey([...list], 'fiscal', 'year', 'month', 'day', 'hour', 'minute', 'second');
+	const chronological = sortKey([...list], 'year', 'month', 'day', 'hour', 'minute', 'second');
 
 	if (chronological.length === 0) return undefined;
 
@@ -96,32 +96,31 @@ export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true) {
 		?? chronological.at(-1)!
 
 	const i = chronological.indexOf(match);
-	const yy = tempo.toDateTime().year;
-	const next = chronological[i + 1] ?? { ...chronological[0], fiscal: (chronological[0].fiscal ?? chronological[0].year ?? yy) + 1, year: (chronological[0].year ?? chronological[0].fiscal ?? yy) + 1 };
+	const zdt = tempo.toDateTime();
+	const { year: yy, month: mm, day: dd } = zdt;
 
-	const start = tempo.toDateTime().with({
-		year: match.year ?? match.fiscal ?? yy,
-		month: match.month ?? 1,
-		day: match.day ?? 1,
-		hour: match.hour ?? 0,
-		minute: match.minute ?? 0,
-		second: match.second ?? 0,
-		millisecond: match.millisecond ?? 0,
-		microsecond: match.microsecond ?? 0,
-		nanosecond: match.nanosecond ?? 0,
+	// Determine the rollover unit based on the largest unit defined in the range list
+	const hasYear = list.some(r => isDefined(r.year) || isDefined(r.month));
+	const hasMonth = !hasYear && list.some(r => isDefined(r.day));
+	const unit = hasYear ? 'year' : (hasMonth ? 'month' : 'day');
+
+	const resolve = (range: Range, anchor: Temporal.ZonedDateTime) => anchor.with({
+		year: range.year ?? anchor.year,
+		month: range.month ?? (hasYear ? 1 : anchor.month),
+		day: range.day ?? (hasYear || hasMonth ? 1 : anchor.day),
+		hour: range.hour ?? 0,
+		minute: range.minute ?? 0,
+		second: range.second ?? 0,
+		millisecond: range.millisecond ?? 0,
+		microsecond: range.microsecond ?? 0,
+		nanosecond: range.nanosecond ?? 0,
 	});
 
-	const end = tempo.toDateTime().with({
-		year: next.year ?? next.fiscal ?? yy,
-		month: next.month ?? 1,
-		day: next.day ?? 1,
-		hour: next.hour ?? 0,
-		minute: next.minute ?? 0,
-		second: next.second ?? 0,
-		millisecond: next.millisecond ?? 0,
-		microsecond: next.microsecond ?? 0,
-		nanosecond: next.nanosecond ?? 0,
-	});
+	const start = resolve(match, zdt);
+	const nextRange = chronological[i + 1];
+	const end = isDefined(nextRange)
+		? resolve(nextRange, zdt)
+		: resolve(chronological[0], zdt.add({ [`${unit}s` as any]: 1 }));
 
 	// Pre-build the Range object with Tempo instances
 	const resolved = secure({
@@ -194,10 +193,11 @@ export function resolveTermShift(tempo: Tempo, terms: TermPlugin[], name: string
 		if (idx === -1) {
 			if (steps > 0) {
 				idx = list.findIndex(r => r.start && r.start.toDateTime().epochNanoseconds > currentZdt.epochNanoseconds);
-				if (idx !== -1) steps--;															// we've already "found" the 1st one
+				if (idx !== -1) steps--;														// we've already "found" the 1st one
 			} else {
 				const reversed = [...list].reverse();
 				const rIdx = reversed.findIndex(r => r.end && r.end.toDateTime().epochNanoseconds < currentZdt.epochNanoseconds);
+
 				if (rIdx !== -1) {
 					idx = list.length - 1 - rIdx;
 					steps++;
@@ -205,7 +205,7 @@ export function resolveTermShift(tempo: Tempo, terms: TermPlugin[], name: string
 			}
 		}
 
-		if (idx === -1) return undefined; // Cannot find a reference point
+		if (idx === -1) return undefined;												// Cannot find a reference point
 
 		const currentRange = list[idx];
 		if (!currentRange.start) return undefined;
@@ -227,11 +227,11 @@ export function resolveTermShift(tempo: Tempo, terms: TermPlugin[], name: string
 				targetIdx -= list.length;
 				list = newList;
 			} else {
-				targetIdx = newList.length + (targetIdx); // targetIdx is negative here
+				targetIdx = newList.length + (targetIdx);						// targetIdx is negative here
 				list = newList;
 			}
-			// Safety break for infinite loops in buggy plugins
-			if (list.length === 0) return undefined;
+
+			if (list.length === 0) return undefined;							// Safety break for infinite loops in buggy plugins
 		}
 
 		const targetRange = list[targetIdx];

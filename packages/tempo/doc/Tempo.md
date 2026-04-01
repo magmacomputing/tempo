@@ -345,7 +345,7 @@ console.log(q.start.format('{dd} {mmm}')); // Fluent formatting directly from th
 console.log(q.end.since(t, 'days'));        // Calculate days remaining in the quarter
 ```
 
-See the [Tempo Terms guide](./tempo.terms.md) for full details and plugin development.
+See the [Tempo Terms guide](./tempo.term.md) for full details and plugin development.
 
 ---
 

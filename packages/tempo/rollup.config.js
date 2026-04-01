@@ -43,7 +43,16 @@ export default {
 	plugins: [
 		resolve({
 			extensions: ['.js']
-		})
+		}),
+		{
+			name: 'indentation-fix',
+			renderChunk(code) {
+				return {
+					code: code.replace(/^( {4})+/gm, (match) => '\t'.repeat(match.length / 4)),
+					map: null
+				};
+			}
+		}
 	],
 	external: ['@js-temporal/polyfill']
 }

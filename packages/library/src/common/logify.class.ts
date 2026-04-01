@@ -18,7 +18,7 @@ export class Logify {
 	#opts: Logify.Constructor = {};
 
 	#log(method: Logify.Method, ...msg: any[]) {
-		if (this.#opts.debug)
+		if (this.#opts.debug || method === Method.Warn || method === Method.Error)
 			console[method](this.#name, ...msg);
 	}
 
@@ -27,13 +27,18 @@ export class Logify {
 	 * otherwise show an error on the console and re-throw the error
 	 */
 	catch(...msg: any[]) {
-		if (this.#opts.catch) {
+		const config = (isObject(msg[0]) && 'catch' in msg[0]) ? msg.shift() : this.#opts;
+		const e = msg.find(m => m instanceof Error);
+
+		if (config.catch) {
 			this.warn(...msg);																		// show a warning on the console
 			return;																							// safe-return
 		}
 
 		this.error(...msg);																		// this goes to the console
-		throw new Error(`${this.#name}${msg.map(m => isObject(m) ? JSON.stringify(m) : String(m)).join(' ')}`);	// catch will be loud or silent, based on #catch config
+		const ErrorClass = e ? (e.constructor as any) : Error;
+		const errorText = msg.map(m => m instanceof Error ? m.message : (isObject(m) ? JSON.stringify(m) : String(m))).join(' ');
+		throw new ErrorClass(`${this.#name}${errorText}`);											// catch will be loud or silent, based on #catch config
 	}
 
 	/** console.log */																				log = (...msg: any[]) => this.#log(Method.Log, ...msg);

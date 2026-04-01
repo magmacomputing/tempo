@@ -13,7 +13,7 @@ import { getContext, CONTEXT } from '#library/utility.library.js';
 import { enumify } from '#library/enumerate.library.js';
 import { STATE, PARSE, DISCOVERY, registryReset } from '#tempo/tempo.enum.js'
 import { registerPlugin, registerTerm, resolveTermAnchor, resolveTermShift } from '#tempo/plugins/tempo.plugin.js'
-import { registerTerms } from '#tempo/plugins/terms/index.js'
+import { registerTerms } from '#tempo/plugins/term/index.js'
 import { ownKeys, ownEntries, getAccessors, omit } from '#library/reflection.library.js';
 import { ifDefined } from '#library/object.library.js';
 import { pad, singular, toProperCase, trimAll } from '#library/string.library.js';
@@ -151,10 +151,24 @@ export class Tempo {
 	/** check if Tempo is currently initializing */						static get isInitializing() { return Tempo.#lifecycle.extendDepth > 0 || !Tempo.#lifecycle.ready }
 	/** check if Tempo is currently extending */							static get isExtending() { return Tempo.#lifecycle.extendDepth > 0 }
 
+	static extend(arg: any, options?: any) {
+		const items = asArray(arg).flat(1);
+	}
+
 	static #dbg = new Logify('Tempo', {
 		debug: Default?.debug ?? false,
 		catch: Default?.catch ?? false
 	})
+
+	/** handle internal errors using the global config */
+	static catch(...msg: any[]) {
+		Tempo.#dbg.catch(Tempo.#global.config, ...msg);
+	}
+
+	/** handle internal debug info using the global config */
+	static debug(...msg: any[]) {
+		Tempo.#dbg.debug(...msg);
+	}
 
 	/** a collection of parse rule-matches */									#matches: Internal.Match[] | undefined;
 
@@ -479,18 +493,6 @@ export class Tempo {
 		if (discovery.terms)
 			this.extend(asArray(discovery.terms));
 
-		// 3. Re-calculate {nbr} snippet and dependent snippets, then re-sync patterns
-		if (discovery.numbers || discovery.terms) {
-			const nbr = new RegExp(`(?<nbr>[0-9]+|${Object.keys(enums.NUMBER).join('|')})`);
-			shape.parse.snippet[Token.nbr] = nbr;
-
-			// rebuild snippets that depend on {nbr}
-			shape.parse.snippet[Token.mod] = new RegExp(`((?<mod>${Match.modifier.source})?${nbr.source}? *)`);
-			shape.parse.snippet[Token.afx] = new RegExp(`((s)? (?<afx>${Match.affix.source}))?${shape.parse.snippet[Token.sep].source}?`);
-
-			Tempo.#setPatterns(shape);
-		}
-
 		// 3. Process Formats
 		if (discovery.formats) {
 			shape.config.formats = shape.config.formats.extend(discovery.formats) as Tempo.Format;
@@ -510,9 +512,11 @@ export class Tempo {
 	static #setPatterns(shape: Internal.State) {
 		const snippet = shape.parse.snippet;
 
-		// if local and no snippet or layout overrides, we can just use the prototype's patterns
-		if (Tempo.#isLocal(shape) && !Tempo.#hasOwn(shape.parse, 'snippet') && !Tempo.#hasOwn(shape.parse, 'layout'))
-			return;
+		// 1. ensure numeric snippets are current
+		const nbr = new RegExp(`(?<nbr>[0-9]+|${Object.keys(enums.NUMBER).sort((a, b) => b.length - a.length).join('|')})`);
+		snippet[Token.nbr] = nbr;
+		snippet[Token.mod] = new RegExp(`((?<mod>${Match.modifier.source})?${nbr.source}? *)`);
+		snippet[Token.afx] = new RegExp(`((s)? (?<afx>${Match.affix.source}))?${snippet[Token.sep].source}?`);
 
 		// ensure we have our own Map to mutate (shadow if local)
 		if (!Tempo.#hasOwn(shape.parse, 'pattern'))
@@ -528,16 +532,7 @@ export class Tempo {
 
 	/** Access to registries */
 	static #buildGuard() {
-		const terms = Tempo.#terms
-			.map(t => [Match.escape(t.key ?? ''), Match.escape(t.scope ?? '')])
-			.flat()
-			.filter(isString)
-			.filter(t => t.length > 0);
-
-		const words = [...terms, ...Object.keys(Event), ...Object.keys(Period), ...Object.keys(enums.NUMBER)].join('|');
-		const dates = [Match.date.source, Match.time.source, Snippet[Token.yy].source].join('|');
-
-		Tempo.#guard = new RegExp(`^(${words}|${dates}|${Match.modifier.source}|${Match.guard.source})$`, 'i');
+		Tempo.#guard = new RegExp(`^[a-z\\d\\s\\-\\.\\:T\\/Z\\+\\-\\(\\)\\[\\]\\,\\=\\#]+$`, 'i');
 	}
 
 	/**
@@ -551,6 +546,7 @@ export class Tempo {
 	static extend(term: Tempo.TermPlugin | Tempo.TermPlugin[], discovery?: symbol): typeof Tempo
 	static extend(config: Internal.Discovery | Internal.Discovery[], discovery?: symbol): typeof Tempo
 	static extend(arg: any, options?: any) {
+		console.error('DEBUG: Tempo.extend called with:', JSON.stringify(arg));
 		const items = asArray(arg).flat(1);
 		if (isEmpty(items)) return this;
 
@@ -582,6 +578,14 @@ export class Tempo {
 						if (discovery.plugins) this.extend(discovery.plugins, discovery.options)
 						if (discovery.terms) this.extend(discovery.terms)
 
+						// handle other discovery keys directly
+						if (discovery.numbers) enums.registryUpdate('NUMBER', discovery.numbers)
+						if (discovery.timeZones) enums.registryUpdate('TIMEZONE', discovery.timeZones)
+						if (discovery.formats) {
+							Tempo.#global.config.formats = Tempo.#global.config.formats.extend(discovery.formats) as Tempo.Format;
+							enums.registryUpdate('FORMAT', discovery.formats)
+						}
+
 						// only trigger init if we're assigning a new discovery object to a symbol
 						if (ownKeys(item).some(key => DISCOVERY.has(key as any))) {
 							const discoverySymbol = (typeof options === 'symbol' ? options : options?.discovery) ?? $Tempo
@@ -597,8 +601,10 @@ export class Tempo {
 			Tempo.#lifecycle.extendDepth--;												// decrement the re-entrant nesting counter
 		}
 
-		if (Tempo.#lifecycle.extendDepth === 0)
-			Tempo.#buildGuard();																	// rebuild the Master Guard only when top-level is finished
+		if (Tempo.#lifecycle.extendDepth === 0) {
+			Tempo.#setPatterns(Tempo.#global);										// rebuild the global patterns
+			Tempo.#buildGuard();																	// rebuild the Master Guard
+		}
 
 		return this;
 	}
@@ -636,15 +642,15 @@ export class Tempo {
 				) as unknown as Internal.Config;
 
 				Tempo.#usrCount = 0;																// reset user-key counter
-				for (const key of Object.keys(Token))							// purge user-allocated Tokens
-					if (key.startsWith('usr.'))											// only remove 'usr.' prefixed keys
+				for (const key of Object.keys(Token))								// purge user-allocated Tokens
+					if (key.startsWith('usr.'))												// only remove 'usr.' prefixed keys
 						delete Token[key];
 
 				Tempo.#terms = [];																	// clear registered terms
-				Tempo.#termMap.clear();														// clear term lookup map
+				Tempo.#termMap.clear();															// clear term lookup map
 				registryReset();																		// purge formats and numbers
 
-				this.extend(registerTerms);												// register built-in term plugins
+				this.extend(registerTerms);													// register built-in term plugins
 
 				const storeKey = Symbol.keyFor($Tempo) as string;
 				Tempo.#setConfig(Tempo.#global,
@@ -1106,6 +1112,7 @@ export class Tempo {
 
 	/** parse DateTime input */
 	#parse(tempo?: Tempo.DateTime, dateTime?: Temporal.ZonedDateTime): Temporal.ZonedDateTime {
+		console.error(`DEBUG: #parse entry | tempo=${tempo} | hasAnchor=${isDefined(dateTime)}`);
 		const isRoot = isUndefined(this.#matches);
 		this.#matches ??= [...(this.#local.parse.result ?? [])];
 
@@ -1138,6 +1145,10 @@ export class Tempo {
 			Tempo.#dbg.info(this.#local.config, 'parse', `{type: ${type}, value: ${value}}`);	// show what we're parsing
 
 			switch (type) {
+				case 'Temporal.ZonedDateTime':
+					dateTime = value;
+					break;
+
 				case 'Null':
 				case 'Void':
 				case 'Empty':
@@ -1147,7 +1158,7 @@ export class Tempo {
 
 				case 'String':																				// String which didn't conform to a Tempo.pattern
 					try {
-						const str = value.replace(/Z$/, '');							// requested Z-stripping for adoption
+						const str = (value as string).replace(/Z$/, '');							// requested Z-stripping for adoption
 						const zdt = Temporal.ZonedDateTime.from(str.includes('[') ? str : `${str}[${tz}]`);
 						if (this.#local) this.#local.config.timeZone = zdt.timeZoneId;
 						dateTime = zdt;
@@ -1341,8 +1352,8 @@ export class Tempo {
 			})
 		}
 
-		if (type !== 'String' && type !== 'Number') {
-			this.#result(arg, { match: type });
+		if (arg.type !== 'String' && arg.type !== 'Number') {
+			this.#result(arg, { match: arg.type });
 			return arg;
 		}
 
@@ -1351,6 +1362,18 @@ export class Tempo {
 			return this.#conform(res, dateTime, isAnchored);
 		}
 
+		if (isString(value)) {
+			const trim = (value as string).trim();
+			// if (!Tempo.#guard.test(trim)) return arg;									// Master Guard: fast-path rejection of non-date strings
+		}
+
+		return arg;
+	}
+
+	/** match a string or number against known layouts */
+	#parseLayout(value: string | number, dateTime: Temporal.ZonedDateTime, isAnchored = false): Internal.Match {
+		const arg = asType(value);
+		const { type } = arg;
 		const trim = trimAll(value);
 
 		if (type === 'String') {																// if original value is String
@@ -1364,37 +1387,42 @@ export class Tempo {
 			}
 		}
 		else {																									// else it is a Number
-			if (trim.length <= 7) {															// cannot reliably interpret small numbers:  might be {ss} or {yymmdd} or {dmmyyyy}
+			if (trim.length <= 7) {																// cannot reliably interpret small numbers:  might be {ss} or {yymmdd} or {dmmyyyy}
 				Tempo.#dbg.catch(this.#local.config, 'Cannot safely interpret number with less than 8-digits: use string instead');
 				return arg;
 			}
 		}
 
 		const map = this.#local.parse.pattern;
+		if (trim === 'eleven days hence') {
+			const keys = [...map.keys()].map(k => k.description);
+			const relPat = [...map.entries()].find(([k]) => k.description === 'rel')?.[1];
+			throw new Error(`DEBUG: 'eleven days hence' checking ${map.size} patterns: [${keys.join(', ')}]. Rel regex: ${relPat?.source}`);
+		}
 		for (const [sym, pat] of map) {
-			const groups = this.#parseMatch(pat, trim);					// determine pattern-match groups
+			const groups = this.#parseMatch(pat, trim);						// determine pattern-match groups
 			if (isEmpty(groups)) continue;												// no match, so skip this iteration
 
-			this.#result(arg, { match: sym.description, groups: cleanify(groups) });	// stash the {key} of the pattern that was matched
+			this.#result(arg, { match: sym.description, groups });	// stash the {key} of the pattern that was matched
 
-			dateTime = this.#parseZone(groups, dateTime);				// resolve timezone early so events can use it
-			dateTime = this.#parseGroups(groups, dateTime);			// mutate the {groups} object (resolves events/periods)
-
-			dateTime = this.#parseWeekday(groups, dateTime);			// if {weekDay} pattern, calculate a calendar value
-			dateTime = this.#parseDate(groups, dateTime);				// if {calendar}|{event} pattern, translate to date value
-			dateTime = this.#parseTime(groups, dateTime);				// if {clock}|{period} pattern, translate to a time value
+			dateTime = this.#parseZone(groups, dateTime);
+			dateTime = this.#parseGroups(groups, dateTime);
 
 			/**
 			 * finished analyzing a matched pattern.  
 			 * rebuild {arg.value} into a ZonedDateTime
 			 */
+			dateTime = this.#parseWeekday(groups, dateTime);			// if {weekDay} pattern, calculate a calendar value
+			dateTime = this.#parseDate(groups, dateTime);					// if {calendar}|{event} pattern, translate to date value
+			dateTime = this.#parseTime(groups, dateTime);					// if {clock}|{period} pattern, translate to a time value
+
 			// if no time-components were matched, strip time to midnight baseline
 			if (!isAnchored && !['hh', 'mi', 'ss', 'ff', 'mer', 'per'].some(key => isDefined(groups[key])))
 				dateTime = dateTime.withPlainTime('00:00:00');
 
 			Object.assign(arg, { type: 'Temporal.ZonedDateTime', value: dateTime });
 
-			Tempo.#dbg.info(this.#local.config, 'groups', groups);	// show the resolved date-time elements
+			Tempo.#dbg.info(this.#local.config, 'groups', groups);// show the resolved date-time elements
 			Tempo.#dbg.info(this.#local.config, 'pattern', sym.description);	// show the pattern that was matched
 
 			break;																								// stop checking patterns
@@ -1410,7 +1438,7 @@ export class Tempo {
 		ownEntries(groups)																			// remove undefined, NaN, null and empty values
 			.forEach(([key, val]: [string, any]) => isEmpty(val) && delete groups[key]);
 
-		return groups;
+		return groups as Tempo.Groups;
 	}
 
 	/** resolve {event} | {period} to their date | time values (mutates groups) */
@@ -1729,11 +1757,11 @@ export class Tempo {
 		return ownEntries(groups)
 			.reduce((acc: Record<string, number>, [key, val]: [string, any]) => {
 				const low = isString(val) ? val.toLowerCase() : '';
-
-				if (isNumeric(val))
-					acc[key] = asNumber(val);
+				if (Number.isFinite(Number(val)))
+					acc[key] = Number(val);
 				else if (low in enums.NUMBER)
 					acc[key] = enums.NUMBER[low as enums.Number];
+
 				return acc;
 			}, {} as Record<string, number>);
 	}
@@ -1758,6 +1786,25 @@ export class Tempo {
 							if (unit === 'timeZone' || unit === 'calendar') return zdt;
 
 							if (unit.startsWith('#')) {
+								if (isString(offset)) {
+									const term = unit.slice(1);
+									const termObj = Tempo.#terms.find(t => t.scope === term || t.key === term);
+
+									let jump = zdt;
+									let next = new this.#Tempo(jump, this.config).set({ [unit]: offset }).toDateTime();
+
+									while (next.epochNanoseconds <= zdt.epochNanoseconds) {
+										const range = termObj?.define.call(new this.#Tempo(jump, this.config), false);
+										if (isObject(range) && (range as any).end) {
+											jump = (range as any).end.toDateTime();
+										} else {
+											const step = (termObj as any)?.scope === 'period' ? { days: 1 } : { years: 1 };
+											jump = jump.add(step);
+										}
+										next = new this.#Tempo(jump, this.config).set({ [unit]: offset }).toDateTime();
+									}
+									return next;
+								}
 								const res = resolveTermShift(new this.#Tempo(zdt, this.config), Tempo.#terms, unit, offset as number);
 								if (isDefined(res)) return res;
 							}
@@ -1783,10 +1830,9 @@ export class Tempo {
 									Tempo.#dbg.catch(this.#local.config, `Unexpected method(${mutate}), unit(${unit}) and offset(${offset})`);
 									return zdt;
 							}
-						}, zdt)
+						}, zdt);
 				}
 				else {
-					return new this.#Tempo(args, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
 				}
 			}
 
@@ -1829,7 +1875,12 @@ export class Tempo {
 											return { mutate: key as Tempo.Mutate, offset, single }
 										}
 									default:
-										return { mutate: 'set', offset: adjust, single: singular(key as string) }
+										{
+											const isTerm = key.startsWith('#');
+											const name = isTerm ? key.slice(1) : key;
+											const single = isTerm ? 'term' : singular(name as string);
+											return { mutate: 'set', offset: adjust, single }
+										}
 								}
 							})(key);																				// IIFE to analyze arguments
 
@@ -1839,6 +1890,7 @@ export class Tempo {
 								case 'set.calendar':
 									return zdt.withCalendar(offset as Temporal.CalendarLike);
 
+								case 'set.term':
 								case 'set.period':
 								case 'set.time':
 								case 'set.date':

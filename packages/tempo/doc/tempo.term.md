@@ -136,8 +136,8 @@ A term plugin is a TypeScript module that exports four named members and follows
 ### Plugin shape
 
 ```ts
-import { getTermRange, type Range } from '@magmacomputing/tempo/terms/term.utils.js';
-import type { Tempo } from 'tempo';
+import { getTermRange, type Range } from '@magmacomputing/tempo/plugins';
+import type { Tempo } from '@magmacomputing/tempo';
 
 /** 1. The range boundaries (static — defined once at import time) */
 const ranges = [

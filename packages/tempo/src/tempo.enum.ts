@@ -132,7 +132,7 @@ export type MONTHS = KeyOf<typeof MONTHS>
 export type Months = ValueOf<typeof MONTHS>
 
 /** number names (0-10) */
-export const NUMBER = enumify(STATE.NUMBER, false);
+export const NUMBER = proxify(enumify(STATE.NUMBER, false), false);
 export type Number = KeyOf<typeof NUMBER>
 
 /** common time-zone aliases */
@@ -147,7 +147,7 @@ export const DURATIONS = enumify(STATE.DURATIONS, false);
 export type DURATIONS = KeyOf<typeof DURATIONS>
 
 /** common format aliases */
-export const FORMAT = enumify(STATE.FORMAT, false);
+export const FORMAT = proxify(enumify(STATE.FORMAT, false), false);
 export type FORMAT = ValueOf<typeof FORMAT>
 export type Format = LooseUnion<KeyOf<typeof FORMAT> & string>
 
@@ -233,9 +233,14 @@ export function registryUpdate(name: keyof typeof STATE, data: Record<string, an
 	const state = STATE[name] as Property<any>;
 
 	Object.entries(data).forEach(([key, val]) => {
-		if (isUndefined(state[key])) {													// only add if key does not exist
-			state[key] = val;
-			if (target) target[key] = val;
+		if (isUndefined(target[key])) {													// only add if key does not exist
+			Object.defineProperty(target, key, {
+				value: val,
+				enumerable: true,
+				writable: true,
+				configurable: true
+			});
+			if (state) state[key] = { value: val, enumerable: true, writable: true, configurable: true };
 		}
 	});
 

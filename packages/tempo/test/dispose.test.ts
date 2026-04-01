@@ -86,7 +86,7 @@ describe('Ticker Symbol.dispose', () => {
 	test('Ticker callback seeding (Virtual Clock)', async () => {
 		const seed = '2024-01-01T00:00:00';
 		const results: string[] = [];
-		const stop = Tempo.ticker({ seed, interval: 0.05 }, (t) => {
+		const stop = Tempo.ticker({ seed, seconds: 0.05 }, (t) => {
 			results.push(t.format('sortTime') as string);
 		});
 
@@ -100,7 +100,7 @@ describe('Ticker Symbol.dispose', () => {
 
 	test('Ticker generator seeding (Virtual Clock)', async () => {
 		const seed = '2024-01-01T00:00:00';
-		const ticker = Tempo.ticker({ seed, interval: 0.05 });
+		const ticker = Tempo.ticker({ seed, seconds: 0.05 });
 		const results: string[] = [];
 
 		let i = 0;
@@ -129,7 +129,7 @@ describe('Ticker Symbol.dispose', () => {
 		const seed = '2024-01-01T12:00:00';
 		const results: string[] = [];
 		{
-			await using ticker = Tempo.ticker({ seed, interval: 0.02 });
+			await using ticker = Tempo.ticker({ seed, seconds: 0.02 });
 			let i = 0;
 			for await (const t of ticker) {
 				results.push(t.format('sortTime') as string);

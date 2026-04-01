@@ -1,28 +1,27 @@
 # Extending Tempo with Plugins
 
-Tempo is designed with a "lean core" philosophy. While it provides robust date-time manipulation and parsing out of the box, advanced functionality—like reactive tickers or domain-specific business logic—is added through a flexible **Plugin System**.
+Tempo is designed with a "lean core" philosophy. While it provides robust date-time manipulation and parsing out of the box, advanced functionality (like reactive tickers or domain-specific business logic) is added through a flexible **Plugin System**.
 
-## The `Tempo.extend()` API
-
-To register a plugin, use the static `extend` method. This can be called multiple times to stack different feature sets.
+To manually register a plugin, use the static `extend` method. This is typically used for "opt-in" features or when you need to provide specific configuration to a plugin factory.
 
 ```typescript
 import { Tempo } from '@magmacomputing/tempo';
 import { MyPlugin } from './my-plugin.js';
 
+// Manual registration
 Tempo.extend(MyPlugin);
 ```
 
 ---
 
-## Writing a Plugin
+The most efficient way to author a plugin is using the `definePlugin` factory. This helper automatically handles the internal registration logic, making your plugin available as soon as it is imported (via side-effect).
 
-A Tempo plugin is a function that receives the `Tempo` environment and attaches new capabilities to the `Tempo` class or its prototype.
-
-### Plugin Signature
+### Example Plugin
 
 ```typescript
-export const MyPlugin: Tempo.Plugin = (options, TempoClass, factory) => {
+import { definePlugin } from '@magmacomputing/tempo/plugins';
+
+export const MyPlugin = definePlugin((options, TempoClass, factory) => {
   /**
    * options:    The global configuration object
    * TempoClass: The internal Tempo class (for static methods)
@@ -30,13 +29,23 @@ export const MyPlugin: Tempo.Plugin = (options, TempoClass, factory) => {
    */
 
   // 1. Add a static method
-  TempoClass.myStaticMethod = () => { ... };
+  TempoClass.myStaticMethod = () => { /* ... */ };
 
   // 2. Add an instance method (on the prototype)
-  // Note: Most Tempo instance methods should be IMMUTABLE and return a new instance.
   TempoClass.prototype.toHoliday = function() {
     return factory(this.add({ days: 1 }));
   };
+});
+```
+
+### Manual Registration Pattern
+If you prefer not to use the factory (e.g. for plugins that should *not* self-register), you can export a plain function with the `Tempo.Plugin` signature:
+
+```typescript
+import type { Tempo } from '@magmacomputing/tempo';
+
+export const ManualPlugin: Tempo.Plugin = (options, TempoClass, factory) => {
+  // ... implementation ...
 };
 ```
 
@@ -65,17 +74,18 @@ declare module '@magmacomputing/tempo' {
 > **Avoid Circular Dependencies**: When writing a plugin, **never** import the `Tempo` class directly from `@magmacomputing/tempo`. Doing so will create a circular dependency that breaks the library initialization. Instead, always use `import type { Tempo }` for type checking, and rely on the `TempoClass` argument passed to your plugin function for static method access.
 ---
 
-## Self-Registering Plugins (Side-Effects)
-
-To simplify developer setup, many plugins support **self-registration** via side-effect imports. This allows a plugin to register itself with the global Tempo registry as soon as it's imported.
+Modern Tempo plugins are designed to be "plug-and-play." By using the `definePlugin` factory, a plugin registers itself with the global Tempo registry as soon as it's imported.
 
 ```typescript
-import '@magmacomputing/tempo/plugins/ticker.js';
+import '@magmacomputing/tempo/plugins/ticker';
 import { Tempo } from '@magmacomputing/tempo';
+
+// Ticker is already available!
+const pulse = Tempo.ticker(1); 
 ```
 
-> [!IMPORTANT]
-> **Import Order Matters**: To ensure self-registered plugins are processed by the automatic `Tempo.init()` at startup, the side-effect import must appear **above** the `Tempo` class import. If imported later, you must call `Tempo.init()` manually to refresh the internal registry.
+> [!NOTE]
+> **Import Order**: While older versions of Tempo were sensitive to import order, current versions handle sequencing robustly. `Tempo.init()` is automatically called during bootstrap to ensure all discovered plugins are integrated. If you dynamically load plugins later, you can call `Tempo.init()` manually to refresh the registry.
 
 ---
 
@@ -124,7 +134,7 @@ Tempo.extend(HolidayPlugin({
 
 ---
 
-## Examples---
+## Examples
 
 ## 🤝 Need Help Writing a Plugin?
 
@@ -133,4 +143,4 @@ If you have a complex business requirement or need a high-performance plugin bui
 **[Contact Magma Computing](https://github.com/magmacomputing)** to discuss your requirements.
 
 - [Tempo Ticker Guide](./tempo.ticker.md): A deep dive into an "Async Generator" based plugin.
-- [Tempo Terms Guide](./tempo.terms.md): Documentation on the "Memoized Lookup" pattern for business logic.
+- [Tempo Terms Guide](./tempo.term.md): Documentation on the "Memoized Lookup" pattern for business logic.
