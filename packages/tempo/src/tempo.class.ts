@@ -4,9 +4,9 @@ import { Logify } from '#library/logify.class.js';
 import { secure } from '#library/utility.library.js';
 import { Immutable, Serializable } from '#library/class.library.js';
 import { asArray, asNumber, asInteger, isNumeric, ifNumeric } from '#library/coercion.library.js';
-import { cleanify, stringify } from '#library/serialize.library.js';
+import { cleanify } from '#library/serialize.library.js';
 import { getStorage, setStorage } from '#library/storage.library.js';
-import { getProxy, getLazyDelegator } from '#library/proxy.library.js';
+import { proxify, getLazyDelegator } from '#library/proxy.library.js';
 import { $Register, $Tempo, $Plugins, registerHook } from '#tempo/tempo.symbol.js';
 import { $Discover } from '#library/symbol.library.js';
 import { getContext, CONTEXT } from '#library/utility.library.js';
@@ -759,13 +759,13 @@ export class Tempo {
 
 	/** global Tempo configuration */
 	static get config() {
-		return getProxy(omit({ ...Tempo.#global.config }, 'value'));
+		return proxify(omit({ ...Tempo.#global.config }, 'value'));
 	}
 
 	/** global discovery configuration */
 	static #getConfig(sym: symbol) {
 		const discovery = (globalThis as Record<symbol, any>)[sym];
-		return getProxy(omit({ ...discovery, scope: 'discovery' }, 'value'));
+		return proxify(omit({ ...discovery, scope: 'discovery' }, 'value'));
 	}
 
 	/** global discovery configuration */
@@ -777,7 +777,7 @@ export class Tempo {
 
 	static get options() {
 		const keyFor = this.config.store ?? Symbol.keyFor($Tempo) as string;
-		const storage = getProxy(Object.assign({ key: keyFor, scope: 'storage' }, omit(Tempo.readStore(keyFor), 'value')));
+		const storage = proxify(Object.assign({ key: keyFor, scope: 'storage' }, omit(Tempo.readStore(keyFor), 'value')));
 		return Object.assign({}, this.default, storage, this.discovery, this.config);
 	}
 
@@ -1021,7 +1021,7 @@ export class Tempo {
 	/** Nanoseconds since Unix epoch (BigInt) */							get nano() { return this.toDateTime().epochNanoseconds }
 	/** current Tempo configuration */
 	get config() {
-		return getProxy(omit({
+		return proxify(omit({
 			...this.#local.config,
 			mode: this.#local.parse.mode,
 			lazy: this.#local.parse.lazy
@@ -1032,7 +1032,7 @@ export class Tempo {
 		this.#ensureParsed();
 		return this.#local.parse;
 	}
-	/** Object containing results from all term plugins */		get term() { return getProxy(this.#term) }
+	/** Object containing results from all term plugins */		get term() { return proxify(this.#term) }
 	/** Formatted results for all pre-defined format codes */	get fmt() { return this.#fmt }
 	/** units since epoch */																	get epoch() {
 		return secure({

@@ -2,7 +2,7 @@ import { secure } from '#library/utility.library.js';
 import { asType, isNumber } from '#library/type.library.js';
 import { $Extensible } from '#library/symbol.library.js';
 import { ownEntries } from '#library/reflection.library.js';
-import { getProxy } from '#library/proxy.library.js';
+import { proxify } from '#library/proxy.library.js';
 import { memoizeMethod } from '#library/function.library.js';
 import type { Property, Index, KeyOf, ValueOf, EntryOf, Invert, LooseKey } from '#library/type.library.js';
 import { Serializable } from '#library/class.library.js';
@@ -110,7 +110,7 @@ export function enumify<T>(this: any, list: T, frozen = true): any {
 
 	const target = Object.create(proto, Object.getOwnPropertyDescriptors(stash));
 	if (!frozen) Object.defineProperty(target, $Extensible, { value: true, enumerable: false });
-	return getProxy(target, true, frozen);										// proxy is ALWAYS frozen (read-only), but target is only 'locked' if requested
+	return proxify(target, true, frozen);										// proxy is ALWAYS frozen (read-only), but target is only 'locked' if requested
 }
 
 /** create an entry in the Serialization Registry to describe how to rebuild an Enum */

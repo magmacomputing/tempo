@@ -152,12 +152,8 @@ export function resolveTermAnchor(tempo: Tempo, terms: TermPlugin[], name: strin
 				case 'start':
 					return start;
 
-				case 'mid': {
-					const midNano = (start.epochNanoseconds + end.epochNanoseconds) / 2n;
-					return new Temporal.ZonedDateTime(midNano, start.timeZoneId, start.calendarId);
-					// const diff = Number(midNano - start.epochNanoseconds);
-					// return start.add({ nanoseconds: diff });
-				}
+				case 'mid':
+					return new Temporal.ZonedDateTime((start.epochNanoseconds + end.epochNanoseconds) / 2n, start.timeZoneId, start.calendarId);
 
 				case 'end':
 					return end.subtract({ nanoseconds: 1 })

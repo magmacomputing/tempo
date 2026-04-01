@@ -1,6 +1,6 @@
 {
   "name": "@magmacomputing/tempo",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "The Tempo core library",
   "author": "Magma Computing Solutions",
   "license": "MIT",
@@ -27,8 +27,6 @@
   "imports": {
     "#library": "@magmacomputing/library",
     "#library/*.js": "@magmacomputing/library/common/*.js",
-    "#browser/*.js": "@magmacomputing/library/browser/*.js",
-    "#server/*.js": "@magmacomputing/library/server/*.js",
     "#tempo": {
       "development": "./src/tempo.index.ts",
       "default": "./dist/tempo.index.js"
@@ -59,7 +57,7 @@
   "scripts": {
     "test": "vitest run",
     "repl": "tsx --conditions=development -i --import ./bin/setup.ts --import ./bin/repl.ts",
-    "build": "tsc -b && npm run build:bundle && bash bin/resolve-self.sh",
+    "build": "tsc -b && npm run build:bundle",
     "build:bundle": "rollup -c",
     "clean": "tsc -b --clean",
     "publish": "npm publish --access public",
@@ -70,11 +68,15 @@
     "src/"
   ],
   "dependencies": {
-    "@magmacomputing/library": "2.0.0",
     "tslib": "^2.8.1"
   },
   "devDependencies": {
     "@js-temporal/polyfill": "^0.5.1",
+    "@magmacomputing/library": "2.0.0",
     "@rollup/plugin-alias": "^6.0.0"
+  },
+  "directories": {
+    "doc": "doc",
+    "test": "test"
   }
 }

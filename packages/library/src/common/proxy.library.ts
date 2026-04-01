@@ -4,8 +4,8 @@ import { secure } from '#library/utility.library.js';
 import { isFunction, isSymbol } from '#library/type.library.js';
 
 /** Stealth Proxy pattern to allow for iteration and logging over a Frozen object */
-export function getProxy<T extends object>(target: T, frozen = true, lock = frozen) {
-	const tgt = (target as any)[$Target] ?? target;					// unwrap if it's already a proxy
+export function proxify<T extends object>(target: T, frozen = true, lock = frozen) {
+	const tgt = (target as any)[$Target] ?? target;						// unwrap if it's already a proxy
 	let cachedJSON: any;
 
 	if (lock) secure(tgt);
@@ -29,11 +29,11 @@ export function getProxy<T extends object>(target: T, frozen = true, lock = froz
 		},
 		get: (_, key) => {
 			if (key === $Target)
-				return tgt;																				// found the 'stop' marker
+				return tgt;																					// found the 'stop' marker
 
 			if (frozen && (key === $Inspect || key === 'toJSON')) {	// two special properties require virtual closures
 				const own = Object.getOwnPropertyDescriptor(tgt, key);
-				if (own && isFunction(own.value))									// if object already has its own toJSON, return
+				if (own && isFunction(own.value))										// if object already has its own toJSON, return
 					return own.value;
 
 				if (!cachedJSON)																		// otherwise, create a virtual closure
@@ -44,7 +44,7 @@ export function getProxy<T extends object>(target: T, frozen = true, lock = froz
 
 			const val = Reflect.get(tgt, key);
 			return (frozen && isFunction(val))										// if the value is a function
-				? val.bind(tgt)																		// bind it to the target
+				? val.bind(tgt)																			// bind it to the target
 				: val;																							// else return the value
 		},
 	}) as T

@@ -1,6 +1,6 @@
 import { $Target, $Extensible } from '#library/symbol.library.js';
 import { enumify, Enum } from '#library/enumerate.library.js';
-import { getProxy } from '#library/proxy.library.js';
+import { proxify } from '#library/proxy.library.js';
 import { allDescriptors, ownKeys } from '#library/reflection.library.js';
 import { clearCache } from '#library/function.library.js';
 import { isUndefined, isDefined } from '#library/type.library.js';
@@ -136,7 +136,7 @@ export const NUMBER = enumify(STATE.NUMBER, false);
 export type Number = KeyOf<typeof NUMBER>
 
 /** common time-zone aliases */
-export const TimeZone = getProxy(STATE.TIMEZONE, false);
+export const TimeZone = proxify(STATE.TIMEZONE, false);
 
 /** number of seconds in a time unit */
 export const DURATION = enumify(STATE.DURATION, false);
@@ -170,11 +170,11 @@ export type Formats = {
 /** Enum registry of format strings */
 export type FormatEnum = Enum.wrap<OwnFormat & Record<string, string | number>>;
 
-export const LIMIT = getProxy(STATE.LIMIT, false);
+export const LIMIT = proxify(STATE.LIMIT, false);
 
 /** date-time element tokens */
 const elementKeys = ['yy', 'mm', 'ww', 'dd', 'hh', 'mi', 'ss', 'ms', 'us', 'ns'] as const;
-export const ELEMENT = getProxy(enumify({
+export const ELEMENT = proxify(enumify({
 	yy: 'year',
 	mm: 'month',
 	ww: 'week',
@@ -191,19 +191,19 @@ export type Element = KeyOf<typeof ELEMENT>
 
 /** allowed mutation keys for .set() and .add() */
 const mutationKeys = [...elementKeys, 'event', 'period', 'clock', 'time', 'date', 'start', 'mid', 'end'] as const;
-export const MUTATION = getProxy(enumify(mutationKeys, false), false);
+export const MUTATION = proxify(enumify(mutationKeys, false), false);
 export type MUTATION = ValueOf<typeof MUTATION>
 export type Mutation = KeyOf<typeof MUTATION>
 
 /** allowed keys for ZonedDateTime-like objects */
 const zonedDateTimeKeys = ['value', 'timeZoneId', 'calendarId', 'monthCode', 'offset', 'timeZone', ...elementKeys] as const;
-export const ZONED_DATE_TIME = getProxy(enumify(zonedDateTimeKeys, false), false);
+export const ZONED_DATE_TIME = proxify(enumify(zonedDateTimeKeys, false), false);
 export type ZONED_DATE_TIME = ValueOf<typeof ZONED_DATE_TIME>
 export type ZonedDateTime = KeyOf<typeof ZONED_DATE_TIME>
 
 /** allowed keys for Tempo configuration options */
 const optionKeys = ['value', 'mode', 'mdyLocales', 'mdyLayouts', 'store', 'discovery', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period', 'formats', 'plugins'] as const;
-export const OPTION = getProxy(enumify(optionKeys, false), false);
+export const OPTION = proxify(enumify(optionKeys, false), false);
 export type Option = KeyOf<typeof OPTION>
 
 /** initialization strategies */
@@ -212,12 +212,12 @@ export type Mode = ValueOf<typeof MODE>
 
 /** allowed keys for internal parse state */
 const parseKeys = ['mdyLocales', 'mdyLayouts', 'formats', 'pivot', 'snippet', 'layout', 'event', 'period', 'anchor', 'value', 'discovery', 'plugins', 'mode'] as const;
-export const PARSE = getProxy(enumify(parseKeys, false), false);
+export const PARSE = proxify(enumify(parseKeys, false), false);
 export type Parse = KeyOf<typeof PARSE>
 
 /** allowed keys for global discovery objects */
 const discoveryKeys = ['options', 'timeZones', 'terms', 'plugins', 'numbers', 'formats'] as const;
-export const DISCOVERY = getProxy(enumify(discoveryKeys, false), false);
+export const DISCOVERY = proxify(enumify(discoveryKeys, false), false);
 export type Discovery = KeyOf<typeof DISCOVERY>
 
 
