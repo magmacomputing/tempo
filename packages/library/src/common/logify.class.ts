@@ -18,10 +18,9 @@ export class Logify {
 	#opts: Logify.Constructor = {};
 
 	#log(method: Logify.Method, ...msg: any[]) {
-		const config = (isObject(msg[0]) && 'silent' in msg[0]) ? msg[0] : this.#opts;
-		if (config.silent) return;
+		const config = (isObject(msg[0]) && ('silent' in msg[0] || 'debug' in msg[0])) ? msg.shift() : this.#opts;
 
-		if (this.#opts.debug || method === Method.Warn || method === Method.Error)
+		if (!config.silent && (config.debug || method === Method.Warn || method === Method.Error))
 			console[method](this.#name, ...msg);
 	}
 
@@ -34,11 +33,11 @@ export class Logify {
 		const e = msg.find(m => m instanceof Error);
 
 		if (config.catch) {
-			this.#log(Method.Warn, ...msg);												// show a warning on the console
+			this.#log(Method.Warn, config, ...msg);								// show a warning on the console
 			return;																								// safe-return
 		}
 
-		this.#log(Method.Error, ...msg);												// only show an error on the console if NOT silent
+		this.#log(Method.Error, config, ...msg);								// only show an error on the console if NOT silent
 		const ErrorClass = e ? (e.constructor as any) : Error;
 		const errorText = msg.map(m => m instanceof Error ? m.message : (isObject(m) ? JSON.stringify(m) : String(m))).join(' ');
 		throw new ErrorClass(`${this.#name}${errorText}`);			// catch will be loud or silent, based on #catch config
@@ -52,16 +51,13 @@ export class Logify {
 
 	constructor(self?: Logify.Constructor | string, opts = {} as Logify.Constructor) {
 		const arg = asType(self);
-		switch (arg.type) {
-			case 'String':
-				this.#name = arg.value;
-				break;
-			// @ts-ignore
-			case 'Object':
-				Object.assign(opts, arg.value);
-			default:
-				this.#name = (self ?? this).constructor.name.concat(': ') ?? '';
-		}
+		this.#name = (arg.type === 'String')
+			? arg.value
+			: (self as any)?.constructor?.name?.concat(': ')
+			?? 'Logify: ';
+
+		if (arg.type === 'Object')
+			Object.assign(opts, arg.value);
 
 		this.#opts.debug = opts.debug ?? false;									// default debug to 'false'
 		this.#opts.catch = opts.catch ?? false;									// default catch to 'false'								

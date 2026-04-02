@@ -152,7 +152,7 @@ export class Pledge<T> {
 		if (this.isPending) {
 			this.#status.error = error;
 			this.#status.state = Pledge.STATE.Rejected;
-			this.#pledge.reject(error);													// reject
+			this.#pledge.reject(error);														// reject
 		}
 		else this.#dbg.warn(this.#status, `Pledge was already ${this.state}`);
 
@@ -169,8 +169,8 @@ export class Pledge<T> {
 }
 
 export namespace Pledge {
-	export type Resolve = (val?: any) => any;								// function to call after Pledge resolves
-	export type Reject = (err: Error) => any;								// function to call after Pledge rejects
+	export type Resolve = (val?: any) => any;									// function to call after Pledge resolves
+	export type Reject = (err: Error) => any;									// function to call after Pledge rejects
 	export type Settle = () => void;													// function to call after Pledge settles
 
 	export type Constructor = {
