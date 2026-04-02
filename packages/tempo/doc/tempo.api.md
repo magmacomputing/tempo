@@ -14,7 +14,7 @@ This document provides a comprehensive technical reference for the `Tempo` class
 ### `Tempo.init(options?: Tempo.Options)`
 Initializes the global default configuration for all subsequent `Tempo` instances.
 - **Returns:** `Tempo.Config` (The resolved global config).
-- **Note:** Settings are inherited from library defaults, persistent storage, and provided options.
+- **Note:** Settings are inherited from library defaults, persistent storage, and provided options. Use `silent: true` to suppress `console.error` output for expected failures.
 
 ### `Tempo.extend(arg, options?)`
 Unified extender for library functionality.
@@ -158,7 +158,7 @@ Returns a `Temporal.PlainDateTime` representation.
 ### Lineage & Metadata
 - `nano`: Epoch nanoseconds (`BigInt`).
 - `epoch`: Object containing `ss`, `ms`, `us`, `ns` epoch values.
-- `term`: Object containing results from all active term plugins.
-- `fmt`: Registry of pre-calculated strings for all standard formats.
+- `term`: Object containing results from all active term plugins. (Note: These are enumerable for easy discovery).
+- `fmt`: Registry of pre-calculated strings for all standard formats. (Note: These are enumerable for easy discovery).
 - `config`: The effective configuration for this specific instance (Note: `scope`, `anchor`, and `value` are excluded from the public object).
 - `parse`: The parsing rules and lineage for this instance.

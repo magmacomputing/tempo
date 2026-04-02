@@ -4,8 +4,8 @@ describe('Term Unified Logic (Mutation & Identity)', () => {
 	// 2024-05-15 is in Q2 (Apr-Jun) in Northern hemisphere
 	const testDate = '2024-05-15T12:00:00+10:00[Australia/Sydney]';
 
-	beforeEach(async () => {
-		await Tempo.init()
+	beforeEach(() => {
+		Tempo.init()
 	})
 
 	it('should jump to the start of a term using #term syntax in set()', () => {
@@ -72,7 +72,9 @@ describe('Term Unified Logic (Mutation & Identity)', () => {
 	it('should throw an error for invalid terms when catch is false', () => {
 		// Choose the STATIC behavior: explicitly set catch: false to expect internal Logify.catch to throw
 		const t = new Tempo(testDate, { catch: false, sphere: 'north' });
+		const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 		expect(() => t.set({ start: '#invalid' })).toThrow(/Unexpected term\(#invalid\)/);
+		spy.mockRestore();
 	});
 
 	it('should correctly resolve quarters in the Southern Hemisphere', () => {

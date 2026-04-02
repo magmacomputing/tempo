@@ -100,6 +100,20 @@ When adding instance methods that "modify" the date, always follow the Tempo pat
 ### 3. Namespace Respect
 When adding many related methods, consider grouping them under a single property (e.g., `tempo.term.xyz` or `tempo.it.abc`) to keep the root `Tempo` interface clean and avoid collisions with future core updates.
 
+### 4. Extending Core Registries
+As of **v2.0.1**, Tempo's core registries (`NUMBER`, `TIMEZONE`, `FORMAT`) are protected by a **Soft Freeze** layer. You cannot directly assign new values to them (e.g., `Tempo.TIMEZONE.myZone = '...'` will fail).
+
+Instead, use **`Tempo.extend()`** to add new data. This is the only supported way to add custom options, formats, or several timezone aliases at once.
+
+```typescript
+Tempo.extend({
+  timeZones: { 'UTC+13': 'Pacific/Auckland' },
+  formats: { 'myCode': '{yy}{mm}{dd}' }
+});
+```
+
+Using `Tempo.extend()` ensures that the library safely bypasses the "Soft Freeze" protection and that all internal caches (like the Master Guard) are correctly synchronized.
+
 ## Distributing Your Plugin
 
 To make your plugin available to the community, package it as a standard NPM module. 

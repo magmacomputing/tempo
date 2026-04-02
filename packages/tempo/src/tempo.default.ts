@@ -6,6 +6,9 @@ import type { Options } from '#tempo/tempo.type.js';
 // BE VERY CAREFUL NOT TO BREAK THE REGEXP PATTERNS BELOW
 // TEMPO functionality heavily depends on these patterns
 
+/** characters allowed inside timezone/calendar brackets */
+const bracket_content = /[^\]]+/;
+
 /** common RegExp patterns */
 export const Match = secure({
 	/** match all {} pairs, if they start with a word char */	braces: /{([#]?[\w]+(?:\.[\w]+)*)}/g,
@@ -22,7 +25,8 @@ export const Match = secure({
 	/** strip out these characters from a string */						strips: /\(|\)/g,
 	/** whitespace characters */															spaces: /\s+/g,
 	/** Z character */																				zed: /^Z$/,
-	/** base guard characters (digits and common symbols) */	guard: /[\d\s\-\.\:T\/Z\+\-\(\)\[\]\,\=\#]+/i,
+	/** base guard characters (digits and common symbols) */	guard: /[\d\s\-\.\:T\/Z\+\-\(\)\,\=\#]/i,
+	/** bracketed content (timezone/calendar) */							bracket: /\[[^\]]+\]/i,
 	/** escape special regex characters in a string */				escape: (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 })
 
@@ -91,7 +95,7 @@ export const Snippet = looseIndex<symbol, RegExp>()({
 	[Token.mod]: new RegExp(`((?<mod>${Match.modifier.source})?{nbr}? *)`),	// modifier (+,-,<,<=,>,>=) plus optional offset-count
 	[Token.sep]: new RegExp(`(?:${Match.separator.source})`),	// date-input separator character "/\\-., " (non-capture group)
 	[Token.unt]: /(?<unt>year|month|week|day|hour|minute|second|millisecond)(?:s)?/,	// useful for '2 days ago' etc
-	[Token.brk]: /(\[(?<brk>[^\]]+)\](?:\[(?<cal>[^\]]+)\])?)?/,	// timezone/calendar brackets [...]
+	[Token.brk]: new RegExp(`(\\[(?<brk>${bracket_content.source})\\](?:\\[(?<cal>${bracket_content.source})\\])?)?`),	// timezone/calendar brackets [...]
 })
 export type Snippet = typeof Snippet
 

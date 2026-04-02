@@ -63,14 +63,14 @@ The **Instance Shadowing** pattern is designed for massive scale. When a library
 ---
 
 ## 2. Soft Freeze Strategy (Proxy)
-Used for: `Tempo.NUMBER`, `Tempo.FORMAT`, `Tempo.config`
+Used for: `Tempo.NUMBER`, `Tempo.FORMAT`, `Tempo.TIMEZONE`, `Tempo.config`
 
-Global registries must be **live**. If a plugin adds a new timezone alias or date format, every existing `Tempo` instance in the application needs to see that change immediately.
+Global registries must be **live** but **secure**. As of **v2.0.1**, these are protected by a "Soft Freeze" layer to prevent accidental state corruption by third-party code.
 
 ### How it works:
-- **The User**: Sees a read-only Proxy that appears and behaves like a frozen object (silent failure on `set`).
-- **The Library**: Uses a private `Symbol` (`$Target`) to "unwrap" the proxy and perform a mutable merge on the source of truth.
-- **Result**: The object reference remains constant across the entire lifecycle of the application, ensuring consistency for all consumers.
+- **The User**: Sees a read-only Proxy that behaves like a frozen object. Direct assignments are blocked to prevent "poisoning" the global state.
+- **The Library**: Uses a private symbol bypass to perform "Transactional Updates" via `registryUpdate()`.
+- **Result**: The object reference remains constant while allowing controlled extensibility. This ensures that internal caches (like the Master Guard) can be re-synchronized whenever a registry changes.
 
 > [!TIP]
 > For more implementation details, see [Soft Freeze Strategy](./soft_freeze_strategy.md).
@@ -81,13 +81,13 @@ Global registries must be **live**. If a plugin adds a new timezone alias or dat
 ## ⚡ 3. Master Guard (Guarded-Lazy Strategy)
 Used for: `new Tempo(string | number)`
 
-The **Guarded-Lazy** strategy is the final pillar of the "Zero-Cost Constructor". It ensures that even with massive extensibility, the entry point remains nearly instantaneous.
+The **Guarded-Lazy** strategy ensures that even with hundreds of custom plugins, the entry point remains nearly instantaneous. In **v2.0.1**, this was refined for 100% matching reliability.
 
 ### How it works:
-1.  **High-Speed Gatekeeper**: Before the engine attempts to iterate over dozens of registered layouts, it runs a single $O(1)$ pass using a static `Master Guard` regex.
-2.  **Fast-Fail**: If the input contains obviously invalid characters (emojis, non-Latin scripts not registered, etc.), it fails immediately.
-3.  **Auto-Lazy**: If the input *passes* the guard, the constructor automatically switches the instance to `lazy: true` mode (even if the default was `false`). This defers the expensive $O(N)$ full-parse operation until the first property access.
-4.  **Sync Point**: This "Guarded-Lazy" approach ensures that valid inputs pay NO penalty at instantiation, while invalid inputs are caught early enough to maintain library robustness.
+1.  **Length-Sorted Terms**: To prevent "partial matching" (e.g., matching `noon` inside `afternoon`), all registered terms are sorted by length (descending) before the Guard regex is built.
+2.  **Automated Escaping**: All custom terms are escaped to prevent regex injection or character collision.
+3.  **High-Speed Gatekeeper**: This single-pass $O(1)$ regex acts as the fast-fail gatekeeper.
+4.  **Auto-Lazy**: Valid inputs that pass the guard automatically switch the instance to `lazy: true` mode, deferring the $O(N)$ full-parse work until the first property access.
 
 ### 📈 Validation & Performance
 The efficiency of the Master Guard and the success of the Zero-Cost objective have been validated via local benchmarking:

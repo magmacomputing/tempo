@@ -23,6 +23,19 @@ Instead of raw numeric seconds, you can use `Temporal.DurationLike` objects for 
 ```typescript
 // Pulse exactly once a month
 await using monthly = Tempo.ticker({ months: 1 });
+
+// Pulse every time a new #quarter begins
+await using quarterly = Tempo.ticker({ '#quarter': 1 });
+```
+
+### 2. Term-Based Intervals
+Ticker intervals can now be driven by any registered **Term**. This is powerful for syncing with business cycles or daily shifts.
+
+```typescript
+// Pulse at the start of every 'morning', 'afternoon', etc.
+using shiftTicker = Tempo.ticker({ '#period': 1 }, (t) => {
+  console.log(`New period started: ${t.term.per}`);
+});
 ```
 
 ### 2. Stop Conditions (Resource Management)
@@ -85,6 +98,24 @@ setTimeout(async () => {
     await ticker.return(); 
 }, 5000);
 ```
+### 3. Event Listeners (.on)
+Instead of (or in addition to) the constructor callback, you can register listeners for the `'pulse'` event.
+
+```typescript
+const ticker = Tempo.ticker(1);
+ticker.on('pulse', (t) => console.log('Listener A:', t));
+ticker.on('pulse', (t) => console.log('Listener B:', t));
+```
+
+### 4. Manual Pulsing (.pulse)
+In some scenarios, you may want to drive a ticker manually (e.g., from a UI event or a WebSocket message) while still benefiting from the ticker's internal state management and listeners.
+
+```typescript
+const ticker = Tempo.ticker({ seconds: 1 }); // Still has a 1s duration logic
+// ...
+ticker.pulse(); // Manually advance and notify listeners
+```
+```
 
 > [!WARNING]
 > If using `const` or `let` instead of `using` / `await using`, you **must** call the returned `stop()` function (or call `.return()` on the generator) to clear the interval manually and prevent memory leaks.
@@ -127,7 +158,19 @@ Creates a reactive stream of `Tempo` instances at regular intervals. Defaults to
 | `seed` | `DateTime \| Options` | The starting point for the virtual clock. |
 | `limit` | `number` | Auto-stop after X number of ticks. |
 | `until` | `DateTime \| Options` | Auto-stop when virtual clock reaches this point. |
+| `#term` | `number \| string` | Term-based interval (e.g., `#quarter: 1`, `#period: 'morning'`). |
 | `...Duration` | `Partial<DurationLike>` | Flattened duration keys (e.g., `seconds: 5`, `minutes: 1`). |
+
+### `Ticker` Object
+The object returned by `Tempo.ticker()` implements the following interface:
+
+| Method | Description |
+| :--- | :--- |
+| `on(event, cb)` | Registers a listener for the `'pulse'` event. |
+| `pulse()` | Manually triggers a pulse, advances state, and notifies listeners. Returns the new `Tempo`. |
+| `stop()` | Stops the ticker and clears any active timers. |
+| `[Symbol.dispose]` | Standard cleanup for `using` blocks. |
+| `next()` | Awaits the next pulse (for `AsyncGenerator` usage). |
 
 ---
 

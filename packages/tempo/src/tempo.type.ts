@@ -41,7 +41,8 @@ export type Options = Partial<Internal.BaseOptions> & Record<string, any>;
 export type TermPlugin = {
 	key: string; scope?: string;
 	description?: string;
-	define: (this: Tempo, keyOnly?: boolean) => any
+	define: (this: Tempo, keyOnly?: boolean) => any;
+	ranges?: any[];
 }
 
 /** plugin function that can extend the Tempo prototype or static space */
@@ -143,6 +144,7 @@ export namespace Internal {
 		/** globalThis Discovery Symbol */											discovery: string | symbol;
 		/** additional console.log for tracking */							debug: boolean | undefined;
 		/** catch or throw Errors */														catch: boolean | undefined;
+		/** suppress console output during catch */							silent: boolean | undefined;
 		/** Temporal timeZone */																timeZone: Temporal.TimeZoneLike;
 		/** Temporal calendar */																calendar: Temporal.CalendarLike;
 		/** locale (e.g. en-AU) */															locale: string;

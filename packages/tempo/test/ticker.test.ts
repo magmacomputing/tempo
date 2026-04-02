@@ -106,12 +106,14 @@ describe(`${label}`, () => {
 	});
 
 	test('ticker: validation', () => {
+		const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 		// @ts-ignore
 		expect(() => Tempo.ticker(NaN)).toThrow(RangeError);
 		// @ts-ignore
 		expect(() => Tempo.ticker(Infinity)).toThrow(RangeError);
 		// @ts-ignore
 		expect(() => Tempo.ticker('not a number')).toThrow(RangeError);
+		spy.mockRestore();
 	});
 
 });

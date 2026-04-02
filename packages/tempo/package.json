@@ -43,6 +43,7 @@
       "development": "./src/plugins/term/index.ts",
       "default": "./dist/plugins/term/index.js"
     },
+    "#tempo/scripts/*.js": "./scripts/*.ts",
     "#tempo/*.js": {
       "development": "./src/*.ts",
       "default": "./dist/*.js"
@@ -76,10 +77,10 @@
   },
   "scripts": {
     "test": "vitest run",
-    "repl": "tsx --conditions=development -i --import ./bin/setup.ts --import ./bin/repl.ts",
+    "repl": "tsx --conditions=development -i --import ./scripts/setup.ts --import ./scripts/repl.ts",
     "build": "tsc -b && npm run build:bundle && npm run build:resolve",
     "build:bundle": "rollup -c",
-    "build:resolve": "tsx bin/resolve-types.ts",
+    "build:resolve": "tsx scripts/resolve-types.ts",
     "clean": "tsc -b --clean && rm -rf dist",
     "publish": "npm publish --access public",
     "prepublishOnly": "npm run build"

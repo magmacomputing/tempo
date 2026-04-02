@@ -17,6 +17,7 @@ export const TimelineTerm = defineTerm({
 	key: 'per',
 	scope: 'period',
 	description: 'Daily time period',
+	ranges,
 
 	/** determine where the current Tempo instance fits within the above range */
 	define(this: Tempo, keyOnly?: boolean) {

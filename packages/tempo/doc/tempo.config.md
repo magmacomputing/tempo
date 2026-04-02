@@ -13,6 +13,17 @@ Settings are loaded in the following order (where later stages override earlier 
 
 ---
 
+## 🔒 Registry Protection (Soft Freeze)
+
+As of **v2.0.1**, Tempo implements a **Soft Freeze** strategy for core registries (`TIMEZONE`, `NUMBER`, `FORMAT`, etc.). 
+
+- **Read-Only Proxy**: Registries are returned as read-only proxies. Any attempt to directly assign to them (e.g., `Tempo.TIMEZONE.myzone = '...' `) will fail or be ignored.
+- **Controlled Extension**: To update a registry, you must use the provided extension methods like `Tempo.extend()` or `Tempo.registryUpdate()`. This ensures that internal caches (like the Master Guard regex) are correctly synchronized.
+
+This strategy prevents accidental state corruption while maintaining the flexible, extensible nature of the library.
+
+---
+
 ## 1. Persistent Configuration (`$Tempo`)
 
 The first layer Tempo checks after its own internal defaults is persistent storage. This is ideal for "sticky" settings like a user's preferred timezone or locale that should persist across sessions without a database.
@@ -89,6 +100,7 @@ Tempo.init({
 | `debug` | `boolean` | `false` | Enables internal log tracking. |
 | `catch` | `boolean` | `false` | If true, invalid inputs return a Void instance. |
 | `lazy` | `boolean` | `false` | Defers registry evaluation until the first property access. |
+| `silent` | `boolean` | `false` | Suppresses `console.error` output for expected failures (useful for clean testing). |
 
 ---
 
@@ -159,9 +171,8 @@ console.log(t.fmt.iso); // Discovery triggers NOW, only once.
 
 ---
 
-## 📅 TimeZone Registry
-
-Tempo includes a built-in registry of common timezone abbreviations. These are automatically translated to IANA strings before being passed to the underlying engine.
+## 📅 TIMEZONE Registry
+Tempo includes a built-in registry of common timezone abbreviations. These are stored in the `TIMEZONE` export.
 
 | Alias | IANA Identifier |
 | :--- | :--- |

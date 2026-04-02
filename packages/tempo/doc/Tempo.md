@@ -54,6 +54,17 @@ For legacy environments or simple prototypes, use the single-file bundle:
 npm install @magmacomputing/tempo
 ```
 
+---
+
+## ✨ What's New in v2.0.1 (Stabilized)
+The **v2.0.1** release focus is on internal hardening, security, and developer ergonomics:
+
+- **Parsing Engine Stabilization**: The "Master Guard" regex is now length-sorted and character-escaped, ensuring 100% reliability for complex term names.
+- **Registry Security (Soft Freeze)**: Core registries (`TIMEZONE`, `NUMBER`, `FORMAT`) are now protected by a proxy-based "Soft Freeze" layer. They are read-only for public consumers while remaining extensible via `Tempo.registryUpdate()`.
+- **Project Structure Refactoring**: Internal tooling moved from `#tempo/bin` to `#tempo/scripts` for better ESM/TS integration.
+
+---
+
 > [!IMPORTANT]
 > `Tempo` requires an environment with native `Temporal` support (Modern Runtimes like Node.js 20+, Deno, or Bun).
 > If your environment is older, you must provide your own polyfill.
@@ -361,17 +372,13 @@ Tempo.init({
 });
 ```
 
-### TimeZone Aliases
+### TIMEZONE Aliases
 For convenience, `timeZone` configurations accept both strict IANA identifiers (e.g., `Australia/Sydney`) as well as common abbreviations.
-Tempo will automatically translate these abbreviations before passing them to the underlying engine:
-- `utc` -> `UTC`
-- `gmt` -> `Europe/London`
-- `est` -> `America/New_York`
-- `cst` -> `America/Chicago`
-- `mst` -> `America/Denver`
-- `pst` -> `America/Los_Angeles`
-- `aest` -> `Australia/Sydney`
-- *(...and several others. See the [Configuration Guide](./tempo.config.md#timezone-registry) for the complete registry.)*
+Tempo will automatically translate these abbreviations before passing them to the underlying engine (e.g., `utc` -> `UTC`, `pst` -> `America/Los_Angeles`).
+
+These are stored in the `Tempo.TIMEZONE` registry, which is protected by **Soft Freeze** but remains extensible via `Tempo.registryUpdate()`. 
+
+See the [Configuration Guide](./tempo.config.md#timezone-registry) for the complete list of default aliases.
 
 Instances can also be created with specific options:
 ```typescript

@@ -18,6 +18,9 @@ export class Logify {
 	#opts: Logify.Constructor = {};
 
 	#log(method: Logify.Method, ...msg: any[]) {
+		const config = (isObject(msg[0]) && 'silent' in msg[0]) ? msg[0] : this.#opts;
+		if (config.silent) return;
+
 		if (this.#opts.debug || method === Method.Warn || method === Method.Error)
 			console[method](this.#name, ...msg);
 	}
@@ -27,18 +30,18 @@ export class Logify {
 	 * otherwise show an error on the console and re-throw the error
 	 */
 	catch(...msg: any[]) {
-		const config = (isObject(msg[0]) && 'catch' in msg[0]) ? msg.shift() : this.#opts;
+		const config = (isObject(msg[0]) && ('catch' in msg[0] || 'silent' in msg[0])) ? msg.shift() : this.#opts;
 		const e = msg.find(m => m instanceof Error);
 
 		if (config.catch) {
-			this.warn(...msg);																		// show a warning on the console
-			return;																							// safe-return
+			this.#log(Method.Warn, ...msg);												// show a warning on the console
+			return;																								// safe-return
 		}
 
-		this.error(...msg);																		// this goes to the console
+		this.#log(Method.Error, ...msg);												// only show an error on the console if NOT silent
 		const ErrorClass = e ? (e.constructor as any) : Error;
 		const errorText = msg.map(m => m instanceof Error ? m.message : (isObject(m) ? JSON.stringify(m) : String(m))).join(' ');
-		throw new ErrorClass(`${this.#name}${errorText}`);											// catch will be loud or silent, based on #catch config
+		throw new ErrorClass(`${this.#name}${errorText}`);			// catch will be loud or silent, based on #catch config
 	}
 
 	/** console.log */																				log = (...msg: any[]) => this.#log(Method.Log, ...msg);
@@ -60,8 +63,9 @@ export class Logify {
 				this.#name = (self ?? this).constructor.name.concat(': ') ?? '';
 		}
 
-		this.#opts.debug = opts.debug ?? false;								// default debug to 'false'
-		this.#opts.catch = opts.catch ?? false;								// default catch to 'false'								
+		this.#opts.debug = opts.debug ?? false;									// default debug to 'false'
+		this.#opts.catch = opts.catch ?? false;									// default catch to 'false'								
+		this.#opts.silent = opts.silent ?? false;								// default silent to 'false'
 	}
 }
 
@@ -70,6 +74,7 @@ export namespace Logify {
 
 	export interface Constructor {
 		debug?: boolean | undefined,
-		catch?: boolean | undefined
+		catch?: boolean | undefined,
+		silent?: boolean | undefined
 	}
 }

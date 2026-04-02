@@ -11,6 +11,9 @@ Once evaluated, the result is memoised — subsequent reads of the same property
 new Tempo('25-Dec-2024').term.season     // ← computed on first access, cached thereafter
 ```
 
+> [!TIP]
+> **Transparent Discovery**: As of **v2.0.1**, all term properties are **enumerable**. This means a single `console.log(t.term)` will trigger the eager evaluation of *every* registered term at once—providing a full snapshot of the instance's grammar state. To prevent terminal noise during these full-eval events (e.g. for invalid dates), initialize Tempo with **`silent: true`**.
+
 ---
 
 ## What a Term Does
@@ -227,6 +230,61 @@ Tempo.extend({
 const t = new Tempo('2025-02-15');
 console.log(t.term.cfy); // → "FY2024" (because it's before July 2025)
 ```
+
+---
+
+## 🧭 Writing Math-Aware Terms
+
+To unlock Tempo's advanced **Term Traversal** (e.g., `t.add({ '#quarter': 1 })`) and **Ticker Syncing**, a plugin must provide semantic **boundaries** (`start` and `end`). 
+
+### The `getTermRange` Helper
+The library provides a specialized helper that calculates these boundaries automatically based on your `ranges` array.
+
+```ts
+import { getTermRange } from '@magmacomputing/tempo/plugins';
+
+export function define(this: Tempo, keyOnly?: boolean) {
+  // Finds the current range, then injects 'start' and 'end' (as Tempo instances)
+  // into the result object before returning it to the user.
+  return getTermRange(this, ranges, keyOnly);
+}
+```
+
+### Manual Boundaries
+If you choose not to use `getTermRange`, you must manually include `start` and `end` (as `Tempo` instances) in your scope object:
+
+```ts
+return keyOnly ? 'MyTerm' : {
+  key: 'MyTerm',
+  start: this.set({ hour: 0 }),
+  end: this.set({ hour: 23, mi: 59 })
+};
+```
+
+---
+
+## 🕒 Terms in Tickers
+Any term that provides `start` and `end` boundaries can be used to drive a `Tempo.ticker`. This is ideal for logic that doesn't follow a fixed duration (like seasons or fiscal quarters).
+
+```ts
+// Pulse every time a new fiscal quarter begins
+await using quarterly = Tempo.ticker({ '#quarter': 1 });
+
+for await (const t of quarterly) {
+  console.log(`Pulsing at Quarter Start: ${t.format('{yyyy}-{#qtr}')}`);
+}
+```
+
+---
+
+## 🛠️ Developer Guide: Best Practices
+
+To ensure a custom `Term` plugin integrates fully with Tempo, follow these guidelines:
+
+1.  **Static `ranges` Export**: For `period` or `event` scopes, export your `ranges` array. This allows `Tempo.extend()` to automatically update the Master Guard regex and parsing snippets.
+2.  **Memoization Safety**: Keep the `define` function pure. It will only be called once per instance access.
+3.  **Math Readiness**: Always use `getTermRange` or provide boundaries. Without them, users cannot use your term in `add()`, `set()`, or `ticker()`.
+4.  **Key consistency**: Ensure the `key` property you return in the `define` function's scope object matches the `key` export of your module.
 
 ---
 
