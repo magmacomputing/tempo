@@ -1,5 +1,6 @@
 import path from 'node:path';
 import resolve from '@rollup/plugin-node-resolve';
+import MagicString from 'magic-string';
 
 /**
  * Custom logic to route modules based on origin.
@@ -36,8 +37,7 @@ export default {
 			preserveModulesRoot: 'dist',
 			sourcemap: true,
 			indent: '\t',
-			entryFileNames: (chunkInfo) => getOutputFileName(chunkInfo.facadeModuleId, chunkInfo.name),
-			chunkFileNames: (chunkInfo) => getOutputFileName(chunkInfo.facadeModuleId, chunkInfo.name)
+			entryFileNames: (chunkInfo) => getOutputFileName(chunkInfo.facadeModuleId, chunkInfo.name)
 		}
 	],
 	plugins: [
@@ -47,9 +47,17 @@ export default {
 		{
 			name: 'indentation-fix',
 			renderChunk(code) {
+				const ms = new MagicString(code);
+				const regex = /^( {4})+/gm;
+				let match;
+
+				while ((match = regex.exec(code)) !== null) {
+					ms.overwrite(match.index, match.index + match[0].length, '\t'.repeat(match[0].length / 4));
+				}
+
 				return {
-					code: code.replace(/^( {4})+/gm, (match) => '\t'.repeat(match.length / 4)),
-					map: null
+					code: ms.toString(),
+					map: ms.generateMap({ hires: true })
 				};
 			}
 		}

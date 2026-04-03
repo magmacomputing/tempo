@@ -38,7 +38,7 @@ using shiftTicker = Tempo.ticker({ '#period': 1 }, (t) => {
 });
 ```
 
-### 2. Stop Conditions (Resource Management)
+### 3. Stop Conditions (Resource Management)
 Prevent memory leaks and runaway processes by setting a built-in termination condition.
 
 ```typescript
@@ -79,23 +79,23 @@ If you are not using the `using` or `await using` keywords, or if you need to st
 
 ```typescript
 // Pattern A: Stop a callback-based ticker
-const stop = Tempo.ticker(1, (t) => console.log(t));
+const ticker = Tempo.ticker(1, (t) => console.log(t));
 // ... later
-stop();
+ticker.stop();
 
 // Pattern B: Stop an async generator externally
-const ticker = Tempo.ticker(1);
+const generator = Tempo.ticker(1);
 
 (async () => {
-    for await (const t of ticker) {
-        console.log(t.toString());
-    }
-    console.log('Ticker has been gracefully stopped.');
+  for await (const t of generator) {
+    console.log(t.toString());
+  }
+  console.log('Ticker has been gracefully stopped.');
 })();
 
 // Close the generator from somewhere else
 setTimeout(async () => {
-    await ticker.return(); 
+  await generator.stop();
 }, 5000);
 ```
 ### 3. Event Listeners (.on)
@@ -114,7 +114,6 @@ In some scenarios, you may want to drive a ticker manually (e.g., from a UI even
 const ticker = Tempo.ticker({ seconds: 1 }); // Still has a 1s duration logic
 // ...
 ticker.pulse(); // Manually advance and notify listeners
-```
 ```
 
 ## 🧟 Zombie Tickers (Warning)
@@ -181,9 +180,9 @@ using countdown = Tempo.ticker({ seconds: -1, seed: "00:00:10" }, (t, stop) => {
 Creates a reactive stream of `Tempo` instances at regular intervals. Defaults to a **1-second** interval if no duration or interval properties are specified.
 
 #### `TickerOptions`
+
 | Property | Type | Description |
 | :--- | :--- | :--- |
-| `interval` | `number \| string \| bigint` | Pulse frequency (**seconds** if number). Defaults to 1s. |
 | `seed` | `DateTime \| Options` | The starting point for the virtual clock. |
 | `limit` | `number` | Auto-stop after X number of ticks. |
 | `until` | `DateTime \| Options` | Auto-stop when virtual clock reaches this point. |

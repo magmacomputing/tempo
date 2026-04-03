@@ -1,4 +1,5 @@
 import { Logify } from '#library/logify.class.js';
+import { markConfig } from '#library/symbol.library.js';
 import { asArray } from '#library/coercion.library.js';
 import { sprintf } from '#library/string.library.js';
 import { ifDefined } from '#library/object.library.js';
@@ -40,11 +41,13 @@ export class Pledge<T> {
 			if (isEmpty(arg))
 				Pledge.#static = {};																// reset static values
 
+			markConfig(Pledge.#static);
 			Object.assign(Pledge.#static,
 				ifDefined({ tag: arg.tag, debug: arg.debug, catch: arg.catch, silent: arg.silent }),
 				ifDefined({ onResolve: arg.onResolve, onReject: arg.onReject, onSettle: arg.onSettle, }),
 			)
 		} else {
+			markConfig(Pledge.#static);
 			Object.assign(Pledge.#static, ifDefined({ tag: arg, }));
 		}
 
@@ -65,7 +68,7 @@ export class Pledge<T> {
 		const config = { ...Pledge.#static, ...ifDefined({ tag: opts.tag, debug: opts.debug, catch: opts.catch, silent: opts.silent }) };
 
 		this.#pledge = Promise.withResolvers();
-		this.#status = { state: Pledge.STATE.Pending, ...config };
+		this.#status = markConfig({ state: Pledge.STATE.Pending, ...config });
 
 		const onResolve = asArray(Pledge.#static.onResolve).concat(asArray(opts.onResolve));
 		const onReject = asArray(Pledge.#static.onReject).concat(asArray(opts.onReject));

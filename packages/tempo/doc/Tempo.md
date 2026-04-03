@@ -373,7 +373,7 @@ Tempo.init({
 ```
 
 ### TIMEZONE Aliases
-For convenience, `timeZone` configurations accept both strict IANA identifiers (e.g., `Australia/Sydney`) as well as common abbreviations.
+For convenience, `timeZone` configurations accept both strict IANA identifiers (e.g., `Australia/Sydney`) and common abbreviations.
 Tempo will automatically translate these abbreviations before passing them to the underlying engine (e.g., `utc` -> `UTC`, `pst` -> `America/Los_Angeles`).
 
 These are stored in the `Tempo.TIMEZONE` registry, which is protected by **Soft Freeze** but remains extensible via `Tempo.registryUpdate()`. 

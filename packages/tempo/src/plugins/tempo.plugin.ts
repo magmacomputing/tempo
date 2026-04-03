@@ -58,7 +58,7 @@ const SCHEMA = [
  * find where a Tempo fits within a range of DateTime
  */
 export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true): string | ResolvedRange | undefined {
-	const chronological = sortKey([...list], 'year', 'month', 'day', 'hour', 'minute', 'second');
+	const chronological = sortKey([...list], 'year', 'month', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond');
 
 	if (chronological.length === 0) return undefined;
 

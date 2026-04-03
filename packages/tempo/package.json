@@ -96,7 +96,8 @@
   "devDependencies": {
     "@js-temporal/polyfill": "^0.5.1",
     "@magmacomputing/library": "2.0.1",
-    "@rollup/plugin-alias": "^6.0.0"
+    "@rollup/plugin-alias": "^6.0.0",
+    "magic-string": "^0.30.21"
   },
   "directories": {
     "doc": "doc",

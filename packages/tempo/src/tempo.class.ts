@@ -8,10 +8,10 @@ import { cleanify } from '#library/serialize.library.js';
 import { getStorage, setStorage } from '#library/storage.library.js';
 import { proxify, getLazyDelegator } from '#library/proxy.library.js';
 import { $Register, $Tempo, $Plugins, registerHook } from '#tempo/tempo.symbol.js';
-import { $Discover } from '#library/symbol.library.js';
+import { $Discover, markConfig } from '#library/symbol.library.js';
 import { getContext, CONTEXT } from '#library/utility.library.js';
 import { enumify } from '#library/enumerate.library.js';
-import { STATE, PARSE, DISCOVERY, registryReset } from '#tempo/tempo.enum.js'
+import { STATE, PARSE, DISCOVERY, registryReset } from '#tempo/tempo.enum.js';
 import { registerPlugin, registerTerm, resolveTermAnchor, resolveTermShift } from '#tempo/plugins/tempo.plugin.js'
 import { registerTerms } from '#tempo/plugins/term/index.js'
 import { ownKeys, ownEntries, getAccessors, omit } from '#library/reflection.library.js';
@@ -173,7 +173,7 @@ export class Tempo {
 	/** mutable list of registered term plugins */						static #terms: Tempo.TermPlugin[] = [];
 	static #termMap: Map<string, Tempo.TermPlugin> = new Map();
 	/** flag to prevent recursion during init */							static #lifecycle = { bootstrap: true, initialising: false, extendDepth: 0, ready: false };
-	/** high-performance Master Guard regex built from all registries */		static #guard: RegExp;
+	/** Master Guard predicate (implements RegExp-like interface) */					static #guard: { test(str: string): boolean } = /(?:)/i;
 
 	//** prototype helpers */
 	/** return the Prototype parent of an object */						static #proto(obj: object) { return Object.getPrototypeOf(obj) }
@@ -409,10 +409,11 @@ export class Tempo {
 						Tempo.#setConfig(shape, arg.value as Tempo.Options);
 						break;
 
-					case 'timeZone':
+					case 'timeZone': {
 						const zone = String(arg.value).toLowerCase() as enums.TIMEZONE;
 						shape.config.timeZone = enums.TIMEZONE[zone] ?? arg.value;
 						break;
+					}
 
 					case 'formats':
 						if (Tempo.#isLocal(shape) && !Tempo.#hasOwn(shape.config, 'formats'))
@@ -473,6 +474,8 @@ export class Tempo {
 		const discovery = (globalThis as Record<symbol, any>)[sym] as Internal.Discovery;
 		if (!isObject(discovery)) return {}
 
+		markConfig(discovery);																// auto-mark the discovery object
+
 		// 1. Process TimeZones (normalize to lowercase for lookup)
 		if (discovery.timeZones) {
 			const tzs = Object.fromEntries(
@@ -509,7 +512,8 @@ export class Tempo {
 		const snippet = shape.parse.snippet;
 
 		// 1. ensure numeric snippets are current
-		const nbr = new RegExp(`(?<nbr>[0-9]+|${Object.keys(enums.NUMBER).sort((a, b) => b.length - a.length).join('|')})`);
+		const keys = Object.keys(enums.NUMBER).map(w => Match.escape(w));			// escape each key
+		const nbr = new RegExp(`(?<nbr>[0-9]+|${keys.sort((a, b) => b.length - a.length).join('|')})`);
 		snippet[Token.nbr] = nbr;
 		snippet[Token.mod] = new RegExp(`((?<mod>${Match.modifier.source})?${nbr.source}? *)`);
 		snippet[Token.afx] = new RegExp(`((s)? (?<afx>${Match.affix.source}))?${snippet[Token.sep].source}?`);
@@ -541,18 +545,22 @@ export class Tempo {
 			...ownKeys(enums.TIMEZONE),
 			...ownKeys(Tempo.#global.parse.event),
 			...ownKeys(Tempo.#global.parse.period),
+			...ownKeys(Tempo.#global.parse.snippet),
+			...ownKeys(Tempo.#global.parse.layout),
 			...Tempo.#terms.map(t => t.key),
 			...Tempo.#terms.map(t => t.scope),
-			'am', 'pm', 'ago', 'hence', 'this', 'next', 'prev', 'last', 'from', 'now', 'start', 'mid', 'end',
+			'am', 'pm', 'ago', 'hence', 'this', 'next', 'prev', 'last', 'from', 'now', 'today', 'yesterday', 'tomorrow', 'start', 'mid', 'end',
 			'year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond',
 			'years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'milliseconds', 'microseconds', 'nanoseconds',
 			'mondays', 'tuesdays', 'wednesdays', 'thursdays', 'fridays', 'saturdays', 'sundays'
-		].filter(isString)
-			.map(w => Match.escape(w))														// escape each word
-			.sort((a, b) => b.length - a.length)									// ensure LONGEST strings match FIRST (avoiding partial-word matching)
-			.join('|');
+		].filter(w => isString(w) || isSymbol(w))
+			.map(w => (isSymbol(w) ? w.description : (w as string))!.toLowerCase())
+			.filter(Boolean)
+			.sort((a, b) => b.length - a.length);
 
-		Tempo.#guard = new RegExp(`^(${words}|${Match.guard.source}|${Match.bracket.source})+$`, 'i');
+		const esc = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+		const pattern = `^(${esc.join('|')}|${Match.guard.source}|${Match.bracket.source}|\\s)+$`;
+		Tempo.#guard = new RegExp(pattern, 'i');
 	}
 
 	/**
@@ -614,7 +622,10 @@ export class Tempo {
 
 						// handle other discovery keys directly
 						if (discovery.numbers) enums.registryUpdate('NUMBER', discovery.numbers)
-						if (discovery.timeZones) enums.registryUpdate('TIMEZONE', discovery.timeZones)
+						if (discovery.timeZones) {
+							const tzs = Object.fromEntries(ownEntries(discovery.timeZones).map(([k, v]) => [k.toString().toLowerCase(), v]));
+							enums.registryUpdate('TIMEZONE', tzs)
+						}
 						if (discovery.formats) {
 							Tempo.#global.config.formats = Tempo.#global.config.formats.extend(discovery.formats) as Tempo.Format;
 							enums.registryUpdate('FORMAT', discovery.formats)
@@ -649,7 +660,7 @@ export class Tempo {
 
 		try {
 			if (isEmpty(options)) {																// if no options supplied, reset all
-				Tempo.#global.parse = {
+				Tempo.#global.parse = markConfig({
 					snippet: Object.assign({}, Snippet),
 					layout: Object.assign({}, Layout),
 					event: Object.assign({}, Event),
@@ -659,10 +670,10 @@ export class Tempo {
 					pivot: Default.pivot,
 					mode: Default.mode as any,
 					lazy: false,
-				} as Internal.Parse;
+				}) as Internal.Parse;
 
 				const { timeZone, calendar } = getResolvedOptions();
-				Tempo.#global.config = Object.assign({},
+				Tempo.#global.config = markConfig(Object.assign({},
 					omit({ ...Default }, ...Object.keys(PARSE)),			// use Default as base, omit parse-related
 					{
 						calendar,
@@ -672,7 +683,7 @@ export class Tempo {
 						formats: enumify(STATE.FORMAT, false),
 						scope: 'global'
 					}
-				) as unknown as Internal.Config;
+				)) as unknown as Internal.Config;
 
 				Tempo.#usrCount = 0;																// reset user-key counter
 				for (const key of Object.keys(Token))								// purge user-allocated Tokens
@@ -846,7 +857,7 @@ export class Tempo {
 
 	/** Tempo initial default settings */
 	static get default() {
-		return Object.freeze({ ...Default, scope: 'default', timeZone: enums.TIMEZONE });
+		return Object.freeze({ ...Default, scope: 'default', timeZone: Default.timeZone || enums.TIMEZONE.utc });
 	}
 
 	/** 
@@ -1129,11 +1140,11 @@ export class Tempo {
 	/** setup local 'config' and 'parse' rules (prototype-linked to global) */
 	#setLocal(options: Tempo.Options) {
 		// setup local config (prototype-linked to global config)
-		this.#local.config = Object.create(Tempo.#global.config);
+		this.#local.config = markConfig(Object.create(Tempo.#global.config));
 		Object.assign(this.#local.config, { scope: 'local' });
 
 		// setup local parse rules (prototype-linked to global parse)
-		this.#local.parse = Object.create(Tempo.#global.parse);
+		this.#local.parse = markConfig(Object.create(Tempo.#global.parse));
 		Object.defineProperty(this.#local.parse, 'result', {
 			value: [...(options.result ?? [])],
 			writable: true,
