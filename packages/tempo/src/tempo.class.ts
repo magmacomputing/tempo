@@ -592,10 +592,10 @@ export class Tempo {
 						registerTerm(config);
 
 						// 3. sync with parser registries
-						if (config.scope && (config as any).ranges) {
+						if (config.scope && config.ranges) {
 							const target = config.scope === 'period' ? Tempo.#global.parse.period : (config.scope === 'event' ? Tempo.#global.parse.event : undefined);
 							if (target) {
-								(config as any).ranges.forEach((r: any) => {
+								config.ranges.forEach(r => {
 									if (r.key && !target[r.key]) {
 										const val = isDefined(r.hour) ? `${r.hour}:${pad(r.minute ?? 0)}` : (r.month ? `${pad(r.day ?? 1)} ${Tempo.MONTH.keys()[r.month - 1]}` : undefined);
 										if (val) target[r.key] = val;
@@ -637,7 +637,6 @@ export class Tempo {
 
 		if (Tempo.#lifecycle.extendDepth === 0) {
 			Tempo.#setPatterns(Tempo.#global);										// rebuild the global patterns
-			Tempo.#buildGuard();																	// rebuild the Master Guard
 		}
 
 		return this;
@@ -1828,7 +1827,13 @@ export class Tempo {
 									let jump = zdt;
 									let next = new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }).set({ [unit]: offset }).toDateTime();
 
+									let iterations = 0;
 									while (next.epochNanoseconds <= zdt.epochNanoseconds) {
+										if (++iterations > 10000) {
+											Tempo.#dbg.catch(this.#local.config, `Infinite loop detected in term resolution for unit "${unit}" (offset: "${offset}"). Last jump: ${jump.toString()}`);
+											break;
+										}
+
 										const range = termObj?.define.call(new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }), false);
 										if (isObject(range) && (range as any).end) {
 											jump = (range as any).end.toDateTime();

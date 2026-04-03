@@ -33,14 +33,20 @@ export class Logify {
 		const e = msg.find(m => m instanceof Error);
 
 		if (config.catch) {
-			this.#log(Method.Warn, config, ...msg);								// show a warning on the console
-			return;																								// safe-return
+			this.#log(Method.Warn, config, ...msg);               // show a warning on the console
+			return;                                               // safe-return
 		}
 
-		this.#log(Method.Error, config, ...msg);								// only show an error on the console if NOT silent
-		const ErrorClass = e ? (e.constructor as any) : Error;
+		this.#log(Method.Error, config, ...msg);                // only show an error on the console if NOT silent
 		const errorText = msg.map(m => m instanceof Error ? m.message : (isObject(m) ? JSON.stringify(m) : String(m))).join(' ');
-		throw new ErrorClass(`${this.#name}${errorText}`);			// catch will be loud or silent, based on #catch config
+		const message = `${this.#name}${errorText}`;
+
+		if (e) {
+			e.message = message;
+			throw e;                                              // preserve type, stack and custom fields
+		}
+
+		throw new Error(message);                               // catch will be loud or silent, based on #catch config
 	}
 
 	/** console.log */																				log = (...msg: any[]) => this.#log(Method.Log, ...msg);
@@ -59,9 +65,9 @@ export class Logify {
 		if (arg.type === 'Object')
 			Object.assign(opts, arg.value);
 
-		this.#opts.debug = opts.debug ?? false;									// default debug to 'false'
-		this.#opts.catch = opts.catch ?? false;									// default catch to 'false'								
-		this.#opts.silent = opts.silent ?? false;								// default silent to 'false'
+		this.#opts.debug = opts.debug ?? false;               	// default debug to 'false'
+		this.#opts.catch = opts.catch ?? false;               	// default catch to 'false'
+		this.#opts.silent = opts.silent ?? false;             	// default silent to 'false'
 	}
 }
 

@@ -42,7 +42,7 @@ export type TermPlugin = {
 	key: string; scope?: string;
 	description?: string;
 	define: (this: Tempo, keyOnly?: boolean) => any;
-	ranges?: any[];
+	ranges?: Range[];
 }
 
 /** plugin function that can extend the Tempo prototype or static space */
@@ -54,6 +54,11 @@ export type Plugin = (options: any, TempoClass: typeof Tempo, factory: (val: any
 
 /** Configuration to use for #until() and #since() argument */
 export type Unit = Temporal.DateUnit | Temporal.TimeUnit | Plural<Temporal.DateUnit | Temporal.TimeUnit>
+type Units = Temporal.PluralizeUnit<Temporal.DateUnit | Temporal.TimeUnit>;
+type BaseDuration = Record<Units, number>;
+export type FlexibleDuration = {
+	[K in Units]: Pick<BaseDuration, K> & Partial<Omit<BaseDuration, K>>;
+}[Units]
 export type Until = (Options & { unit?: Unit }) | Unit
 export type Mutate = 'start' | 'mid' | 'end'
 export type Set = Partial<Record<Mutate, Unit> &
@@ -92,19 +97,21 @@ export type FormatType<K extends PropertyKey> = enums.FormatType<K>;
 /** mapping of terms to their resolved values */
 export type Terms = Property<any>;
 
+/** term definition range */
+export type Range = FlexibleDuration & {
+	key?: string;
+	[key: string]: any;
+}
+
 /** resolved Term range */
-export interface Range {
-	key: string; scope: string;
-	fiscal?: number; year?: number;
-	month?: number; day?: number;
-	hour?: number; minute?: number;
-	second?: number;
+export type ResolvedRange = FlexibleDuration & {
+	key: string;
+	scope: string;
 	label?: string;
 	start: Tempo;
 	end: Tempo;
 	[str: PropertyKey]: any;
 }
-
 export type WEEKDAY = enums.WEEKDAY
 export type WEEKDAYS = enums.WEEKDAYS
 export type MONTH = enums.MONTH
@@ -125,7 +132,7 @@ export type Element = enums.Element
 
 /** Type for consistency in expected arguments for helper functions */
 export interface Params<T> {
-	(tempo?: DateTime, options?: Options): T;								// parse DateTime, default to Temporal.Instance.now()
+	(tempo?: DateTime, options?: Options): T;									// parse DateTime, default to Temporal.Instance.now()
 	(options: Options): T;																		// provide just the Options (use {value:'XXX'} for specific DateTime)
 }
 

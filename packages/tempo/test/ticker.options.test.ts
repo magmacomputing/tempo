@@ -15,10 +15,14 @@ describe('Tempo.ticker Options & Enhancements', () => {
 			results.push(t.format('{ss}:{ms}') as string);
 		});
 
-		await new Promise(resolve => setTimeout(resolve, 250));
+		try {
+			await new Promise(resolve => setTimeout(resolve, 250));
 
-		expect(count).toBe(3);
-		expect(results.length).toBe(3);
+			expect(count).toBe(3);
+			expect(results.length).toBe(3);
+		} finally {
+			stop();
+		}
 	});
 
 	test('ticker with limit (generator)', async () => {
@@ -46,11 +50,14 @@ describe('Tempo.ticker Options & Enhancements', () => {
 			results.push(t.format('sortTime') as string);
 		});
 
-		await new Promise(resolve => setTimeout(resolve, 300));	// enough for virtual time to pass, but real time is fast
-		stop();
+		try {
+			await new Promise(resolve => setTimeout(resolve, 300));	// enough for virtual time to pass, but real time is fast
 
-		expect(results.length).toBe(6);												// 0, 0.2, 0.4, 0.6, 0.8, 1.0
-		expect(results[results.length - 1]).toContain('12:00:01');
+			expect(results.length).toBe(6);												// 0, 0.2, 0.4, 0.6, 0.8, 1.0
+			expect(results[results.length - 1]).toContain('12:00:01');
+		} finally {
+			stop();
+		}
 	});
 
 	test('ticker with flattened DurationLike options', async () => {
@@ -92,10 +99,12 @@ describe('Tempo.ticker Options & Enhancements', () => {
 			count++;
 		});
 
-		await new Promise(resolve => setTimeout(resolve, 150));
-		stop();
-
-		expect(count).toBeGreaterThanOrEqual(2);
+		try {
+			await new Promise(resolve => setTimeout(resolve, 150));
+			expect(count).toBeGreaterThanOrEqual(2);
+		} finally {
+			stop();
+		}
 	});
 
 	test('ergonomic callback-only ticker (default 1s)', async () => {
@@ -104,11 +113,13 @@ describe('Tempo.ticker Options & Enhancements', () => {
 			count++;
 		});
 
-		// Check immediate tick
-		await new Promise(resolve => setTimeout(resolve, 0));
-		expect(count).toBe(1);
-
-		stop();
+		try {
+			// Check immediate tick
+			await new Promise(resolve => setTimeout(resolve, 0));
+			expect(count).toBe(1);
+		} finally {
+			stop();
+		}
 	});
 
 });

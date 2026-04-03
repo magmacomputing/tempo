@@ -14,9 +14,9 @@ Tempo.extend(MyPlugin);
 
 ---
 
-The most efficient way to author a plugin is using the `definePlugin` factory. This helper automatically handles the internal registration logic, making your plugin available as soon as it is imported (via side-effect).
+The most efficient way to author a plugin is using the `definePlugin` factory. This helper automatically handles the internal registration logic, making your plugin available as soon as it is imported (via side effect).
 
-### Example Plugin
+## Example Plugin
 
 ```typescript
 import { definePlugin } from '@magmacomputing/tempo/plugins';
@@ -38,7 +38,7 @@ export const MyPlugin = definePlugin((options, TempoClass, factory) => {
 });
 ```
 
-### Manual Registration Pattern
+## Manual Registration Pattern
 If you prefer not to use the factory (e.g. for plugins that should *not* self-register), you can export a plain function with the `Tempo.Plugin` signature:
 
 ```typescript
@@ -49,7 +49,7 @@ export const ManualPlugin: Tempo.Plugin = (options, TempoClass, factory) => {
 };
 ```
 
-### Type Safety (TypeScript)
+## Type Safety (TypeScript)
 
 To ensure your plugin is discoverable by the IDE, use **Module Augmentation** to extend the `Tempo` namespace and the `Tempo` class interface.
 

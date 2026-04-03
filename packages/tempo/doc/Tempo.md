@@ -60,7 +60,7 @@ npm install @magmacomputing/tempo
 The **v2.0.1** release focus is on internal hardening, security, and developer ergonomics:
 
 - **Parsing Engine Stabilization**: The "Master Guard" regex is now length-sorted and character-escaped, ensuring 100% reliability for complex term names.
-- **Registry Security (Soft Freeze)**: Core registries (`TIMEZONE`, `NUMBER`, `FORMAT`) are now protected by a proxy-based "Soft Freeze" layer. They are read-only for public consumers while remaining extensible via `Tempo.registryUpdate()`.
+- **Registry Security (Soft Freeze)**: Core registries (`TIMEZONE`, `NUMBER`, `FORMAT`) are now protected by a proxy-based "Soft Freeze" layer. They are read-only for public consumers while remaining extensible via the primary public API **`Tempo.extend({ timeZones, formats, ... })`** (which internally uses `Tempo.registryUpdate()`). The lower-level `registryUpdate` method remains available for advanced custom extensions.
 - **Project Structure Refactoring**: Internal tooling moved from `#tempo/bin` to `#tempo/scripts` for better ESM/TS integration.
 
 ---

@@ -159,7 +159,8 @@ console.log(t.format('We are currently in the {#quarter}')); // "We are currentl
 
 ---
 
-## 🕒 Reactive Streams & Tickers
+> [!NOTE]
+> The examples below use the `using` and `await using` syntax, which require **TypeScript 5.2+** and a runtime that supports **TC39 Explicit Resource Management**.
 
 ### Subscription Billing (Recurring Payments)
 Use a `seed` to anchor your subscription to a specific day, then use a month-based ticker.
@@ -170,6 +171,13 @@ await using billing = Tempo.ticker({
   months: 1, 
   seed: '2024-01-15' 
 }, (t) => processPayment(t));
+
+// -- OR --
+
+// Manual alternative for environments without 'await using' support:
+const billing = Tempo.ticker({ months: 1, seed: '2024-01-15' }, (t) => processPayment(t));
+// ... later ...
+await billing[Symbol.asyncDispose](); // Explicitly clean up resources
 ```
 
 ### Fiscal Quarter Reporting
@@ -208,6 +216,9 @@ button.onclick = () => {
   const t = heartbeat.pulse();
   console.log(`Manual pulse triggered at: ${t}`);
 };
+
+// Ensure cleanup on page unload or component unmount
+window.onunload = () => heartbeat.stop();
 ```
 
 ---

@@ -100,7 +100,7 @@ Tempo.init({
 | `debug` | `boolean` | `false` | Enables internal log tracking. |
 | `catch` | `boolean` | `false` | If true, invalid inputs return a Void instance. |
 | `lazy` | `boolean` | `false` | Defers registry evaluation until the first property access. |
-| `silent` | `boolean` | `false` | Suppresses `console.error` output for expected failures (useful for clean testing). |
+| `silent` | `boolean` | `false` | Suppresses both `console.error` and `console.warn` output. When combined with `catch: true`, expected failures (like invalid date strings) produce no console output. |
 
 ---
 

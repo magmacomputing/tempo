@@ -104,7 +104,7 @@ describe('Tempo Issue Fixes', () => {
       expect(shifted.format('{yyyy}-{mm}-{dd}')).toBe('2024-05-21')
     })
 
-    test('add() accepts options with mutation', () => {
+    test('add() accepts a duration payload', () => {
       const t = new Tempo('2024-05-20 10:00', { timeZone: 'UTC' })
       const nextWeek = t.add({ days: 7 })
       expect(nextWeek.format('{dd}')).toBe('27')

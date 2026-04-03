@@ -1,4 +1,4 @@
-import { Tempo } from '../src/tempo.class.js';
+import { Tempo } from '#tempo/tempo.class.js';
 
 describe('Term Unified Logic (Mutation & Identity)', () => {
 	// 2024-05-15 is in Q2 (Apr-Jun) in Northern hemisphere
@@ -72,9 +72,12 @@ describe('Term Unified Logic (Mutation & Identity)', () => {
 	it('should throw an error for invalid terms when catch is false', () => {
 		// Choose the STATIC behavior: explicitly set catch: false to expect internal Logify.catch to throw
 		const t = new Tempo(testDate, { catch: false, sphere: 'north' });
-		const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-		expect(() => t.set({ start: '#invalid' })).toThrow(/Unexpected term\(#invalid\)/);
-		spy.mockRestore();
+		const spy = vi.spyOn(console, 'error').mockImplementation(() => { });
+		try {
+			expect(() => t.set({ start: '#invalid' })).toThrow(/Unexpected term\(#invalid\)/);
+		} finally {
+			spy.mockRestore();
+		}
 	});
 
 	it('should correctly resolve quarters in the Southern Hemisphere', () => {

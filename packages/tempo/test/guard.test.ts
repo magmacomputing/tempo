@@ -37,12 +37,8 @@ describe('Master Guard Verification', () => {
     ];
     
     inputs.forEach(input => {
-      const spyE = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const spyW = vi.spyOn(console, 'warn').mockImplementation(() => {});
       // Tempo throws on parse failure if catch is false (default)
-      expect(() => new Tempo(input)).toThrow();
-      spyE.mockRestore();
-      spyW.mockRestore();
+      expect(() => new Tempo(input, { silent: true })).toThrow();
     });
   });
 

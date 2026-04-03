@@ -5,15 +5,15 @@ import resolve from '@rollup/plugin-node-resolve';
  * Custom logic to route modules based on origin.
  * We want Tempo code in the root and internal library code in lib/
  */
-const getOutputFileName = (moduleId) => {
-	if (!moduleId) return '[name].js';
+const getOutputFileName = (moduleId, name) => {
+	if (!moduleId) return (name || '[name]') + '.js';
 
 	const rel = path.relative(process.cwd(), moduleId);
 
 	// Check if this module is from outside the tempo package (likely @magmacomputing/library)
 	return (rel.startsWith('..') || rel.includes('node_modules'))
 		? 'lib/' + path.basename(moduleId, '.js') + '.js'
-		: '[name].js';
+		: (name || '[name]') + '.js';
 }
 
 export default {
@@ -36,8 +36,8 @@ export default {
 			preserveModulesRoot: 'dist',
 			sourcemap: true,
 			indent: '\t',
-			entryFileNames: (chunkInfo) => getOutputFileName(chunkInfo.facadeModuleId),
-			chunkFileNames: (chunkInfo) => getOutputFileName(chunkInfo.facadeModuleId)
+			entryFileNames: (chunkInfo) => getOutputFileName(chunkInfo.facadeModuleId, chunkInfo.name),
+			chunkFileNames: (chunkInfo) => getOutputFileName(chunkInfo.facadeModuleId, chunkInfo.name)
 		}
 	],
 	plugins: [

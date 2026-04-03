@@ -117,8 +117,37 @@ ticker.pulse(); // Manually advance and notify listeners
 ```
 ```
 
+## 🧟 Zombie Tickers (Warning)
+
+In a Node.js environment, `Tempo.ticker()` uses background timers (`setTimeout`) to drive its pulses. If you do not explicitly stop a ticker, it becomes a **"Zombie Ticker"** that continues to run indefinitely, even if the variable that created it has gone out of scope.
+
+### The Risks:
+- **Process Hangs**: Node.js will not exit a process if there are active timers. Undisposed tickers are a common cause of "mysterious hangs" at the end of test runs.
+- **Test Inconsistency**: Leaked tickers can continue to fire while subsequent tests are running, leading to flaky assertions and "impossible" state changes.
+- **Memory Leaks**: Each active ticker maintains closures that prevent garbage collection of the `Tempo` instance and its listeners.
+
+### The Solution:
+Always use the **Disposer Pattern** (`using` or `await using`) or a `try...finally` block to guarantee cleanup:
+
+```typescript
+// ✅ BEST: Automatic cleanup via 'using'
+{
+  using ticker = Tempo.ticker(1);
+  // ... logic ...
+} // Stays clean: ticker stopped automatically here
+
+// ✅ GOOD: Manual cleanup in finally block (Required for captured variables)
+let stop;
+try {
+  stop = Tempo.ticker(1, (t) => { ... });
+  // ... assertions ...
+} finally {
+  stop?.(); // Prevents "Zombie Tickers" even if assertions fail
+}
+```
+
 > [!WARNING]
-> If using `const` or `let` instead of `using` / `await using`, you **must** call the returned `stop()` function (or call `.return()` on the generator) to clear the interval manually and prevent memory leaks.
+> If you are using `const` or `let` without a `finally` block, an assertion failure will skip the `stop()` call, leaving a live timer in the event loop. Always prefer the `using` keyword or `try...finally` for industrial-grade resource management.
 
 ### 3. Virtual Clock (Seeding)
 

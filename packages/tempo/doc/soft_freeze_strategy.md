@@ -29,21 +29,21 @@ The library uses a private `Symbol` called `$Target`. Only code with access to t
 ## Implementation Details
 
 ### `proxy.library.ts`
-The core logic resides in `getProxy`, which now supports an optional `lock` parameter.
+The core logic resides in `proxify`, which now supports an optional `lock` parameter.
 
 - **Hard Freeze** (`frozen=true, lock=true`): Both the proxy and the target are immutable.
 - **Soft Freeze** (`frozen=true, lock=false`): The proxy is read-only, but the target stays mutable.
 
 ```typescript
-export function getProxy<T extends object>(target: T, frozen = true, lock = frozen) {
-    const tgt = (target as any)[$Target] ?? target;
+export function proxify<T extends object>(target: T, frozen = true, lock = frozen) {
+    const tgt = (target as any)[$Target] ?? target;         // unwrap proxy
 
     // Hard Freeze: prevent all mutation to the target
     if (lock) secure(tgt); 
 
     return new Proxy(tgt, {
         set: (_, key, val) => {
-            // Soft Freeze: Proxy blocks mutation, but target might still be mutable
+            // Soft Freeze: Proxy blocks mutation, but target stays mutable
             return frozen ? false : Reflect.set(tgt, key, val);
         },
         deleteProperty: (_, key) => {
@@ -63,7 +63,7 @@ export function enumify(list, frozen = true) {
     
     // Default to Soft Freeze (frozen=true, lock=false)
     // if 'frozen' is passed as false, it signals 'extensible library registry'
-    return getProxy(target, true, frozen); 
+    return proxify(target, true, frozen); 
 }
 ```
 

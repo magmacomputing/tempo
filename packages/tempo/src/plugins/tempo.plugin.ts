@@ -3,7 +3,7 @@ import { isDefined } from '#library/type.library.js';
 import { secure } from '#library/utility.library.js';
 import { $Plugins, $Register } from '#tempo/tempo.symbol.js';
 import type { Tempo } from '#tempo/tempo.class.js';
-import type { Plugin, TermPlugin } from '#tempo/tempo.type.js';
+import type { Plugin, TermPlugin, Range, ResolvedRange } from '#tempo/tempo.type.js';
 
 /** helper to self-register a Plugin into the Global Discovery registry */
 export function registerPlugin(plugin: Plugin) {
@@ -41,21 +41,6 @@ export const defineTerm = <T extends TermPlugin>(term: T): T => {
 	return term;
 }
 
-/** Tempo.Terms lets us know where a DateTime fits within pre-defined Ranges */
-/** use this type to define a Range with a DateTime qualifier */
-export type Range = {
-	key: PropertyKey;
-	year?: number;
-	month?: number;
-	day?: number;
-	hour?: number;
-	minute?: number;
-	second?: number;
-	label?: string;
-	start?: Tempo;
-	end?: Tempo;
-	[str: PropertyKey]: any;
-}
 
 const SCHEMA = [
 	['year', 'yy'],
@@ -72,7 +57,7 @@ const SCHEMA = [
 /**
  * find where a Tempo fits within a range of DateTime
  */
-export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true) {
+export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true): string | ResolvedRange | undefined {
 	const chronological = sortKey([...list], 'year', 'month', 'day', 'hour', 'minute', 'second');
 
 	if (chronological.length === 0) return undefined;
@@ -127,7 +112,7 @@ export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true) {
 		...match,
 		start: new (tempo.constructor as any)(start, tempo.config),
 		end: new (tempo.constructor as any)(end, tempo.config)
-	}) as Range;
+	}) as ResolvedRange;
 
 	return keyOnly
 		? resolved.key
