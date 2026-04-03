@@ -74,9 +74,22 @@ export class Pledge<T> {
 		const onReject = asArray(Pledge.#static.onReject).concat(asArray(opts.onReject));
 		const onSettle = asArray(Pledge.#static.onSettle).concat(asArray(opts.onSettle));
 
-		if (onResolve.length) this.#pledge.promise.then(val => onResolve.forEach(cb => cb(val)));
-		if (onReject.length) this.#pledge.promise.catch(err => onReject.forEach(cb => cb(err)));
-		if (onSettle.length) this.#pledge.promise.finally(() => onSettle.forEach(cb => cb()));
+		const runSafely = <A extends any[]>(callbacks: ((...args: A) => any)[], ...args: A) => {
+			callbacks.forEach(cb => {
+				try {
+					cb(...args);
+				} catch (err) {
+					Pledge.#dbg.warn(this.#status, 'Pledge callback failed', err);
+				}
+			});
+		}
+
+		if (onResolve.length)
+			this.#pledge.promise.then(val => runSafely(onResolve, val));
+		if (onReject.length)
+			this.#pledge.promise.catch(err => runSafely(onReject, err));
+		if (onSettle.length)
+			this.#pledge.promise.finally(() => runSafely(onSettle));
 
 		if (this.#status.catch)
 			this.#pledge.promise.catch(err => Pledge.#dbg.catch(this.#status, err));

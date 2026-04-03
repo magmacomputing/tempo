@@ -3,7 +3,8 @@ import { isDefined } from '#library/type.library.js';
 
 import { COMPASS } from '#tempo/tempo.enum.js';
 import type { Tempo } from '#tempo/tempo.class.js';
-import { defineTerm, getTermRange, type Range } from '#tempo/plugins/tempo.plugin.js';
+import { defineTerm, getTermRange } from '../tempo.plugin.js';
+import type { Range } from '#tempo/tempo.type.js';
 
 /** definition of fiscal quarter ranges */
 const ranges = [

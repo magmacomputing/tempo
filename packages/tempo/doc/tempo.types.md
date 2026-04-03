@@ -14,6 +14,7 @@ type DateTime =
   | bigint                      // Unix timestamp in nanoseconds
   | Date                        // Standard JavaScript Date object
   | Tempo                       // Another Tempo instance (cloning)
+  | Function                    // Dynamic resolution (max depth 5)
   | Temporal.ZonedDateTimeLike  // Temporal ZonedDateTime object or property bag
   | undefined | null            // Interpreted as "now"
 ```

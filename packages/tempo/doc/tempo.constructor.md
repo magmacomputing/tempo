@@ -17,6 +17,7 @@ The {dateTime} argument is one of the following types:
 - `BigInt`: Unix timestamps in nanoseconds.
 - `Date`: Standard JavaScript Date object.
 - `Tempo`: Another Tempo instance (clones the instance).
+- `Function`: A dynamic resolver (max depth 5; returns any valid DateTime).
 - `Temporal.*`: Various Temporal objects (ZonedDateTime, PlainDate, etc.).
 - `void` | `null`: Defaults to the current time ("now").
 

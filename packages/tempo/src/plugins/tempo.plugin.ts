@@ -2,6 +2,7 @@ import { sortKey } from '#library/array.library.js';
 import { isDefined } from '#library/type.library.js';
 import { secure } from '#library/utility.library.js';
 import { $Plugins, $Register } from '#tempo/tempo.symbol.js';
+import { SCHEMA, getLargestUnit } from '#tempo/tempo.util.js';
 import type { Tempo } from '#tempo/tempo.class.js';
 import type { Plugin, TermPlugin, Range, ResolvedRange } from '#tempo/tempo.type.js';
 
@@ -41,19 +42,6 @@ export const defineTerm = <T extends TermPlugin>(term: T): T => {
 	return term;
 }
 
-
-const SCHEMA = [
-	['year', 'yy'],
-	['month', 'mm'],
-	['day', 'dd'],
-	['hour', 'hh'],
-	['minute', 'mi'],
-	['second', 'ss'],
-	['millisecond', 'ms'],
-	['microsecond', 'us'],
-	['nanosecond', 'ns']
-] as [Temporal.DateUnit | Temporal.TimeUnit, keyof Tempo][];
-
 /**
  * find where a Tempo fits within a range of DateTime
  */
@@ -82,36 +70,48 @@ export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true): strin
 
 	const i = chronological.indexOf(match);
 	const zdt = tempo.toDateTime();
-	const { year: yy, month: mm, day: dd } = zdt;
 
-	// Determine the rollover unit based on the largest unit defined in the range list
-	const hasYear = list.some(r => isDefined(r.year) || isDefined(r.month));
-	const hasMonth = !hasYear && list.some(r => isDefined(r.day));
-	const unit = hasYear ? 'year' : (hasMonth ? 'month' : 'day');
+	// determine the largest unit defined in the range list, and use the unit above it as rollover
+	const unit = getLargestUnit(list);
+	const unitIndex = SCHEMA.findIndex(([u]) => u === unit);
+	const rolloverIndex = Math.max(0, unitIndex - 1);
+	const rolloverUnit = SCHEMA[rolloverIndex][0];
 
-	const resolve = (range: Range, anchor: Temporal.ZonedDateTime) => anchor.with({
-		year: range.year ?? anchor.year,
-		month: range.month ?? (hasYear ? 1 : anchor.month),
-		day: range.day ?? (hasYear || hasMonth ? 1 : anchor.day),
-		hour: range.hour ?? 0,
-		minute: range.minute ?? 0,
-		second: range.second ?? 0,
-		millisecond: range.millisecond ?? 0,
-		microsecond: range.microsecond ?? 0,
-		nanosecond: range.nanosecond ?? 0,
-	});
+	const resolve = (range: Range, anchor: Temporal.ZonedDateTime) => {
+		const obj: any = {};
+		for (let i = 0; i < SCHEMA.length; i++) {
+			const [u] = SCHEMA[i];
+			if (isDefined(range[u])) {
+				obj[u] = range[u];
+			} else if (i > rolloverIndex) {
+				obj[u] = (i <= 2) ? 1 : 0;										// year, month, day reset to 1; time units reset to 0
+			} else {
+				obj[u] = (anchor as any)[u];
+			}
+		}
+		return anchor.with(obj);
+	};
 
-	const start = resolve(match, zdt);
+	const startAnchor = (() => {
+		const candidate = resolve(match, zdt);
+		return candidate.epochNanoseconds > zdt.epochNanoseconds
+			? zdt.subtract({ [`${rolloverUnit}s` as any]: 1 })
+			: zdt
+	})();
+	const start = resolve(match, startAnchor);
+
 	const nextRange = chronological[i + 1];
 	const end = isDefined(nextRange)
-		? resolve(nextRange, zdt)
-		: resolve(chronological[0], zdt.add({ [`${unit}s` as any]: 1 }));
+		? resolve(nextRange, startAnchor)
+		: resolve(chronological[0], startAnchor.add({ [`${rolloverUnit}s` as any]: 1 }))
 
 	// Pre-build the Range object with Tempo instances
 	const resolved = secure({
 		...match,
 		start: new (tempo.constructor as any)(start, tempo.config),
-		end: new (tempo.constructor as any)(end, tempo.config)
+		end: new (tempo.constructor as any)(end, tempo.config),
+		unit,
+		rollover: rolloverUnit
 	}) as ResolvedRange;
 
 	return keyOnly

@@ -13,6 +13,7 @@ import { getContext, CONTEXT } from '#library/utility.library.js';
 import { enumify } from '#library/enumerate.library.js';
 import { STATE, PARSE, DISCOVERY, registryReset } from '#tempo/tempo.enum.js';
 import { registerPlugin, registerTerm, resolveTermAnchor, resolveTermShift } from '#tempo/plugins/tempo.plugin.js'
+import { getSafeFallbackStep } from '#tempo/tempo.util.js'
 import { registerTerms } from '#tempo/plugins/term/index.js'
 import { ownKeys, ownEntries, getAccessors, omit } from '#library/reflection.library.js';
 import { ifDefined } from '#library/object.library.js';
@@ -173,7 +174,8 @@ export class Tempo {
 	/** mutable list of registered term plugins */						static #terms: Tempo.TermPlugin[] = [];
 	static #termMap: Map<string, Tempo.TermPlugin> = new Map();
 	/** flag to prevent recursion during init */							static #lifecycle = { bootstrap: true, initialising: false, extendDepth: 0, ready: false };
-	/** Master Guard predicate (implements RegExp-like interface) */					static #guard: { test(str: string): boolean } = /(?:)/i;
+	/** Master Guard predicate (implements RegExp-like interface) */					static #guard: { test(str: string): boolean } = { test: () => true };
+	/** Set of allowed lowercased tokens for the Master Guard */					static #allowedTokens: Set<string> = new Set();
 
 	//** prototype helpers */
 	/** return the Prototype parent of an object */						static #proto(obj: object) { return Object.getPrototypeOf(obj) }
@@ -534,7 +536,8 @@ export class Tempo {
 	}
 
 	static #buildGuard() {
-		const words = [
+		// Tempo.#dbg.catch(Tempo.#global.config, 'Building Guard...');
+		const wordsList = [
 			...ownKeys(enums.NUMBER),
 			...ownKeys(enums.WEEKDAY),
 			...ownKeys(enums.WEEKDAYS),
@@ -555,12 +558,67 @@ export class Tempo {
 			'mondays', 'tuesdays', 'wednesdays', 'thursdays', 'fridays', 'saturdays', 'sundays'
 		].filter(w => isString(w) || isSymbol(w))
 			.map(w => (isSymbol(w) ? w.description : (w as string))!.toLowerCase())
-			.filter(Boolean)
-			.sort((a, b) => b.length - a.length);
+			.filter(Boolean);
 
-		const esc = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-		const pattern = `^(${esc.join('|')}|${Match.guard.source}|${Match.bracket.source}|\\s)+$`;
-		Tempo.#guard = new RegExp(pattern, 'i');
+		Tempo.#allowedTokens = new Set(wordsList);
+
+		let maxT = 0;
+		for (const w of wordsList) if (w.length > maxT) maxT = w.length;
+		const maxTokenLength = maxT;
+
+		// Define the custom guard logic (Scan-and-Consume)
+		Tempo.#guard = {
+			test(input: string): boolean {
+				if (!input || typeof input !== 'string') return false;
+
+				let i = 0;
+				const len = input.length;
+
+				while (i < len) {
+					const char = input[i];
+
+					// 1. Skip spaces
+					if (char === ' ' || char === '\n' || char === '\t' || char === '\r') {
+						i++;
+						continue;
+					}
+
+					// 2. Try Bracket match (starts with [)
+					if (char === '[') {
+						const sub = input.substring(i);
+						const match = sub.match(Match.bracket);
+						if (match && match.index === 0) {
+							i += match[0].length;
+							continue;
+						}
+					}
+
+					// 3. Try Longest Token match from Set
+					let matched = false;
+					const searchLen = Math.min(maxTokenLength, len - i);
+					const slice = input.substring(i, i + searchLen).toLowerCase();
+
+					for (let l = searchLen; l > 0; l--) {
+						if (Tempo.#allowedTokens.has(slice.substring(0, l))) {
+							i += l;
+							matched = true;
+							break;
+						}
+					}
+					if (matched) continue;
+
+					// 4. Try Fallback char (Match.guard)
+					if (Match.guard.test(char)) {
+						i++;
+						continue;
+					}
+
+					return false; // No valid match at current position
+				}
+
+				return true;
+			}
+		}
 	}
 
 	/**
@@ -1370,7 +1428,7 @@ export class Tempo {
 	}
 
 	/** evaluate 'string | number' input against known patterns */
-	#conform(tempo: Tempo.DateTime | undefined, dateTime: Temporal.ZonedDateTime, isAnchored = false): Internal.Match {
+	#conform(tempo: Tempo.DateTime | undefined, dateTime: Temporal.ZonedDateTime, isAnchored = false, depth = 0): Internal.Match {
 		const arg = asType(tempo);
 		const { type, value } = arg;
 
@@ -1393,14 +1451,18 @@ export class Tempo {
 			})
 		}
 
-		if (arg.type !== 'String' && arg.type !== 'Number') {
+		if (arg.type !== 'String' && arg.type !== 'Number' && arg.type !== 'Function' && arg.type !== 'AsyncFunction') {
 			this.#result(arg, { match: arg.type });
 			return arg;
 		}
 
 		if (isFunction(value)) {
+			if (depth > 5) {														// recursion limit for functions
+				Tempo.#dbg.catch(this.#local.config, `Infinite recursion detected in functional resolution: ${String(value)}`);
+				return arg;
+			}
 			const res = (value as Function).call(this);
-			return this.#conform(res, dateTime, isAnchored);
+			return this.#conform(res, dateTime, isAnchored, depth + 1);
 		}
 
 		if (isString(value)) {
@@ -1442,7 +1504,7 @@ export class Tempo {
 			if (isEmpty(groups)) continue;												// no match, so skip this iteration
 
 
-			this.#result(arg, { match: sym.description, groups });	// stash the {key} of the pattern that was matched
+			this.#result(arg, { match: sym.description, groups: { ...groups } });	// stash the {key} of the pattern that was matched
 
 			dateTime = this.#parseZone(groups, dateTime);
 			dateTime = this.#parseGroups(groups, dateTime);
@@ -1725,7 +1787,7 @@ export class Tempo {
 		let cal = groups["cal"];
 		if (zone?.startsWith('u-ca=')) {
 			cal = zone;
-			zone = undefined;
+			zone = tzd;														// preserve offset
 		}
 
 		if (zone && zone !== dateTime.timeZoneId) {
@@ -1842,6 +1904,10 @@ export class Tempo {
 									while (next.epochNanoseconds <= zdt.epochNanoseconds) {
 										if (++iterations > 10000) {
 											Tempo.#dbg.catch(this.#local.config, `Infinite loop detected in term resolution for unit "${unit}" (offset: "${offset}"). Last jump: ${jump.toString()}`);
+											const range = termObj?.define.call(new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }), false);
+											const step = getSafeFallbackStep(range as any, (termObj as any)?.scope);
+											jump = jump.add(step);									// safe fallback jump
+											next = new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }).set({ [unit]: offset }).toDateTime();
 											break;
 										}
 

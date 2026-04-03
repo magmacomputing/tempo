@@ -9,7 +9,7 @@
 /** NodeJS custom inspection symbol for the Proxy pattern */export const $Inspect = Symbol.for('nodejs.util.inspect.custom');
 /** unique marker to identify a Logify configuration object */export const $Logify = Symbol.for('$Logify');
 
-/** identify and mark a Logify configuration object */	  	export function markConfig<T extends object>(obj: T): T {
-  (obj as any)[$Logify] = true;															// tag the object
-  return obj;
+/** identify and mark a Logify configuration object */			export function markConfig<T extends object>(obj: T): T {
+	Object.defineProperty(obj, $Logify, { value: true, enumerable: false, writable: true, configurable: true });
+	return obj;
 }

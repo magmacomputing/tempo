@@ -20,7 +20,7 @@ import type { Tempo } from '#tempo/tempo.class.js';
 // #region Primitives
 
 /** the value that Tempo will attempt to interpret as a valid ISO date / time */
-export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | Temporal.ZonedDateTimeLike | undefined | null
+export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | Temporal.ZonedDateTimeLike | Function | undefined | null
 
 export type Pattern = string | RegExp
 export type Logic = string | number | Function
@@ -53,8 +53,9 @@ export type Plugin = (options: any, TempoClass: typeof Tempo, factory: (val: any
 // #region Date/time unit types
 
 /** Configuration to use for #until() and #since() argument */
-export type Unit = Temporal.DateUnit | Temporal.TimeUnit | Plural<Temporal.DateUnit | Temporal.TimeUnit>
-type Units = Temporal.PluralizeUnit<Temporal.DateUnit | Temporal.TimeUnit>;
+export type DateTimeUnit = Temporal.DateUnit | Temporal.TimeUnit
+export type Unit = DateTimeUnit | Plural<DateTimeUnit>
+type Units = Temporal.PluralizeUnit<DateTimeUnit>;
 type BaseDuration = Record<Units, number>;
 export type FlexibleDuration = {
 	[K in Units]: Pick<BaseDuration, K> & Partial<Omit<BaseDuration, K>>;
@@ -110,6 +111,8 @@ export type ResolvedRange = FlexibleDuration & {
 	label?: string;
 	start: Tempo;
 	end: Tempo;
+	unit?: DateTimeUnit;
+	rollover?: DateTimeUnit;
 	[str: PropertyKey]: any;
 }
 export type WEEKDAY = enums.WEEKDAY

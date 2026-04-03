@@ -4,7 +4,7 @@
 
 ## Installation
 
-To use the ticker, simply import the plugin as a side-effect. This automatically registers the `Tempo.ticker()` method with the core library:
+To use the ticker, simply import the plugin as a side effect. This automatically registers the `Tempo.ticker()` method with the core library:
 
 ```typescript
 import '@magmacomputing/tempo/plugins/ticker';
@@ -75,27 +75,27 @@ Using the `using` and `await using` keywords ensures that tickers are automatica
 
 ### 2. Manual Control (Programmatic Stop)
 
-If you are not using the `using` or `await using` keywords, or if you need to stop the ticker from outside its own loop (e.g., in a separate event handler), you can manually call the `stop()` function (for callbacks) or the `.return()` method (for generators).
+If you are not using the `using` or `await using` keywords, or if you need to stop the ticker from outside its own loop (e.g., in a separate event handler), you can manually call the `stop()` method on the ticker object.
 
 ```typescript
 // Pattern A: Stop a callback-based ticker
-const ticker = Tempo.ticker(1, (t) => console.log(t));
+const tickerA = Tempo.ticker(1, (t) => console.log(t));
 // ... later
-ticker.stop();
+tickerA.stop();
 
 // Pattern B: Stop an async generator externally
-const generator = Tempo.ticker(1);
+const tickerB = Tempo.ticker(1);
 
 (async () => {
-  for await (const t of generator) {
+  for await (const t of tickerB) {
     console.log(t.toString());
   }
   console.log('Ticker has been gracefully stopped.');
 })();
 
 // Close the generator from somewhere else
-setTimeout(async () => {
-  await generator.stop();
+setTimeout(() => {
+  tickerB.stop();
 }, 5000);
 ```
 ### 3. Event Listeners (.on)
@@ -136,12 +136,12 @@ Always use the **Disposer Pattern** (`using` or `await using`) or a `try...final
 } // Stays clean: ticker stopped automatically here
 
 // ✅ GOOD: Manual cleanup in finally block (Required for captured variables)
-let stop;
+let ticker;
 try {
-  stop = Tempo.ticker(1, (t) => { ... });
+  ticker = Tempo.ticker(1, (t) => { ... });
   // ... assertions ...
 } finally {
-  stop?.(); // Prevents "Zombie Tickers" even if assertions fail
+  ticker?.stop(); // Prevents "Zombie Tickers" even if assertions fail
 }
 ```
 
@@ -198,7 +198,8 @@ The object returned by `Tempo.ticker()` implements the following interface:
 | `pulse()` | Manually triggers a pulse, advances state, and notifies listeners. Returns the new `Tempo`. |
 | `stop()` | Stops the ticker and clears any active timers. |
 | `[Symbol.dispose]` | Standard cleanup for `using` blocks. |
-| `next()` | Awaits the next pulse (for `AsyncGenerator` usage). |
+| `[Symbol.asyncDispose]` | Standard async cleanup for `await using` blocks via the `Ticker` implementation. |
+| `[Symbol.asyncIterator]` | Standard async iteration support (for `for await` loops). |
 
 ---
 
