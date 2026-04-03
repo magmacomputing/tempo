@@ -151,10 +151,74 @@ const t2 = t1.add({ '#quarter': 1 }); // Middle of Q3: "2024-08-14" (approx)
 ```
 
 ### Semantic Formatting
-Use the `{#term}` token to automatically embed the current active Term's label into a string.
+Use specific term tokens like `{#quarter}` or `{#season}` to automatically embed a Term's label (or key) into a format string.
 ```typescript
 const t = new Tempo();
-console.log(t.format('We are currently in the {#term}')); // "We are currently in the First Quarter"
+console.log(t.format('We are currently in the {#quarter}')); // "We are currently in the First Quarter"
+```
+
+---
+
+> [!NOTE]
+> The examples below use the `using` and `await using` syntax, which require **TypeScript 5.2+** and a runtime that supports **TC39 Explicit Resource Management**.
+
+### Subscription Billing (Recurring Payments)
+Use a `seed` to anchor your subscription to a specific day, then use a month-based ticker.
+
+```typescript
+// Anchor to the 15th of the month
+await using billing = Tempo.ticker({ 
+  months: 1, 
+  seed: '2024-01-15' 
+}, (t) => processPayment(t));
+
+// -- OR --
+
+// Manual alternative for environments without 'await using' support:
+const billing = Tempo.ticker({ months: 1, seed: '2024-01-15' }, (t) => processPayment(t));
+// ... later ...
+await billing[Symbol.asyncDispose](); // Explicitly clean up resources
+```
+
+### Fiscal Quarter Reporting
+Drive internal reporting cycles precisely when a new quarter begins.
+
+```typescript
+// Shift automatically to the start of the current quarter
+await using quarterly = Tempo.ticker({ '#quarter': 1 });
+
+for await (const t of quarterly) {
+  generateReport(t.term.quarter);
+}
+```
+
+### Daily Shift Management
+Automatically update a UI when a daily time period (e.g., 'morning' or 'afternoon') changes.
+
+```typescript
+using shiftTicker = Tempo.ticker({ '#period': 1 }, (t) => {
+  document.body.className = `shift-${t.term.per}`;
+});
+
+using dailyTicker = Tempo.ticker({ '#period': 'morning' }, (t) => {
+  document.body.className = `morning-has-broken`;
+});
+```
+
+### Manual Sync (Action-Triggered)
+Sometimes you want a ticker's logic but need to trigger it from an external event.
+
+```typescript
+const heartbeat = Tempo.ticker({ seconds: 5 });
+
+// Manually trigger a pulse from a UI button or WebSocket
+button.onclick = () => {
+  const t = heartbeat.pulse();
+  console.log(`Manual pulse triggered at: ${t}`);
+};
+
+// Ensure cleanup on page unload or component unmount
+window.onunload = () => heartbeat.stop();
 ```
 
 ---

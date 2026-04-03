@@ -2,8 +2,9 @@ import { sortKey } from '#library/array.library.js';
 import { isDefined } from '#library/type.library.js';
 import { secure } from '#library/utility.library.js';
 import { $Plugins, $Register } from '#tempo/tempo.symbol.js';
+import { SCHEMA, getLargestUnit } from '#tempo/tempo.util.js';
 import type { Tempo } from '#tempo/tempo.class.js';
-import type { Plugin, TermPlugin } from '#tempo/tempo.type.js';
+import type { Plugin, TermPlugin, Range, ResolvedRange } from '#tempo/tempo.type.js';
 
 /** helper to self-register a Plugin into the Global Discovery registry */
 export function registerPlugin(plugin: Plugin) {
@@ -41,39 +42,11 @@ export const defineTerm = <T extends TermPlugin>(term: T): T => {
 	return term;
 }
 
-/** Tempo.Terms lets us know where a DateTime fits within pre-defined Ranges */
-/** use this type to define a Range with a DateTime qualifier */
-export type Range = {
-	key: PropertyKey;
-	year?: number;
-	month?: number;
-	day?: number;
-	hour?: number;
-	minute?: number;
-	second?: number;
-	label?: string;
-	start?: Tempo;
-	end?: Tempo;
-	[str: PropertyKey]: any;
-}
-
-const SCHEMA = [
-	['year', 'yy'],
-	['month', 'mm'],
-	['day', 'dd'],
-	['hour', 'hh'],
-	['minute', 'mi'],
-	['second', 'ss'],
-	['millisecond', 'ms'],
-	['microsecond', 'us'],
-	['nanosecond', 'ns']
-] as [Temporal.DateUnit | Temporal.TimeUnit, keyof Tempo][];
-
 /**
  * find where a Tempo fits within a range of DateTime
  */
-export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true) {
-	const chronological = sortKey([...list], 'fiscal', 'year', 'month', 'day', 'hour', 'minute', 'second');
+export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true): string | ResolvedRange | undefined {
+	const chronological = sortKey([...list], 'year', 'month', 'day', 'hour', 'minute', 'second', 'millisecond', 'microsecond', 'nanosecond');
 
 	if (chronological.length === 0) return undefined;
 
@@ -96,39 +69,50 @@ export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true) {
 		?? chronological.at(-1)!
 
 	const i = chronological.indexOf(match);
-	const yy = tempo.toDateTime().year;
-	const next = chronological[i + 1] ?? { ...chronological[0], fiscal: (chronological[0].fiscal ?? chronological[0].year ?? yy) + 1, year: (chronological[0].year ?? chronological[0].fiscal ?? yy) + 1 };
+	const zdt = tempo.toDateTime();
 
-	const start = tempo.toDateTime().with({
-		year: match.year ?? match.fiscal ?? yy,
-		month: match.month ?? 1,
-		day: match.day ?? 1,
-		hour: match.hour ?? 0,
-		minute: match.minute ?? 0,
-		second: match.second ?? 0,
-		millisecond: match.millisecond ?? 0,
-		microsecond: match.microsecond ?? 0,
-		nanosecond: match.nanosecond ?? 0,
-	});
+	// determine the largest unit defined in the range list, and use the unit above it as rollover
+	const unit = getLargestUnit(list);
+	const unitIndex = SCHEMA.findIndex(([u]) => u === unit);
+	const rolloverIndex = Math.max(0, unitIndex - 1);
+	const rolloverUnit = SCHEMA[rolloverIndex][0];
 
-	const end = tempo.toDateTime().with({
-		year: next.year ?? next.fiscal ?? yy,
-		month: next.month ?? 1,
-		day: next.day ?? 1,
-		hour: next.hour ?? 0,
-		minute: next.minute ?? 0,
-		second: next.second ?? 0,
-		millisecond: next.millisecond ?? 0,
-		microsecond: next.microsecond ?? 0,
-		nanosecond: next.nanosecond ?? 0,
-	});
+	const resolve = (range: Range, anchor: Temporal.ZonedDateTime) => {
+		const obj: any = {};
+		for (let i = 0; i < SCHEMA.length; i++) {
+			const [u] = SCHEMA[i];
+			if (isDefined(range[u])) {
+				obj[u] = range[u];
+			} else if (i > rolloverIndex) {
+				obj[u] = (i <= 2) ? 1 : 0;										// year, month, day reset to 1; time units reset to 0
+			} else {
+				obj[u] = (anchor as any)[u];
+			}
+		}
+		return anchor.with(obj);
+	};
+
+	const startAnchor = (() => {
+		const candidate = resolve(match, zdt);
+		return candidate.epochNanoseconds > zdt.epochNanoseconds
+			? zdt.subtract({ [`${rolloverUnit}s` as any]: 1 })
+			: zdt
+	})();
+	const start = resolve(match, startAnchor);
+
+	const nextRange = chronological[i + 1];
+	const end = isDefined(nextRange)
+		? resolve(nextRange, startAnchor)
+		: resolve(chronological[0], startAnchor.add({ [`${rolloverUnit}s` as any]: 1 }))
 
 	// Pre-build the Range object with Tempo instances
 	const resolved = secure({
 		...match,
 		start: new (tempo.constructor as any)(start, tempo.config),
-		end: new (tempo.constructor as any)(end, tempo.config)
-	}) as Range;
+		end: new (tempo.constructor as any)(end, tempo.config),
+		unit,
+		rollover: rolloverUnit
+	}) as ResolvedRange;
 
 	return keyOnly
 		? resolved.key
@@ -152,12 +136,8 @@ export function resolveTermAnchor(tempo: Tempo, terms: TermPlugin[], name: strin
 				case 'start':
 					return start;
 
-				case 'mid': {
-					const midNano = (start.epochNanoseconds + end.epochNanoseconds) / 2n;
-					return new Temporal.ZonedDateTime(midNano, start.timeZoneId, start.calendarId);
-					// const diff = Number(midNano - start.epochNanoseconds);
-					// return start.add({ nanoseconds: diff });
-				}
+				case 'mid':
+					return new Temporal.ZonedDateTime((start.epochNanoseconds + end.epochNanoseconds) / 2n, start.timeZoneId, start.calendarId);
 
 				case 'end':
 					return end.subtract({ nanoseconds: 1 })
@@ -198,10 +178,11 @@ export function resolveTermShift(tempo: Tempo, terms: TermPlugin[], name: string
 		if (idx === -1) {
 			if (steps > 0) {
 				idx = list.findIndex(r => r.start && r.start.toDateTime().epochNanoseconds > currentZdt.epochNanoseconds);
-				if (idx !== -1) steps--;															// we've already "found" the 1st one
+				if (idx !== -1) steps--;														// we've already "found" the 1st one
 			} else {
 				const reversed = [...list].reverse();
 				const rIdx = reversed.findIndex(r => r.end && r.end.toDateTime().epochNanoseconds < currentZdt.epochNanoseconds);
+
 				if (rIdx !== -1) {
 					idx = list.length - 1 - rIdx;
 					steps++;
@@ -209,7 +190,7 @@ export function resolveTermShift(tempo: Tempo, terms: TermPlugin[], name: string
 			}
 		}
 
-		if (idx === -1) return undefined; // Cannot find a reference point
+		if (idx === -1) return undefined;												// Cannot find a reference point
 
 		const currentRange = list[idx];
 		if (!currentRange.start) return undefined;
@@ -217,7 +198,10 @@ export function resolveTermShift(tempo: Tempo, terms: TermPlugin[], name: string
 
 		// Traverse the blocks
 		let targetIdx = idx + steps;
+		let safeguard = 0;
 		while (targetIdx < 0 || targetIdx >= list.length) {
+			if (safeguard++ > 10000) return undefined;						// Safety break for infinite loops in buggy plugins
+
 			const pivotDate = targetIdx >= list.length
 				? list[list.length - 1]?.end?.toDateTime().add({ nanoseconds: 1 })
 				: list[0]?.start?.toDateTime().subtract({ nanoseconds: 1 });
@@ -231,11 +215,11 @@ export function resolveTermShift(tempo: Tempo, terms: TermPlugin[], name: string
 				targetIdx -= list.length;
 				list = newList;
 			} else {
-				targetIdx = newList.length + (targetIdx); // targetIdx is negative here
+				targetIdx = newList.length + (targetIdx);						// targetIdx is negative here
 				list = newList;
 			}
-			// Safety break for infinite loops in buggy plugins
-			if (list.length === 0) return undefined;
+
+			if (list.length === 0) return undefined;							// Safety break for infinite loops in buggy plugins
 		}
 
 		const targetRange = list[targetIdx];

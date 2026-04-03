@@ -1,5 +1,6 @@
 {
   "name": "tempo-monorepo",
+  "version": "2.0.1",
   "private": true,
   "description": "Magma Computing Monorepo",
   "repository": {

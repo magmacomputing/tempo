@@ -3,7 +3,8 @@
  * (using 'Temporal' namespace object)
 */
 
-import '#library/temporal.polyfill.js';										// ensure Temporal is available
+import '#library/temporal.polyfill.js';											// ensure Temporal is available
+import { isNumber } from '#library/type.library.js';
 
 /** return the current Temporal.Now.instant */
 export function instant() {
@@ -41,4 +42,32 @@ export function isDST(date?: Temporal.ZonedDateTime | string, timeZone: string =
 	const { jan, jul } = getOffsets(zdt.timeZoneId, zdt.year);
 
 	return zdt.offsetNanoseconds !== Math.min(jan, jul);
+}
+
+/**
+ * Temporal rejects fractional Duration values, so normalise 
+ * fractional parts downwards, e.g. { seconds: 0.1 } → { milliseconds: 100 }.
+ * Mutates the provided duration object.
+ */
+export function normaliseFractionalDurations(payload: Record<string, any>) {
+	const SCALE: [string, string, number][] = [
+		['hours', 'minutes', 60],
+		['minutes', 'seconds', 60],
+		['seconds', 'milliseconds', 1_000],
+		['milliseconds', 'microseconds', 1_000],
+		['microseconds', 'nanoseconds', 1_000],
+	]
+
+	for (const [big, small, factor] of SCALE) {
+		const v = payload[big];
+
+		if (isNumber(v) && v !== Math.trunc(v)) {
+			const whole = Math.trunc(v);
+			const frac = v - whole;
+			if (whole) payload[big] = whole; else delete payload[big];
+			payload[small] = (payload[small] ?? 0) + Math.round(frac * factor);
+		}
+	}
+
+	return payload;
 }

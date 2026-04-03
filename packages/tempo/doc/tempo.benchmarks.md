@@ -34,7 +34,7 @@ The static `#guard` regex acts as a rapid "Sync Point."
 
 ## 🧪 Benchmark Methodology
 
-The benchmark script used `performance.now()` within a Vitest environment to ensure accurate module resolution and subpath alias support (`#library`).
+The benchmark script used `performance.now()` within a Vitest environment to ensure accurate module resolution and internal alias support (`#library`).
 
 1. **Lazy Creation**: Creates a `new Tempo('2024-05-20')` without accessing any properties.
 2. **Eager Simulation**: Creates a `new Tempo()` and manually triggers discovery on 5 core properties to simulate O(N) initialization.

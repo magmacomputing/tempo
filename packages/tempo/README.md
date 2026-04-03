@@ -64,9 +64,6 @@ npm install @magmacomputing/tempo
 
 ### 💻 Node.js (Server-Side)
 Tempo is a native ESM package. In Node.js (20+), simply import the class.
-> [!NOTE]
-> Tempo uses native Node.js subpath imports (e.g. `#tempo/*`). This requires Node.js 14.6+ or 12.19+ in server-side environments.
-
 In Node.js:
 
 ```javascript
@@ -127,17 +124,17 @@ console.log(now.fmt.date);                    // using pre-built formats: "2026-
 ## 📚 Documentation
 
 For detailed technical guides, please refer to:
-- [Vision & Value Proposition](./doc/vision.md)
-- [Tempo vs. Native Temporal](./doc/tempo-vs-temporal.md)
-- [Tempo vs. The Competition](./doc/comparison.md)
-- [Tempo Class Documentation](./doc/Tempo.md)
-- [Data In ~ Parsing Engine](./doc/Tempo.md#parsing)
-- [Data Out ~ Formatting Tokens](./doc/Tempo.md#formatting)
-- [Plugin System (Extending Tempo)](./doc/Tempo.md#plugin-system)
-- [Terms (Calculation Plugins)](./doc/Tempo.md#plugins-terms)
-- [Configuration Guide](./doc/tempo.config.md)
-- [Architecture & Internal Protection](./doc/architecture.md)
-- [Commercial Support & Consulting](./doc/commercial.md)
+- [Vision & Value Proposition](https://github.com/magmacomputing/magma/blob/v2.0.1/packages/tempo/doc/vision.md)
+- [Tempo vs. Native Temporal](https://github.com/magmacomputing/magma/blob/v2.0.1/packages/tempo/doc/tempo-vs-temporal.md)
+- [Tempo vs. The Competition](https://github.com/magmacomputing/magma/blob/v2.0.1/packages/tempo/doc/comparison.md)
+- [Tempo Class Documentation](https://github.com/magmacomputing/magma/blob/v2.0.1/packages/tempo/doc/Tempo.md)
+- [Data In ~ Parsing Engine](https://github.com/magmacomputing/magma/blob/v2.0.1/packages/tempo/doc/Tempo.md#parsing)
+- [Data Out ~ Formatting Tokens](https://github.com/magmacomputing/magma/blob/v2.0.1/packages/tempo/doc/Tempo.md#formatting)
+- [Plugin System (Extending Tempo)](https://github.com/magmacomputing/magma/blob/v2.0.1/packages/tempo/doc/Tempo.md#plugin-system)
+- [Terms (Calculation Plugins)](https://github.com/magmacomputing/magma/blob/v2.0.1/packages/tempo/doc/Tempo.md#plugins-terms)
+- [Configuration Guide](https://github.com/magmacomputing/magma/blob/v2.0.1/packages/tempo/doc/tempo.config.md)
+- [Architecture & Internal Protection](https://github.com/magmacomputing/magma/blob/v2.0.1/packages/tempo/doc/architecture.md)
+- [Commercial Support & Consulting](https://github.com/magmacomputing/magma/blob/v2.0.1/packages/tempo/doc/commercial.md)
 
 ## 💖 Support the Project
 

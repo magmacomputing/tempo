@@ -1,8 +1,11 @@
 import { Tempo, isTempo } from '#tempo/tempo.class.js';
-import '#tempo/plugins/plugin.ticker.js';
+import { TickerPlugin } from '#tempo/plugins/extend/plugin.ticker.js'
+import { QuarterTerm } from '#tempo/plugins/term/term.quarter.js'
+import { TimelineTerm } from '#tempo/plugins/term/term.timeline.js'
 
 // TickerPlugin self-registers on import via definePlugin
 Tempo.init();
+Tempo.extend(TickerPlugin);
 
 const label = 'ticker:';
 
@@ -56,7 +59,7 @@ describe(`${label}`, () => {
 		const start = new Tempo('2024-01-01T00:00:10Z');
 
 		{
-			Tempo.ticker({ seed: start, interval: -1 }, (t, stop) => {
+			Tempo.ticker({ seed: start, seconds: -1 }, (t, stop) => {
 				results.push(t.ss);
 				if (results.length === 3) stop();
 			});
@@ -103,12 +106,17 @@ describe(`${label}`, () => {
 	});
 
 	test('ticker: validation', () => {
-		// @ts-ignore
-		expect(() => Tempo.ticker(NaN)).toThrow(RangeError);
-		// @ts-ignore
-		expect(() => Tempo.ticker(Infinity)).toThrow(RangeError);
-		// @ts-ignore
-		expect(() => Tempo.ticker('not a number')).toThrow(RangeError);
+		const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		try {
+			// @ts-ignore
+			expect(() => Tempo.ticker(NaN)).toThrow(RangeError);
+			// @ts-ignore
+			expect(() => Tempo.ticker(Infinity)).toThrow(RangeError);
+			// @ts-ignore
+			expect(() => Tempo.ticker('not a number')).toThrow(RangeError);
+		} finally {
+			spy.mockRestore();
+		}
 	});
 
 });

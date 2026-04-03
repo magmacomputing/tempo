@@ -20,7 +20,7 @@ import type { Tempo } from '#tempo/tempo.class.js';
 // #region Primitives
 
 /** the value that Tempo will attempt to interpret as a valid ISO date / time */
-export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | Temporal.ZonedDateTimeLike | undefined | null
+export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | Temporal.ZonedDateTimeLike | Function | undefined | null
 
 export type Pattern = string | RegExp
 export type Logic = string | number | Function
@@ -41,7 +41,8 @@ export type Options = Partial<Internal.BaseOptions> & Record<string, any>;
 export type TermPlugin = {
 	key: string; scope?: string;
 	description?: string;
-	define: (this: Tempo, keyOnly?: boolean) => any
+	define: (this: Tempo, keyOnly?: boolean) => any;
+	ranges?: Range[];
 }
 
 /** plugin function that can extend the Tempo prototype or static space */
@@ -52,7 +53,13 @@ export type Plugin = (options: any, TempoClass: typeof Tempo, factory: (val: any
 // #region Date/time unit types
 
 /** Configuration to use for #until() and #since() argument */
-export type Unit = Temporal.DateUnit | Temporal.TimeUnit | Plural<Temporal.DateUnit | Temporal.TimeUnit>
+export type DateTimeUnit = Temporal.DateUnit | Temporal.TimeUnit
+export type Unit = DateTimeUnit | Plural<DateTimeUnit>
+type Units = Temporal.PluralizeUnit<DateTimeUnit>;
+type BaseDuration = Record<Units, number>;
+export type FlexibleDuration = {
+	[K in Units]: Pick<BaseDuration, K> & Partial<Omit<BaseDuration, K>>;
+}[Units]
 export type Until = (Options & { unit?: Unit }) | Unit
 export type Mutate = 'start' | 'mid' | 'end'
 export type Set = Partial<Record<Mutate, Unit> &
@@ -91,19 +98,23 @@ export type FormatType<K extends PropertyKey> = enums.FormatType<K>;
 /** mapping of terms to their resolved values */
 export type Terms = Property<any>;
 
+/** term definition range */
+export type Range = FlexibleDuration & {
+	key?: string;
+	[key: string]: any;
+}
+
 /** resolved Term range */
-export interface Range {
-	key: string; scope: string;
-	fiscal?: number; year?: number;
-	month?: number; day?: number;
-	hour?: number; minute?: number;
-	second?: number;
+export type ResolvedRange = FlexibleDuration & {
+	key: string;
+	scope: string;
 	label?: string;
 	start: Tempo;
 	end: Tempo;
+	unit?: DateTimeUnit;
+	rollover?: DateTimeUnit;
 	[str: PropertyKey]: any;
 }
-
 export type WEEKDAY = enums.WEEKDAY
 export type WEEKDAYS = enums.WEEKDAYS
 export type MONTH = enums.MONTH
@@ -124,7 +135,7 @@ export type Element = enums.Element
 
 /** Type for consistency in expected arguments for helper functions */
 export interface Params<T> {
-	(tempo?: DateTime, options?: Options): T;								// parse DateTime, default to Temporal.Instance.now()
+	(tempo?: DateTime, options?: Options): T;									// parse DateTime, default to Temporal.Instance.now()
 	(options: Options): T;																		// provide just the Options (use {value:'XXX'} for specific DateTime)
 }
 
@@ -143,6 +154,7 @@ export namespace Internal {
 		/** globalThis Discovery Symbol */											discovery: string | symbol;
 		/** additional console.log for tracking */							debug: boolean | undefined;
 		/** catch or throw Errors */														catch: boolean | undefined;
+		/** suppress console output during catch */							silent: boolean | undefined;
 		/** Temporal timeZone */																timeZone: Temporal.TimeZoneLike;
 		/** Temporal calendar */																calendar: Temporal.CalendarLike;
 		/** locale (e.g. en-AU) */															locale: string;

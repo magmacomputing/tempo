@@ -1,6 +1,6 @@
 {
   "name": "@magmacomputing/tempo",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "The Tempo core library",
   "author": "Magma Computing Solutions",
   "license": "MIT",
@@ -27,12 +27,23 @@
   "imports": {
     "#library": "@magmacomputing/library",
     "#library/*.js": "@magmacomputing/library/common/*.js",
-    "#browser/*.js": "@magmacomputing/library/browser/*.js",
-    "#server/*.js": "@magmacomputing/library/server/*.js",
     "#tempo": {
       "development": "./src/tempo.index.ts",
       "default": "./dist/tempo.index.js"
     },
+    "#tempo/plugins/plugin.*.js": {
+      "development": "./src/plugins/extend/plugin.*.ts",
+      "default": "./dist/plugins/extend/plugin.*.js"
+    },
+    "#tempo/plugins/term/term.*.js": {
+      "development": "./src/plugins/term/term.*.ts",
+      "default": "./dist/plugins/term/term.*.js"
+    },
+    "#tempo/plugins/term/index.js": {
+      "development": "./src/plugins/term/index.ts",
+      "default": "./dist/plugins/term/index.js"
+    },
+    "#tempo/scripts/*.js": "./scripts/*.ts",
     "#tempo/*.js": {
       "development": "./src/*.ts",
       "default": "./dist/*.js"
@@ -47,9 +58,17 @@
       "types": "./dist/tempo.enum.d.ts",
       "import": "./dist/tempo.enum.js"
     },
+    "./plugins": {
+      "types": "./dist/plugins/tempo.plugin.d.ts",
+      "import": "./dist/plugins/tempo.plugin.js"
+    },
     "./plugins/ticker": {
-      "types": "./dist/plugins/plugin.ticker.d.ts",
-      "import": "./dist/plugins/plugin.ticker.js"
+      "types": "./dist/plugins/extend/plugin.ticker.d.ts",
+      "import": "./dist/plugins/extend/plugin.ticker.js"
+    },
+    "./plugins/plugin.*": {
+      "types": "./dist/plugins/extend/plugin.*.d.ts",
+      "import": "./dist/plugins/extend/plugin.*.js"
     },
     "./library": {
       "types": "./dist/library.index.d.ts",
@@ -58,23 +77,30 @@
   },
   "scripts": {
     "test": "vitest run",
-    "repl": "tsx --conditions=development -i --import ./bin/setup.ts --import ./bin/repl.ts",
-    "build": "tsc -b && npm run build:bundle && bash bin/resolve-self.sh",
+    "repl": "tsx --conditions=development -i --import ./scripts/setup.ts --import ./scripts/repl.ts",
+    "build": "tsc -b && npm run build:bundle && npm run build:resolve",
     "build:bundle": "rollup -c",
-    "clean": "tsc -b --clean",
+    "build:resolve": "tsx scripts/resolve-types.ts",
+    "clean": "tsc -b --clean && rm -rf dist",
     "publish": "npm publish --access public",
     "prepublishOnly": "npm run build"
   },
   "files": [
+    "doc/",
     "dist/",
     "src/"
   ],
   "dependencies": {
-    "@magmacomputing/library": "2.0.0",
     "tslib": "^2.8.1"
   },
   "devDependencies": {
     "@js-temporal/polyfill": "^0.5.1",
-    "@rollup/plugin-alias": "^6.0.0"
+    "@magmacomputing/library": "2.0.1",
+    "@rollup/plugin-alias": "^6.0.0",
+    "magic-string": "^0.30.21"
+  },
+  "directories": {
+    "doc": "doc",
+    "test": "test"
   }
 }
