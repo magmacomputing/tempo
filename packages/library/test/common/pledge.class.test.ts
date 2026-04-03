@@ -49,4 +49,16 @@ describe('Pledge', () => {
 		expect(result).toBe('thenable works');
 	});
 
+	test('silent mode suppression', async () => {
+		const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+		const p = new Pledge({ silent: true, catch: true });
+		p.reject(new Error('silent failure'));
+		await expect(p.promise).rejects.toThrow('silent failure');
+		expect(warnSpy).not.toHaveBeenCalled();
+		expect(errSpy).not.toHaveBeenCalled();
+		warnSpy.mockRestore();
+		errSpy.mockRestore();
+	});
+
 });

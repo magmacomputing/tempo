@@ -213,7 +213,10 @@ export function resolveTermShift(tempo: Tempo, terms: TermPlugin[], name: string
 
 		// Traverse the blocks
 		let targetIdx = idx + steps;
+		let safeguard = 0;
 		while (targetIdx < 0 || targetIdx >= list.length) {
+			if (safeguard++ > 10000) return undefined;						// Safety break for infinite loops in buggy plugins
+
 			const pivotDate = targetIdx >= list.length
 				? list[list.length - 1]?.end?.toDateTime().add({ nanoseconds: 1 })
 				: list[0]?.start?.toDateTime().subtract({ nanoseconds: 1 });

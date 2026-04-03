@@ -1,5 +1,5 @@
 import { isObject, isFunction, isDefined, isEmpty, isNumber } from '#library/type.library.js'
-import { normaliseFractionalDurations } from '#library/temporal.library.js'
+import { instant, normaliseFractionalDurations } from '#library/temporal.library.js'
 import { DURATIONS } from '#tempo/tempo.enum.js'
 import { definePlugin } from '#tempo/plugins/tempo.plugin.js'
 import type { Tempo } from '#tempo/tempo.class.js'
@@ -133,7 +133,7 @@ export const TickerPlugin = definePlugin((_options, TempoClass, _factory) => {
 
 		// ms until `current` should fire (≥ 0; virtual/past seeds → 0)
 		const delayMs = () =>
-			Math.max(0, Math.round(current.epoch.ms - Date.now()));
+			Math.max(0, Math.round(current.epoch.ms - instant().epochMilliseconds));
 
 		// ── Callback-mode scheduler ──────────────────────────────────────────
 		const scheduleNext = () => {

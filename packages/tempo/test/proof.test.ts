@@ -18,8 +18,7 @@ describe('Proof: Enumerable + Silent Mode', () => {
 		const spyW = vi.spyOn(console, 'warn').mockImplementation(() => { });
 
 		// Trigger full evaluation of all enumerable getters
-		const keys = Object.keys(t.term);
-		console.log(`Triggered ${keys.length} getters silently.`);
+		Object.keys(t.term);
 
 		// Even though getters were triggered and some definitely failed (invalid date),
 		// Logify.silent should have prevented any console output.

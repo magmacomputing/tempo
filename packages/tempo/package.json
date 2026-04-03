@@ -35,7 +35,7 @@
       "development": "./src/plugins/extend/plugin.*.ts",
       "default": "./dist/plugins/extend/plugin.*.js"
     },
-    "#tempo/plugins/term.*.js": {
+    "#tempo/plugins/term/term.*.js": {
       "development": "./src/plugins/term/term.*.ts",
       "default": "./dist/plugins/term/term.*.js"
     },
@@ -86,6 +86,7 @@
     "prepublishOnly": "npm run build"
   },
   "files": [
+    "doc/",
     "dist/",
     "src/"
   ],
@@ -94,7 +95,7 @@
   },
   "devDependencies": {
     "@js-temporal/polyfill": "^0.5.1",
-    "@magmacomputing/library": "2.0.0",
+    "@magmacomputing/library": "2.0.1",
     "@rollup/plugin-alias": "^6.0.0"
   },
   "directories": {
