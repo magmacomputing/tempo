@@ -1,7 +1,5 @@
 import { Tempo } from '#tempo/tempo.class.js';
-import { TickerPlugin } from '#tempo/plugins/plugin.ticker.js';
-
-Tempo.extend(TickerPlugin);
+import '#tempo/plugins/plugin.ticker.js';
 
 describe('Tempo.ticker Options & Enhancements', () => {
 

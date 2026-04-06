@@ -4,13 +4,18 @@
 
 ## Installation
 
-To use the ticker, simply import the plugin as a side effect. This automatically registers the `Tempo.ticker()` method with the core library:
+To use the ticker, simply import the plugin as a side effect or import the `Ticker` class directly if you need to access the [Reporting & Registry](#reporting--registry) API. Both methods automatically register the `Tempo.ticker()` method with the core library:
 
 ```typescript
+// Pattern A: Pure side-effect (registers Tempo.ticker)
 import '@magmacomputing/tempo/plugins/ticker';
 import { Tempo } from '@magmacomputing/tempo';
 
-// Ticker is now available!
+// Pattern B: Direct import (recommended if using Ticker.active)
+import { Ticker } from '@magmacomputing/tempo/plugins/ticker';
+import { Tempo } from '@magmacomputing/tempo';
+
+// Ticker is now available via Tempo.ticker() in both patterns!
 ```
 
 ## 🚀 Enhancements
@@ -18,7 +23,7 @@ import { Tempo } from '@magmacomputing/tempo';
 The ticker now supports a unified **Options** object, enabling professional resource management and semantic duration-based intervals.
 
 ### 1. Semantic Intervals (Duration Objects)
-Instead of raw numeric seconds, you can use `Temporal.DurationLike` objects for clarity. This is especially powerful for variable-length intervals like **months**.
+Instead of raw numeric seconds, you can use `DurationLike` objects for clarity. This is especially powerful for variable-length intervals like **months**.
 
 ```typescript
 // Pulse exactly once a month
@@ -50,6 +55,28 @@ using tickerB = Tempo.ticker({
   seconds: 10,               // Plural DurationLike property
   until: '2024-12-25T12:00:00' 
 }, (t) => console.log(t));
+```
+
+### 4. Virtual Clock (Seeding)
+To create a **Virtual Clock** that increments from a specific point rather than using the system time, use the `seed` option:
+
+```typescript
+// Starts at '2024-01-01', then increments by 1 day per pulse
+await using daily = Tempo.ticker({ 
+  days: 1, 
+  seed: '2024-01-01' 
+});
+```
+
+### 5. Backwards Tickers (Countdowns)
+By providing a **negative** interval, you can create a ticker that moves backwards in time. 
+
+```typescript
+// Count down from 10 seconds, moving backwards 1s at a time
+using countdown = Tempo.ticker({ seconds: -1, seed: "00:00:10" }, (t, stop) => {
+  console.log(t.format('ss'));
+  if (t.ss === 0) stop(); 
+});
 ```
 
 ## Usage Patterns
@@ -116,6 +143,25 @@ const ticker = Tempo.ticker({ seconds: 1 }); // Still has a 1s duration logic
 ticker.pulse(); // Manually advance and notify listeners
 ```
 
+### 5. Reporting & Management
+The `Ticker` class provides a centralized way to monitor all active (non-stopped) tickers. This is essential for debugging and ensuring that resources are properly disposed.
+
+#### Ticker.active
+A static getter that returns an array of snapshots for every live ticker.
+
+```typescript
+import { Ticker } from '@magmacomputing/tempo/plugins/ticker';
+
+// Monitor all active tickers
+const monitoring = Ticker.active;
+
+console.log(`There are ${monitoring.length} active tickers.`);
+
+monitoring.forEach(({ ticks, next, interval }) => {
+  console.log(`- Pulsed ${ticks} times. Next at: ${next}. Interval:`, interval);
+});
+```
+
 ## 🧟 Zombie Tickers (Warning)
 
 In a Node.js environment, `Tempo.ticker()` uses background timers (`setTimeout`) to drive its pulses. If you do not explicitly stop a ticker, it becomes a **"Zombie Ticker"** that continues to run indefinitely, even if the variable that created it has gone out of scope.
@@ -129,7 +175,7 @@ In a Node.js environment, `Tempo.ticker()` uses background timers (`setTimeout`)
 Always use the **Disposer Pattern** (`using` or `await using`) or a `try...finally` block to guarantee cleanup:
 
 ```typescript
-// ✅ BEST: Automatic cleanup via 'using'
+// ✅✅ BEST: Automatic cleanup via 'using'
 {
   using ticker = Tempo.ticker(1);
   // ... logic ...
@@ -148,58 +194,88 @@ try {
 > [!WARNING]
 > If you are using `const` or `let` without a `finally` block, an assertion failure will skip the `stop()` call, leaving a live timer in the event loop. Always prefer the `using` keyword or `try...finally` for industrial-grade resource management.
 
-### 3. Virtual Clock (Seeding)
+---
 
-To create a **Virtual Clock** that increments from a specific point rather than using the system time, use the `seed` option:
+### `Ticker` Object
+The object returned by `Tempo.ticker()` (or an instance of the `Ticker` class) implements the following interface:
+
+| Method / Property | Description |
+| :--- | :--- |
+| `on(event, cb)` | Registers a listener for the `'pulse'` event. |
+| `pulse()` | Manually triggers a pulse, advances state, and notifies listeners. Returns the new `Tempo`. |
+| `info` | Read-only getter returning `{ next, ticks, limit, interval, stopped }`. |
+| `stop()` | Stops the ticker and clears any active timers. |
+| `[Symbol.dispose]` | Standard cleanup for `using` blocks. |
+| `[Symbol.asyncDispose]` | Standard async cleanup for `await using` blocks. |
+| `[Symbol.asyncIterator]` | Standard async iteration support (for `for await` loops). |
+
+---
+
+## 📊 Reporting & Registry
+
+The `Ticker` class maintains a static registry of all currently active tickers. This is useful for debugging, monitoring, or cleanup checks.
+
+### `Ticker.active`
+A static getter that returns an array of [`TickerSnapshot`](#tickersnapshot) objects for all active (non-stopped) tickers.
 
 ```typescript
-// Starts at '2024-01-01', then increments by 1 day per pulse
-await using daily = Tempo.ticker({ 
-  days: 1, 
-  seed: '2024-01-01' 
+import { Ticker } from '@magmacomputing/tempo/plugins/ticker';
+
+// Get a report of all running tickers
+const reports = Ticker.active;
+
+reports.forEach(({ ticker, next, ticks }) => {
+  console.log(`Ticker ${ticker} next pulse: ${next}, ticks so far: ${ticks}`);
 });
 ```
 
-### 4. Backwards Tickers (Countdowns)
-
-By providing a **negative** interval, you can create a ticker that moves backwards in time. 
-
+#### `TickerSnapshot`
 ```typescript
-// Count down from 10 seconds, moving backwards 1s at a time
-using countdown = Tempo.ticker({ seconds: -1, seed: "00:00:10" }, (t, stop) => {
-  console.log(t.format('ss'));
-  if (t.ss === 0) stop(); 
-});
+type TickerSnapshot = {
+  ticker: Ticker;       // The Ticker instance itself
+  next: Tempo;          // The next Tempo value to be emitted
+  ticks: number;        // Number of pulses emitted so far
+  limit?: number;       // The configured limit (if any)
+  interval: object;     // The duration-based interval
+  stopped: boolean;     // Whether the ticker is stopped
+}
 ```
 
 ---
 
-## API Reference
+## 🎯 One-Shot Ticker (Meeting Alerts)
 
-### `Tempo.ticker(arg1?: number | string | bigint | TickerOptions, arg2?: Callback): TickerResult`
-Creates a reactive stream of `Tempo` instances at regular intervals. Defaults to a **1-second** interval if no duration or interval properties are specified.
+You can use the ticker as a "one-shot" timer for specific events by simply specifying a **seed** value. This is perfect for setting up a single alert (e.g., for a meeting) that cleans itself up immediately after firing.
 
-#### `TickerOptions`
+> [!TIP]
+> **Seed-Only Logic**: Providing a `seed` (as a string or in an options object) without any other duration-based keys (`seconds`, `minutes`, etc.) or a `limit` implies a `limit: 1`. 
+> 
+> Effectively, `Tempo.ticker('Fri 10am')` and `Tempo.ticker({ seed: 'Fri 10am' })` and `Tempo.ticker({ seed: 'Fri 10am', limit: 1 })` are all treated as one-shot tickers.
 
-| Property | Type | Description |
-| :--- | :--- | :--- |
-| `seed` | `DateTime \| Options` | The starting point for the virtual clock. |
-| `limit` | `number` | Auto-stop after X number of ticks. |
-| `until` | `DateTime \| Options` | Auto-stop when virtual clock reaches this point. |
-| `#term` | `number \| string` | Term-based interval (e.g., `#quarter: 1`, `#period: 'morning'`). |
-| `...Duration` | `Partial<DurationLike>` | Flattened duration keys (e.g., `seconds: 5`, `minutes: 1`). |
+```typescript
+// Pattern A: Implicit one-shot via string seed
+Tempo.ticker('Friday 10am', (t) => {
+  console.log(`Meeting alert: ${t.format('HH:mm')}`);
+});
 
-### `Ticker` Object
-The object returned by `Tempo.ticker()` implements the following interface:
+// Pattern B: Explicit one-shot via options
+const event = { meeting: 'Friday 10am' };
 
-| Method | Description |
-| :--- | :--- |
-| `on(event, cb)` | Registers a listener for the `'pulse'` event. |
-| `pulse()` | Manually triggers a pulse, advances state, and notifies listeners. Returns the new `Tempo`. |
-| `stop()` | Stops the ticker and clears any active timers. |
-| `[Symbol.dispose]` | Standard cleanup for `using` blocks. |
-| `[Symbol.asyncDispose]` | Standard async cleanup for `await using` blocks via the `Ticker` implementation. |
-| `[Symbol.asyncIterator]` | Standard async iteration support (for `for await` loops). |
+Tempo.ticker({ 
+  seed: { value: 'meeting', event }
+}, (t) => {
+  console.log(`Meeting alert: ${t.format('HH:mm')}`);
+});
+```
+
+> [!IMPORTANT]
+> **Future Seeds**: If the `seed` is in the future, the Ticker will remain dormant (waiting) until that time is reached. **Most Tickers emit an initial pulse immediately** (at the `seed` time or "now"), but a future seed will delay that first pulse until the specified time.
+
+> [!CAUTION]
+> **Persistence**: Ticker timers exist only **in-memory**. If the driving process (e.g., Node.js) terminates, any scheduled future pulses (including those from future seeds) are lost. For critical long-term scheduling, consider an external persistent job runner.
+
+> [!WARNING]
+> While `limit: 1` handles the stop condition automatically, always remember that if you are using long-running tickers without a limit, you **must** use the [Disposer Pattern](#zombie-tickers-warning) or manual `stop()` to avoid memory leaks and zombie processes.
 
 ---
 

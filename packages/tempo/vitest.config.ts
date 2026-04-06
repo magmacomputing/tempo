@@ -9,6 +9,13 @@ export default defineConfig({
   test: {
     globals: true,
     setupFiles: [resolve(__dirname, './scripts/setup.ts')],
+    pool: 'forks',                                        // isolated child processes (no shared memory)
+    poolOptions: {
+      forks: {
+        minForks: 1,                                      // always keep at least 1 worker alive
+        maxForks: 2,                                      // cap at 2 concurrent forks to limit load
+      },
+    },
   },
   resolve: {
     alias: [

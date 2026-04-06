@@ -86,7 +86,7 @@ function value(val: any) {
 export function enumify<const T extends readonly any[]>(list: T, frozen?: boolean): Enum.wrap<Index<T>>;
 export function enumify<const T extends Property<any>>(list: T, frozen?: boolean): Enum.wrap<T>;
 export function enumify<T>(this: any, list: T, frozen = true): any {
-	const proto = this ?? ENUM;
+	const proto = (this && Object.prototype.toString.call(this).slice(8, -1) !== 'Module') ? this : ENUM;
 	const arg = asType(list);
 	let stash = {};
 

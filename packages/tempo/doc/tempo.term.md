@@ -134,39 +134,45 @@ Tempo.terms
 
 ## How to Define a Term Plugin
 
-A term plugin is a TypeScript module that exports four named members and follows a simple contract.
+A term plugin is ideally created using the **`defineTerm`** factory function provided by the library. This ensures correct type-inference and automatically handles registration during the discovery phase.
 
-### Plugin shape
+### Plugin Definition
 
 ```ts
-import { getTermRange, type Range } from '@magmacomputing/tempo/plugins';
+import { defineTerm, defineRange, getTermRange, type Range, COMPASS } from '@magmacomputing/tempo/plugins';
 import type { Tempo } from '@magmacomputing/tempo';
 
-/** 1. The range boundaries (static — defined once at import time) */
-const ranges = [
-  { key: 'Low',  month: 1 },
-  { key: 'Mid',  month: 5 },
-  { key: 'High', month: 9 },
-] as Range[];
+/** 1. The range boundaries (flattened and self-documenting) */
+const { ranges, groups } = defineRange([
+  { key: 'Spring', month: 3,  group: 'season', sphere: COMPASS.North },
+  { key: 'Summer', month: 6,  group: 'season', sphere: COMPASS.North },
+  { key: 'Autumn', month: 9,  group: 'season', sphere: COMPASS.North },
+  { key: 'Winter', month: 12, group: 'season', sphere: COMPASS.North },
+  
+  { key: 'Dry',    month: 1,  group: 'tropical' },
+  { key: 'Wet',    month: 5,  group: 'tropical' },
+], 'group', 'sphere');
 
-/** 2. Short identifier used as the property name on `tempo.term` */
-export const key = 'rng';
+/** 2. The Plugin Object */
+export const MySeasonTerm = defineTerm({
+    key: 'szn',
+    scope: 'season',
+    description: 'Custom seasonal range',
+    ranges,
 
-/** 3. Long name used as the scope property name on `tempo.term` */
-export const scope = 'range';
+    /**
+     * 3. The lookup function.
+     *    - `this` is bound to the Tempo instance at call time.
+     *    - `keyOnly = true`  → return the key string
+     *    - `keyOnly = false` → return the full range object
+     */
+    define(this: Tempo, keyOnly?: boolean) {
+      // Use pre-grouped results for instantaneous lookup!
+      const list = groups[`season.${this.config.sphere}`] ?? [];
 
-/** 4. Human-readable description (surfaced via Tempo.terms) */
-export const description = 'Custom seasonal range';
-
-/**
- * 5. The lookup function.
- *    - `this` is bound to the Tempo instance at call time.
- *    - `keyOnly = true`  → called when accessing `tempo.term.<key>`   → return the key string
- *    - `keyOnly = false` → called when accessing `tempo.term.<scope>` → return the full range object
- */
-export function define(this: Tempo, keyOnly?: boolean) {
-  return getTermRange(this, ranges, keyOnly);
-}
+      return getTermRange(this, list, keyOnly);
+    }
+});
 ```
 
 ### `Range` fields
@@ -176,27 +182,28 @@ A `Range` object must include a `key` and any subset of the date-time fields bel
 
 ```ts
 type Range = {
-  key: PropertyKey;   // identifier returned when keyOnly = true
+  key: PropertyKey;                // identifier returned when keyOnly = true
   year?:   number;
   month?:  number;
   day?:    number;
   hour?:   number;
   minute?: number;
   second?: number;
-  [extra: PropertyKey]: any;  // any additional metadata fields
+  group?:  string;                 // categorization marker (e.g. 'fiscal', 'western')
+  [extra: PropertyKey]: any;       // any additional term-dependent metadata (e.g. 'sphere')
 }
 ```
 
 ### Registering the plugin
 
-Use the static **`Tempo.extend()`** method. This allows you to add terms dynamically without modifying the library source.
+Use the static **`Tempo.extend()`** (or `Tempo.addTerm()`) method. This allows you to add terms dynamically without modifying the library source.
 
 ```ts
 import { Tempo } from '@magmacomputing/tempo';
-import * as rng from './term.myrange.js';
+import { MySeasonTerm } from './term.myseason.js';
 
 // Register the term plugin
-Tempo.extend(rng);
+Tempo.extend(MySeasonTerm);
 ```
 
 Every `Tempo` instance created after that point will have the custom term available.
@@ -281,10 +288,11 @@ for await (const t of quarterly) {
 
 To ensure a custom `Term` plugin integrates fully with Tempo, follow these guidelines:
 
-1.  **Static `ranges` Export**: For `period` or `event` scopes, export your `ranges` array. This allows `Tempo.extend()` to automatically update the Master Guard regex and parsing snippets.
-2.  **Memoization Safety**: Keep the `define` function pure. It will only be called once per instance access.
-3.  **Math Readiness**: Always use `getTermRange` or provide boundaries. Without them, users cannot use your term in `add()`, `set()`, or `ticker()`.
-4.  **Key consistency**: Ensure the `key` property you return in the `define` function's scope object matches the `key` export of your module.
+1.  **Static `ranges` Export**: Always include the `ranges` property in your `defineTerm` configuration. This enables **programmatic discovery** via `Tempo.terms` and allows the Ticker to automatically calculate next-pulse intervals.
+2.  **Metadata-First Boundaries**: If your plugin handles multiple sets (e.g. hemispheres or cultural calendars), avoid using array indices like `ranges[0]`. Instead, add marker fields like **`sphere`** or **`group`** to each range object and use `.filter()` inside your `define` function.
+3.  **Memoization Safety**: Keep the `define` function pure. It will only be called once per instance access.
+4.  **Math Readiness**: Always use `getTermRange` or provide boundaries. Without them, users cannot use your term in `add()`, `set()`, or `ticker()`.
+5.  **Key consistency**: Ensure the `key` property you return in the `define` function's scope object matches the `key` definition of your plugin.
 
 ---
 

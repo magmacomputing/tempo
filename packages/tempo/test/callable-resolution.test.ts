@@ -1,6 +1,8 @@
-import { Tempo } from '../src/tempo.class.js';
+import { Tempo } from '#tempo';
 
 describe('Tempo Callable Resolution', () => {
+	beforeEach(() => Tempo.init());
+
 	test('should resolve a function-valued input returning a date string', () => {
 		const t = new Tempo(() => '2024-01-01');
 		expect(t.fmt.date).toBe('2024-01-01');
@@ -14,13 +16,13 @@ describe('Tempo Callable Resolution', () => {
 
 	test('should preserve Tempo instance context (this) in callable input', () => {
 		const t = new Tempo(function (this: any) {
-			return '2024-01-01';
+			return (this instanceof Tempo) ? '2024-01-01' : 'WRONG';
 		});
 		expect(t.fmt.date).toBe('2024-01-01');
 	});
 
 	test('should prevent infinite recursion for self-returning functions', () => {
 		const self: any = function (this: any) { return self };
-		expect(() => new Tempo(self, { silent: true })).toThrow();	// Throws diagnostic error in default catch:false mode
+		expect(() => new Tempo(self, { silent: true })).toThrow(/Infinite recursion detected/);
 	});
 });

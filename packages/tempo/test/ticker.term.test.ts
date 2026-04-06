@@ -1,13 +1,7 @@
 import { Tempo } from '#tempo/tempo.class.js'
-import { TickerPlugin } from '#tempo/plugins/extend/plugin.ticker.js'
-import { QuarterTerm } from '#tempo/plugins/term/term.quarter.js'
-import { TimelineTerm } from '#tempo/plugins/term/term.timeline.js'
+import '#tempo/plugins/extend/plugin.ticker.js'
 
 describe('Ticker with Terms', () => {
-	Tempo.init()
-	Tempo.extend(TickerPlugin)
-	Tempo.extend(QuarterTerm)
-	Tempo.extend(TimelineTerm)
 
 	it('should pulse once-per-quarter using #quarter term', () => {
 		const seed = '2020-01-01T00:00:00'

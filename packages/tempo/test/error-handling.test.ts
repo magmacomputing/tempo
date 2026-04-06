@@ -1,8 +1,5 @@
 import { Tempo } from '#tempo/tempo.class.js';
-import { TickerPlugin } from '#tempo/plugins/extend/plugin.ticker.js';
-
-// TickerPlugin self-registers on import via definePlugin
-Tempo.extend(TickerPlugin);
+import '#tempo/plugins/extend/plugin.ticker.js';
 
 describe('Error Handling stabilization', () => {
 	it('should throw an error for invalid ticker interval by default', () => {

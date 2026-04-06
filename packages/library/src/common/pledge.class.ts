@@ -172,22 +172,22 @@ export namespace Pledge {
 	export type Settle = () => void;													// function to call after Pledge settles
 
 	export type Constructor = {
-		tag?: string;
-		onResolve?: Pledge.Resolve | Pledge.Resolve[];
-		onReject?: Pledge.Reject | Pledge.Reject[];
-		onSettle?: Pledge.Settle | Pledge.Settle[];
+		tag?: string | undefined;
+		onResolve?: Pledge.Resolve | Pledge.Resolve[] | undefined;
+		onReject?: Pledge.Reject | Pledge.Reject[] | undefined;
+		onSettle?: Pledge.Settle | Pledge.Settle[] | undefined;
 		debug?: boolean | undefined;
 		catch?: boolean | undefined;
 		silent?: boolean | undefined;
 	}
 
 	export interface Status<T> {
-		tag?: string;
+		tag?: string | undefined;
 		debug?: boolean | undefined;
 		catch?: boolean | undefined;
 		silent?: boolean | undefined;
 		state: symbol;
-		settled?: T,
-		error?: Error,
+		settled?: T | undefined;
+		error?: any | undefined;
 	}
 }

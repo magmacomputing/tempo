@@ -1,9 +1,10 @@
-import { sortKey } from '#library/array.library.js';
+import { sortKey, byKey } from '#library/array.library.js';
 import { isDefined } from '#library/type.library.js';
 import { secure } from '#library/utility.library.js';
 import { $Plugins, $Register } from '#tempo/tempo.symbol.js';
 import { SCHEMA, getLargestUnit } from '#tempo/tempo.util.js';
 import type { Tempo } from '#tempo/tempo.class.js';
+export type { Plugin, TermPlugin, Range, ResolvedRange } from '#tempo/tempo.type.js';
 import type { Plugin, TermPlugin, Range, ResolvedRange } from '#tempo/tempo.type.js';
 
 /** helper to self-register a Plugin into the Global Discovery registry */
@@ -40,6 +41,17 @@ export const definePlugin = <T extends Plugin>(plugin: T): T => {
 export const defineTerm = <T extends TermPlugin>(term: T): T => {
 	registerTerm(term);
 	return term;
+}
+
+/**
+ * # defineRange
+ * Factory to normalize and group Term ranges for efficient lookup.
+ */
+export function defineRange<T extends Range>(ranges: T[], ...keys: (keyof T)[]) {
+	return {
+		ranges,
+		groups: byKey(ranges, ...keys) as Record<PropertyKey, T[]>
+	}
 }
 
 /**
@@ -137,7 +149,8 @@ export function resolveTermAnchor(tempo: Tempo, terms: TermPlugin[], name: strin
 					return start;
 
 				case 'mid':
-					return new Temporal.ZonedDateTime((start.epochNanoseconds + end.epochNanoseconds) / 2n, start.timeZoneId, start.calendarId);
+					const duration = start.until(end);
+					return start.add(duration.divide(2, { relativeTo: start }));
 
 				case 'end':
 					return end.subtract({ nanoseconds: 1 })

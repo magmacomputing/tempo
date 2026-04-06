@@ -1,12 +1,14 @@
 import { $Target, $Inspect, $Discover } from '#library/symbol.library.js';
 import { allObject } from '#library/reflection.library.js';
 import { secure } from '#library/utility.library.js';
-import { isFunction, isSymbol } from '#library/type.library.js';
+import { isFunction, isSymbol, registerType, type Constructor, type Type } from '#library/type.library.js';
 
 /** Stealth Proxy pattern to allow for iteration and logging over a Frozen object */
 export function proxify<T extends object>(target: T, frozen = true, lock = frozen) {
 	const tgt = (target as any)[$Target] ?? target;						// unwrap if it's already a proxy
 	let cachedJSON: any;
+
+	registerType(tgt as Constructor);													// auto-register with global type system
 
 	if (lock) secure(tgt);
 
@@ -51,7 +53,7 @@ export function proxify<T extends object>(target: T, frozen = true, lock = froze
 }
 
 /** Stealth Proxy pattern to allow for on-demand lazy property discovery and registration */
-export function getLazyDelegator<T extends object>(target: T, onGet: (key: string | symbol, target: T) => any) {
+export function delegate<T extends object>(target: T, onGet: (key: string | symbol, target: T) => any) {
 	const pending = new Set<PropertyKey>();									// recursion guard
 
 	return new Proxy(target, {

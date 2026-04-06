@@ -43,6 +43,13 @@ Some snippets are auto-built from others:
 - `{dt}`: Matches a date (e.g., `{dd}{sep}{mm}`) OR an event alias `{evt}`.
 - `{tm}`: Matches a time (e.g., `{hh}{mi}`) OR a period alias `{per}`.
 
+> [!IMPORTANT]
+> **Component-Aware Resolution**: To ensure that custom aliases don't accidentally overwrite explicit date or time parts in your input, `#parseGroups` is type-aware:
+> - **Events**: If an Event function returns a `Tempo` or `Temporal` object, it is converted to a `PlainDate` string (date-only) before parsing.
+> - **Periods**: If a Period function returns a `Tempo` or `Temporal` object, it is converted to a `PlainTime` string (time-only) before parsing.
+>
+> This ensures that an Event result (like `tomorrow`) only modifies the date-component, and a Period result (like `morning`) only modifies the time-component, preserving any other explicitly provided fields.
+
 ## Built-in Layouts
 
 Snippets are wrapped in curly braces `{}` and can be combined to create a layout.

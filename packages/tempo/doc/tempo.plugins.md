@@ -114,6 +114,26 @@ Tempo.extend({
 
 Using `Tempo.extend()` ensures that the library safely bypasses the "Soft Freeze" protection and that all internal caches (like the Master Guard) are correctly synchronized.
 
+### 5. Error Handling & The Logify Pattern
+When building plugins that perform complex parsing or logic, follow Tempo's **"Fail-fast by Default"** principle.
+
+- **Strict Mode (Default)**: If your plugin encounters a terminal error (e.g., invalid input that cannot be recovered), you should `throw` a descriptive error.
+- **Catch Mode**: Respect the user's `catch` configuration. If `this.config.catch` is `true`, instead of throwing, you should log a warning using `Tempo.#dbg.warn()` and return a sensible fallback (or the original input).
+
+```typescript
+// Example within a plugin instance method
+if (errorCondition) {
+  const msg = `Custom Error: ${details}`;
+  if (this.config.catch === true) {
+    Tempo.#dbg.warn(this.config, msg);
+    return this; // or a fallback value
+  }
+  throw new Error(msg);
+}
+```
+
+This pattern ensures that Tempo remains robust in production environments while providing strict validation during development.
+
 ## Distributing Your Plugin
 
 To make your plugin available to the community, package it as a standard NPM module. 

@@ -70,14 +70,8 @@ describe('Term Unified Logic (Mutation & Identity)', () => {
 	});
 
 	it('should throw an error for invalid terms when catch is false', () => {
-		// Choose the STATIC behavior: explicitly set catch: false to expect internal Logify.catch to throw
-		const t = new Tempo(testDate, { catch: false, sphere: 'north' });
-		const spy = vi.spyOn(console, 'error').mockImplementation(() => { });
-		try {
-			expect(() => t.set({ start: '#invalid' })).toThrow(/Unexpected term\(#invalid\)/);
-		} finally {
-			spy.mockRestore();
-		}
+		const t = new Tempo(testDate, { catch: false, sphere: 'north', silent: true });
+		expect(() => t.set({ start: '#invalid' })).toThrow(/Unexpected term\(#invalid\)/);
 	});
 
 	it('should correctly resolve quarters in the Southern Hemisphere', () => {

@@ -20,9 +20,9 @@ Working with dates in JavaScript has historically been painful. The new `Tempora
 - **Terms**: Access complex date ranges (Quarters, Seasons, Fiscal Years) easily.
 - **Immutable**: Operations (like `set` and `add`) return a new `Tempo` instance, ensuring thread safety and predictability.
 
-## ✨ New in v2.0.0
+## ✨ New in v2.0.1
 
-Tempo v2.0.0 is a major milestone, delivering a more reactive architecture and rock-solid stability.
+Tempo v2.0.1 is a major milestone, delivering a more reactive architecture and rock-solid stability.
 
 - **Side Effect Registration**: Plugins and Terms now support self-registration. Simply importing a plugin is now sufficient to extend the Tempo core automatically.
 - **100% Reliability**: The engine now passes 304/304 regression tests, ensuring complete stability across all parsing, calculation, and formatting routines.
@@ -33,14 +33,14 @@ Tempo v2.0.0 is a major milestone, delivering a more reactive architecture and r
 
 ## ⚠️ Migrating from v1.x
 
-Tempo v2.0.0 introduces several architectural improvements that may require minor updates to your existing code:
+Tempo v2.0.1 introduces several architectural improvements that may require minor updates to your existing code:
 
 - **Token Refactor**: The `wy` (week-of-year) formatting token has been refactored to `yw` to better align with the native Temporal `yearOfWeek` getter.
 - **Method Consolidation**: `Tempo.load()` has been removed. Use `Tempo.extend()` for custom plugin registration and global configuration tasks. 
 - **Automatic Registration**: Built-ins self-register on import (just import the module). You no longer need to manually call `Tempo.extend()` for these.
 
 ```javascript
-// v2.0.0 - Automatic registration via side-effect import
+// v2.0.1 - Automatic registration via side-effect import
 import '@magmacomputing/tempo/plugins/ticker';
 ```
 
@@ -123,6 +123,9 @@ console.log(now.fmt.date);                    // using pre-built formats: "2026-
 
 ## 📚 Documentation
 
+> [!IMPORTANT]
+> **Documentation Update**: We have been made aware that the documentation links between npmjs.com (the package host) and github.com (the source repository) was broken a short while back. To overcome this, we have altered our Publish process to now include the doc/ subfolder (along with dist/ and src/ folders) in the Tempo package (as well as updating the links between individual documentation files). We sincerely apologize for the trouble this has caused and the poor user-experience it presented.
+
 For detailed technical guides, please refer to:
 - [Vision & Value Proposition](https://github.com/magmacomputing/magma/blob/v2.0.1/packages/tempo/doc/vision.md)
 - [Tempo vs. Native Temporal](https://github.com/magmacomputing/magma/blob/v2.0.1/packages/tempo/doc/tempo-vs-temporal.md)
@@ -152,11 +155,8 @@ If you have a question, find a bug, or want to suggest a new feature:
 
 ## 🛡️ Privacy & Transparency
 
-We value your privacy. **Tempo** does not include any runtime telemetry or "phone-home" features. To understand adoption and prioritize features, we use [Scarf](https://scarf.sh/) to aggregate anonymous download statistics. 
-
-- **No Runtime Tracking**: Tempo will never make network requests from your application.
-- **Anonymous Data**: We only see aggregated metadata (e.g., download volume, general geographic region) provided by the registry gateway.
-- **Opt-out**: You can opt-out of Scarf's tracking by following their [opt-out instructions](https://scarf.sh/privacy-policy#opt-out).
+We value your privacy. **Tempo** does not include any runtime telemetry or "phone-home" features. 
+Tempo will never make network requests from your application.
 
 ## 🗳️ Feedback & Reactions
 

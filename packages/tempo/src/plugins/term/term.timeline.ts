@@ -1,18 +1,17 @@
-import { defineTerm, getTermRange } from '../tempo.plugin.js';
+import { defineTerm, getTermRange, defineRange } from '../tempo.plugin.js';
 import type { Tempo } from '#tempo/tempo.class.js';
-import type { Range } from '#tempo/tempo.type.js';
 
 /** definition of daily time periods */
-const ranges = [
-	{ key: 'midnight', hour: 0 },
-	{ key: 'early', hour: 4 },
-	{ key: 'morning', hour: 8 },
-	{ key: 'midmorning', hour: 10 },
-	{ key: 'midday', hour: 12 },
-	{ key: 'afternoon', hour: 15, minute: 30 },
-	{ key: 'evening', hour: 18 },
-	{ key: 'night', hour: 20 },
-] as Range[]
+const { ranges } = defineRange([
+	{ key: 'midnight', hour: 0, group: 'standard' },
+	{ key: 'early', hour: 4, group: 'standard' },
+	{ key: 'morning', hour: 8, group: 'standard' },
+	{ key: 'midmorning', hour: 10, group: 'standard' },
+	{ key: 'midday', hour: 12, group: 'standard' },
+	{ key: 'afternoon', hour: 15, minute: 30, group: 'standard' },
+	{ key: 'evening', hour: 18, group: 'standard' },
+	{ key: 'night', hour: 20, group: 'standard' },
+], 'group');
 
 export const TimelineTerm = defineTerm({
 	key: 'per',

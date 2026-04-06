@@ -2,12 +2,12 @@ import { Tempo } from '../src/tempo.class.js';
 
 describe('Master Guard Extension', () => {
   beforeEach(() => {
-    Tempo.init()
+    Tempo.init({ silent: true })
   });
 
   it('should rebuild the guard after extension via Discovery', () => {
     // 1. Initially, '$$$apple$$$' should FAIL the guard and throw immediately
-    expect(() => new Tempo('$$$apple$$$', { silent: true })).toThrow(/Cannot parse Date: "\$\$\$apple\$\$\$"/);
+    expect(() => new Tempo('$$$apple$$$')).toThrow(/Cannot parse Date: "\$\$\$apple\$\$\$"/);
 
     // 2. Extend with a custom term '$$$apple$$$' via Discovery object
     Tempo.extend({
@@ -18,7 +18,7 @@ describe('Master Guard Extension', () => {
     });
 
     // 3. Now '$$$apple$$$' should PASS the guard and auto-switch to lazy: true.
-    const t = new Tempo('$$$apple$$$', { silent: true });
+    const t = new Tempo('$$$apple$$$');
     expect(t).toBeInstanceOf(Tempo);
     expect(t.config.lazy).toBe(true);
 
@@ -28,7 +28,7 @@ describe('Master Guard Extension', () => {
 
   it('should rebuild the guard after direct extension', () => {
     // 1. '@@@banana@@@' fails initially
-    expect(() => new Tempo('@@@banana@@@', { silent: true })).toThrow(/Cannot parse Date: "@@@banana@@@"/);
+    expect(() => new Tempo('@@@banana@@@')).toThrow(/Cannot parse Date: "@@@banana@@@"/);
 
     // 2. Extend directly
     Tempo.extend({
@@ -37,7 +37,7 @@ describe('Master Guard Extension', () => {
     });
 
     // 3. '@@@banana@@@' now passes guard
-    const t = new Tempo('@@@banana@@@', { silent: true });
+    const t = new Tempo('@@@banana@@@');
     expect(t.config.lazy).toBe(true);
   });
 });

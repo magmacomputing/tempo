@@ -14,7 +14,7 @@ describe(`${label} set method`, () => {
 
   test('sets via parsing string (e.g. period)', () => {
     const t = new Tempo('2024-05-20 08:00');
-    const t2 = t.set({ period: 'afternoon' });							// afternoon -> 15:00 usually
+    const t2 = t.set({ event: 'afternoon' });							            // afternoon -> 15:00 usually
     expect(t2.hh).toBe(15);
   });
 

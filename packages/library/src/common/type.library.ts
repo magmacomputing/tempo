@@ -1,15 +1,13 @@
-import { $Extensible, $Target } from '#library/symbol.library.js';
+import { $Extensible, $Target, $Registry, $Register } from '#library/symbol.library.js';
 
-/** the primitive type reported by toStringTag() */
-const protoType = (obj?: unknown) => Object.prototype.toString.call(obj).slice(8, -1);
-
+const $isTempo = Symbol.for('$isTempo');
 const registry: Instance[] = [];														// global types for getType
 
-/** 
- * # resetRegistry
- * Clear the global type registry for test isolation and deterministic behavior.
- */
-export const resetRegistry = () => { registry.length = 0; };
+/** the primitive type reported by toStringTag() */
+const protoType = (obj?: unknown) => {
+	const raw = (obj as any)?.[$Target] ?? obj;							// bypass Proxy traps
+	return Object.prototype.toString.call(raw).slice(8, -1) as Type;
+}
 
 /** 
  * # getType
@@ -20,27 +18,35 @@ export const resetRegistry = () => { registry.length = 0; };
  * Consumers must import modules that call registerType() (such as Tempo) 
  * before calling getType() to ensure custom types are correctly identified.
  */
-export const getType = (obj?: any, ...instances: Instance[]) => {
-	const type = protoType(obj) as Type;
+export const getType = (obj?: any, ...instances: Instance[]): Type => {
+	const raw = (obj as any)?.[$Target] ?? obj;							// bypass Proxy traps
+	const type = protoType(raw);
 
 	switch (true) {
+		case obj === null: return 'Null';
+		case obj === undefined: return 'Undefined';
+
+		case isClassConstructor(raw): return 'Class';
+		case typeof raw === 'function': return type;						// catch all functional types (including AsyncFunction)
+
 		case type === 'Object': {
-			if (isArrayLike(obj)) return 'ArrayLike';
+			if (isArrayLike(raw)) return 'ArrayLike';
 
-			for (const inst of instances)
-				if (obj === inst.class || obj instanceof inst.class) return inst.type;
+			for (const inst of instances) {
+				const instRaw = (inst.class as any)?.[$Target] ?? inst.class;
+				if (raw === instRaw || (instRaw && raw instanceof instRaw)) return inst.type as Type;
+			}
 
-			for (const inst of registry)
-				if (obj === inst.class || obj instanceof inst.class) return inst.type;
+			const globalRegistry = (globalThis as any)[$Registry] ?? [];
+			for (const inst of [...registry, ...globalRegistry]) {
+				const instRaw = (inst.class as any)?.[$Target] ?? inst.class;
+				if (raw === instRaw || (instRaw && raw instanceof instRaw)) return inst.type as Type;
+			}
 
 			return 'Object';
 		}
 
-		case type === 'Function' && Function.prototype.toString.call(obj).startsWith('class '):
-			return 'Class';
-
-		default:
-			return type;
+		default: return type;
 	}
 }
 
@@ -85,7 +91,10 @@ export const isError = <T>(err?: T): err is Extract<T, Error> => isType(err, 'Er
 export const isTemporal = <T>(obj: T): obj is Extract<T, Temporals> => protoType(obj).startsWith('Temporal.');
 
 // non-standard Objects
-export const isTempo = <T>(obj?: T): obj is Extract<T, GetType<'Tempo'>> => isType(obj, 'Tempo');
+export const isTempo = <T>(obj?: T): obj is Extract<T, GetType<'Tempo'>> => {
+	const raw = (obj as any)?.[$Target] ?? obj;							// bypass Proxy traps
+	return !!(raw?.[$isTempo]);
+}
 export const isEnum = <T, E extends Property<any>>(obj?: T): obj is Extract<T, GetType<'Enumify', E>> => isType(obj, 'Enumify');
 export const isPledge = <T, P = any>(obj?: T): obj is Extract<T, GetType<'Pledge', P>> => isType(obj, 'Pledge');
 
@@ -113,6 +122,48 @@ export function assertCondition(condition: boolean, message?: string): asserts c
 }
 export function assertString(str: unknown): asserts str is string { assertCondition(isString(str), `Invalid string: ${str}`) };
 export function assertNever(val: never): asserts val is never { throw new Error(`Unexpected object: ${val}`) };
+
+/** 
+ * # resetRegistry
+ * Clear the global type registry for test isolation and deterministic behavior.
+ */
+export const resetRegistry = () => { registry.length = 0; };
+const classRegex = /^\s*(class\s|\[native code\])/;						// match class keyword OR native constructor
+
+/** private helper to safely identify an ES6 class, bypassing Proxies */
+const isClassConstructor = (obj: any): boolean => {
+	if (typeof obj !== 'function') return false;
+
+	const raw = (obj as any)?.[$Target] ?? obj;							// bypass Proxy traps
+	const name = (raw as any)?.name;
+	const tag = raw?.[Symbol.toStringTag] ?? raw?.prototype?.[Symbol.toStringTag];
+
+	// Absolute bypass for Tempo and Temporal identities (using global brands)
+	if (raw?.[$isTempo] || name === 'Tempo' || tag === 'Tempo' || (typeof tag === 'string' && (tag.startsWith('Temporal.') || tag.startsWith('Tempo.')))) return true;
+	if (typeof tag === 'string' && tag.endsWith('Function')) return false;	// check the tag directly to avoid misidentifying function as class
+
+	const globalRegistry = (globalThis as any)[$Registry] ?? [];
+	if (globalRegistry.some((inst: any) => ((inst.class as any)?.[$Target] ?? inst.class) === raw || (name && inst.type === name) || (tag && inst.type === tag))) return true;
+
+	// 3. Last resort: Inspection of constructor property & prototype (Transpilation-Safe)
+	try {
+		const str = Function.prototype.toString.call(raw);
+		if (classRegex.test(str)) return true;
+
+		// ES6 classes have a non-writable prototype descriptor
+		const descriptor = Object.getOwnPropertyDescriptor(raw, 'prototype');
+		if (descriptor && descriptor.writable === false) return true;
+
+		// if it's a function with a 'prototype' that is NOT an empty object (excluding its constructor), it's likely a class
+		const proto = raw.prototype;
+		if (proto && Object.getOwnPropertyNames(proto).length > 2) return true;
+
+	} catch {
+		return false;
+	}
+
+	return false;
+}
 
 /** infer T of a <T | T[]> */																export type TValue<T> = T extends Array<infer A> ? A : NonNullable<T>;
 /** cast <T | undefined> as <T | T[]> */										export type TValues<T> = TValue<T> | Array<TValue<T>> | Extract<T, undefined>;
@@ -195,6 +246,7 @@ export const registerType = (cls: Constructor, type?: Type) => {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 export type Temporals = typeof Temporal extends { Now: any } ? Exclude<keyof typeof Temporal, 'Now'> : never;
+export type TemporalObject = Temporal.PlainDate | Temporal.PlainTime | Temporal.PlainDateTime | Temporal.ZonedDateTime | Temporal.Instant | Temporal.Duration;
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 export interface TypeValueMap<T = any> {
@@ -232,6 +284,13 @@ export interface TypeValueMap<T = any> {
 	'Temporal.PlainTime': { type: 'Temporal.PlainTime', value: Temporal.PlainTime };
 	'Temporal.PlainYearMonth': { type: 'Temporal.PlainYearMonth', value: Temporal.PlainYearMonth };
 	'Temporal.PlainMonthDay': { type: 'Temporal.PlainMonthDay', value: Temporal.PlainMonthDay };
+	'Temporal.ZonedDateTimeLike': { type: 'Temporal.ZonedDateTimeLike', value: Temporal.ZonedDateTimeLike };
+	'Temporal.Duration': { type: 'Temporal.Duration', value: Temporal.Duration };
+	'Temporal.DurationLike': { type: 'Temporal.DurationLike', value: Temporal.DurationLike };
+	'Temporal.PlainDateLike': { type: 'Temporal.PlainDateLike', value: Temporal.PlainDateLike };
+	'Temporal.PlainTimeLike': { type: 'Temporal.PlainTimeLike', value: Temporal.PlainTimeLike };
+	'Temporal.PlainYearMonthLike': { type: 'Temporal.PlainYearMonthLike', value: Temporal.PlainYearMonthLike };
+	'Temporal.PlainMonthDayLike': { type: 'Temporal.PlainMonthDayLike', value: Temporal.PlainMonthDayLike };
 }
 
 /** add Special Type placeholders to the keyof TypeValueMap */

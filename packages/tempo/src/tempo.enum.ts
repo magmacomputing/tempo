@@ -110,6 +110,8 @@ export const STATE = {
 (STATE.NUMBER as any)[$Extensible] = true;
 (STATE.FORMAT as any)[$Extensible] = true;
 (STATE.TIMEZONE as any)[$Extensible] = true;
+(STATE.DURATION as any)[$Extensible] = true;
+(STATE.DURATIONS as any)[$Extensible] = true;
 
 /** Gregorian calendar week-days (short-form) */
 export const WEEKDAY = enumify(['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
@@ -154,7 +156,8 @@ export type FORMAT = ValueOf<typeof FORMAT>
 export type Format = LooseUnion<KeyOf<typeof FORMAT> & string>
 
 /** patterns that return a number */
-type NumericPattern = '{yyyy}{mm}' | '{yyww}' | '{yyyy}{mm}{dd}' | '{yw}{ww}' | '{yw}'
+export const NumericPattern = ['{yyyy}{ww}', '{yyyy}{mm}', '{yyyy}{mm}{dd}', '{yyww}', '{yw}{ww}', '{yw}'] as const;
+export type NumericPattern = typeof NumericPattern[number]
 
 /** pre-configured format strings */
 export type OwnFormat = Mutable<OwnOf<typeof FORMAT>>

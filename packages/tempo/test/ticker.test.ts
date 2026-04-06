@@ -1,15 +1,13 @@
 import { Tempo, isTempo } from '#tempo/tempo.class.js';
-import { TickerPlugin } from '#tempo/plugins/extend/plugin.ticker.js'
-import { QuarterTerm } from '#tempo/plugins/term/term.quarter.js'
-import { TimelineTerm } from '#tempo/plugins/term/term.timeline.js'
+import '#tempo/plugins/extend/plugin.ticker.js'
 
 // TickerPlugin self-registers on import via definePlugin
-Tempo.init();
-Tempo.extend(TickerPlugin);
-
 const label = 'ticker:';
 
 describe(`${label}`, () => {
+	beforeEach(() => {
+		Tempo.init({ silent: true })
+	});
 
 	test(`${label} callback pattern`, async () => {
 		let count = 0;
@@ -106,17 +104,16 @@ describe(`${label}`, () => {
 	});
 
 	test('ticker: validation', () => {
-		const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-		try {
-			// @ts-ignore
-			expect(() => Tempo.ticker(NaN)).toThrow(RangeError);
-			// @ts-ignore
-			expect(() => Tempo.ticker(Infinity)).toThrow(RangeError);
-			// @ts-ignore
-			expect(() => Tempo.ticker('not a number')).toThrow(RangeError);
-		} finally {
-			spy.mockRestore();
-		}
+		// In Tempo v2 Logify pattern, terminal errors are thrown by default unless caught.
+		// @ts-ignore
+		expect(() => Tempo.ticker(NaN)).toThrow(/Invalid Ticker interval/);
+		// @ts-ignore
+		expect(() => Tempo.ticker(NaN, { catch: true })).not.toThrow();
+
+		// @ts-ignore
+		expect(() => Tempo.ticker(Infinity)).toThrow(/Invalid Ticker interval/);
+		// @ts-ignore
+		expect(() => Tempo.ticker('not a number')).toThrow(/Invalid Ticker interval/);
 	});
 
 });

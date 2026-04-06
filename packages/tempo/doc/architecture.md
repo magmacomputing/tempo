@@ -1,4 +1,17 @@
-# 🏗️ Tempo Architecture: Internal Protection & Performance
+# 🏗️ Core Architecture
+
+Tempo v2.0.1 introduces several industry-leading architectural patterns designed for maximum resilience in complex Monorepo and Proxy-wrapped environments.
+
+## 🌐 Shared Global Registry
+To solve the "Split-Brain" issue inherent in monorepo development (where multiple instances of the same library might be loaded), Tempo utilizes a **Shared Global Registry**. By leveraging `Symbol.for('magmacomputing/library/registry')` on `globalThis`, all versions of the Tempo and Library packages share a unified type-identification engine. This ensures that classes are correctly identified as constructors even when loaded across different module boundaries.
+
+## 🛡️ Hardened Functional Resolution
+Tempo implements a "Fail-Safe" execution pattern for functional inputs. The **Hardened Functional Resolution** engine automatically detects and recovers from misidentified types—such as ES6 classes wrapped in defensive Proxies.
+- **Defensive Execution**: All plugin and factory invocations are wrapped in recursive `try/catch` blocks.
+- **Automatic Recovery**: If a class constructor is accidentally invoked as a function, Tempo catches the `TypeError`, downgrades it to a diagnostic warning, and returns the original constructor to ensure the library remains operational.
+- **Deep Identification**: A three-tiered identification strategy (Reference, Tag, and Name matching) ensures "Perfect Identification" of constructors across all module boundaries.
+
+## 🏗️ Tempo Architecture: Internal Protection & Performance
 
 Tempo employs two distinct methodologies for protecting its internal state. These strategies are complementary, each tailored to a specific scope (Instance vs. Global) and performance requirement.
 
