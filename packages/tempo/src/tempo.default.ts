@@ -173,4 +173,5 @@ export const Default = secure({
 	/** default timezone if not specified */									timeZone: 'UTC',
 	/** locales that prefer month-day order */								mdyLocales: ['en-US', 'en-AS'],	/** @link https:	//en.wikipedia.org/wiki/Date_format_by_country */
 	/** layouts that need to swap parse-order */							mdyLayouts: [['dayMonthYear', 'monthDayYear']],
+	/** hemisphere for term.qtr or term.szn */								sphere: undefined,
 } as Options)

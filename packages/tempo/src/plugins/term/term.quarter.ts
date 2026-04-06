@@ -18,7 +18,7 @@ const { ranges, groups } = defineRange([
 ], 'sphere');
 
 export const QuarterTerm = defineTerm({
-	key: 'quarter',
+	key: 'qtr',
 	scope: 'quarter',
 	description: 'Fiscal Quarter',
 	ranges,

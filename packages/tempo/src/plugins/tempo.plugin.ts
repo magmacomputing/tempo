@@ -96,7 +96,7 @@ export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true): strin
 			if (isDefined(range[u])) {
 				obj[u] = range[u];
 			} else if (i > rolloverIndex) {
-				obj[u] = (i <= 2) ? 1 : 0;										// year, month, day reset to 1; time units reset to 0
+				obj[u] = (i <= 2) ? 1 : 0;													// year, month, day reset to 1; time units reset to 0
 			} else {
 				obj[u] = (anchor as any)[u];
 			}
@@ -121,7 +121,7 @@ export function getTermRange(tempo: Tempo, list: Range[], keyOnly = true): strin
 	const resolved = secure({
 		...match,
 		start: new (tempo.constructor as any)(start, tempo.config),
-		end: new (tempo.constructor as any)(end, tempo.config),
+		end: new (tempo.constructor as any)((end as any).subtract({ seconds: 1 }), tempo.config),
 		unit,
 		rollover: rolloverUnit
 	}) as ResolvedRange;

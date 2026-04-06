@@ -8,11 +8,11 @@ import { cleanify } from '#library/serialize.library.js';
 import { getStorage, setStorage } from '#library/storage.library.js';
 import { proxify, delegate } from '#library/proxy.library.js';
 import { $Register, $Tempo, $Plugins, $isTempo, registerHook } from '#tempo/tempo.symbol.js';
-import { $Logify, $Discover, markConfig } from '#library/symbol.library.js';
+import { $Logify, $Discover, $Target, markConfig } from '#library/symbol.library.js';
 import { getContext, CONTEXT } from '#library/utility.library.js';
 import { enumify } from '#library/enumerate.library.js';
 import { STATE, PARSE, DISCOVERY, registryReset } from '#tempo/tempo.enum.js';
-import { registerPlugin, registerTerm, resolveTermAnchor, resolveTermShift } from '#tempo/plugins/tempo.plugin.js'
+import { registerPlugin, registerTerm, getTermRange, resolveTermAnchor, resolveTermShift } from '#tempo/plugins/tempo.plugin.js'
 import { getSafeFallbackStep } from '#tempo/tempo.util.js'
 import { registerTerms } from '#tempo/plugins/term/index.js'
 import { ownKeys, ownEntries, getAccessors, omit } from '#library/reflection.library.js';
@@ -98,6 +98,7 @@ export class Tempo {
 	/** Tempo state for the global configuration */						static #global = {} as Internal.State
 	/** cache for next-available 'usr' Token key */						static #usrCount = 0;
 	/** mutable list of registered term plugins */						static #terms: Tempo.TermPlugin[] = [];
+	/** current parsing depth to manage state isolation */		#parseDepth = 0;
 	static #termMap: Map<string, Tempo.TermPlugin> = new Map();
 	/** flag to prevent recursion during init */							static #lifecycle = { bootstrap: true, initialising: false, extendDepth: 0, ready: false };
 	/** Master Guard predicate (implements RegExp-like interface) */					static #guard: { test(str: string): boolean } = { test: () => true };
@@ -193,7 +194,7 @@ export class Tempo {
 			return shape.config.sphere;													// already specified or no timeZone to calculate from
 
 		const sphere = getHemisphere(shape.config.timeZone as string);
-		return isDefined(options.timeZone) ? sphere : (sphere ?? shape.config.sphere);
+		return isDefined(options.timeZone) ? (sphere ?? 'north') : (sphere ?? shape.config.sphere ?? 'north');
 	}
 
 	/** determine if we have a {timeZone} which prefers {mdy} date-order */
@@ -374,7 +375,7 @@ export class Tempo {
 			})
 
 		const isMonthDay = Tempo.#isMonthDay(shape);
-		if (isMonthDay !== Tempo.#proto(shape.parse).isMonthDay)	// this will always set on 'global', conditionally on 'local'
+		if (isMonthDay !== Tempo.#proto(shape.parse).isMonthDay)// this will always set on 'global', conditionally on 'local'
 			shape.parse.isMonthDay = isMonthDay;
 
 		shape.config.sphere = Tempo.#setSphere(shape, mergedOptions);
@@ -653,55 +654,54 @@ export class Tempo {
 		Tempo.#lifecycle.initialising = true;
 
 		try {
-			if (isEmpty(options)) {																// if no options supplied, reset all
-				Tempo.#global.parse = markConfig({
-					snippet: Object.assign({}, Snippet),
-					layout: Object.assign({}, Layout),
-					event: Object.assign({}, Event),
-					period: Object.assign({}, Period),
-					mdyLocales: Tempo.#mdyLocales(Default.mdyLocales as Tempo.Options['mdyLocales']),
-					mdyLayouts: asArray(Default.mdyLayouts as Tempo.Options['mdyLayouts']) as Tempo.Pair[],
-					pivot: Default.pivot,
-					mode: Default.mode as any,
-					lazy: false,
-				}) as Internal.Parse;
+			const { timeZone, calendar } = getResolvedOptions();
 
-				const { timeZone, calendar } = getResolvedOptions();
-				Tempo.#global.config = markConfig(Object.create(Default));
-				Object.defineProperties(Tempo.#global.config, {
-					calendar: { value: calendar, enumerable: true, writable: true, configurable: true },
-					timeZone: { value: timeZone, enumerable: true, writable: true, configurable: true },
-					locale: { value: Tempo.#locale(), enumerable: true, writable: true, configurable: true },
-					discovery: { value: Symbol.keyFor($Tempo) as string, enumerable: true, writable: true, configurable: true },
-					formats: { value: enumify(STATE.FORMAT, false), enumerable: true, writable: true, configurable: true },
-					scope: { value: 'global', enumerable: true, writable: true, configurable: true },
-					catch: { value: options.catch ?? false, enumerable: true, writable: true, configurable: true }
-				});
+			// 1. Establish the base parsing state
+			Tempo.#global.parse = markConfig({
+				snippet: Object.assign({}, Snippet),
+				layout: Object.assign({}, Layout),
+				event: Object.assign({}, Event),
+				period: Object.assign({}, Period),
+				mdyLocales: Tempo.#mdyLocales(Default.mdyLocales as Tempo.Options['mdyLocales']),
+				mdyLayouts: asArray(Default.mdyLayouts as Tempo.Options['mdyLayouts']) as Tempo.Pair[],
+				pivot: Default.pivot,
+				mode: Default.mode as any,
+				lazy: false,
+			}) as Internal.Parse;
 
-				Tempo.#usrCount = 0;																// reset user-key counter
-				for (const key of Object.keys(Token))								// purge user-allocated Tokens
-					if (key.startsWith('usr.'))												// only remove 'usr.' prefixed keys
-						delete Token[key];
+			// 2. Establish the base configuration options
+			Tempo.#global.config = markConfig(Object.create(Default));
+			Object.defineProperties(Tempo.#global.config, {
+				calendar: { value: calendar, enumerable: true, writable: true, configurable: true },
+				timeZone: { value: timeZone, enumerable: true, writable: true, configurable: true },
+				locale: { value: Tempo.#locale(), enumerable: true, writable: true, configurable: true },
+				discovery: { value: Symbol.keyFor($Tempo) as string, enumerable: true, writable: true, configurable: true },
+				formats: { value: enumify(STATE.FORMAT, false), enumerable: true, writable: true, configurable: true },
+				sphere: { value: undefined, enumerable: true, writable: true, configurable: true },
+				get: { value: function (key: string) { return this[key] }, enumerable: false, writable: true, configurable: true },
+				scope: { value: 'global', enumerable: true, writable: true, configurable: true },
+				catch: { value: options.catch ?? false, enumerable: true, writable: true, configurable: true }
+			});
 
-				Tempo.#terms = [];																	// clear registered terms
-				Tempo.#termMap.clear();															// clear term lookup map
-				registryReset();																		// purge formats and numbers
+			Tempo.#usrCount = 0;																	// reset user-key counter
+			for (const key of Object.keys(Token))									// purge user-allocated Tokens
+				if (key.startsWith('usr.'))													// only remove 'usr.' prefixed keys
+					delete Token[key];
 
-				this.extend(registerTerms);													// register built-in term plugins
+			Tempo.#terms = [];																		// clear registered terms
+			Tempo.#termMap.clear();																// clear term lookup map
+			registryReset();																			// purge formats and numbers
 
-				const storeKey = Symbol.keyFor($Tempo) as string;
-				Tempo.#setConfig(Tempo.#global,
-					{ store: storeKey, discovery: storeKey, scope: 'global' },
-					Tempo.readStore(storeKey),												// allow for storage-values to overwrite
-					Tempo.#setDiscovery(Tempo.#global, $Plugins),			// persistent library extensions
-					Tempo.#setDiscovery(Tempo.#global, $Tempo),				// user Discovery (Configuration bootstrapping)
-				)
-			}
-			else {
-				const discovery = options.discovery ?? Tempo.#global.config.discovery ?? Symbol.keyFor($Tempo) as string;
-				Tempo.#setConfig(Tempo.#global, Tempo.#setDiscovery(Tempo.#global, discovery), options);
-				markConfig(Tempo.#global.config);														// ensure global config is marked for Logify
-			}
+			this.extend(registerTerms);														// register built-in term plugins
+
+			const storeKey = Symbol.keyFor($Tempo) as string;
+			Tempo.#setConfig(Tempo.#global,
+				{ store: storeKey, discovery: storeKey, scope: 'global' },
+				Tempo.readStore(storeKey),													// allow for storage-values to overwrite
+				Tempo.#setDiscovery(Tempo.#global, $Plugins),				// persistent library extensions
+				Tempo.#setDiscovery(Tempo.#global, $Tempo),					// user Discovery (Configuration bootstrapping)
+				options,																						// explicit options from the call
+			)
 
 			if (options.plugins) this.extend(options.plugins);		// ensure init-plugins are processed before 'ready'
 
@@ -801,7 +801,15 @@ export class Tempo {
 
 	/** global Tempo configuration */
 	static get config() {
-		return proxify(omit({ ...Tempo.#global.config }, 'value'));
+		const out = Object.create(Default);
+		const descriptors = Object.getOwnPropertyDescriptors(Tempo.#global.config) as Record<string, any>;
+		delete descriptors.value;
+		Object.defineProperties(out, descriptors);
+		Object.defineProperty(out, 'toJSON',		// bare-bones: only show global overrides
+			{ value: () => Object.fromEntries(
+				Object.entries(out)),							// proxify sees own toJSON, skips allObject
+				enumerable: false, configurable: true });
+		return proxify(out);
 	}
 
 	/** global discovery configuration */
@@ -975,7 +983,8 @@ export class Tempo {
 
 	#setLazy(target: any, name: PropertyKey | undefined, define: (keyOnly: boolean) => any, isKeyOnly = false) {
 		if (isDefined(name) && isDefined(define)) {
-			if (Object.hasOwn(target, name)) return target[name];
+			const desc = Object.getOwnPropertyDescriptor(target, name);
+			if (desc) return ('value' in desc) ? () => desc.value : desc.get;
 			let guard = false;
 			let memo: any;
 			let set = false;
@@ -1017,6 +1026,7 @@ export class Tempo {
 
 			return get;																						// return getter closure
 		}
+		return undefined;
 	}
 
 	/** create a Proxy-based delegator that registers lazy properties on-demand */
@@ -1037,7 +1047,8 @@ export class Tempo {
 					const isKeyOnly = term.key === key;
 					const define = (keyOnly: boolean) => {
 						try {
-							return term.define.call(this, keyOnly);
+							const result = term.define.call(this, keyOnly);
+							return Array.isArray(result) ? getTermRange(this, result, keyOnly) : result;
 						} catch (e: any) {
 							if (isClass(term.define)) Tempo.#dbg.warn(this.#local.config, `Misidentified class in term definition: ${key}`, e.stack ?? e);
 							else throw e;
@@ -1100,18 +1111,34 @@ export class Tempo {
 	/** Nanoseconds since Unix epoch (BigInt) */							get nano() { return this.toDateTime().epochNanoseconds }
 	/** current Tempo configuration */
 	get config() {
-		return proxify(omit({
-			...this.#local.config,
-			mode: this.#local.parse.mode,
-			lazy: this.#local.parse.lazy
-		}, 'scope', 'value', 'anchor')) as t.Internal.Config;
+		const base = Object.create(Default);		// Default → global overrides
+		const gDesc = Object.getOwnPropertyDescriptors(Tempo.#global.config) as Record<string, any>;
+		delete gDesc.value;
+		Object.defineProperties(base, gDesc);
+
+		const out = Object.create(base);				// global → local overrides
+		const lDesc = Object.getOwnPropertyDescriptors(this.#local.config) as Record<string, any>;
+		delete lDesc.scope;
+		delete lDesc.value;
+		delete lDesc.anchor;
+		Object.defineProperties(out, lDesc);
+
+		Object.defineProperties(out, {
+			mode: { value: this.#local.parse.mode, enumerable: true, writable: true, configurable: true },
+			lazy: { value: this.#local.parse.lazy, enumerable: true, writable: true, configurable: true },
+			toJSON: { value: () => Object.fromEntries(	// bare-bones: only show local overrides
+				Object.entries(out)),									// proxify sees own toJSON, skips allObject
+				enumerable: false, configurable: true },
+		});
+
+		return proxify(out) as t.Internal.Config;
 	}
 	/** Instance-specific parse rules (merged with global) */
 	get parse() {
 		this.#ensureParsed();
 		return this.#local.parse;
 	}
-	/** Object containing results from all term plugins */		get term() { return proxify(this.#term) }
+	/** Object containing results from all term plugins */		get term() { return this.#term }
 	/** Formatted results for all pre-defined format codes */	get fmt() { return this.#fmt }
 	/** units since epoch */																	get epoch() {
 		return secure({
@@ -1192,7 +1219,8 @@ export class Tempo {
 
 	/** parse DateTime input */
 	#parse(tempo: Tempo.DateTime, dateTime?: Temporal.ZonedDateTime, depth = 0): Temporal.ZonedDateTime {
-		const isRoot = isUndefined(this.#matches);
+		this.#parseDepth++;
+		const isRoot = this.#parseDepth === 1;
 		if (isRoot) this.#matches = [];														// initialize match accumulator
 		let today: Temporal.ZonedDateTime;
 		try {
@@ -1342,8 +1370,8 @@ export class Tempo {
 
 			if (isRoot) {
 				// ensure the final conformed result is also logged in match history
-				if (isDefined(res) && !this.#matches!.includes(res)) {
-					this.#matches!.push(res);
+				if (isDefined(res) && this.#matches && !this.#matches.includes(res)) {
+					this.#matches.push(res);
 				}
 
 				if (Reflect.isExtensible(this.#local.parse)) {
@@ -1362,6 +1390,7 @@ export class Tempo {
 			}
 		} finally {
 			if (isRoot) this.#matches = undefined;
+			this.#parseDepth--;
 		}
 
 		return dateTime!;
@@ -1608,7 +1637,8 @@ export class Tempo {
 		this.#anchor = dateTime;																// temporarily anchor the instance so events resolve relative to current state
 		this.#zdt = dateTime;																	// temporarily prime the instance to avoid recursion during event resolution
 
-		const isRoot = !this.#matches;
+		this.#parseDepth++;
+		const isRoot = this.#parseDepth === 1;
 		if (isRoot) this.#matches = [];
 
 		try {
@@ -1691,12 +1721,13 @@ export class Tempo {
 			}
 		} finally {
 			this.#anchor = prevAnchor;														// restore anchor baseline
-			if (isRoot) {
+			if (this.#parseDepth === 1) {
 				this.#zdt = prevZdt;																// restore instance state only if root
 				this.#matches = undefined;
 			} else {
 				if (isTemporal(dateTime)) this.#zdt = dateTime;			// only propagate valid Temporal state to parent level
 			}
+			this.#parseDepth--;
 		}
 
 		// resolve month-names into month-numbers (some browsers do not allow month-names when parsing a Date)
@@ -2003,13 +2034,14 @@ export class Tempo {
 			}, {} as Record<string, number>);
 	}
 
-	/** mutate the date-time by adding a duration */
 	#add = (args?: any, options: Tempo.Options = {}) => {
 		if (!isTemporal(this.#zdt)) return this;
 
 		const tz = options.timeZone ?? this.tz;
 		let zdt = (this.#zdt as any).withTimeZone(tz);
-		this.#matches = [...this.#local.parse.result];
+		this.#parseDepth++;
+		const isRoot = this.#parseDepth === 1;
+		if (isRoot) this.#matches = [...this.#local.parse.result];
 
 		const overrides = {
 			timeZone: tz,
@@ -2100,7 +2132,8 @@ export class Tempo {
 
 			return new this.#Tempo(zdt, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
 		} finally {
-			this.#matches = undefined;
+			if (isRoot) this.#matches = undefined;
+			this.#parseDepth--;
 		}
 	}
 
@@ -2114,7 +2147,9 @@ export class Tempo {
 		// Shift the current instance to the target timezone first to ensure
 		// that any relative keywords (like 'tomorrow') are resolved correctly.
 		let zdt = (this.#zdt as any).withTimeZone(tz).withCalendar(cal);
-		this.#matches = [...this.#local.parse.result];
+		this.#parseDepth++;
+		const isRoot = this.#parseDepth === 1;
+		if (isRoot) this.#matches = [...this.#local.parse.result];
 
 		const overrides = {
 			timeZone: tz,
@@ -2324,7 +2359,8 @@ export class Tempo {
 
 			return new this.#Tempo(zdt, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
 		} finally {
-			this.#matches = undefined;
+			if (isRoot) this.#matches = undefined;
+			this.#parseDepth--;
 		}
 	}
 

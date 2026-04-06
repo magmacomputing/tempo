@@ -175,7 +175,7 @@ export namespace Internal {
 		/** plugins to be automatically extended */							plugins: Plugin | Plugin[];
 		/** supplied value to parse */													value: DateTime;
 		/** @internal temporary anchor used during parsing */		anchor: Temporal.ZonedDateTime;
-		/** @internal accumulated parse results */							result?: Match[];
+		/** @internal accumulated parse results */							result?: Match[] | undefined;
 	}
 
 	/** high-precision precision to measure timestamps (ms | us) */

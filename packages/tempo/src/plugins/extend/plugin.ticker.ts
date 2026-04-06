@@ -115,7 +115,7 @@ export class Ticker implements AsyncGenerator<Tempo, any>, AsyncDisposable, Disp
 		const isSeed = isDefined(rawOptions.seed) && (!isNumber(rawOptions.seed) || (Number.isFinite(rawOptions.seed as number) && !Number.isNaN(rawOptions.seed as number)));
 		const isInterval = isDefined(rawOptions.seconds) && Number.isFinite(rawOptions.seconds) && !Number.isNaN(rawOptions.seconds);
 
-		if (isDefined(arg1) && !isInterval && !isSeed) {
+		if (isDefined(arg1) && !isInterval && !isSeed && !cb) {
 			(TempoClass as any).catch(markConfig(rawOptions), `Invalid Ticker interval or seed: ${String(arg1)}`);
 		}
 
