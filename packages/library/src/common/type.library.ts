@@ -132,7 +132,6 @@ const classRegex = /^\s*(class\s|\[native code\])/;						// match class keyword 
 
 /** private helper to safely identify an ES6 class, bypassing Proxies */
 const isClassConstructor = (obj: any): boolean => {
-	console.log("Checking constructor:", obj?.name || obj);
 	if (typeof obj !== 'function') return false;
 
 	const raw = (obj as any)?.[$Target] ?? obj;							// bypass Proxy traps

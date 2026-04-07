@@ -979,7 +979,7 @@ export class Tempo {
 	#ensureParsed() {
 		if (this.#zdt) return;
 		try {
-			this.#zdt = this.#parse(this.#tempo as Tempo.DateTime, this.#anchor, 0);
+			this.#zdt = this.#parse(this.#tempo as Tempo.DateTime, this.#anchor);
 			secure(this.#local.config);
 			const skip = [this.#local.parse.format, this.#local.parse.term].filter(v => v !== undefined);
 			secure(this.#local.parse, new WeakSet(skip as any));
@@ -1236,7 +1236,7 @@ export class Tempo {
 	}
 
 	/** parse DateTime input */
-	#parse(tempo: Tempo.DateTime, dateTime?: Temporal.ZonedDateTime, depth = 0): Temporal.ZonedDateTime {
+	#parse(tempo: Tempo.DateTime, dateTime?: Temporal.ZonedDateTime): Temporal.ZonedDateTime {
 		if (isNull(tempo)) {																		// fail-early
 			this.#errored = true;
 			return undefined as any;
@@ -1266,7 +1266,7 @@ export class Tempo {
 
 			const isAnchored = isDefined(dateTime) || isDefined(this.#anchor);
 			const resolvingKeys = new Set<string>();
-			const res = this.#conform(tempo, today, isAnchored, 0, resolvingKeys);
+			const res = this.#conform(tempo, today, isAnchored, resolvingKeys);
 			const { type, value } = res;
 
 			// re-fetch zone/cal as they may have been updated by brackets during #conform
@@ -1372,34 +1372,6 @@ export class Tempo {
 						.toZonedDateTimeISO(targetTz);
 					break;
 
-				case 'Class':
-					Tempo.#dbg.warn(this.#local.config, `Unexpected Tempo parameter type: Class for value: ${String(value)}`);
-					dateTime = today;
-					break;
-
-				case 'AsyncFunction':
-				case 'Function':
-					if (depth >= 100) {
-						const msg = `Infinite recursion detected in functional resolution for: ${String(value)}`;
-						Tempo.#dbg.warn(this.#local.config, msg);
-						this.#errored = true;
-						throw new RangeError(msg);
-					} else {
-						try {
-							const res = (value as Function).call(this);
-							dateTime = this.#parse(res, today, depth + 1);
-						} catch (err: any) {
-							console.log('Error caught in #parse functional resolution:', err.message, err.stack);
-							if (isString(err?.message) && err.message.toLowerCase().includes('class constructor')) {
-								Tempo.#dbg.warn(this.#local.config, `Unexpected Tempo parameter type: Class for value: ${String(value)}`);
-								dateTime = today;
-							} else {
-								Tempo.#dbg.warn(this.#local.config, `Functional resolution failed: ${err.message}`);
-								throw err;
-							}
-						}
-					}
-					break;
 
 				default:
 					Tempo.#dbg.warn(this.#local.config, new TypeError(`Unexpected Tempo parameter type: ${String(type)} for value: ${String(value)}`));
@@ -1488,7 +1460,7 @@ export class Tempo {
 	}
 
 	/** conform input to a Temporal.ZonedDateTime */
-	#conform(tempo: Tempo.DateTime, dateTime: Temporal.ZonedDateTime, isAnchored = false, depth = 0, resolvingKeys = new Set<string>()): TypeValue<any> {
+	#conform(tempo: Tempo.DateTime, dateTime: Temporal.ZonedDateTime, isAnchored = false, resolvingKeys = new Set<string>()): TypeValue<any> {
 		const arg = asType(tempo);
 		const { type, value } = arg;
 
@@ -1499,10 +1471,6 @@ export class Tempo {
 
 		let zdt = dateTime as any;
 
-		if (depth >= 100) {
-			Tempo.#dbg.error(this.#local.config, new RangeError(`Infinite recursion detected in functional resolution for: ${String(value)}`));
-			return arg;
-		}
 
 		if (this.#isZonedDateTimeLike(tempo)) {									// tempo is ZonedDateTime-ish object (throw away 'value' property)
 			const { timeZone, calendar, value: _, ...options } = tempo as Tempo.Options;

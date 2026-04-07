@@ -33,7 +33,7 @@ declare global {
 }
 
 /** the value that Tempo will attempt to interpret as a valid ISO date / time */
-export type DateTime = string | number | bigint | Date | Tempo | TemporalObject | Temporal.ZonedDateTimeLike | Function | undefined | null
+export type DateTime = string | number | bigint | Date | Tempo | TemporalObject | Temporal.ZonedDateTimeLike | undefined | null
 
 export type Pattern = string | RegExp
 export type Logic = string | number | Function
