@@ -1,4 +1,5 @@
 import { isObject, isFunction, isDefined, isUndefined, isEmpty, isNumber } from '#library/type.library.js'
+import { Pledge } from '#library/pledge.class.js'
 import { isNumeric } from '#library/coercion.library.js'
 import { instant, normaliseFractionalDurations } from '#library/temporal.library.js'
 import { DURATIONS } from '#tempo/tempo.enum.js'
@@ -78,6 +79,7 @@ export class Ticker implements AsyncGenerator<Tempo, any>, AsyncDisposable, Disp
 	#isForward = true;
 	#isInstant = false;
 	#schedId: any;
+	#waiter: Pledge<void> | undefined;
 	#listeners = new Set<Tempo.TickerCallback>();
 	#catchListeners = new Set<Tempo.TickerCallback>();
 	#TempoClass: typeof Tempo;
@@ -178,7 +180,11 @@ export class Ticker implements AsyncGenerator<Tempo, any>, AsyncDisposable, Disp
 		Ticker.#active.add(this);
 
 		// Bootstrap
-		if (this.#listeners.size > 0 && !this.#stopped) {
+		this.#bootstrap();
+	}
+
+	#bootstrap() {
+		if (this.#listeners.size > 0 && !this.#stopped && !this.#schedId) {
 			const delay = this.#delayMs();
 			if (delay > 0) {
 				this.#schedId = setTimeout(() => {
@@ -222,18 +228,23 @@ export class Ticker implements AsyncGenerator<Tempo, any>, AsyncDisposable, Disp
 		this.#current = this.#isInstant ? t : t.add(this.#payload);
 		this.#ticks++;
 
-		if (this.#limit && this.#ticks >= this.#limit) this.stop();
-		if (this.#until) {
+		if (isDefined(this.#limit) && this.#ticks >= this.#limit) this.stop();
+		if (isDefined(this.#until)) {
 			const cmp = this.#TempoClass.compare(t, this.#until);
 			if ((this.#isForward && cmp >= 0) || (!this.#isForward && cmp <= 0)) this.stop();
 		}
+
+		if (this.#stopped && isDefined(this.#limit) && this.#limit === 0) return t;
 
 		this.#listeners.forEach(l => l(t, () => this.stop()));
 		return t;
 	}
 
 	on(event: 'pulse' | 'catch', cb: Tempo.TickerCallback): this {
-		if (event === 'pulse') this.#listeners.add(cb);
+		if (event === 'pulse') {
+			this.#listeners.add(cb);
+			this.#bootstrap();
+		}
 		if (event === 'catch') this.#catchListeners.add(cb);
 		return this;
 	}
@@ -244,6 +255,11 @@ export class Ticker implements AsyncGenerator<Tempo, any>, AsyncDisposable, Disp
 		if (this.#schedId) {
 			clearTimeout(this.#schedId);
 			this.#schedId = undefined;
+		}
+
+		if (this.#waiter && this.#waiter.isPending) {
+			this.#waiter.resolve();
+			this.#waiter = undefined;
 		}
 	}
 
@@ -264,19 +280,29 @@ export class Ticker implements AsyncGenerator<Tempo, any>, AsyncDisposable, Disp
 			this.#genFirstYielded = true;
 			const delay = this.#delayMs();
 			if (delay > 0) {
-				await new Promise<void>(res => { this.#schedId = setTimeout(res, delay) });
+				this.#waiter = new Pledge('Ticker.next');
+				this.#schedId = setTimeout(() => this.#waiter?.resolve(), delay);
+				await this.#waiter;
+				this.#waiter = undefined;
 				if (this.#stopped) return { done: true, value: undefined };
 			}
-			return { done: false, value: this.pulse() };
+			const t = this.pulse();
+			if (this.#stopped && isDefined(this.#limit) && this.#limit === 0) return { done: true, value: undefined };
+			return { done: false, value: t };
 		}
 
 		if (this.#isInstant) return { done: true, value: undefined };
 
 		const delay = this.#delayMs();
-		await new Promise<void>(res => { this.#schedId = setTimeout(res, delay) });
+		this.#waiter = new Pledge('Ticker.next');
+		this.#schedId = setTimeout(() => this.#waiter?.resolve(), delay);
+		await this.#waiter;
+		this.#waiter = undefined;
 		if (this.#stopped) return { done: true, value: undefined };
 
-		return { done: false, value: this.pulse() };
+		const t = this.pulse();
+		if (this.#stopped && isDefined(this.#limit) && this.#limit === 0) return { done: true, value: undefined };
+		return { done: false, value: t };
 	}
 
 	[Symbol.asyncIterator](): this { return this; }
@@ -289,6 +315,10 @@ export class Ticker implements AsyncGenerator<Tempo, any>, AsyncDisposable, Disp
 	}
 
 	async throw(e: any): Promise<never> {
+		if (this.#waiter && this.#waiter.isPending) {
+			this.#waiter.reject(e);
+			this.#waiter = undefined;
+		}
 		this.stop();
 		throw e;
 	}

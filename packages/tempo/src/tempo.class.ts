@@ -457,17 +457,16 @@ export class Tempo {
 
 		// ensure we have our own Map to mutate (shadow if local)
 		if (!Tempo.#hasOwn(shape.parse, 'pattern'))
-			shape.parse.pattern = new Map();
-
-		shape.parse.pattern.clear();														// reset {pattern} Map
+			shape.parse.pattern = new Map(shape.parse.pattern);							// preserve inherited entries while shadowing
 
 		const layouts = { ...shape.parse.layout };										// shallow-copy to include inherited properties
 		for (const [sym, layout] of ownEntries(layouts, true)) {
 			const reg = Tempo.regexp(layout, snippet);
-			shape.parse.pattern.set(sym, reg);
+			shape.parse.pattern.set(sym, reg);											// merge/update compiled RegExp
 		}
 
-		Tempo.#buildGuard();																		// build the high-performance 'Master Guard'
+		if (shape === Tempo.#global)
+			Tempo.#buildGuard();															// build the high-performance 'Master Guard' ONLY for global changes
 	}
 
 	static #buildGuard() {

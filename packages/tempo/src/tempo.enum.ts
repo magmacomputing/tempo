@@ -235,21 +235,24 @@ const REGISTRIES: Record<string, any> = {
 export function registryUpdate(name: keyof typeof STATE, data: Record<string, any>) {
 	const registry = REGISTRIES[name];
 	const target = registry?.[$Target] as Property<any>;
+
+	if (!isDefined(registry) || !isDefined(target)) return;					// early-return if no valid target to mutate
+
 	const state = STATE[name] as Property<any>;
 
 	Object.entries(data).forEach(([key, val]) => {
-		if (isUndefined(target[key])) {													// only add if key does not exist
+		if (isUndefined(target[key])) {																// only add if key does not exist
 			Object.defineProperty(target, key, {
 				value: val,
 				enumerable: true,
 				writable: true,
 				configurable: true
 			});
-			if (state) state[key] = val;
+			if (isDefined(state)) state[key] = val;
 		}
 	});
 
-	if (target) clearCache(target);
+	clearCache(target);
 }
 
 /** Reset all extendable registries to their original built-in defaults */

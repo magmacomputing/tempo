@@ -50,11 +50,14 @@ Prevent memory leaks and runaway processes by setting a built-in termination con
 // Pattern A: Stop after exactly 5 ticks (defaults to 1-second interval)
 using tickerA = Tempo.ticker({ limit: 5 }, (t) => console.log(t));
 
-// Pattern B: Stop when a specific virtual time is reached
+// Pattern B: Stop when a specific virtual time is reached (Inclusive)
 using tickerB = Tempo.ticker({ 
   seconds: 10,               // Plural DurationLike property
   until: '2024-12-25T12:00:00' 
 }, (t) => console.log(t));
+
+// Pattern C: Stop immediately (Limit: 0 is strictly honored)
+using tickerC = Tempo.ticker({ limit: 0 }); 
 ```
 
 ### 4. Virtual Clock (Seeding)
@@ -204,7 +207,7 @@ The object returned by `Tempo.ticker()` (or an instance of the `Ticker` class) i
 | `on(event, cb)` | Registers a listener for the `'pulse'` event. |
 | `pulse()` | Manually triggers a pulse, advances state, and notifies listeners. Returns the new `Tempo`. |
 | `info` | Read-only getter returning `{ next, ticks, limit, interval, stopped }`. |
-| `stop()` | Stops the ticker and clears any active timers. |
+| `stop()` | Stops the ticker, clears active timers, and immediately resolves any pending async iteration Promises. |
 | `[Symbol.dispose]` | Standard cleanup for `using` blocks. |
 | `[Symbol.asyncDispose]` | Standard async cleanup for `await using` blocks. |
 | `[Symbol.asyncIterator]` | Standard async iteration support (for `for await` loops). |
@@ -251,6 +254,8 @@ You can use the ticker as a "one-shot" timer for specific events by simply speci
 > **Seed-Only Logic**: Providing a `seed` (as a string or in an options object) without any other duration-based keys (`seconds`, `minutes`, etc.) or a `limit` implies a `limit: 1`. 
 > 
 > Effectively, `Tempo.ticker('Fri 10am')` and `Tempo.ticker({ seed: 'Fri 10am' })` and `Tempo.ticker({ seed: 'Fri 10am', limit: 1 })` are all treated as one-shot tickers.
+>
+> **Inclusive Boundaries**: Termination conditions (`limit` and `until`) are **inclusive**. A ticker with `limit: 1` will pulse exactly once before stopping.
 
 ```typescript
 // Pattern A: Implicit one-shot via string seed
