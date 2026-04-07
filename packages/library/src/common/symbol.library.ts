@@ -12,6 +12,8 @@
 /** key to identify the global registration hook */					export const $Register = Symbol.for('$Register');
 
 /** identify and mark a Logify configuration object */			export function markConfig<T extends object>(obj: T): T {
-	Object.defineProperty(obj, $Logify, { value: true, enumerable: false, writable: true, configurable: true });
+	if (!(obj as any)[$Logify]) {
+		Object.defineProperty(obj, $Logify, { value: true, enumerable: false, writable: true, configurable: true });
+	}
 	return obj;
 }

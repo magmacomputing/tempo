@@ -106,7 +106,7 @@ Calculates the duration until another date-time.
 ### `tempo.since(since, opts?)`
 Returns a human-readable relative time string (e.g., "3 days ago").
 
-### `tempo.isValid()`
+### `tempo.isValid`
 Returns `true` if the instance represents a valid date-time.
 
 ### `tempo.toString()`

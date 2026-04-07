@@ -10,7 +10,7 @@
 import * as enums from '#tempo/tempo.enum.js';
 import { $Tempo, $Plugins, $Register } from '#tempo/tempo.symbol.js';
 import type { Snippet, Layout, Event, Period, Token } from '#tempo/tempo.default.js';
-import type { IntRange, NonOptional, Property, Plural, Prettify, TemporalObject } from '#library/type.library.js';
+import type { IntRange, NonOptional, Property, Plural, Prettify, TemporalObject, TypeValue } from '#library/type.library.js';
 
 /**
  * Structural forward-reference to the Tempo class.
@@ -21,8 +21,8 @@ import type { Tempo } from '#tempo/tempo.class.js';
 declare module '#library/type.library.js' {
 	interface TypeValueMap<T> {
 		Tempo: { type: 'Tempo', value: Tempo };
-		Event: { type: 'Event', value: string | number | Function };
-		Period: { type: 'Period', value: string | number | Function };
+		// Event: { type: 'Event', value: string | number | Function };
+		// Period: { type: 'Period', value: string | number | Function };
 	}
 }
 
@@ -44,7 +44,12 @@ export type Groups = Record<string, string>
 
 export type Options = Prettify<{ [K in keyof Internal.BaseOptions]?: Internal.BaseOptions[K] } & Record<string, any>>;
 
-/** define a new term plugin */
+/**
+ * # TermPlugin
+ * extend the functionality of the Tempo term-resolution system.
+ * Every attempt to resolve an input to a Tempo should always be checked with .isValid before continuing.
+ * Otherwise unpredictable behaviour is likely.
+ */
 export type TermPlugin = {
 	key: string; scope?: string;
 	description?: string;
@@ -52,7 +57,12 @@ export type TermPlugin = {
 	ranges?: Range[];
 }
 
-/** plugin function that can extend the Tempo prototype or static space */
+/**
+ * # Plugin
+ * extend the functionality of the Tempo class.
+ * Every attempt to resolve an input to a Tempo should always be checked with .isValid before continuing.
+ * Otherwise unpredictable behaviour is likely.
+ */
 export type Plugin = (options: any, TempoClass: typeof Tempo, factory: (val: any) => Tempo) => void;
 
 /** Configuration to use for #until() and #since() argument */
@@ -214,11 +224,12 @@ export namespace Internal {
 	}
 
 	/** debug a Tempo instantiation */
+	type MatchExtend = { type: 'Event' | 'Period', value: string | number | Function }
 	export type Match = {
 		/** pattern which matched the input */									match?: string | undefined;
 		/** groups from the pattern match */										groups?: Groups;
 		/** was this a nested/anchored parse? */								isAnchored?: boolean;
-	} & import('#library/type.library.js').TypeValue<any>;
+	} & (TypeValue<any> | MatchExtend)
 
 	/** drop the parse-only Options */
 	export type OptionsKeep = Omit<BaseOptions, "mdyLocales" | "mdyLayouts" | "pivot" | "snippet" | "layout" | "event" | "period" | "value">

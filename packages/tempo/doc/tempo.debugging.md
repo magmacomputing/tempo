@@ -92,10 +92,10 @@ Tempo uses a **Master Guard** to avoid the expensive regex parsing phase for str
 ---
 
 ### Invalid Instances
-If a `Tempo` instance completely fails to instantiate (and `{ catch: false }` is not set), it returns an empty object. You can check for this using the `isValid()` method:
+If a `Tempo` instance completely fails to instantiate (and `{ catch: false }` is not set), it returns an empty object. You can check for this using the `isValid` method:
 ```typescript
 const t = new Tempo();
-if (!t.isValid()) {
+if (!t.isValid) {
     console.error("Tempo failed to initialize properly");
 }
 ```

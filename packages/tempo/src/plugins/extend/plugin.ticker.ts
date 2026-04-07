@@ -5,7 +5,6 @@ import { DURATIONS } from '#tempo/tempo.enum.js'
 import { markConfig } from '#library/symbol.library.js'
 import { definePlugin } from '#tempo/plugins/tempo.plugin.js'
 import type { Tempo } from '#tempo/tempo.class.js'
-import type { DateTime, Options } from '#tempo/tempo.type.js'
 
 declare module '#tempo/tempo.class.js' {
 	namespace Tempo {
@@ -20,6 +19,7 @@ declare module '#tempo/tempo.class.js' {
 			limit?: number;
 			until?: DateTime | Options;
 			seed?: DateTime | Options;
+			catch?: boolean;
 			[key: `#${string}`]: number | string;
 		}
 
@@ -30,7 +30,7 @@ declare module '#tempo/tempo.class.js' {
 		interface Ticker extends AsyncGenerator<Tempo, any>, AsyncDisposable, Disposable {
 			(): void
 			pulse(): Tempo;
-			on(event: 'pulse', cb: (t: Tempo, stop: () => void) => void): this;
+			on(event: 'pulse' | 'catch', cb: (t: Tempo, stop: () => void) => void): this;
 			stop(): void;
 			readonly info: {
 				next: Tempo;
@@ -75,10 +75,11 @@ export class Ticker implements AsyncGenerator<Tempo, any>, AsyncDisposable, Disp
 	#ticks = 0;
 	#stopped = false;
 	#genFirstYielded = false;
-	#isForward: boolean;
-	#isInstant: boolean;
+	#isForward = true;
+	#isInstant = false;
 	#schedId: any;
 	#listeners = new Set<Tempo.TickerCallback>();
+	#catchListeners = new Set<Tempo.TickerCallback>();
 	#TempoClass: typeof Tempo;
 
 	constructor(TempoClass: typeof Tempo, arg1: any, arg2?: any) {
@@ -137,12 +138,41 @@ export class Ticker implements AsyncGenerator<Tempo, any>, AsyncDisposable, Disp
 
 		normaliseFractionalDurations(this.#payload);
 
-		const probe = new TempoClass();
-		const probeShifted = probe.add(this.#payload);
-		this.#isForward = TempoClass.compare(probeShifted, probe) >= 0;
-		this.#isInstant = probeShifted.epoch.ns === probe.epoch.ns;
-
 		this.#current = new TempoClass(isOptions(startAt) ? undefined : startAt, isOptions(startAt) ? { ...rest, ...startAt } : rest);
+
+		// ── Validation: Refusal-to-Launch ────────────────────────────────────
+		if (!this.#current.isValid) {
+			this.stop();
+			(TempoClass as any).catch(this.#current.config, `Invalid Ticker seed: ${String(startAt)}`);
+			return;
+		}
+
+		if (this.#until && !this.#until.isValid) {
+			this.stop();
+			(TempoClass as any).catch(this.#current.config, `Invalid Ticker until boundary: ${String(stopAt)}`);
+			return;
+		}
+
+		try {
+			const firstStep = this.#current.add(this.#payload);
+			if (!firstStep.isValid) throw new Error(`Invalid Ticker payload resolution for ${JSON.stringify(this.#payload)}`);
+
+			this.#isForward = TempoClass.compare(firstStep, this.#current) >= 0;
+			this.#isInstant = firstStep.epoch.ns === this.#current.epoch.ns;
+
+			// If it's a Term (starts with #), the first tick is the first occurrence (advanced).
+			// If it's a Duration (numeric patterns), the first tick is the seed (immediate).
+			const isTerm = Object.keys(this.#payload).some(k => k.startsWith('#'));
+			if (isTerm) this.#current = firstStep;
+
+		} catch (e: any) {
+			this.stop();
+			(TempoClass as any).catch(this.#current.config, `Invalid Ticker payload resolution for ${JSON.stringify(this.#payload)}`, e);
+			queueMicrotask(() => this.#catchListeners.forEach(l => l(this.#current, () => this.stop())));
+
+			this.#isForward = true;																// safely default on inhibited start
+			this.#isInstant = false;
+		}
 
 		// Register in global registry
 		Ticker.#active.add(this);
@@ -180,14 +210,20 @@ export class Ticker implements AsyncGenerator<Tempo, any>, AsyncDisposable, Disp
 
 	/** Manual pulse — advances state and notifies listeners */
 	pulse(): Tempo {
-		if (this.#stopped) return this.#current.clone();
+		if (this.#stopped) return new (this.#TempoClass as any)(null, this.#current.config);
 
-		const t = this.#current.clone();
-		this.#current = this.#current.add(this.#payload);
+		const t = this.#current;
+		if (!t.isValid) {
+			this.stop();
+			this.#catchListeners.forEach(l => l(t, () => this.stop()));
+			return t;
+		}
+
+		this.#current = this.#isInstant ? t : t.add(this.#payload);
 		this.#ticks++;
 
-		if (isDefined(this.#limit) && this.#ticks >= this.#limit) this.stop();
-		if (isDefined(this.#until)) {
+		if (this.#limit && this.#ticks >= this.#limit) this.stop();
+		if (this.#until) {
 			const cmp = this.#TempoClass.compare(t, this.#until);
 			if ((this.#isForward && cmp >= 0) || (!this.#isForward && cmp <= 0)) this.stop();
 		}
@@ -196,8 +232,9 @@ export class Ticker implements AsyncGenerator<Tempo, any>, AsyncDisposable, Disp
 		return t;
 	}
 
-	on(event: 'pulse', cb: Tempo.TickerCallback): this {
+	on(event: 'pulse' | 'catch', cb: Tempo.TickerCallback): this {
 		if (event === 'pulse') this.#listeners.add(cb);
+		if (event === 'catch') this.#catchListeners.add(cb);
 		return this;
 	}
 

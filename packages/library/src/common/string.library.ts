@@ -93,7 +93,7 @@ export const plural = (val: string | number | Record<string, string>, word: stri
 
 /** strip a plural suffix, if endsWith 's' */
 export const singular = (val: string) =>
-	val.endsWith('s') ? val.slice(0, -1) : val;
+	val.endsWith('s') && val.length > 3 ? val.slice(0, -1) : val;
 
 /**
  * make an Object's values into a Template Literals, and evaluate

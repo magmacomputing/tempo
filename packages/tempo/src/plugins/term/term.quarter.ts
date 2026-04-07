@@ -6,15 +6,15 @@ import type { Tempo } from '#tempo/tempo.class.js';
 
 /** definition of fiscal quarter ranges */
 const { ranges, groups } = defineRange([
-	{ key: 'Q1', day: 1, month: 1, year: 0, fiscal: 0, sphere: COMPASS.North },
-	{ key: 'Q2', day: 1, month: 4, year: 0, fiscal: 0, sphere: COMPASS.North },
-	{ key: 'Q3', day: 1, month: 7, year: 0, fiscal: 0, sphere: COMPASS.North },
-	{ key: 'Q4', day: 1, month: 10, year: 0, fiscal: 0, sphere: COMPASS.North },
+	{ key: 'Q1', day: 1, month: 1, fiscal: 0, sphere: COMPASS.North },
+	{ key: 'Q2', day: 1, month: 4, fiscal: 0, sphere: COMPASS.North },
+	{ key: 'Q3', day: 1, month: 7, fiscal: 0, sphere: COMPASS.North },
+	{ key: 'Q4', day: 1, month: 10, fiscal: 0, sphere: COMPASS.North },
 
-	{ key: 'Q3', day: 1, month: 1, year: 0, fiscal: 0, sphere: COMPASS.South },
-	{ key: 'Q4', day: 1, month: 4, year: 0, fiscal: 0, sphere: COMPASS.South },
-	{ key: 'Q1', day: 1, month: 7, year: 0, fiscal: 1, sphere: COMPASS.South },
-	{ key: 'Q2', day: 1, month: 10, year: 0, fiscal: 1, sphere: COMPASS.South },
+	{ key: 'Q1', day: 1, month: 7, fiscal: 0, sphere: COMPASS.South },
+	{ key: 'Q2', day: 1, month: 10, fiscal: 0, sphere: COMPASS.South },
+	{ key: 'Q3', day: 1, month: 1, fiscal: 1, sphere: COMPASS.South },
+	{ key: 'Q4', day: 1, month: 4, fiscal: 1, sphere: COMPASS.South },
 ], 'sphere');
 
 export const QuarterTerm = defineTerm({
@@ -25,7 +25,7 @@ export const QuarterTerm = defineTerm({
 
 	/** determine where the current Tempo instance fits within the above range */
 	define(this: Tempo, keyOnly?: boolean) {
-		const { yy, config: { sphere = '' } } = this;
+		const { yy, config: { sphere = COMPASS.North } } = this;
 		const list = (groups[sphere] ?? []).map(r => ({ ...r }));
 
 		list.forEach((itm: any) => {

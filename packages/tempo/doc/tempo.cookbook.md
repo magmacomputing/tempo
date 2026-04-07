@@ -32,7 +32,7 @@ t.format('{hh}:{mi} {mer}');   // "12:00 am"
 ### How do I check if a date is valid?
 ```typescript
 const t = new Tempo('invalid-date');
-if (t.isValid()) {
+if (t.isValid) {
   // ...
 }
 ```

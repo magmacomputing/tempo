@@ -61,14 +61,14 @@ describe('Tempo Core', () => {
 			it('should suppress immediate throws in strict mode', () => {
 				vi.spyOn(console, 'warn').mockImplementation(() => {});
 				const t = new Tempo('2024-01-01', { mode: Tempo.MODE.Strict, timeZone: 'Invalid/Zone', catch: true });
-				expect(t.isValid()).toBe(false);
+				expect(t.isValid).toBe(false);
 				expect(t.format('{yyyy}')).toBe('');
 			});
 
 			it('should suppress deferred throws in defer mode', () => {
 				vi.spyOn(console, 'warn').mockImplementation(() => {});
 				const t = new Tempo('2024-01-01', { mode: Tempo.MODE.Defer, timeZone: 'Invalid/Zone', catch: true });
-				expect(t.isValid()).toBe(false);										// Validates on call
+				expect(t.isValid).toBe(false);										// Validates on call
 				expect(t.format('{yyyy}')).toBe('');
 			});
 		});

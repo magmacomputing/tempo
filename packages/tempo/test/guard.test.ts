@@ -11,7 +11,7 @@ describe('Master Guard Verification', () => {
     
     inputs.forEach(input => {
       const t = new Tempo(input);
-      expect(t.isValid(), `Failed to validate: ${input}`).toBe(true);
+      expect(t.isValid, `Failed to validate: ${input}`).toBe(true);
     });
   });
 
@@ -24,7 +24,7 @@ describe('Master Guard Verification', () => {
     
     inputs.forEach(input => {
       const t = new Tempo(input);
-      expect(t.isValid(), `Failed to validate dual-brackets: ${input}`).toBe(true);
+      expect(t.isValid, `Failed to validate dual-brackets: ${input}`).toBe(true);
     });
   });
 
@@ -44,7 +44,7 @@ describe('Master Guard Verification', () => {
 
   test('should handle keyword-interleaving (e.g. "today[UTC]")', () => {
     const t = new Tempo('today[UTC]');
-    expect(t.isValid()).toBe(true);
+    expect(t.isValid).toBe(true);
     expect(t.tz).toBe('UTC');
   });
 
