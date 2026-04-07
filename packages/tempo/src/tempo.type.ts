@@ -21,8 +21,6 @@ import type { Tempo } from '#tempo/tempo.class.js';
 declare module '#library/type.library.js' {
 	interface TypeValueMap<T> {
 		Tempo: { type: 'Tempo', value: Tempo };
-		// Event: { type: 'Event', value: string | number | Function };
-		// Period: { type: 'Period', value: string | number | Function };
 	}
 }
 
@@ -87,7 +85,7 @@ export type Set = Prettify<SetFields & {
 	calendar?: Temporal.CalendarLike;
 } & TermOffset> | DateTime
 type AddUnits = { [K in Unit]?: number };
-export type Add = Prettify<AddUnits & TermOffset>
+export type Add = Prettify<AddUnits & TermOffset> | DateTime
 
 export type Modifier = '=' | '-' | '+' | '<' | '<=' | '-=' | '>' | '>=' | '+=' | 'this' | 'next' | 'prev' | 'last' | 'first' | undefined
 export type Relative = 'ago' | 'hence' | 'prior' | 'from now'

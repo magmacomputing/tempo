@@ -92,7 +92,7 @@ export class Pledge<T> {
 			this.#pledge.promise.finally(() => runSafely(onSettle));
 
 		if (this.#status.catch)
-			this.#pledge.promise.catch(err => Pledge.#dbg.catch(this.#status, err));
+			this.#pledge.promise.catch(err => Pledge.#dbg.warn(this.#status, err));
 	}
 
 	get [Symbol.toStringTag]() {

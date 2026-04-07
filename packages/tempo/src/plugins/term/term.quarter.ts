@@ -25,7 +25,7 @@ export const QuarterTerm = defineTerm({
 
 	/** determine where the current Tempo instance fits within the above range */
 	define(this: Tempo, keyOnly?: boolean) {
-		const { yy, config: { sphere = COMPASS.North } } = this;
+		const { yy, config: { sphere = '' } } = this;
 		const list = (groups[sphere] ?? []).map(r => ({ ...r }));
 
 		list.forEach((itm: any) => {

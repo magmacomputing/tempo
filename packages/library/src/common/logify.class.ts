@@ -25,6 +25,8 @@ export class Logify {
 	#trap(method: Logify.Method, ...msg: any[]) {
 		const config = (isObject(msg[0]) && (msg[0] as any)[$Logify] === true) ? msg.shift() : this.#opts;
 
+		if (method === Method.Debug && !config.debug) return;
+
 		const output = msg.map(m => {
 			if (m instanceof Error) return m.message;
 			if (isObject(m)) {

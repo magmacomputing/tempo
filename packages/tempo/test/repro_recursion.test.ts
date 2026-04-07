@@ -2,7 +2,7 @@ import { Tempo } from '#tempo';
 import { isFunction } from '#library/type.library.js';
 
 describe('Functional Recursion Limit', () => {
-	it('should cap functional recursion at 5 hops and return gracefully when catch:true', () => {
+	it('should cap functional recursion at 100 hops and return gracefully when catch:true', () => {
 		let count = 0;
 		const recursive = () => {
 			count++;
@@ -10,7 +10,7 @@ describe('Functional Recursion Limit', () => {
 		};
 
 		// 1. With catch:true, it should log a warning and return the function as-is
-		const t = new Tempo(recursive as any, { catch: true });
+		const t = new Tempo(recursive, { catch: true });
 		expect(count).toBe(100);
 		expect(isFunction(recursive)).toBe(true);
 	});

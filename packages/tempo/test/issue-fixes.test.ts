@@ -18,8 +18,8 @@ describe('Tempo Issue Fixes', () => {
       const yesterday = today.set('yesterday')
       const dayBeforeYesterday = yesterday.set('yesterday')
 
-      const expected = (today.toDateTime()).toPlainDate().add({ days: -2 })
-      expect(dayBeforeYesterday.format('{yyyy}-{mm}-{dd}')).toBe(expected.toString())
+      const expected = (today.toDateTime()).toPlainDate().add({ days: -2 }).toString()
+      expect(dayBeforeYesterday.format('{yyyy}-{mm}-{dd}')).toBe(expected.split('[')[0])
     })
 
     test('now matches the current time by default', () => {

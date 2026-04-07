@@ -12,3 +12,11 @@
 
 ### Features & Improvements
 - [ ] **Consolidate Class Branding into a Formal Registry**: (Needs Investigation) Explore creating a central `Brands` registry in `symbol.library.ts` using `Symbol.for()` for cross-bundle identity. Investigate how `type.library.ts` can dynamically fetch or discover this registry to automate type identification without hard-coding class names.
+
+### look at making the 'debug' value an enum instead of boolean ?
+- this would allow us to set a debug level, e.g. none, parse, format, all
+
+### better tracking of Temporal types
+- rather than isTemporal() checking if the type starts with 'Temporal.'.  
+We need to use the symbols defined in the Temporal API for a more robust and reliable way to identify Temporal objects.
+

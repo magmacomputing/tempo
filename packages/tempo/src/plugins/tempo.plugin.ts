@@ -163,7 +163,15 @@ export function resolveTermAnchor(tempo: Tempo, terms: TermPlugin[], name: strin
 
 /** helper to normalize term definition ranges */
 function getRange(term: TermPlugin, t: Tempo): Range[] {
-	const res = term.define.call(t, false);
+	let res;
+	try {
+		res = term.define.call(t, false);
+	} catch (err: any) {
+		if (err.message.includes('Class constructor')) {
+			return [];
+		}
+		throw err;
+	}
 	const list = (res == null) ? [] : (Array.isArray(res) ? res : [res]);
 	return list.filter((r): r is Range => Boolean(r));
 }

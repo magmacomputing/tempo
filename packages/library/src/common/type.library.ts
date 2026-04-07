@@ -132,9 +132,14 @@ const classRegex = /^\s*(class\s|\[native code\])/;						// match class keyword 
 
 /** private helper to safely identify an ES6 class, bypassing Proxies */
 const isClassConstructor = (obj: any): boolean => {
+	console.log("Checking constructor:", obj?.name || obj);
 	if (typeof obj !== 'function') return false;
 
 	const raw = (obj as any)?.[$Target] ?? obj;							// bypass Proxy traps
+
+	// Arrow functions do NOT have a prototype property, whereas traditional functions and classes DO.
+	// This is a high-performance check to immediately classify arrow functions as non-classes.
+	if (!('prototype' in raw)) return false;
 	const name = (raw as any)?.name;
 	const tag = raw?.[Symbol.toStringTag] ?? raw?.prototype?.[Symbol.toStringTag];
 

@@ -91,7 +91,9 @@ Returns a **new** `Tempo` instance with the specified duration or date-time payl
 
 ### `tempo.set(payload: Tempo.DateTime | Tempo.Set, options?: Tempo.Options)`
 Returns a **new** `Tempo` instance with specific values or relative alignments.
-- **Example:** `t.set({ month: 5, hh: 12 })` or `t.set({ start: 'month' })`
+- **Example:** `t.set({ month: 5, hh: 12 })` or `t.set({ start: 'month' })` landing on `01-May 00:00:00`.
+- **Note (End):** Using `end` with an anchor (e.g., `set({ end: '#qtr' })`) lands on the **Inclusive End** of the period (e.g., `30-Sep 23:59:59.999...`). This follows industry UX expectations for "end-of-period" navigation.
+- **Note (Mid):** Using `mid` with an anchor lands on the **Arithmetic Mid-point** (exact nanosecond center) of the period.
 
 ### `tempo.clone()`
 Returns a **new**, lean `Tempo` instance based on the current one. It preserves all local configuration but starts a fresh "parse history" (length 1). This is ideal for minimizing memory footprint in long chains or live tickers.

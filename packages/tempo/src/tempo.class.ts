@@ -194,7 +194,10 @@ export class Tempo {
 		if (isUndefined(shape.config.timeZone) || Tempo.#hasOwn(options, 'sphere'))
 			return shape.config.sphere;													// already specified or no timeZone to calculate from
 
-		const sphere = getHemisphere(shape.config.timeZone as string);
+		const tz = shape.config.timeZone as string;
+		const sphere = getHemisphere(tz);
+		if (tz.toLowerCase() === 'utc' || !sphere) return undefined;
+
 		return isDefined(options.timeZone) ? (sphere ?? 'north') : (sphere ?? shape.config.sphere ?? 'north');
 	}
 
@@ -270,10 +273,14 @@ export class Tempo {
 	static #setConfig(shape: Internal.State, ...options: Tempo.Options[]) {
 
 		const mergedOptions: Tempo.Options = Object.assign({}, ...options);
-		if (isEmpty(mergedOptions))														// nothing to do
+
+		if (shape === Tempo.#global)																// sanitize global configuration
+			omit(mergedOptions, 'value', 'anchor', 'result');
+
+		if (isEmpty(mergedOptions))																	// nothing to do
 			return;
 
-		if (mergedOptions.store)																// check for local-storage
+		if (mergedOptions.store)																		// check for local-storage
 			Object.assign(mergedOptions, { ...Tempo.readStore(mergedOptions.store), ...mergedOptions });
 
 		/** helper to normalize snippet/layout Options into the target Config */
@@ -613,6 +620,7 @@ export class Tempo {
 					// 2. handle Discovery object (container)
 					else {
 						const discovery = item as any
+						if (discovery.options) Tempo.#setConfig(Tempo.#global, discovery.options)
 						if (discovery.plugins) this.extend(discovery.plugins, discovery.options)
 						if (discovery.terms) this.extend(discovery.terms)
 
@@ -632,7 +640,7 @@ export class Tempo {
 							const discoverySymbol = (typeof options === 'symbol' ? options : options?.discovery) ?? $Tempo
 							if ((globalThis as any)[discoverySymbol] !== item) {
 								; (globalThis as Record<symbol, any>)[discoverySymbol] = item
-								this.init({ discovery: discoverySymbol })
+								Tempo.#setConfig(Tempo.#global, { discovery: discoverySymbol })
 							}
 						}
 					}
@@ -695,12 +703,14 @@ export class Tempo {
 
 			this.extend(registerTerms);														// register built-in term plugins
 
+			const discoveryKey = options.discovery ?? Symbol.keyFor($Tempo) as string;
 			const storeKey = Symbol.keyFor($Tempo) as string;
+
 			Tempo.#setConfig(Tempo.#global,
 				{ store: storeKey, discovery: storeKey, scope: 'global' },
 				Tempo.readStore(storeKey),													// allow for storage-values to overwrite
 				Tempo.#setDiscovery(Tempo.#global, $Plugins),				// persistent library extensions
-				Tempo.#setDiscovery(Tempo.#global, $Tempo),					// user Discovery (Configuration bootstrapping)
+				Tempo.#setDiscovery(Tempo.#global, discoveryKey),		// user Discovery (Configuration bootstrapping)
 				options,																						// explicit options from the call
 			)
 
@@ -783,12 +793,12 @@ export class Tempo {
 				}
 
 				return (isNullish(res) || res === match)						// if no definition found,
-					? match																					// return the original match
+					? match																						// return the original match
 					: matcher(res, depth + 1);												// else recurse to see if snippet contains embedded "{}" pairs
 			});
 		}
 
-		layout = matcher(layout);															// initiate the layout-parse
+		layout = matcher(layout);																// initiate the layout-parse
 
 		return new RegExp(`^(${layout})$`, 'i');								// translate the source into a regex
 	}
@@ -803,12 +813,13 @@ export class Tempo {
 	/** global Tempo configuration */
 	static get config() {
 		const out = Object.create(Default);
-		const descriptors = omit(Object.getOwnPropertyDescriptors(Tempo.#global.config), 'value');
+		const descriptors = omit(Object.getOwnPropertyDescriptors(Tempo.#global.config), 'value', 'anchor');
+
 		Object.defineProperties(out, descriptors);
-		Object.defineProperty(out, 'toJSON',		// bare-bones: only show global overrides
+		Object.defineProperty(out, 'toJSON',										// bare-bones: only show global overrides
 			{
 				value: () => Object.fromEntries(
-					Object.entries(out)),							// proxify sees own toJSON, skips allObject
+					Object.entries(out)),															// proxify sees own toJSON, skips allObject
 				enumerable: false, configurable: true
 			});
 		return proxify(out);
@@ -894,7 +905,7 @@ export class Tempo {
 
 	/** allow for auto-convert of Tempo to BigInt, Number or String */
 	[Symbol.toPrimitive](hint?: 'string' | 'number' | 'default') {
-		Tempo.#dbg.info(this.config, getType(this), '.hint: ', hint);
+		// Tempo.#dbg.info(this.config, getType(this), '.hint: ', hint);
 		switch (hint) {
 			case 'string': return this.toString();								// ISO 8601 string
 			case 'number': return this.epoch.ms;									// Unix epoch (milliseconds)
@@ -1051,9 +1062,12 @@ export class Tempo {
 						try {
 							const result = term.define.call(this, keyOnly);
 							return Array.isArray(result) ? getTermRange(this, result, keyOnly) : result;
-						} catch (e: any) {
-							if (isClass(term.define)) Tempo.#dbg.warn(this.#local.config, `Misidentified class in term definition: ${key}`, e.stack ?? e);
-							else throw e;
+						} catch (err: any) {
+							if (err.message.includes('Class constructor')) {
+								Tempo.#dbg.warn(this.#local.config, `Misidentified class in term definition: ${key}`, err.stack ?? err);
+							} else {
+								throw err;
+							}
 						}
 					};
 					return this.#setLazy(target, key, define, isKeyOnly)?.();
@@ -1078,9 +1092,12 @@ export class Tempo {
 				const define = (keyOnly: boolean) => {
 					try {
 						return term.define.call(this, keyOnly);
-					} catch (e: any) {
-						if (isClass(term.define)) Tempo.#dbg.warn(this.#local.config, `Misidentified class in term discovery: ${term.key}`, e.stack ?? e);
-						else throw e;
+					} catch (err: any) {
+						if (err.message.includes('Class constructor')) {
+							Tempo.#dbg.warn(this.#local.config, `Misidentified class in term discovery: ${term.key}`, err.stack ?? err);
+						} else {
+							throw err;
+						}
 					}
 				};
 				this.#setLazy(target, term.key, define, true);
@@ -1119,7 +1136,7 @@ export class Tempo {
 		Object.defineProperties(base, gDesc);
 
 		const out = Object.create(base);												// global → local overrides
-		const lDesc = omit(Object.getOwnPropertyDescriptors(this.#local.config), 'scope', 'value', 'anchor', 'mode', 'lazy');
+		const lDesc = omit(Object.getOwnPropertyDescriptors(this.#local.config), 'value', 'anchor', 'mode', 'lazy');
 		Object.defineProperties(out, lDesc);
 
 		Object.defineProperties(out, {
@@ -1199,7 +1216,7 @@ export class Tempo {
 	}
 
 	/** Custom JSON serialization for `JSON.stringify`. */
-	toJSON() { return omit({ ...this.#local.config, value: this.toString() }, 'scope', 'store') }
+	toJSON() { return { ...this.#local.config, value: this.toString() } }
 
 
 	/** setup local 'config' and 'parse' rules (prototype-linked to global) */
@@ -1246,6 +1263,7 @@ export class Tempo {
 				Tempo.#dbg.error(this.#local.config, err, 'Anchor determination failed');
 				return this.#now.toZonedDateTimeISO(tz);						// fallback to absolute now
 			}
+
 			const isAnchored = isDefined(dateTime) || isDefined(this.#anchor);
 			const resolvingKeys = new Set<string>();
 			const res = this.#conform(tempo, today, isAnchored, 0, resolvingKeys);
@@ -1257,7 +1275,8 @@ export class Tempo {
 			const targetCal = isString(cal2) ? cal2 : (cal2 as any).id ?? (cal2 as any).calendarId;
 
 			// results are now handled at the end of #parse via #matches
-			Tempo.#dbg.info(this.#local.config, 'parse', `{type: ${type}, value: ${value}}`);	// show what we're parsing
+			if (!['Undefined', 'Void', 'Empty'].includes(type as string))
+				Tempo.#dbg.debug(this.#local.config, 'parse', `{type: ${type}, value: ${value}}`);	// show what we're parsing
 
 			switch (type) {
 				case 'Void':
@@ -1353,21 +1372,47 @@ export class Tempo {
 						.toZonedDateTimeISO(targetTz);
 					break;
 
+				case 'Class':
+					Tempo.#dbg.warn(this.#local.config, `Unexpected Tempo parameter type: Class for value: ${String(value)}`);
+					dateTime = today;
+					break;
+
+				case 'AsyncFunction':
+				case 'Function':
+					if (depth >= 100) {
+						const msg = `Infinite recursion detected in functional resolution for: ${String(value)}`;
+						Tempo.#dbg.warn(this.#local.config, msg);
+						this.#errored = true;
+						throw new RangeError(msg);
+					} else {
+						try {
+							const res = (value as Function).call(this);
+							dateTime = this.#parse(res, today, depth + 1);
+						} catch (err: any) {
+							console.log('Error caught in #parse functional resolution:', err.message, err.stack);
+							if (isString(err?.message) && err.message.toLowerCase().includes('class constructor')) {
+								Tempo.#dbg.warn(this.#local.config, `Unexpected Tempo parameter type: Class for value: ${String(value)}`);
+								dateTime = today;
+							} else {
+								Tempo.#dbg.warn(this.#local.config, `Functional resolution failed: ${err.message}`);
+								throw err;
+							}
+						}
+					}
+					break;
+
 				default:
 					Tempo.#dbg.warn(this.#local.config, new TypeError(`Unexpected Tempo parameter type: ${String(type)} for value: ${String(value)}`));
 					dateTime = today;
+					break;
 			}
 
 			// Final adjustment to normalize timezone and calendar across all types
-			if (dateTime && !this.#errored) {
+			if (dateTime && !this.#errored)
 				dateTime = dateTime.withTimeZone(targetTz).withCalendar(targetCal);
-			}
 
 			if (isRoot) {
-				// ensure the final conformed result is also logged in match history
-				if (isDefined(res) && this.#matches && !this.#matches.includes(res)) {
-					this.#matches.push(res);
-				}
+				// results already handled above
 
 				if (Reflect.isExtensible(this.#local.parse)) {
 					// ensure 'result' array is present and append our discovered matches
@@ -1436,10 +1481,9 @@ export class Tempo {
 		if (isDefined(this.#anchor) && !match.isAnchored)
 			match.isAnchored = true;
 
-		if (isDefined(this.#matches)) {
-			this.#matches.push(match);
-		} else if (isDefined(this.#local.parse.result) && Reflect.isExtensible(this.#local.parse)) {
-			this.#local.parse.result.push(match);
+		const res = this.#matches ?? this.#local.parse.result;
+		if (isDefined(res) && !Object.isFrozen(res)) {
+			if (!res.includes(match)) res.push(match);
 		}
 	}
 
@@ -1460,23 +1504,12 @@ export class Tempo {
 			return arg;
 		}
 
-		if (isFunction(value) && !isClass(value) && !(value as any)[$isTempo]) {
-			try {
-				const result = (value as Function).call(this);
-				return this.#conform(result, dateTime, isAnchored, depth + 1, resolvingKeys);
-			} catch (e: any) {
-				const msg = `Infinite recursion detected in functional resolution for: ${String(value)} - ${e.message}`;
-				Tempo.#dbg.error(this.#local.config, new RangeError(msg));
-				return arg;
-			}
-		}
-
 		if (this.#isZonedDateTimeLike(tempo)) {									// tempo is ZonedDateTime-ish object (throw away 'value' property)
 			const { timeZone, calendar, value: _, ...options } = tempo as Tempo.Options;
 			if (!isEmpty(options)) zdt = zdt.with(options as Temporal.ZonedDateTimeLikeObject);
 
 			if (timeZone)
-				if (isTemporal(zdt)) zdt = zdt.withTimeZone(timeZone);															// optionally set timeZone
+				if (isTemporal(zdt)) zdt = zdt.withTimeZone(timeZone);// optionally set timeZone
 			if (calendar)
 				zdt = zdt.withCalendar(calendar);										// optionally set calendar
 
@@ -1491,25 +1524,6 @@ export class Tempo {
 		if (type !== 'String' && type !== 'Number' && type !== 'Function' && type !== 'AsyncFunction') {
 			this.#result(arg, { match: type });										// log the 'type' detected and return
 			return arg;
-		}
-
-		if (typeof value === 'function' && !(value as any)?.[$isTempo] && !isClass(value) && !String(value).startsWith('class ')) {
-			let res;
-			try {
-				res = (value as Function).call(this);
-				if (typeof res === 'object' && res !== null) {
-					if (res instanceof String || res instanceof Number || res instanceof Boolean) res = res.valueOf();
-					res = this.#conform(res as any, dateTime, isAnchored, depth + 1, resolvingKeys).value;
-				}
-			} catch (e: any) {
-				const msg = (e?.message ?? '').toLowerCase();
-				if (msg.includes('constructor') || msg.includes('class') || e.name === 'TypeError' || isClass(value)) {
-					Tempo.#dbg.warn(this.#local.config, `Misidentified class/constructor in functional resolution: ${String(value)}`, e.stack ?? e);
-					return arg;
-				}
-				throw e;
-			}
-			return this.#conform(res, dateTime, isAnchored, depth + 1, resolvingKeys);
 		}
 
 		if (isTempo(value)) {
@@ -1577,8 +1591,7 @@ export class Tempo {
 			const isRootMatch = Object.keys(groups).some(k => k === 'dt' || k === 'tm');
 			const hadEventOrPeriod = hasAlias || isRootMatch;
 
-			if (!hasAlias)
-				this.#result(arg, { match: sym.description, groups: { ...groups } });	// stash the {key} of the pattern that was matched
+			this.#result(arg, { match: sym.description, groups: { ...groups } });	// stash the {key} of the pattern that was matched
 
 			dateTime = this.#parseZone(groups, dateTime);
 			dateTime = this.#parseGroups(groups, dateTime, isAnchored, resolvingKeys);
@@ -1690,7 +1703,7 @@ export class Tempo {
 					res = (definition as string);
 				}
 
-				if (isEvent && isTemporal(dateTime)) dateTime = (dateTime as any).with({ hour: 0, minute: 0, second: 0, millisecond: 0, microsecond: 0, nanosecond: 0 });
+				if (isEvent && !isAnchored && isTemporal(dateTime)) dateTime = (dateTime as any).startOfDay();
 
 				Tempo.#dbg.info(this.#local.config, 'event', `resolved "${key}" to "${res}" against ${(dateTime as any).toString?.() ?? String(dateTime)}`);
 
@@ -2036,7 +2049,7 @@ export class Tempo {
 		let zdt = (this.#zdt as any).withTimeZone(tz);
 		this.#parseDepth++;
 		const isRoot = this.#parseDepth === 1;
-		if (isRoot) this.#matches = [...this.#local.parse.result];
+		if (isRoot) this.#matches = [];
 
 		const overrides = {
 			timeZone: tz,
@@ -2072,9 +2085,12 @@ export class Tempo {
 												let range;
 												try {
 													range = termObj?.define.call(new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }), false);
-												} catch (e: any) {
-													if (isClass(termObj?.define)) Tempo.#dbg.warn(this.#local.config, `Misidentified class in term recovery: ${unit}`, e.stack ?? e);
-													else throw e;
+												} catch (err: any) {
+													if (err.message.includes('Class constructor')) {
+														Tempo.#dbg.warn(this.#local.config, `Misidentified class in term recovery: ${unit}`, err.stack ?? err);
+													} else {
+														throw err;
+													}
 												}
 												const step = getSafeFallbackStep(range as any, (termObj as any)?.scope ?? (unit === '#period' ? 'period' : undefined));
 												jump = jump.add(step);
@@ -2085,9 +2101,12 @@ export class Tempo {
 											let range;
 											try {
 												range = termObj?.define.call(new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }), false);
-											} catch (e: any) {
-												if (isClass(termObj?.define)) Tempo.#dbg.warn(this.#local.config, `Misidentified class in term resolution: ${unit}`, e.stack ?? e);
-												else throw e;
+											} catch (err: any) {
+												if (err.message.includes('Class constructor')) {
+													Tempo.#dbg.warn(this.#local.config, `Misidentified class in term resolution: ${unit}`, err.stack ?? err);
+												} else {
+													throw err;
+												}
 											}
 
 											if (isObject(range) && (range as any).end) {
@@ -2160,7 +2179,7 @@ export class Tempo {
 		let zdt = (this.#zdt as any).withTimeZone(tz).withCalendar(cal);
 		this.#parseDepth++;
 		const isRoot = this.#parseDepth === 1;
-		if (isRoot) this.#matches = [...this.#local.parse.result];
+		if (isRoot) this.#matches = [];
 
 		const overrides = {
 			timeZone: tz,
@@ -2346,9 +2365,15 @@ export class Tempo {
 
 										try {
 											const range = term.define.call(tempo, false);
-											if (mutate === 'start') return range.start.toDateTime();
-											if (mutate === 'mid') return range.start.toDateTime().add(range.end.toDateTime().since(range.start.toDateTime()).divide(2));
-											if (mutate === 'end') return range.end.toDateTime();
+											const start = range.start.toDateTime();
+											const end = range.end.toDateTime();
+
+											if (mutate === 'start') return start;
+											if (mutate === 'mid') {
+												const total = end.since(start).total({ unit: 'nanoseconds', relativeTo: start });
+												return start.add({ nanoseconds: Math.trunc(total / 2) });
+											}
+											if (mutate === 'end') return end.subtract({ nanoseconds: 1 });
 										} catch (e) { return undefined; }
 									}
 									return resolveTermAnchor(new this.#Tempo(zdt, this.config), Tempo.#terms, offset as string, mutate as Tempo.Mutate) ??
