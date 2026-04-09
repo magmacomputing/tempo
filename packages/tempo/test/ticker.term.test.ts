@@ -19,11 +19,12 @@ describe('Ticker with Terms', () => {
 		ticker.pulse() // Pulse 2: 2020-07-01T00:00:00
 		ticker.pulse() // Pulse 3: 2020-10-01T00:00:00
 
-		expect(callback).toHaveBeenCalledTimes(3)
+		expect(callback).toHaveBeenCalledTimes(4)
 		expect(pulses).toEqual([
 			'2020-04-01T00:00:00',
 			'2020-07-01T00:00:00',
-			'2020-10-01T00:00:00'
+			'2020-10-01T00:00:00',
+			'2021-01-01T00:00:00'
 		])
 	})
 
@@ -43,11 +44,12 @@ describe('Ticker with Terms', () => {
 		ticker.pulse() // Pulse 2: 2020-01-02T08:00:00 (following morning)
 		ticker.pulse() // Pulse 3: 2020-01-03T08:00:00 (next day morning)
 
-		expect(callback).toHaveBeenCalledTimes(3)
+		expect(callback).toHaveBeenCalledTimes(4)
 		expect(pulses).toEqual([
 			'2020-01-01T08:00:00',
 			'2020-01-02T08:00:00',
-			'2020-01-03T08:00:00'
+			'2020-01-03T08:00:00',
+			'2020-01-04T08:00:00'
 		])
 	})
 

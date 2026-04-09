@@ -1,4 +1,5 @@
-import { Tempo, isTempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo/tempo.class.js';
+import { isTempo } from '#tempo/tempo.symbol.js';
 import '#tempo/plugins/plugin.ticker.js'
 
 // TickerPlugin self-registers on import via definePlugin

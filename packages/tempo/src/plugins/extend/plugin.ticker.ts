@@ -4,7 +4,7 @@ import { isNumeric } from '#library/coercion.library.js'
 import { instant, normaliseFractionalDurations } from '#library/temporal.library.js'
 import { DURATIONS } from '#tempo/tempo.enum.js'
 import { markConfig } from '#library/symbol.library.js'
-import { definePlugin } from '#tempo/plugins/tempo.plugin.js'
+import { definePlugin } from '#tempo/plugins/plugin.util.js'
 import type { Tempo } from '#tempo/tempo.class.js'
 
 declare module '#tempo/tempo.class.js' {
@@ -56,296 +56,283 @@ declare module '#tempo/tempo.class.js' {
 }
 
 /**
- * # Ticker
- * Unified Ticker supporting generators, events, and manual pulsing.
- * Management is handled via the static .active registry.
+ * # ACTIVE_TICKERS
+ * Internal registry for all active tickers.
  */
-export class Ticker implements AsyncGenerator<Tempo, any>, AsyncDisposable, Disposable {
-	static #active = new Set<Ticker>();
+const ACTIVE_TICKERS = new Set<Tempo.Ticker>();
 
-	/** Return a summary of all active tickers */
-	static get active() {
-		return Array.from(this.#active)
-			.map(t => ({ ticker: (t as any).proxy ?? t, ...t.info } as unknown as Tempo.TickerSnapshot));
+/**
+ * # createTicker
+ * Stateful factory for Tempo.Ticker instances.
+ * This function-based approach avoids "Class constructor cannot be invoked without new" errors.
+ */
+function createTicker(TempoClass: typeof Tempo, arg1: any, arg2?: any): Tempo.Ticker {
+	// ── State ────────────────────────────────────────────────────────────
+	let payload: Record<string, any> = {};
+	let current: Tempo;
+	let until: Tempo | undefined;
+	let limit: number | undefined;
+	let ticks = 0;
+	let stopped = false;
+	let genFirstYielded = false;
+	let isForward = true;
+	let isInstant = false;
+	let schedId: any;
+	let waiter: Pledge<void> | undefined;
+	const listeners = new Set<Tempo.TickerCallback>();
+	const catchListeners = new Set<Tempo.TickerCallback>();
+
+	const isOptions = (obj: any) => isObject(obj) && !('epochMilliseconds' in obj);
+
+	// ── Overload Parsing ─────────────────────────────────────────────────
+	let rawOptions: any = {};
+	let cb: Tempo.TickerCallback | undefined;
+
+	switch (true) {
+		case isFunction(arg1):
+			cb = arg1;
+			break;
+		case isOptions(arg1):
+			Object.assign(rawOptions, arg1);
+			if (isFunction(arg2)) cb = arg2;
+			else if (isOptions(arg2)) Object.assign(rawOptions, arg2);
+			break;
+		default:
+			if (isDefined(arg1)) {
+				const num = Number(arg1);
+				if (isNumeric(arg1) && Number.isFinite(num)) rawOptions.seconds = num;
+				else rawOptions.seed = arg1;
+			}
+			if (isFunction(arg2)) cb = arg2;
+			else if (isOptions(arg2)) Object.assign(rawOptions, arg2);
 	}
 
-	#payload: Record<string, any>;
-	#current: Tempo;
-	#until: Tempo | undefined;
-	#limit?: number;
-	#ticks = 0;
-	#stopped = false;
-	#genFirstYielded = false;
-	#isForward = true;
-	#isInstant = false;
-	#schedId: any;
-	#waiter: Pledge<void> | undefined;
-	#listeners = new Set<Tempo.TickerCallback>();
-	#catchListeners = new Set<Tempo.TickerCallback>();
-	#TempoClass: typeof Tempo;
+	// ── Initialization ───────────────────────────────────────────────────
+	const isSeed = isDefined(rawOptions.seed) && (!isNumber(rawOptions.seed) || (Number.isFinite(rawOptions.seed as number) && !Number.isNaN(rawOptions.seed as number)));
+	const isInterval = isDefined(rawOptions.seconds) && Number.isFinite(rawOptions.seconds) && !Number.isNaN(rawOptions.seconds);
 
-	constructor(TempoClass: typeof Tempo, arg1: any, arg2?: any) {
-		this.#TempoClass = TempoClass;
-		let rawOptions: any = {};
-		let cb: Tempo.TickerCallback | undefined;
-
-		const isOptions = (obj: any) => isObject(obj) && !('epochMilliseconds' in obj);
-
-		// ── Parse overloads ──────────────────────────────────────────────────
-		switch (true) {
-			case isFunction(arg1):
-				cb = arg1;
-				break;
-			case isOptions(arg1):
-				Object.assign(rawOptions, arg1);
-				if (isFunction(arg2)) cb = arg2;
-				else if (isOptions(arg2)) Object.assign(rawOptions, arg2);
-				break;
-			default:
-				if (isDefined(arg1)) {
-					const num = Number(arg1);
-					if (isNumeric(arg1) && Number.isFinite(num)) {
-						rawOptions.seconds = num;
-					} else {
-						rawOptions.seed = arg1;
-					}
-				}
-				if (isFunction(arg2)) cb = arg2;
-				else if (isOptions(arg2)) Object.assign(rawOptions, arg2);
-		}
-
-		// Validation: ensure we have a valid interval or seed
-		const isSeed = isDefined(rawOptions.seed) && (!isNumber(rawOptions.seed) || (Number.isFinite(rawOptions.seed as number) && !Number.isNaN(rawOptions.seed as number)));
-		const isInterval = isDefined(rawOptions.seconds) && Number.isFinite(rawOptions.seconds) && !Number.isNaN(rawOptions.seconds);
-
-		if (isDefined(arg1) && !isInterval && !isSeed && !cb) {
-			(TempoClass as any).catch(markConfig(rawOptions), `Invalid Ticker interval or seed: ${String(arg1)}`);
-		}
-
-		const { limit, until: stopAt, seed: startAt, ...rest } = rawOptions;
-		this.#limit = limit;
-		this.#until = stopAt ? new TempoClass(isOptions(stopAt) ? undefined : stopAt, isOptions(stopAt) ? { ...rest, ...stopAt } : rest) : undefined;
-		if (cb) this.#listeners.add(cb);
-
-		const durationKeys = new Set(Object.keys(DURATIONS));
-		this.#payload = {};
-		for (const [key, val] of Object.entries(rest))
-			if (isDefined(val) && (durationKeys.has(key) || key.startsWith('#')))
-				this.#payload[key] = val;
-
-		if (isEmpty(this.#payload)) {
-			if (isDefined(startAt) && isUndefined(limit)) this.#limit = 1;
-			else this.#payload.seconds = 1;
-		}
-
-		normaliseFractionalDurations(this.#payload);
-
-		this.#current = new TempoClass(isOptions(startAt) ? undefined : startAt, isOptions(startAt) ? { ...rest, ...startAt } : rest);
-
-		// ── Validation: Refusal-to-Launch ────────────────────────────────────
-		if (!this.#current.isValid) {
-			this.stop();
-			(TempoClass as any).catch(this.#current.config, `Invalid Ticker seed: ${String(startAt)}`);
-			return;
-		}
-
-		if (this.#until && !this.#until.isValid) {
-			this.stop();
-			(TempoClass as any).catch(this.#current.config, `Invalid Ticker until boundary: ${String(stopAt)}`);
-			return;
-		}
-
-		try {
-			const firstStep = this.#current.add(this.#payload);
-			if (!firstStep.isValid) throw new Error(`Invalid Ticker payload resolution for ${JSON.stringify(this.#payload)}`);
-
-			this.#isForward = TempoClass.compare(firstStep, this.#current) >= 0;
-			this.#isInstant = firstStep.epoch.ns === this.#current.epoch.ns;
-
-			// If it's a Term (starts with #), the first tick is the first occurrence (advanced).
-			// If it's a Duration (numeric patterns), the first tick is the seed (immediate).
-			const isTerm = Object.keys(this.#payload).some(k => k.startsWith('#'));
-			if (isTerm) this.#current = firstStep;
-
-		} catch (e: any) {
-			this.stop();
-			(TempoClass as any).catch(this.#current.config, `Invalid Ticker payload resolution for ${JSON.stringify(this.#payload)}`, e);
-			queueMicrotask(() => this.#catchListeners.forEach(l => l(this.#current, () => this.stop())));
-
-			this.#isForward = true;																// safely default on inhibited start
-			this.#isInstant = false;
-		}
-
-		// Register in global registry
-		Ticker.#active.add(this);
-
-		// Bootstrap
-		this.#bootstrap();
+	if (isDefined(arg1) && !isInterval && !isSeed && !cb) {
+		(TempoClass as any).logError(markConfig(rawOptions), `Invalid Ticker interval or seed: ${String(arg1)}`);
 	}
 
-	#bootstrap() {
-		if (this.#listeners.size > 0 && !this.#stopped && !this.#schedId) {
-			const delay = this.#delayMs();
+	const { limit: lmt, until: stopAt, seed: startAt, ...rest } = rawOptions;
+	limit = lmt;
+	until = stopAt ? new TempoClass(isOptions(stopAt) ? undefined : stopAt, isOptions(stopAt) ? { ...rest, ...stopAt } : rest) : undefined;
+	if (cb) listeners.add(cb);
+
+	const durationKeys = new Set(Object.keys(DURATIONS));
+	for (const [key, val] of Object.entries(rest))
+		if (isDefined(val) && (durationKeys.has(key) || key.startsWith('#')))
+			payload[key] = val;
+
+	if (isEmpty(payload)) {
+		if (isDefined(startAt) && isUndefined(limit)) limit = 1;
+		else payload.seconds = 1;
+	}
+
+	normaliseFractionalDurations(payload);
+	current = new TempoClass(isOptions(startAt) ? undefined : startAt, isOptions(startAt) ? { ...rest, ...startAt } : rest);
+
+	// ── Methods ──────────────────────────────────────────────────────────
+
+	const stop = () => {
+		stopped = true;
+		ACTIVE_TICKERS.delete(ticker);
+		if (schedId) {
+			clearTimeout(schedId);
+			schedId = undefined;
+		}
+		if (waiter && waiter.isPending) {
+			waiter.resolve();
+			waiter = undefined;
+		}
+	};
+
+	const delayMs = () => Math.max(0, Math.round(current.epoch.ms - instant().epochMilliseconds));
+
+	const scheduleNext = () => {
+		if (stopped || isInstant) return;
+		schedId = setTimeout(() => {
+			if (!stopped) {
+				pulse();
+				scheduleNext();
+			}
+		}, delayMs());
+	};
+
+	const bootstrap = () => {
+		if (listeners.size > 0 && !stopped && !schedId) {
+			const delay = delayMs();
 			if (delay > 0) {
-				this.#schedId = setTimeout(() => {
-					if (!this.#stopped) {
-						this.pulse();
-						this.#scheduleNext();
+				schedId = setTimeout(() => {
+					if (!stopped) {
+						pulse();
+						scheduleNext();
 					}
 				}, delay);
 			} else {
-				this.pulse();
-				this.#scheduleNext();
+				pulse();
+				scheduleNext();
 			}
 		}
-	}
+	};
 
-	#delayMs() {
-		return Math.max(0, Math.round(this.#current.epoch.ms - instant().epochMilliseconds));
-	}
+	const pulse = (): Tempo => {
+		if (stopped) return new (TempoClass as any)(null, current.config);
 
-	#scheduleNext() {
-		if (this.#stopped || this.#isInstant) return;
-		this.#schedId = setTimeout(() => {
-			if (!this.#stopped) {
-				this.pulse();
-				this.#scheduleNext();
-			}
-		}, this.#delayMs());
-	}
-
-	/** Manual pulse — advances state and notifies listeners */
-	pulse(): Tempo {
-		if (this.#stopped) return new (this.#TempoClass as any)(null, this.#current.config);
-
-		const t = this.#current;
+		const t = current;
 		if (!t.isValid) {
-			this.stop();
-			this.#catchListeners.forEach(l => l(t, () => this.stop()));
+			stop();
+			catchListeners.forEach(l => l(t, stop));
 			return t;
 		}
 
-		this.#current = this.#isInstant ? t : t.add(this.#payload);
-		this.#ticks++;
+		current = isInstant ? t : t.add(payload);
+		ticks++;
 
-		if (isDefined(this.#limit) && this.#ticks >= this.#limit) this.stop();
-		if (isDefined(this.#until)) {
-			const cmp = this.#TempoClass.compare(t, this.#until);
-			if ((this.#isForward && cmp >= 0) || (!this.#isForward && cmp <= 0)) this.stop();
+		if (isDefined(limit) && ticks >= limit) stop();
+		if (isDefined(until)) {
+			const cmp = TempoClass.compare(t, until);
+			if ((isForward && cmp >= 0) || (!isForward && cmp <= 0)) stop();
 		}
 
-		if (this.#stopped && isDefined(this.#limit) && this.#limit === 0) return t;
+		if (stopped && isDefined(limit) && limit === 0) return t;
 
-		this.#listeners.forEach(l => l(t, () => this.stop()));
+		listeners.forEach(l => l(t, stop));
 		return t;
+	};
+
+	// ── Ticker Object ───────────────────────────────────────────────────
+
+	const ticker = (() => stop()) as unknown as Tempo.Ticker;
+
+	Object.defineProperties(ticker, {
+		pulse: { value: pulse, enumerable: true },
+		on: {
+			value: function (event: 'pulse' | 'catch', cb: Tempo.TickerCallback) {
+				if (event === 'pulse') {
+					listeners.add(cb);
+					bootstrap();
+				}
+				if (event === 'catch') catchListeners.add(cb);
+				return this;
+			},
+			enumerable: true
+		},
+		stop: { value: stop, enumerable: true },
+		info: {
+			get: () => ({
+				next: current.clone(),
+				ticks,
+				limit,
+				interval: { ...payload },
+				stopped
+			}),
+			enumerable: true
+		},
+		next: {
+			value: async function (): Promise<IteratorResult<Tempo, any>> {
+				if (stopped) return { done: true, value: undefined };
+				if (!genFirstYielded) {
+					genFirstYielded = true;
+					const delay = delayMs();
+					if (delay > 0) {
+						waiter = new Pledge<void>('Ticker.next');
+						schedId = setTimeout(() => waiter?.resolve(), delay);
+						await waiter;
+						waiter = undefined;
+						if (stopped) return { done: true, value: undefined };
+					}
+					const t = pulse();
+					if (stopped && isDefined(limit) && limit === 0) return { done: true, value: undefined };
+					return { done: false, value: t };
+				}
+				if (isInstant) return { done: true, value: undefined };
+				const delay = delayMs();
+				waiter = new Pledge('Ticker.next') as Pledge<void>;
+				schedId = setTimeout(() => waiter?.resolve(), delay);
+				await waiter;
+				waiter = undefined;
+				if (stopped) return { done: true, value: undefined };
+				const t = pulse();
+				if (stopped && isDefined(limit) && limit === 0) return { done: true, value: undefined };
+				return { done: false, value: t };
+			},
+			enumerable: true
+		},
+		return: {
+			value: async function () {
+				stop();
+				return { done: true, value: undefined };
+			},
+			enumerable: true
+		},
+		throw: {
+			value: async function (e: any) {
+				if (waiter && waiter.isPending) {
+					waiter.reject(e);
+					waiter = undefined;
+				}
+				stop();
+				throw e;
+			},
+			enumerable: true
+		},
+		[Symbol.asyncIterator]: { value: function () { return this; }, enumerable: false },
+		[Symbol.asyncDispose]: { value: async function () { stop(); }, enumerable: false },
+		[Symbol.dispose]: { value: function () { stop(); }, enumerable: false }
+	});
+
+	// ── Validation: Refusal-to-Launch ────────────────────────────
+	if (!current.isValid) {
+		stop();
+		(TempoClass as any).logError(current.config, `Invalid Ticker seed: ${String(startAt)}`);
+		return ticker;
+	}
+	if (until && !until.isValid) {
+		stop();
+		(TempoClass as any).logError(current.config, `Invalid Ticker boundary: ${String(stopAt)}`);
+		return ticker;
 	}
 
-	on(event: 'pulse' | 'catch', cb: Tempo.TickerCallback): this {
-		if (event === 'pulse') {
-			this.#listeners.add(cb);
-			this.#bootstrap();
-		}
-		if (event === 'catch') this.#catchListeners.add(cb);
-		return this;
+	try {
+		const firstStep = current.add(payload);
+		if (!firstStep.isValid) throw new Error(`Invalid Ticker payload resolution for ${JSON.stringify(payload)}`);
+		isForward = TempoClass.compare(firstStep, current) >= 0;
+		isInstant = firstStep.epoch.ns === current.epoch.ns;
+		if (Object.keys(payload).some(k => k.startsWith('#'))) current = firstStep;
+	} catch (e: any) {
+		stop();
+		(TempoClass as any).logError(current.config, `Invalid Ticker payload resolution for ${JSON.stringify(payload)}`, e);
+		queueMicrotask(() => catchListeners.forEach(l => l(current, stop)));
+		isForward = true;
+		isInstant = false;
 	}
 
-	stop(): void {
-		this.#stopped = true;
-		Ticker.#active.delete(this);
-		if (this.#schedId) {
-			clearTimeout(this.#schedId);
-			this.#schedId = undefined;
-		}
+	ACTIVE_TICKERS.add(ticker);
+	bootstrap();
 
-		if (this.#waiter && this.#waiter.isPending) {
-			this.#waiter.resolve();
-			this.#waiter = undefined;
-		}
-	}
-
-	get info(): Tempo.Ticker['info'] {
-		return {
-			next: this.#current.clone(),
-			ticks: this.#ticks,
-			limit: this.#limit,
-			interval: { ...this.#payload },
-			stopped: this.#stopped
-		};
-	}
-
-	async next(): Promise<IteratorResult<Tempo, any>> {
-		if (this.#stopped) return { done: true, value: undefined };
-
-		if (!this.#genFirstYielded) {
-			this.#genFirstYielded = true;
-			const delay = this.#delayMs();
-			if (delay > 0) {
-				this.#waiter = new Pledge('Ticker.next');
-				this.#schedId = setTimeout(() => this.#waiter?.resolve(), delay);
-				await this.#waiter;
-				this.#waiter = undefined;
-				if (this.#stopped) return { done: true, value: undefined };
-			}
-			const t = this.pulse();
-			if (this.#stopped && isDefined(this.#limit) && this.#limit === 0) return { done: true, value: undefined };
-			return { done: false, value: t };
-		}
-
-		if (this.#isInstant) return { done: true, value: undefined };
-
-		const delay = this.#delayMs();
-		this.#waiter = new Pledge('Ticker.next');
-		this.#schedId = setTimeout(() => this.#waiter?.resolve(), delay);
-		await this.#waiter;
-		this.#waiter = undefined;
-		if (this.#stopped) return { done: true, value: undefined };
-
-		const t = this.pulse();
-		if (this.#stopped && isDefined(this.#limit) && this.#limit === 0) return { done: true, value: undefined };
-		return { done: false, value: t };
-	}
-
-	[Symbol.asyncIterator](): this { return this; }
-	async [Symbol.asyncDispose](): Promise<void> { this.stop(); }
-	[Symbol.dispose](): void { this.stop(); }
-
-	async return(): Promise<IteratorResult<Tempo>> {
-		this.stop();
-		return { done: true, value: undefined };
-	}
-
-	async throw(e: any): Promise<never> {
-		if (this.#waiter && this.#waiter.isPending) {
-			this.#waiter.reject(e);
-			this.#waiter = undefined;
-		}
-		this.stop();
-		throw e;
-	}
+	return ticker;
 }
 
 /**
+ * # Public API
+ */
+export const Ticker = {
+	get active() {
+		return Array.from(ACTIVE_TICKERS)
+			.map(t => ({ ticker: t, ...t.info } as unknown as Tempo.TickerSnapshot));
+	}
+};
+
+/**
  * # TickerPlugin
- * Exposes the .ticker() factory method to the Tempo class.
- * Management is handled via the exported Ticker class.
  */
 export const TickerPlugin = definePlugin((_options, TempoClass, _factory) => {
-	TempoClass.ticker = function (arg1: any, arg2?: any): Tempo.Ticker {
-		const instance = new Ticker(TempoClass, arg1, arg2);
-
-		// Return a proxy that allows the instance to be called as a function (to stop it)
-		// while still behaving like a Ticker instance.
-		const proxy = new Proxy(() => instance.stop(), {
-			get: (_, prop) => {
-				const val = (instance as any)[prop];
-				return typeof val === 'function' ? val.bind(instance) : val;
-			},
-			getOwnPropertyDescriptor: (_, prop) => Object.getOwnPropertyDescriptor(instance, prop),
-			has: (_, prop) => prop in instance,
-			ownKeys: () => Reflect.ownKeys(instance)
-		}) as unknown as Tempo.Ticker;
-
-		(instance as any).proxy = proxy;						// store proxy on instance for .active lookup
-		return proxy;
+	TempoClass.ticker = function (this: typeof Tempo, arg1: any, arg2?: any): Tempo.Ticker {
+		return createTicker(this, arg1, arg2);
 	} as typeof Tempo.ticker;
+
+	// @ts-ignore
+	TempoClass.tickers = Ticker.active;
 });

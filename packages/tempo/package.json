@@ -31,6 +31,14 @@
       "development": "./src/tempo.index.ts",
       "default": "./dist/tempo.index.js"
     },
+    "#tempo/plugins/plugin.util.js": {
+      "development": "./src/plugins/plugin.util.ts",
+      "default": "./dist/plugins/plugin.util.js"
+    },
+    "#tempo/plugins/plugin.type.js": {
+      "development": "./src/plugins/plugin.type.ts",
+      "default": "./dist/plugins/plugin.type.js"
+    },
     "#tempo/plugins/plugin.*.js": {
       "development": "./src/plugins/extend/plugin.*.ts",
       "default": "./dist/plugins/extend/plugin.*.js"

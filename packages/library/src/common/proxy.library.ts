@@ -20,14 +20,12 @@ export function proxify<T extends object>(target: T, frozen = true, lock = froze
 		ownKeys: () => Reflect.ownKeys(tgt),
 		has: (_, key) => Reflect.has(tgt, key),
 		deleteProperty: (_, key) => {
-			return frozen
-				? false
-				: Reflect.deleteProperty(tgt, key);
+			if (frozen) throw new TypeError(`Cannot delete property '${String(key)}' from a frozen object.`);
+			return Reflect.deleteProperty(tgt, key);
 		},
 		set: (_, key, val) => {
-			return frozen
-				? false
-				: Reflect.set(tgt, key, val);
+			if (frozen) throw new TypeError(`Cannot set property '${String(key)}' on a frozen object.`);
+			return Reflect.set(tgt, key, val);
 		},
 		get: (_, key) => {
 			if (key === $Target)
@@ -53,10 +51,34 @@ export function proxify<T extends object>(target: T, frozen = true, lock = froze
 }
 
 /** Stealth Proxy pattern to allow for on-demand lazy property discovery and registration */
-export function delegate<T extends object>(target: T, onGet: (key: string | symbol, target: T) => any) {
+export function delegate<T extends object>(target: T, onGet: (key: string | symbol, target: T) => any, readonly = true) {
 	const pending = new Set<PropertyKey>();									// recursion guard
 
 	return new Proxy(target, {
+		isExtensible: (t) => Reflect.isExtensible(t),
+		preventExtensions: (t) => Reflect.preventExtensions(t),
+		getOwnPropertyDescriptor: (t, key) => Reflect.getOwnPropertyDescriptor(t, key),
+		getPrototypeOf: (t) => Reflect.getPrototypeOf(t),
+		setPrototypeOf: (t, proto) => {
+			if (readonly) throw new TypeError('Cannot set prototype of a read-only delegator.');
+			return Reflect.setPrototypeOf(t, proto);
+		},
+
+		deleteProperty: (t, key) => {
+			if (readonly) throw new TypeError(`Cannot delete property '${String(key)}' from a read-only delegator.`);
+			return Reflect.deleteProperty(t, key);
+		},
+
+		defineProperty: (t, key, desc) => {
+			if (readonly) throw new TypeError(`Cannot define property '${String(key)}' on a read-only delegator.`);
+			return Reflect.defineProperty(t, key, desc);
+		},
+
+		set: (t, key, val) => {
+			if (readonly) throw new TypeError(`Cannot set property '${String(key)}' on a read-only delegator.`);
+			return Reflect.set(t, key, val);
+		},
+
 		ownKeys: (t) => {
 			if (!pending.has($Discover)) {
 				pending.add($Discover);
@@ -73,7 +95,7 @@ export function delegate<T extends object>(target: T, onGet: (key: string | symb
 			if (isSymbol(key) || Reflect.has(t, key) || pending.has(key))
 				return Reflect.get(t, key);
 
-			pending.add(key);																		// mark as resolving
+			pending.add(key);																			// mark as resolving
 			try {
 				const val = onGet(key, t);													// discovery phase
 				if (val !== undefined) return val;									// return early if evaluation was handled

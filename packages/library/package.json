@@ -81,6 +81,7 @@
     }
   },
   "scripts": {
+    "test": "vitest run",
     "build": "tsc -b",
     "clean": "tsc -b --clean",
     "prepublishOnly": "npm run build"

@@ -24,7 +24,7 @@ describe('Ticker Management (Static Registry)', () => {
 		const ticker = Tempo.ticker({ seconds: 1, seed, limit: 10 });
 
 		try {
-			const snapshot = Ticker.active.find(s => s.ticker === ticker);
+			const snapshot = Ticker.active.find((s: any) => s.ticker === ticker);
 
 			expect(snapshot).toBeDefined();
 			expect(snapshot?.ticks).toBe(0);
@@ -32,7 +32,7 @@ describe('Ticker Management (Static Registry)', () => {
 			expect(snapshot?.next.format('sortTime')).toContain('00:00:00');
 
 			ticker.pulse();
-			const snapshot2 = Ticker.active.find(s => s.ticker === ticker);
+			const snapshot2 = Ticker.active.find((s: any) => s.ticker === ticker);
 			expect(snapshot2?.ticks).toBe(1);
 			expect(snapshot2?.next.format('sortTime')).toContain('00:00:01');
 		} finally {
@@ -89,9 +89,9 @@ describe('Ticker Management (Static Registry)', () => {
 		{
 			// @ts-ignore - 'using' might require newer TS target but is supported by Vitest/Node
 			using t = Tempo.ticker({ limit, seconds: 1 });
-			expect(Ticker.active.find(s => s.limit === limit)).toBeDefined();
+			expect(Ticker.active.find((s: any) => s.limit === limit)).toBeDefined();
 		}
 		// t is now stopped automatically
-		expect(Ticker.active.find(s => s.limit === limit)).toBeUndefined();
+		expect(Ticker.active.find((s: any) => s.limit === limit)).toBeUndefined();
 	});
 });

@@ -52,6 +52,8 @@ describe('Term Unified Logic (Mutation & Identity)', () => {
 			key: 'custom',
 			define() {
 				return {
+					key: 'custom_2024',
+					year: 2024,
 					start: new Tempo('2024-01-01'),
 					end: new Tempo('2024-12-31'),
 					label: 'Year 2024'
@@ -71,7 +73,7 @@ describe('Term Unified Logic (Mutation & Identity)', () => {
 
 	it('should throw an error for invalid terms when catch is false', () => {
 		const t = new Tempo(testDate, { catch: false, sphere: 'north', silent: true });
-		expect(() => t.set({ start: '#invalid' })).toThrow(/Unexpected term\(#invalid\)/);
+		expect(() => t.set({ start: '#invalid' })).toThrow(/Unknown Term identifier\: #invalid/);
 	});
 
 	it('should correctly resolve quarters in the Southern Hemisphere', () => {

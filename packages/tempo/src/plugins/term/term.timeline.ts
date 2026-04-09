@@ -1,8 +1,8 @@
-import { defineTerm, getTermRange, defineRange } from '../tempo.plugin.js';
+import { defineTerm, getTermRange, defineRange } from '../plugin.util.js';
 import type { Tempo } from '#tempo/tempo.class.js';
 
 /** definition of daily time periods */
-const { ranges } = defineRange([
+const groups = defineRange([
 	{ key: 'midnight', hour: 0, group: 'standard' },
 	{ key: 'early', hour: 4, group: 'standard' },
 	{ key: 'morning', hour: 8, group: 'standard' },
@@ -13,14 +13,24 @@ const { ranges } = defineRange([
 	{ key: 'night', hour: 20, group: 'standard' },
 ], 'group');
 
+function resolve(t: Tempo, anchor?: any) {
+	const template = groups["standard"] ?? [];
+
+	return template;
+}
+
 export const TimelineTerm = defineTerm({
 	key: 'per',
 	scope: 'period',
 	description: 'Daily time period',
-	ranges,
+	groups,
+
+	resolve(this: Tempo, anchor?: any) {
+		return resolve(this, anchor);
+	},
 
 	/** determine where the current Tempo instance fits within the above range */
-	define(this: Tempo, keyOnly?: boolean) {
-		return getTermRange(this, ranges, keyOnly);
+	define(this: Tempo, keyOnly?: boolean, anchor?: any) {
+		return getTermRange(this, groups['standard'], keyOnly, anchor);
 	}
 });

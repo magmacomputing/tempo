@@ -1,7 +1,6 @@
 import { Logify } from '#library/logify.class.js';
 import { markConfig } from '#library/symbol.library.js';
 import { asArray } from '#library/coercion.library.js';
-import { sprintf } from '#library/string.library.js';
 import { ifDefined } from '#library/object.library.js';
 import { secure } from '#library/utility.library.js';
 import { cleanify } from '#library/serialize.library.js';

@@ -213,7 +213,7 @@ export type Option = KeyOf<typeof OPTION>
 
 /** initialization strategies */
 export const MODE = enumify({ Auto: 'auto', Strict: 'strict', Defer: 'defer', }, false);
-export type Mode = ValueOf<typeof MODE>
+export type MODE = ValueOf<typeof MODE>
 
 /** allowed keys for internal parse state */
 const parseKeys = ['mdyLocales', 'mdyLayouts', 'formats', 'pivot', 'snippet', 'layout', 'event', 'period', 'anchor', 'value', 'discovery', 'plugins', 'mode'] as const;
@@ -284,4 +284,26 @@ export function registryReset() {
 		if (target) clearCache(target);
 		clearCache(state);																			// clear cache for state object
 	});
+}
+
+/** public-reachable enums */
+export default {
+	SEASON,
+	COMPASS,
+	WEEKDAY,
+	WEEKDAYS,
+	MONTH,
+	MONTHS,
+	NUMBER,
+	TIMEZONE,
+	DURATION,
+	DURATIONS,
+	FORMAT,
+	LIMIT,
+	ELEMENT,
+	MUTATION,
+	ZONED_DATE_TIME,
+	OPTION,
+	MODE,
+	PARSE,
 }

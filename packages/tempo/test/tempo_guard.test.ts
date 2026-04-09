@@ -1,4 +1,4 @@
-import { Tempo } from '../src/tempo.class.js';
+import { Tempo } from '#tempo/tempo.class.js';
 
 describe('Master Guard Extension', () => {
   beforeEach(() => {
@@ -13,7 +13,7 @@ describe('Master Guard Extension', () => {
     Tempo.extend({
       terms: [{
         key: '$$$apple$$$',
-        define() { return this.mm === 10 }
+        define() { return this.mm === 10 ? 'OCT' : undefined }
       }]
     });
 
@@ -33,7 +33,7 @@ describe('Master Guard Extension', () => {
     // 2. Extend directly
     Tempo.extend({
       key: '@@@banana@@@',
-      define() { return this.mm === 11 }
+      define() { return this.mm === 11 ? 'NOV' : undefined }
     });
 
     // 3. '@@@banana@@@' now passes guard

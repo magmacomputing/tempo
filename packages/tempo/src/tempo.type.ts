@@ -11,6 +11,7 @@ import * as enums from '#tempo/tempo.enum.js';
 import { $Tempo, $Plugins, $Register } from '#tempo/tempo.symbol.js';
 import type { Snippet, Layout, Event, Period, Token } from '#tempo/tempo.default.js';
 import type { IntRange, NonOptional, Property, Plural, Prettify, TemporalObject, TypeValue } from '#library/type.library.js';
+import type { Range, TermPlugin, ResolvedRange, Plugin, Terms } from './plugins/plugin.type.js';
 
 /**
  * Structural forward-reference to the Tempo class.
@@ -42,18 +43,6 @@ export type Groups = Record<string, string>
 
 export type Options = Prettify<{ [K in keyof Internal.BaseOptions]?: Internal.BaseOptions[K] } & Record<string, any>>;
 
-/**
- * # TermPlugin
- * extend the functionality of the Tempo term-resolution system.
- * Every attempt to resolve an input to a Tempo should always be checked with .isValid before continuing.
- * Otherwise unpredictable behaviour is likely.
- */
-export type TermPlugin = {
-	key: string; scope?: string;
-	description?: string;
-	define: (this: Tempo, keyOnly?: boolean) => any;
-	ranges?: Range[];
-}
 
 /**
  * # Plugin
@@ -61,7 +50,7 @@ export type TermPlugin = {
  * Every attempt to resolve an input to a Tempo should always be checked with .isValid before continuing.
  * Otherwise unpredictable behaviour is likely.
  */
-export type Plugin = (options: any, TempoClass: typeof Tempo, factory: (val: any) => Tempo) => void;
+export type { Plugin };
 
 /** Configuration to use for #until() and #since() argument */
 export type DateTimeUnit = Temporal.DateUnit | Temporal.TimeUnit
@@ -111,28 +100,7 @@ export type Formats = enums.Formats;
 export type Format = enums.FormatEnum;
 export type FormatType<K extends PropertyKey> = enums.FormatType<K>;
 
-/** mapping of terms to their resolved values */
-export type Terms = Property<any>;
-
-/** term definition range */
-export type Range = Partial<BaseDuration> & {
-	key?: string;
-	/** categorization marker (e.g. 'western', 'chinese', 'fiscal') */
-	group?: string;
-	[key: string]: any;
-}
-
-/** resolved Term range */
-export type ResolvedRange = FlexibleDuration & {
-	key: string;
-	scope: string;
-	label?: string;
-	start: Tempo;
-	end: Tempo;
-	unit?: DateTimeUnit;
-	rollover?: DateTimeUnit;
-	[str: PropertyKey]: any;
-}
+export type { Range, TermPlugin, ResolvedRange, Terms };
 
 export type WEEKDAY = enums.WEEKDAY
 export type WEEKDAYS = enums.WEEKDAYS
@@ -143,10 +111,17 @@ export type DURATIONS = enums.DURATIONS
 export type COMPASS = enums.COMPASS
 export type SEASON = enums.SEASON
 export type ELEMENT = enums.ELEMENT
+export type TIMEZONE = enums.TIMEZONE
+export type MODE = enums.MODE
+export type NUMBER = enums.Number
 
 export type Weekday = enums.Weekday
 export type Month = enums.Month
 export type Element = enums.Element
+export type Number = enums.Number
+export type Mode = enums.MODE
+export type NumericPattern = typeof enums.NumericPattern[number];
+
 
 /** Type for consistency in expected arguments for helper functions */
 export interface Params<T> {
@@ -172,7 +147,7 @@ export namespace Internal {
 		/** pivot year for two-digit years */										pivot: number;
 		/** hemisphere for term.qtr or term.szn */							sphere: enums.COMPASS | undefined;
 		/** Precision to measure timestamps (ms | us) */				timeStamp?: TimeStamp;
-		/** initialization strategy ('auto'|'strict'|'defer') */mode?: enums.Mode;
+		/** initialization strategy ('auto'|'strict'|'defer') */mode?: enums.MODE;
 		/** locale-names that prefer 'mm-dd-yy' date order */		mdyLocales: string | string[];
 		/** swap parse-order of layouts */											mdyLayouts: Pair[];
 		/** date-time snippets to help compose a Layout */			snippet: Snippet | PatternOption<Pattern>;
@@ -214,7 +189,7 @@ export namespace Internal {
 		/** pivot year for two-digit years */										pivot?: number;
 		/** parsing match result */															result: Match[];
 		/** was this a nested/anchored parse? */								isAnchored?: boolean;
-		/** initialization strategy ('auto'|'strict'|'defer') */mode: enums.Mode;
+		/** initialization strategy ('auto'|'strict'|'defer') */mode: enums.MODE;
 		/** @internal is parsing currently deferred? */					lazy: boolean;
 		/** @internal lazy delegator for formats */							format?: any;
 		/** @internal lazy delegator for terms */								term?: any;
@@ -244,8 +219,9 @@ export namespace Internal {
 		/** pre-defined config options for Tempo.#global */			options?: Options | (() => Options);
 		/** aliases to merge in the TimeZone dictionary */			timeZones?: Record<string, string>;
 		/** aliases to merge in the Number-Word dictionary */		numbers?: Record<string, number>;
-		/** term plugins to be registered via Tempo.addTerm() */terms?: TermPlugin | TermPlugin[];
-		/** plugins to be automatically extended via Tempo.extend() */plugins?: Plugin | Plugin[];
 		/** custom format strings to merge in the FORMAT dictionary */formats?: Property<any>;
+		/** term plugins to be registered via Tempo.addTerm() */term?: TermPlugin | TermPlugin[];
+		/** plugins to be automatically extended via Tempo.extend() */plugins?: Plugin | Plugin[];
+		/** @deprecated use term instead */											terms?: TermPlugin | TermPlugin[];
 	}
 }

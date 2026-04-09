@@ -1,4 +1,4 @@
-import { $Extensible, $Target, $Registry, $Register } from '#library/symbol.library.js';
+import { $Extensible, $Target, $Registry } from '#library/symbol.library.js';
 
 const $isTempo = Symbol.for('$isTempo');
 const registry: Instance[] = [];														// global types for getType
@@ -88,11 +88,35 @@ export const isPromise = <T>(obj?: T): obj is Extract<T, Promise<any>> => isType
 export const isMap = <T, K = any, V = any>(obj?: T): obj is Extract<T, Map<K, V>> => isType(obj, 'Map');
 export const isSet = <T, K = any>(obj?: T): obj is Extract<T, Set<K>> => isType(obj, 'Set');
 export const isError = <T>(err?: T): err is Extract<T, Error> => isType(err, 'Error');
-export const isTemporal = <T>(obj: T): obj is Extract<T, Temporals> => protoType(obj).startsWith('Temporal.');
+
+export const isTemporal = <T>(obj: T): obj is Extract<T, Temporals> => protoType(obj).startsWith('Temporal.') || (!!(globalThis as any).Temporal && (
+	(obj as any) instanceof (globalThis as any).Temporal.Instant ||
+	(obj as any) instanceof (globalThis as any).Temporal.ZonedDateTime ||
+	(obj as any) instanceof (globalThis as any).Temporal.PlainDate ||
+	(obj as any) instanceof (globalThis as any).Temporal.PlainTime ||
+	(obj as any) instanceof (globalThis as any).Temporal.PlainDateTime ||
+	(obj as any) instanceof (globalThis as any).Temporal.Duration ||
+	(obj as any) instanceof (globalThis as any).Temporal.PlainYearMonth ||
+	(obj as any) instanceof (globalThis as any).Temporal.PlainMonthDay
+));
+
+export const isInstant = <T>(obj: T): obj is Extract<T, Temporal.Instant> => isType(obj, 'Temporal.Instant') || (!!(globalThis as any).Temporal?.Instant && (obj as any) instanceof (globalThis as any).Temporal.Instant);
+export const isZonedDateTime = <T>(obj: T): obj is Extract<T, Temporal.ZonedDateTime> => isType(obj, 'Temporal.ZonedDateTime') || (!!(globalThis as any).Temporal?.ZonedDateTime && (obj as any) instanceof (globalThis as any).Temporal.ZonedDateTime);
+export const isPlainDate = <T>(obj: T): obj is Extract<T, Temporal.PlainDate> => isType(obj, 'Temporal.PlainDate') || (!!(globalThis as any).Temporal?.PlainDate && (obj as any) instanceof (globalThis as any).Temporal.PlainDate);
+export const isPlainTime = <T>(obj: T): obj is Extract<T, Temporal.PlainTime> => isType(obj, 'Temporal.PlainTime') || (!!(globalThis as any).Temporal?.PlainTime && (obj as any) instanceof (globalThis as any).Temporal.PlainTime);
+export const isPlainDateTime = <T>(obj: T): obj is Extract<T, Temporal.PlainDateTime> => isType(obj, 'Temporal.PlainDateTime') || (!!(globalThis as any).Temporal?.PlainDateTime && (obj as any) instanceof (globalThis as any).Temporal.PlainDateTime);
+export const isDuration = <T>(obj: T): obj is Extract<T, Temporal.Duration> => isType(obj, 'Temporal.Duration') || (!!(globalThis as any).Temporal?.Duration && (obj as any) instanceof (globalThis as any).Temporal.Duration);
+export const isDurationLike = <T>(obj: T): obj is Extract<T, Temporal.DurationLike | string | Temporal.Duration> => isString(obj) || isDuration(obj) || (isObject(obj) && (
+	'years' in obj || 'months' in obj || 'weeks' in obj || 'days' in obj ||
+	'hours' in obj || 'minutes' in obj || 'seconds' in obj ||
+	'milliseconds' in obj || 'microseconds' in obj || 'nanoseconds' in obj
+));
+export const isPlainYearMonth = <T>(obj: T): obj is Extract<T, Temporal.PlainYearMonth> => isType(obj, 'Temporal.PlainYearMonth') || (!!(globalThis as any).Temporal?.PlainYearMonth && (obj as any) instanceof (globalThis as any).Temporal.PlainYearMonth);
+export const isPlainMonthDay = <T>(obj: T): obj is Extract<T, Temporal.PlainMonthDay> => isType(obj, 'Temporal.PlainMonthDay') || (!!(globalThis as any).Temporal?.PlainMonthDay && (obj as any) instanceof (globalThis as any).Temporal.PlainMonthDay);
 
 // non-standard Objects
 export const isTempo = <T>(obj?: T): obj is Extract<T, GetType<'Tempo'>> => {
-	const raw = (obj as any)?.[$Target] ?? obj;							// bypass Proxy traps
+	const raw = (obj as any)?.[$Target] ?? obj;								// bypass Proxy traps
 	return !!(raw?.[$isTempo]);
 }
 export const isEnum = <T, E extends Property<any>>(obj?: T): obj is Extract<T, GetType<'Enumify', E>> => isType(obj, 'Enumify');

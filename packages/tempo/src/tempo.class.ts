@@ -7,14 +7,9 @@ import { asArray, asInteger, isNumeric, ifNumeric } from '#library/coercion.libr
 import { cleanify } from '#library/serialize.library.js';
 import { getStorage, setStorage } from '#library/storage.library.js';
 import { proxify, delegate } from '#library/proxy.library.js';
-import { $Register, $Tempo, $Plugins, $isTempo, registerHook } from '#tempo/tempo.symbol.js';
-import { $Logify, $Discover, $Target, markConfig } from '#library/symbol.library.js';
+import { $Logify, $Discover, markConfig } from '#library/symbol.library.js';
 import { getContext, CONTEXT } from '#library/utility.library.js';
 import { enumify } from '#library/enumerate.library.js';
-import { STATE, PARSE, DISCOVERY, registryReset } from '#tempo/tempo.enum.js';
-import { registerPlugin, registerTerm, getTermRange, resolveTermAnchor, resolveTermShift } from '#tempo/plugins/tempo.plugin.js'
-import { getSafeFallbackStep } from '#tempo/tempo.util.js'
-import { registerTerms } from '#tempo/plugins/term/index.js'
 import { ownKeys, ownEntries, getAccessors, omit } from '#library/reflection.library.js';
 import { ifDefined } from '#library/object.library.js';
 import { pad, singular, toProperCase, trimAll } from '#library/string.library.js';
@@ -23,8 +18,13 @@ import { getHemisphere, getResolvedOptions, canonicalLocale, getRelativeTime } f
 import { instant } from '#library/temporal.library.js';
 import type { Property, TypeValue, Secure } from '#library/type.library.js';
 
+import { registerTerms } from '#tempo/plugins/term/index.js'
+import { REGISTRY, registerPlugin, registerTerm, getRange, getTermRange, resolveTermShift } from '#tempo/plugins/plugin.util.js'
+
+import { getSafeFallbackStep } from '#tempo/tempo.util.js'
+import { $Register, $Tempo, $Plugins, $isTempo, isTempo, registerHook } from '#tempo/tempo.symbol.js';
 import { Match, Token, Snippet, Layout, Event, Period, Default } from '#tempo/tempo.default.js';
-import * as enums from '#tempo/tempo.enum.js'
+import enums, { STATE, PARSE, DISCOVERY, NumericPattern, registryUpdate, registryReset } from '#tempo/tempo.enum.js';
 import * as t from '#tempo/tempo.type.js';									// namespaced types (Tempo.*)
 
 const Context = getContext();																// current execution context */
@@ -42,8 +42,8 @@ namespace Internal {
 	export type GroupDate = { mod?: t.Modifier; nbr?: string; afx?: t.Relative; unt?: string; yy?: string; mm?: string; dd?: string; }
 	export type GroupModifier = { mod?: t.Modifier | t.Relative, adjust: number, offset: number, period: number }
 	export type Fmt = {																			// used for the fmtTempo() shortcut
-		<F extends string>(fmt: F, tempo?: t.DateTime, options?: t.Options): enums.FormatType<F>;
-		<F extends string>(fmt: F, options: t.Options): enums.FormatType<F>;
+		<F extends string>(fmt: F, tempo?: t.DateTime, options?: t.Options): t.FormatType<F>;
+		<F extends string>(fmt: F, options: t.Options): t.FormatType<F>;
 	}
 }
 
@@ -82,14 +82,14 @@ export class Tempo {
 	})
 
 	/** handle internal errors using the global config */
-	static catch(...msg: any[]) {
+	static logError(...msg: any[]) {
 		const config = (isObject(msg[0]) && (msg[0] as any)[$Logify] === true) ? msg.shift() : Tempo.#global.config;
 		markConfig(config);														// ensure config is marked for Logify
 		Tempo.#dbg.error(config, ...msg);
 	}
 
 	/** handle internal debug info using the global config */
-	static debug(...msg: any[]) {
+	static logDebug(...msg: any[]) {
 		Tempo.#dbg.debug(...msg);
 	}
 
@@ -98,9 +98,9 @@ export class Tempo {
 	/** Tempo state for the global configuration */						static #global = {} as Internal.State
 	/** cache for next-available 'usr' Token key */						static #usrCount = 0;
 	/** guard against infinite mutation recursion */					static #mutateDepth = 0;
-	/** mutable list of registered term plugins */						static #terms: Tempo.TermPlugin[] = [];
+	/** mutable list of registered term plugins */						static #terms: Tempo.TermPlugin[] = REGISTRY.terms;
 	/** current parsing depth to manage state isolation */		#parseDepth = 0;
-	static #termMap: Map<string, Tempo.TermPlugin> = new Map();
+	/** mapping of terms to their resolved values */					static #termMap: Map<string, Tempo.TermPlugin> = new Map();
 	/** flag to prevent recursion during init */							static #lifecycle = { bootstrap: true, initialising: false, extendDepth: 0, ready: false };
 	/** Master Guard predicate (implements RegExp-like interface) */					static #guard: { test(str: string): boolean } = { test: () => true };
 	/** Set of allowed lowercased tokens for the Master Guard */					static #allowedTokens: Set<string> = new Set();
@@ -347,7 +347,7 @@ export class Tempo {
 						break;
 
 					case 'timeZone': {
-						const zone = String(arg.value).toLowerCase() as enums.TIMEZONE;
+						const zone = String(arg.value).toLowerCase() as t.TIMEZONE;
 						Object.defineProperty(shape.config, 'timeZone', { value: enums.TIMEZONE[zone] ?? arg.value, writable: true, configurable: true, enumerable: true });
 						break;
 					}
@@ -418,12 +418,12 @@ export class Tempo {
 			const tzs = Object.fromEntries(
 				ownEntries(discovery.timeZones, true).map(([k, v]) => [String(k).toLowerCase(), v])
 			);
-			enums.registryUpdate('TIMEZONE', tzs);
+			registryUpdate('TIMEZONE', tzs);
 		}
 
 		// 1b. Process Numbers
 		if (discovery.numbers)
-			enums.registryUpdate('NUMBER', discovery.numbers);
+			registryUpdate('NUMBER', discovery.numbers);
 
 		// 2. Process Terms
 		if (discovery.terms)
@@ -432,7 +432,7 @@ export class Tempo {
 		// 3. Process Formats
 		if (discovery.formats) {
 			shape.config.formats = shape.config.formats.extend(discovery.formats) as Tempo.Format;
-			enums.registryUpdate('FORMAT', discovery.formats);
+			registryUpdate('FORMAT', discovery.formats);
 		}
 
 		// 4. Process Plugins
@@ -562,9 +562,9 @@ export class Tempo {
 	 * @param options - Optional configuration for a standard `Plugin`.
 	 * @returns The `Tempo` class for chaining.
 	 */
-	static extend(plugin: Tempo.Plugin | Tempo.Plugin[], options?: any): typeof Tempo
-	static extend(term: Tempo.TermPlugin | Tempo.TermPlugin[], discovery?: symbol): typeof Tempo
-	static extend(config: Internal.Discovery | Internal.Discovery[], discovery?: symbol): typeof Tempo
+	static extend(plugin: t.Plugin | t.Plugin[], options?: any): typeof Tempo
+	static extend(term: t.TermPlugin | t.TermPlugin[], discovery?: symbol): typeof Tempo
+	static extend(config: t.Internal.Discovery | t.Internal.Discovery[], discovery?: symbol): typeof Tempo
 	static extend(arg: any, options?: any) {
 		const items = asArray(arg).flat(1);
 		if (isEmpty(items)) return this;
@@ -575,7 +575,7 @@ export class Tempo {
 				const arg = item as any;
 				if (isFunction(arg)) {		// Standard Plugin registration
 					if ((arg as any).installed) return;
-					(arg as any).installed = true;											// mark as installed (BEFORE side-effects)
+					(arg as any).installed = true;										// mark as installed (BEFORE side-effects)
 
 					registerPlugin(arg);
 					try {
@@ -624,14 +624,14 @@ export class Tempo {
 						if (discovery.terms) this.extend(discovery.terms)
 
 						// handle other discovery keys directly
-						if (discovery.numbers) enums.registryUpdate('NUMBER', discovery.numbers)
+						if (discovery.numbers) registryUpdate('NUMBER', discovery.numbers)
 						if (discovery.timeZones) {
 							const tzs = Object.fromEntries(ownEntries(discovery.timeZones).map(([k, v]) => [k.toString().toLowerCase(), v]));
-							enums.registryUpdate('TIMEZONE', tzs)
+							registryUpdate('TIMEZONE', tzs)
 						}
 						if (discovery.formats) {
 							Tempo.#global.config.formats = Tempo.#global.config.formats.extend(discovery.formats) as Tempo.Format;
-							enums.registryUpdate('FORMAT', discovery.formats)
+							registryUpdate('FORMAT', discovery.formats)
 						}
 
 						// only trigger init if we're assigning a new discovery object to a symbol
@@ -804,7 +804,7 @@ export class Tempo {
 
 	/** Compares two `Tempo` instances or date-time values. */
 	static compare(tempo1?: Tempo.DateTime | Tempo.Options, tempo2?: Tempo.DateTime | Tempo.Options) {
-		const one = new Tempo(tempo1 as Tempo.DateTime), two = new Tempo(tempo2 as Tempo.DateTime);
+		const one = Reflect.construct(Tempo, [tempo1 as Tempo.DateTime]), two = Reflect.construct(Tempo, [tempo2 as Tempo.DateTime]);
 
 		return Number((one.nano > two.nano) || -(one.nano < two.nano)) + 0;
 	}
@@ -846,7 +846,7 @@ export class Tempo {
 	/** Creates a new `Tempo` instance. */
 	static from(options?: Tempo.Options): Tempo;
 	static from(tempo: Tempo.DateTime | undefined, options?: Tempo.Options): Tempo;
-	static from(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return new this(tempo as NonNullable<Tempo.DateTime>, options); }
+	static from(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return Reflect.construct(this, [tempo as NonNullable<Tempo.DateTime>, options]); }
 
 	static now() { return instant().epochNanoseconds; }
 
@@ -1020,7 +1020,7 @@ export class Tempo {
 						set = true;
 						// Promote to own property on target for subsequent calls (memoization) if extensible
 						if (Reflect.isExtensible(target))
-							Object.defineProperty(target, name, { value: memo, enumerable: true, configurable: true });
+							Object.defineProperty(target, name, { value: memo, enumerable: true, configurable: true, writable: false });
 					}
 					return memo;
 				}
@@ -1051,7 +1051,7 @@ export class Tempo {
 			// discovery phase
 			if (host === 'fmt') {
 				if (isDefined(this.#local.config.formats[key])) {
-					return this.#setLazy(target, key, () => this.format(key as enums.Format))?.();
+					return this.#setLazy(target, key, () => this.format(key as t.Format))?.();
 				}
 			} else {
 				const term = Tempo.#termMap.get(key);
@@ -1060,7 +1060,8 @@ export class Tempo {
 					const define = (keyOnly: boolean) => {
 						try {
 							const result = term.define.call(this, keyOnly);
-							return Array.isArray(result) ? getTermRange(this, result, keyOnly) : result;
+							const res = Array.isArray(result) ? getTermRange(this, result, keyOnly) : result;
+							return (typeof res === 'object' && res !== null) ? secure(res) : res;
 						} catch (err: any) {
 							if (err.message.includes('Class constructor')) {
 								Tempo.#dbg.warn(this.#local.config, `Misidentified class in term definition: ${key}`, err.stack ?? err);
@@ -1068,11 +1069,12 @@ export class Tempo {
 								throw err;
 							}
 						}
+						return undefined;
 					};
 					return this.#setLazy(target, key, define, isKeyOnly)?.();
 				}
 			}
-		});
+		}, true);
 
 		// Eager support during construction
 		if (!this.#local.parse.lazy) this.#discover(host, target);
@@ -1084,13 +1086,15 @@ export class Tempo {
 		if (!Tempo.#lifecycle.ready) return;
 		if (host === 'fmt') {
 			ownKeys(this.#local.config.formats).forEach(key => {
-				if (isString(key)) this.#setLazy(target, key, () => this.format(key as enums.Format));
+				if (isString(key)) this.#setLazy(target, key, () => this.format(key as t.Format));
 			});
 		} else {
 			Tempo.#terms.forEach(term => {
-				const define = (keyOnly: boolean) => {
+				const define = (keyOnly: boolean, anchor?: any) => {
 					try {
-						return term.define.call(this, keyOnly);
+						const res = term.resolve ? term.resolve.call(this, anchor) : term.define.call(this, keyOnly, anchor);
+						const out = (getTermRange(this, (Array.isArray(res) ? (res as any) : [res]), keyOnly, anchor) as any);
+						return (typeof out === 'object' && out !== null) ? secure(out) : out;
 					} catch (err: any) {
 						if (err.message.includes('Class constructor')) {
 							Tempo.#dbg.warn(this.#local.config, `Misidentified class in term discovery: ${term.key}`, err.stack ?? err);
@@ -1099,8 +1103,8 @@ export class Tempo {
 						}
 					}
 				};
-				this.#setLazy(target, term.key, define, true);
-				if (term.scope) this.#setLazy(target, term.scope, define, false);
+				this.#setLazy(target, term.key, (isKey: boolean) => define(isKey, this.toDateTime()), true);
+				if (term.scope) this.#setLazy(target, term.scope, (isKey: boolean) => define(isKey, this.toDateTime()), false);
 			});
 		}
 	}
@@ -1174,7 +1178,7 @@ export class Tempo {
 	 * we must instantiate internally from the decorated wrapper (which is bound to `this.constructor`)  
 	 * rather than using `new Tempo(..)`.  
 	 */
-	get #Tempo() { return this.constructor as typeof Tempo; }
+	/** @internal */																					get #Tempo() { return (tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) => Reflect.construct(this.constructor, [tempo, options]) as Tempo; }
 
 	/** time duration until (with unit, returns number) */		until(until: Tempo.Until, opts?: Tempo.Options): number;
 	/** time duration until another date-time (with unit) */	until(dateTimeOrOpts: Tempo.DateTime | Tempo.Options, until: Tempo.Until): number;
@@ -1186,10 +1190,10 @@ export class Tempo {
 	/** time elapsed since another date-time (without unit) */since(dateTimeOrOpts?: Tempo.DateTime | Tempo.Options, opts?: Tempo.Options): string;
 	/** time elapsed since another date-time */								since(optsOrDate?: any, optsOrUntil?: any): string { this.#ensureParsed(); return this.#since(optsOrDate, optsOrUntil) }
 
-	/** applies a format to the instance. See `doc/tempo.md`. */	format<K extends enums.Format>(fmt: K) { this.#ensureParsed(); return this.#format(fmt) }
+	/** applies a format to the instance. */									format<K extends t.Format>(fmt: K) { this.#ensureParsed(); return this.#format(fmt) }
 	/** returns a new `Tempo` with specific duration added. */add(tempo?: Tempo.Add, options?: Tempo.Options) { this.#ensureParsed(); return this.#add(tempo, options); }
 	/** returns a new `Tempo` with specific offsets. */				set(tempo?: Tempo.Set, options?: Tempo.Options) { this.#ensureParsed(); return this.#set(tempo, options); }
-	/** returns a clone of the current `Tempo` instance. */		clone() { return new this.#Tempo(this, this.config) }
+	/** returns a clone of the current `Tempo` instance. */		clone() { return this.#Tempo(this, this.config) }
 
 	/** returns the underlying Temporal.ZonedDateTime */
 	toDateTime() {
@@ -1235,7 +1239,7 @@ export class Tempo {
 	}
 
 	/** parse DateTime input */
-	#parse(tempo: Tempo.DateTime, dateTime?: Temporal.ZonedDateTime): Temporal.ZonedDateTime {
+	#parse(tempo: Tempo.DateTime, dateTime?: Temporal.ZonedDateTime, term?: string): Temporal.ZonedDateTime {
 		if (isNull(tempo)) {																		// fail-early
 			this.#errored = true;
 			return undefined as any;
@@ -1255,6 +1259,39 @@ export class Tempo {
 			const cal = isTempo(basis) ? (basis as any).cal : (isTemporal(basis) ? (basis as any).calendarId : config.calendar);
 
 			today = isTemporal(basis) ? (basis as any) : (isTempo(basis) ? (basis as any).toDateTime() : instant().toZonedDateTimeISO(tz).withCalendar(cal));
+
+			if (term) {
+				const ident = term.startsWith('#') ? term.slice(1) : term;
+				const termObj = Tempo.#terms.find(t => t.key === ident || t.scope === ident);
+				if (!termObj) throw new Error(`Unknown Term identifier: ${term}`);
+
+				// 1. if input is numeric, resolve by index
+				if (isNumeric(tempo as any)) {
+					const list = getRange(termObj, this, today);
+					const current = (getTermRange(this, list, false, today) as any);
+					const isMultiCycle = isDefined(termObj.resolve) && list.some(r => r.year !== undefined);
+					const itemsPerCycle = isMultiCycle ? list.length / 3 : list.length;
+					const currentIdx = list.findIndex(r => r.key === current.key && (isMultiCycle ? r.year === current.year : true));
+
+					const cycleOffset = isMultiCycle ? Math.floor(currentIdx / itemsPerCycle) * itemsPerCycle : 0;
+					const targetIdx = cycleOffset + (Number(tempo) - 1);
+					const item = list[targetIdx];
+
+					if (item) {
+						const range = (getTermRange(this, [item], false, today) as any);
+						if (range?.start) return range.start.toDateTime().withTimeZone(tz).withCalendar(cal);
+					}
+					throw new RangeError(`Term index out of range: ${tempo} for ${term}`);
+				}
+
+				// 2. if input is the term identifier itself, resolve current range
+				if (tempo === term) {
+					const range = termObj.define.call(this, false, today);
+					const list = isUndefined(range) ? [] : asArray(range as unknown) as t.Range[];
+					const current = (getTermRange(this, list, false, today) as any);
+					if (current?.start) return current.start.toDateTime().withTimeZone(tz).withCalendar(cal);
+				}
+			}
 
 			try {
 				// anchor successfully determined
@@ -1708,7 +1745,7 @@ export class Tempo {
 		// resolve month-names into month-numbers (some browsers do not allow month-names when parsing a Date)
 		if (isDefined(groups["mm"]) && !isNumeric(groups["mm"])) {
 			const mm = Tempo.#prefix(groups["mm"] as Tempo.MONTH);	// conform month-name
-			groups["mm"] = Tempo.MONTH[mm as keyof typeof Tempo.MONTH]!.toString().padStart(2, "0");
+			groups["mm"] = Tempo.MONTH[mm as Tempo.MONTH]!.toString().padStart(2, "0");
 		}
 
 		return dateTime;
@@ -2003,7 +2040,7 @@ export class Tempo {
 				if (Number.isFinite(Number(val)))
 					acc[key] = Number(val);
 				else if (low in enums.NUMBER)
-					acc[key] = enums.NUMBER[low as enums.Number];
+					acc[key] = enums.NUMBER[low as t.Number];
 
 				return acc;
 			}, {} as Record<string, number>);
@@ -2043,7 +2080,7 @@ export class Tempo {
 										const termObj = Tempo.#terms.find(t => t.scope === term || t.key === term);
 
 										let jump = zdt;
-										let next = new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }).set({ [unit]: offset }).toDateTime();
+										let next = this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }).set({ [unit]: offset }).toDateTime();
 
 										let iterations = 0;
 										while (next.epochNanoseconds <= zdt.epochNanoseconds) {
@@ -2051,7 +2088,7 @@ export class Tempo {
 												Tempo.#dbg.warn(this.#local.config, `Term resolution stalling for "${unit}" (offset: "${offset}"). Jumping range.`);
 												let range;
 												try {
-													range = termObj?.define.call(new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }), false);
+													range = termObj?.define.call(this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }), false);
 												} catch (err: any) {
 													if (err.message.includes('Class constructor')) {
 														Tempo.#dbg.warn(this.#local.config, `Misidentified class in term recovery: ${unit}`, err.stack ?? err);
@@ -2061,13 +2098,13 @@ export class Tempo {
 												}
 												const step = getSafeFallbackStep(range as any, (termObj as any)?.scope ?? (unit === '#period' ? 'period' : undefined));
 												jump = jump.add(step);
-												next = new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }).set({ [unit]: offset }).toDateTime();
+												next = this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }).set({ [unit]: offset }).toDateTime();
 												break;
 											}
 
 											let range;
 											try {
-												range = termObj?.define.call(new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }), false);
+												range = termObj?.define.call(this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }), false);
 											} catch (err: any) {
 												if (err.message.includes('Class constructor')) {
 													Tempo.#dbg.warn(this.#local.config, `Misidentified class in term resolution: ${unit}`, err.stack ?? err);
@@ -2082,17 +2119,17 @@ export class Tempo {
 												const step = (unit === '#period' || (termObj as any)?.scope === 'period') ? { days: 1 } : { years: 1 };
 												jump = jump.add(step);
 											}
-											next = new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }).set({ [unit]: offset }).toDateTime();
+											next = this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }).set({ [unit]: offset }).toDateTime();
 										}
 										return next;
 									}
-									const res = resolveTermShift(new this.#Tempo(zdt, this.config), Tempo.#terms, unit, offset as number);
+									const res = resolveTermShift(this.#Tempo(zdt, this.config), Tempo.#terms, unit, offset as number);
 									if (isDefined(res)) {
 										return res;
 									}
 								}
 
-								const single = singular((enums.ELEMENT[unit as enums.Element] ?? unit) as string);
+								const single = singular((enums.ELEMENT[unit as t.Element] ?? unit) as string);
 								const plural = single + 's';
 
 								switch (`${mutate}.${single}`) {
@@ -2119,14 +2156,14 @@ export class Tempo {
 						}, zdt);
 				}
 				else {
-					return new this.#Tempo(args, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
+					return this.#Tempo(args, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
 				}
 			}
 
 			if (this.#errored)
-				return new this.#Tempo(null, { ...this.#options, ...overrides, ...options, result: this.#matches });
+				return this.#Tempo(null, { ...this.#options, ...overrides, ...options, result: this.#matches });
 
-			return new this.#Tempo(zdt, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
+			return this.#Tempo(zdt, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
 
 		} finally {
 			if (isRoot) this.#matches = undefined;
@@ -2165,27 +2202,52 @@ export class Tempo {
 						.reduce<Temporal.ZonedDateTime>((zdt, [key, adjust]) => {	// apply each mutation to preceding one
 							if (key === 'timeZone' || key === 'calendar') return zdt;
 
-							const { mutate, offset, single } = ((key) => {
+							const { mutate, offset, single, term } = ((key) => {
 								switch (key) {
 									case 'start':
 									case 'mid':
 									case 'end':
 										{
-											const offset = adjust?.toString() ?? '';
-											const single = offset.startsWith('#') ? 'term' : singular(offset);
-											return { mutate: key as Tempo.Mutate, offset, single }
+											const val = adjust?.toString() ?? '';
+											const isTerm = val.startsWith('#');
+											const single = isTerm ? 'term' : singular(val);
+											return { mutate: key as Tempo.Mutate, offset: val, single, term: isTerm ? val : undefined }
 										}
 									default:
 										{
 											const isTerm = key.startsWith('#');
 											const name = isTerm ? key.slice(1) : key;
 											const single = isTerm ? 'term' : singular(name as string);
-											return { mutate: 'set', offset: adjust, single }
+											return { mutate: 'set', offset: adjust, single, term: isTerm ? (key as string) : undefined }
 										}
 								}
 							})(key);																			// IIFE to analyze arguments
 
 							switch (`${mutate}.${single}`) {
+								case 'start.term':
+								case 'mid.term':
+								case 'end.term':
+									{
+										const ident = term!.startsWith('#') ? term!.slice(1) : term!;
+										const termObj = Tempo.#terms.find(t => t.key === ident || t.scope === ident);
+										if (!termObj) throw new Error(`Unknown Term identifier: ${term}`);
+
+										const list = getRange(termObj, this, zdt);
+										const range = (getTermRange(this, list, false, zdt) as any);
+										if (!range) throw new Error(`Cannot resolve range for Term: ${term}`);
+
+										switch (mutate) {
+											case 'start': return range.start.toDateTime().withTimeZone(tz).withCalendar(cal);
+											case 'mid': {
+												const startNs = range.start.toDateTime().epochNanoseconds as bigint;
+												const endNs = range.end.toDateTime().epochNanoseconds as bigint;
+												const midNs = startNs + (endNs - startNs) / BigInt(2);
+												return Temporal.Instant.fromEpochNanoseconds(midNs).toZonedDateTimeISO(tz).withCalendar(cal);
+											}
+											case 'end': return range.end.toDateTime().subtract({ nanoseconds: 1 }).withTimeZone(tz).withCalendar(cal);
+										}
+									}
+
 								case 'set.timeZone':
 									return zdt.withTimeZone(offset as Temporal.TimeZoneLike);
 								case 'set.calendar':
@@ -2198,7 +2260,7 @@ export class Tempo {
 								case 'set.event':
 								case 'set.dow':															// set day-of-week by number
 								case 'set.wkd':															// set day-of-week by name
-									return this.#parse(offset as any, zdt);
+									return this.#parse(offset as any, zdt, term);
 
 								case 'set.year':
 								case 'set.month':
@@ -2316,63 +2378,30 @@ export class Tempo {
 									return zdt
 										.round({ smallestUnit: offset as 'day' | 'hour' | 'minute' | 'second', roundingMode: 'ceil' })
 										.subtract({ nanoseconds: 1 });
-
-								// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-								// Term anchors
-								case 'start.term':
-								case 'mid.term':
-								case 'end.term':
-									function resolveTermAnchor(tempo: Tempo, terms: Record<string, any>, offset: string, mutate: Tempo.Mutate) {
-										const zdt = (tempo as any).toDateTime();
-										if (!isTemporal(zdt)) return undefined;
-
-										const low = offset.toLowerCase().replace(/^#/, '');
-										const term = terms.find((t: any) => t.scope === low || t.key === low);
-										if (!term) return undefined;
-
-										try {
-											const range = term.define.call(tempo, false);
-											const start = range.start.toDateTime();
-											const end = range.end.toDateTime();
-
-											if (mutate === 'start') return start;
-											if (mutate === 'mid') {
-												const total = end.since(start).total({ unit: 'nanoseconds', relativeTo: start });
-												return start.add({ nanoseconds: Math.trunc(total / 2) });
-											}
-											if (mutate === 'end') return end.subtract({ nanoseconds: 1 });
-										} catch (e) { return undefined; }
-									}
-									return resolveTermAnchor(new this.#Tempo(zdt, this.config), Tempo.#terms, offset as string, mutate as Tempo.Mutate) ??
-										(() => {
-											Tempo.#dbg.error(this.#local.config, `Unexpected term(${offset})`);
-											return zdt;
-										})();
-
 								default:
 									Tempo.#dbg.error(this.#local.config, `Unexpected method(${mutate}), unit(${adjust}) and offset(${single})`);
 									return zdt;
 							}
-						}, zdt)																						// start reduce with the shifted zonedDateTime
+						}, zdt)																					// start reduce with the shifted zonedDateTime
 				}
 				else {
-					return new this.#Tempo(args, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
+					return this.#Tempo(args, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
 				}
 			}
 
-			return new this.#Tempo(zdt, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
+			return this.#Tempo(zdt, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
 		} finally {
 			if (isRoot) this.#matches = undefined;
 			this.#parseDepth--;
 		}
 	}
 
-	#format = <K extends string>(fmt: K): enums.FormatType<K> => {
+	#format = <K extends string>(fmt: K): t.FormatType<K> => {
 		if (isNull(this.#tempo))
-			return undefined as unknown as enums.FormatType<K>;	// don't format <null> dates
+			return undefined as unknown as t.FormatType<K>;				// don't format <null> dates
 
 		if (!this.isValid)
-			return '' as unknown as enums.FormatType<K>;					// return empty string for invalid dates (catch-mode)
+			return '' as unknown as t.FormatType<K>;							// return empty string for invalid dates (catch-mode)
 
 		const obj = this.#local.config.formats;
 		let template = (isString(fmt) && obj.has(fmt))
@@ -2429,8 +2458,8 @@ export class Tempo {
 			}
 		});
 
-		const isExplicitlyNumeric = enums.NumericPattern.includes(template as enums.NumericPattern);
-		return (isExplicitlyNumeric ? ifNumeric(result) : result) as enums.FormatType<K>;
+		const isExplicitlyNumeric = NumericPattern.includes(template as t.NumericPattern);
+		return (isExplicitlyNumeric ? ifNumeric(result) : result) as t.FormatType<K>;
 	}
 
 	/** calculate the difference between two Tempos  
@@ -2473,7 +2502,7 @@ export class Tempo {
 				value = arg as Tempo.DateTime;											// assume 'arg' is a DateTime
 		}
 
-		const offset = new this.#Tempo(value, { ...opts, mode: enums.MODE.Strict });	// create the offset Tempo (strict: #zdt needed immediately)
+		const offset = this.#Tempo(value, { ...opts, mode: enums.MODE.Strict });	// create the offset Tempo (strict: #zdt needed immediately)
 		const diffZone = this.#zdt.timeZoneId !== offset.#zdt.timeZoneId;
 		// Temporal restricts cross-timezone math to absolute units ('hours') to avoid DST ambiguity
 		const duration = this.#zdt.until(offset.#zdt.withCalendar(this.#zdt.calendarId), { largestUnit: diffZone ? 'hours' : (unit ?? 'years') });
@@ -2533,7 +2562,7 @@ export class Tempo {
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // shortcut functions to common Tempo properties / methods
-/** check valid Tempo */      export const isTempo = (tempo?: any): tempo is Tempo => tempo?.[$isTempo] === true;
+/** check valid Tempo */
 /** current timestamp (ts) */	export const getStamp = ((tempo: Tempo.DateTime, options: Tempo.Options) => new Tempo(tempo, options).ts) as Tempo.Params<number | bigint>;
 /** create new Tempo */				export const getTempo = ((tempo: Tempo.DateTime, options: Tempo.Options) => new Tempo(tempo, options)) as Tempo.Params<Tempo>;
 /** format a Tempo */					export const fmtTempo = ((fmt: string, tempo: Tempo.DateTime, options: Tempo.Options) => new Tempo(tempo, options).format(fmt as any)) as Internal.Fmt;
