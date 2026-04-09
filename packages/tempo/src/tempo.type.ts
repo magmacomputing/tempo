@@ -8,57 +8,87 @@
  */
 
 import * as enums from '#tempo/tempo.enum.js';
+import { $Tempo, $Plugins, $Register } from '#tempo/tempo.symbol.js';
 import type { Snippet, Layout, Event, Period, Token } from '#tempo/tempo.default.js';
-import type { IntRange, LooseUnion, NonOptional, Property, Plural, Type } from '#library/type.library.js';
+import type { IntRange, NonOptional, Property, Plural, Prettify, TemporalObject, TypeValue } from '#library/type.library.js';
+import type { Range, TermPlugin, ResolvedRange, Plugin, Terms } from './plugins/plugin.type.js';
 
 /**
  * Structural forward-reference to the Tempo class.
- * import type is safe for circular ESM references — erased at runtime.
- */
+ * 'import type' is safe for circular ESM references — erased at runtime.
+*/
 import type { Tempo } from '#tempo/tempo.class.js';
 
-// #region Primitives
+declare module '#library/type.library.js' {
+	interface TypeValueMap<T> {
+		Tempo: { type: 'Tempo', value: Tempo };
+	}
+}
+
+declare global {
+	interface globalThis {
+		[$Tempo]?: Internal.Discovery;
+		[$Plugins]?: Internal.Discovery;
+		[$Register]?: () => void;
+	}
+}
 
 /** the value that Tempo will attempt to interpret as a valid ISO date / time */
-export type DateTime = string | number | bigint | Date | Tempo | typeof Temporal | Temporal.ZonedDateTimeLike | undefined | null
+export type DateTime = string | number | bigint | Date | Tempo | TemporalObject | Temporal.ZonedDateTimeLike | undefined | null
 
 export type Pattern = string | RegExp
 export type Logic = string | number | Function
 export type Pair = [string, string]
 export type Groups = Record<string, string>
 
-// #endregion
+export type Options = Prettify<{ [K in keyof Internal.BaseOptions]?: Internal.BaseOptions[K] } & Record<string, any>>;
 
-// #region Options / Config
 
-export type Options = Partial<Internal.BaseOptions> & Record<string, any>;
-
-// #endregion
-
-// #region Plugins
-
-/** define a new term plugin */
-export type TermPlugin = {
-	key: string; scope?: string;
-	description?: string;
-	define: (this: Tempo, keyOnly?: boolean) => any
-}
-
-/** plugin function that can extend the Tempo prototype or static space */
-export type Plugin = (options: any, TempoClass: typeof Tempo, factory: (val: any) => Tempo) => void;
-
-// #endregion
-
-// #region Date/time unit types
+/**
+ * # Plugin
+ * extend the functionality of the Tempo class.
+ * Every attempt to resolve an input to a Tempo should always be checked with .isValid before continuing.
+ * Otherwise unpredictable behaviour is likely.
+ */
+export type { Plugin };
 
 /** Configuration to use for #until() and #since() argument */
-export type Unit = Temporal.DateUnit | Temporal.TimeUnit | Plural<Temporal.DateUnit | Temporal.TimeUnit>
+export type DateTimeUnit = Temporal.DateUnit | Temporal.TimeUnit
+export type Unit = DateTimeUnit | Plural<DateTimeUnit>
+type Units = Temporal.PluralizeUnit<DateTimeUnit>;
+type BaseDuration = Record<Units, number>;
+/**
+ * # FlexibleDuration
+ * A distributive mapped type over {@link Units} which requires at least one duration key 
+ * from {@link BaseDuration} (the mapped key K) while making all other BaseDuration 
+ * properties optional.
+ * 
+ * @example
+ * // Valid: at least one key is present
+ * const a: FlexibleDuration = { hours: 1 };
+ * const b: FlexibleDuration = { hours: 1, minutes: 30 };
+ * 
+ * // Invalid: empty object (no mandatory key)
+ * const c: FlexibleDuration = {}; 
+ */
+export type FlexibleDuration = {
+	[K in Units]: Pick<BaseDuration, K> & { [P in keyof Omit<BaseDuration, K>]?: number };
+}[Units]
 export type Until = (Options & { unit?: Unit }) | Unit
+
 export type Mutate = 'start' | 'mid' | 'end'
-export type Set = Partial<Record<Mutate, Unit> &
-	Record<'date' | 'time' | 'event' | 'period', string> &
-{ timeZone?: Temporal.TimeZoneLike; calendar?: Temporal.CalendarLike }>
-export type Add = Partial<Record<Unit, number>>
+type TermOffset = { [K: `#${string}`]: number | string }
+type SetFields = {
+	[K in Mutate]?: Unit | `#${string}`;
+} & {
+	[K in 'date' | 'time' | 'event' | 'period']?: string;
+}
+export type Set = Prettify<SetFields & {
+	timeZone?: Temporal.TimeZoneLike;
+	calendar?: Temporal.CalendarLike;
+} & TermOffset> | DateTime
+type AddUnits = { [K in Unit]?: number };
+export type Add = Prettify<AddUnits & TermOffset> | DateTime
 
 export type Modifier = '=' | '-' | '+' | '<' | '<=' | '-=' | '>' | '>=' | '+=' | 'this' | 'next' | 'prev' | 'last' | 'first' | undefined
 export type Relative = 'ago' | 'hence' | 'prior' | 'from now'
@@ -74,35 +104,19 @@ export type ww = IntRange<1, 53>
 
 export type Duration = NonOptional<Temporal.DurationLikeObject> & Record<"iso", string> & Record<"sign", number> & Record<"blank", boolean> & Record<"unit", string | undefined>
 
-// #endregion
-
-// #region Enum re-exports (as Tempo.* aliases)
-
 /** pre-configured format strings */
 export type OwnFormat = enums.OwnFormat;
 
 /** mapping of format names to instance-resolutions (string | number) */
 export type Formats = enums.Formats;
 
+/** Union of all known format strings */
+export type Format = enums.Format;
 /** Enum registry of format strings */
-export type Format = enums.FormatEnum;
+export type FormatRegistry = enums.FormatEnum;
 export type FormatType<K extends PropertyKey> = enums.FormatType<K>;
 
-/** mapping of terms to their resolved values */
-export type Terms = Property<any>;
-
-/** resolved Term range */
-export interface Range {
-	key: string; scope: string;
-	fiscal?: number; year?: number;
-	month?: number; day?: number;
-	hour?: number; minute?: number;
-	second?: number;
-	label?: string;
-	start: Tempo;
-	end: Tempo;
-	[str: PropertyKey]: any;
-}
+export type { Range, TermPlugin, ResolvedRange, Terms };
 
 export type WEEKDAY = enums.WEEKDAY
 export type WEEKDAYS = enums.WEEKDAYS
@@ -113,24 +127,23 @@ export type DURATIONS = enums.DURATIONS
 export type COMPASS = enums.COMPASS
 export type SEASON = enums.SEASON
 export type ELEMENT = enums.ELEMENT
+export type TIMEZONE = enums.TIMEZONE
+export type MODE = enums.MODE
+export type NUMBER = enums.Number
 
 export type Weekday = enums.Weekday
 export type Month = enums.Month
 export type Element = enums.Element
+export type Number = enums.Number
+export type Mode = enums.MODE
+export type NumericPattern = typeof enums.NumericPattern[number];
 
-// #endregion
-
-// #region Helper types
 
 /** Type for consistency in expected arguments for helper functions */
 export interface Params<T> {
-	(tempo?: DateTime, options?: Options): T;								// parse DateTime, default to Temporal.Instance.now()
+	(tempo?: DateTime, options?: Options): T;									// parse DateTime, default to Temporal.Instance.now()
 	(options: Options): T;																		// provide just the Options (use {value:'XXX'} for specific DateTime)
 }
-
-// #endregion
-
-// #region INTERNAL namespace (hidden from standard API surface)
 
 export namespace Internal {
 	export type Registry = Map<symbol, RegExp>
@@ -143,13 +156,14 @@ export namespace Internal {
 		/** globalThis Discovery Symbol */											discovery: string | symbol;
 		/** additional console.log for tracking */							debug: boolean | undefined;
 		/** catch or throw Errors */														catch: boolean | undefined;
+		/** suppress console output during catch */							silent: boolean | undefined;
 		/** Temporal timeZone */																timeZone: Temporal.TimeZoneLike;
 		/** Temporal calendar */																calendar: Temporal.CalendarLike;
 		/** locale (e.g. en-AU) */															locale: string;
 		/** pivot year for two-digit years */										pivot: number;
 		/** hemisphere for term.qtr or term.szn */							sphere: enums.COMPASS | undefined;
 		/** Precision to measure timestamps (ms | us) */				timeStamp?: TimeStamp;
-		/** initialization strategy ('auto'|'strict'|'defer') */mode?: enums.Mode;
+		/** initialization strategy ('auto'|'strict'|'defer') */mode?: enums.MODE;
 		/** locale-names that prefer 'mm-dd-yy' date order */		mdyLocales: string | string[];
 		/** swap parse-order of layouts */											mdyLayouts: Pair[];
 		/** date-time snippets to help compose a Layout */			snippet: Snippet | PatternOption<Pattern>;
@@ -160,7 +174,7 @@ export namespace Internal {
 		/** plugins to be automatically extended */							plugins: Plugin | Plugin[];
 		/** supplied value to parse */													value: DateTime;
 		/** @internal temporary anchor used during parsing */		anchor: Temporal.ZonedDateTime;
-		/** @internal accumulated parse results */							result?: Match[];
+		/** @internal accumulated parse results */							result?: Match[] | undefined;
 	}
 
 	/** high-precision precision to measure timestamps (ms | us) */
@@ -191,20 +205,20 @@ export namespace Internal {
 		/** pivot year for two-digit years */										pivot?: number;
 		/** parsing match result */															result: Match[];
 		/** was this a nested/anchored parse? */								isAnchored?: boolean;
-		/** initialization strategy ('auto'|'strict'|'defer') */mode: enums.Mode;
+		/** initialization strategy ('auto'|'strict'|'defer') */mode: enums.MODE;
 		/** @internal is parsing currently deferred? */					lazy: boolean;
 		/** @internal lazy delegator for formats */							format?: any;
 		/** @internal lazy delegator for terms */								term?: any;
+		/** @internal localized Master Guard scanner */					guard?: { test(str: string): boolean };
 	}
 
 	/** debug a Tempo instantiation */
-	export interface Match {
+	type MatchExtend = { type: 'Event' | 'Period', value: string | number | Function }
+	export type Match = {
 		/** pattern which matched the input */									match?: string | undefined;
 		/** groups from the pattern match */										groups?: Groups;
-		/** the type of the original input */										type: LooseUnion<Type>;
-		/** the value of the original input */									value: any;
 		/** was this a nested/anchored parse? */								isAnchored?: boolean;
-	}
+	} & (TypeValue<any> | MatchExtend)
 
 	/** drop the parse-only Options */
 	export type OptionsKeep = Omit<BaseOptions, "mdyLocales" | "mdyLayouts" | "pivot" | "snippet" | "layout" | "event" | "period" | "value">
@@ -212,7 +226,7 @@ export namespace Internal {
 	/** Instance configuration derived from supply, storage, and discovery. */
 	export interface Config extends Required<Omit<OptionsKeep, "formats">> {
 		/** configuration (global | local) */										scope: 'global' | 'local';
-		/** pre-configured format strings */										formats: Format;
+		/** pre-configured format strings */										formats: FormatRegistry;
 		/** index-signature */																	readonly [key: string]: any;
 	}
 
@@ -221,10 +235,9 @@ export namespace Internal {
 		/** pre-defined config options for Tempo.#global */			options?: Options | (() => Options);
 		/** aliases to merge in the TimeZone dictionary */			timeZones?: Record<string, string>;
 		/** aliases to merge in the Number-Word dictionary */		numbers?: Record<string, number>;
-		/** term plugins to be registered via Tempo.addTerm() */terms?: TermPlugin | TermPlugin[];
-		/** plugins to be automatically extended via Tempo.extend() */plugins?: Plugin | Plugin[];
 		/** custom format strings to merge in the FORMAT dictionary */formats?: Property<any>;
+		/** term plugins to be registered via Tempo.addTerm() */term?: TermPlugin | TermPlugin[];
+		/** plugins to be automatically extended via Tempo.extend() */plugins?: Plugin | Plugin[];
+		/** @deprecated use term instead */											terms?: TermPlugin | TermPlugin[];
 	}
 }
-
-// #endregion

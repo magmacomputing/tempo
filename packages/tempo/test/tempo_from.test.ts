@@ -4,7 +4,7 @@ describe('Tempo.from() static method', () => {
 	it('should create an instance of Tempo from no arguments (now)', () => {
 		const t = Tempo.from();
 		expect(t).toBeInstanceOf(Tempo);
-		expect(t.isValid()).toBe(true);
+		expect(t.isValid).toBe(true);
 
 		// check that it's close to "now"
 		const now = Temporal.Now.instant().epochMilliseconds;

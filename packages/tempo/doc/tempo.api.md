@@ -14,7 +14,7 @@ This document provides a comprehensive technical reference for the `Tempo` class
 ### `Tempo.init(options?: Tempo.Options)`
 Initializes the global default configuration for all subsequent `Tempo` instances.
 - **Returns:** `Tempo.Config` (The resolved global config).
-- **Note:** Settings are inherited from library defaults, persistent storage, and provided options.
+- **Note:** Settings are inherited from library defaults, persistent storage, and provided options. Use `silent: true` to suppress `console.error` output for expected failures.
 
 ### `Tempo.extend(arg, options?)`
 Unified extender for library functionality.
@@ -91,7 +91,9 @@ Returns a **new** `Tempo` instance with the specified duration or date-time payl
 
 ### `tempo.set(payload: Tempo.DateTime | Tempo.Set, options?: Tempo.Options)`
 Returns a **new** `Tempo` instance with specific values or relative alignments.
-- **Example:** `t.set({ month: 5, hh: 12 })` or `t.set({ start: 'month' })`
+- **Example:** `t.set({ month: 5, hh: 12 })` or `t.set({ start: 'month' })` landing on `01-May 00:00:00`.
+- **Note (End):** Using `end` with an anchor (e.g., `set({ end: '#qtr' })`) lands on the **Inclusive End** of the period (e.g., `30-Sep 23:59:59.999...`). This follows industry UX expectations for "end-of-period" navigation.
+- **Note (Mid):** Using `mid` with an anchor lands on the **Arithmetic Mid-point** (exact nanosecond center) of the period.
 
 ### `tempo.clone()`
 Returns a **new**, lean `Tempo` instance based on the current one. It preserves all local configuration but starts a fresh "parse history" (length 1). This is ideal for minimizing memory footprint in long chains or live tickers.
@@ -106,7 +108,7 @@ Calculates the duration until another date-time.
 ### `tempo.since(since, opts?)`
 Returns a human-readable relative time string (e.g., "3 days ago").
 
-### `tempo.isValid()`
+### `tempo.isValid`
 Returns `true` if the instance represents a valid date-time.
 
 ### `tempo.toString()`
@@ -158,7 +160,7 @@ Returns a `Temporal.PlainDateTime` representation.
 ### Lineage & Metadata
 - `nano`: Epoch nanoseconds (`BigInt`).
 - `epoch`: Object containing `ss`, `ms`, `us`, `ns` epoch values.
-- `term`: Object containing results from all active term plugins.
-- `fmt`: Registry of pre-calculated strings for all standard formats.
+- `term`: Object containing results from all active term plugins. (Note: These are enumerable for easy discovery).
+- `fmt`: Registry of pre-calculated strings for all standard formats. (Note: These are enumerable for easy discovery).
 - `config`: The effective configuration for this specific instance (Note: `scope`, `anchor`, and `value` are excluded from the public object).
 - `parse`: The parsing rules and lineage for this instance.

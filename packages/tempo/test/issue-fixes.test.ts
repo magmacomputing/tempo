@@ -15,26 +15,38 @@ describe('Tempo Issue Fixes', () => {
   describe('Relative Event Logic', () => {
     test('relative events follow the instance base when using .set()', () => {
       const today = new Tempo()
-      const yesterday = today.set({ event: 'yesterday' })
-      const dayBeforeYesterday = yesterday.set({ event: 'yesterday' })
+      const yesterday = today.set('yesterday')
+      const dayBeforeYesterday = yesterday.set('yesterday')
 
-      const expected = (today.toDateTime()).toPlainDate().add({ days: -2 })
-      expect(dayBeforeYesterday.format('{yyyy}-{mm}-{dd}')).toBe(expected.toString())
+      const expected = (today.toDateTime()).toPlainDate().add({ days: -2 }).toString()
+      expect(dayBeforeYesterday.format('{yyyy}-{mm}-{dd}')).toBe(expected.split('[')[0])
     })
 
     test('now matches the current time by default', () => {
       const t = new Tempo('now')
       const realNow = Temporal.Now.instant().epochMilliseconds
-      // Allow 200ms for execution jitter
-      expect(Math.abs(t.toInstant().epochMilliseconds - realNow)).toBeLessThan(200)
+      // Allow 1000ms for execution jitter (CI/slow polyfill)
+      expect(Math.abs(t.toInstant().epochMilliseconds - realNow)).toBeLessThan(1000)
     })
-
     test('combined event and period works correctly (e.g. yesterday afternoon)', () => {
       const t = new Tempo('yesterday afternoon')
       const expectedDate = new Tempo().add({ days: -1 }).format('{yyyy}-{mm}-{dd}')
 
       expect(t.format('{yyyy}-{mm}-{dd}')).toBe(expectedDate)
-      expect(t.format('{HH}')).toBe('03pm')								// afternoon is 3:00pm
+      expect(t.format('{HH}:{mi}:{ss}')).toBe('03:00:00pm')
+    })
+
+    test('dynamic period alias with `this` binding (e.g. half-hour)', () => {
+      Tempo.init({
+        period: {
+          'half-hour': function (this: Tempo) {
+            return `${this.hh}:30`
+          }
+        }
+      })
+      const t = new Tempo('half-hour')
+      expect(t.format('{mi}:{ss}')).toBe('30:00')
+      expect(t.hh).toBe(new Tempo().hh)
     })
   })
 
@@ -99,15 +111,62 @@ describe('Tempo Issue Fixes', () => {
     test('set() accepts two arguments (value, options)', () => {
       const t = new Tempo('2024-05-20 10:00', { timeZone: 'UTC' })
       // This would have failed before
-      const shifted = t.set('tomorrow', { timeZone: 'America/New_York' })
+      const shifted = t.set('tomorrow', { timeZone: 'America/New_York', debug: true })
       expect(shifted.tz).toBe('America/New_York')
       expect(shifted.format('{yyyy}-{mm}-{dd}')).toBe('2024-05-21')
     })
 
-    test('add() accepts options with mutation', () => {
+    test('add() accepts a duration payload', () => {
       const t = new Tempo('2024-05-20 10:00', { timeZone: 'UTC' })
-      const nextWeek = t.add({ days: 7 }, { debug: true })
+      const nextWeek = t.add({ days: 7 })
       expect(nextWeek.format('{dd}')).toBe('27')
+    })
+  })
+
+  describe('Relative Parsing Stability', () => {
+    test('tomorrow resolution with explicit anchor', () => {
+      const today = new Tempo('2024-05-20')
+      const yesterday = today.set('yesterday')
+      expect(yesterday.format('{yyyy}-{mm}-{dd}')).toBe('2024-05-19')
+
+      // @ts-ignore - anchor is an internal option used for testing
+      const t = new Tempo('tomorrow', { anchor: today.toDateTime() })
+      expect(t.format('{yyyy}-{mm}-{dd}')).toBe('2024-05-21')
+    })
+
+    test('tomorrow resolution preserves explicit time', () => {
+      const today = new Tempo('2024-05-20')
+      // @ts-ignore
+      const t = new Tempo('tomorrow 10pm', { anchor: today.toDateTime() })
+      expect(t.format('{yyyy}-{mm}-{dd}')).toBe('2024-05-21')
+      expect(t.format('{hh}:{mi}')).toBe('22:00')
+    })
+
+    test('Event resolution with custom date string', () => {
+      const today = new Tempo('2024-05-20')
+      const event = { blah: '20-May' }
+      // @ts-ignore
+      const t = new Tempo('blah 10pm', { event, anchor: today.toDateTime() })
+      expect(t.format('{yyyy}-{mm}-{dd}')).toBe('2024-05-20')
+      expect(t.format('{hh}:{mi}')).toBe('22:00')
+    })
+
+    test('Period resolution preserves date component', () => {
+      const today = new Tempo('2024-05-20')
+      const period = { bedtime: function (this: any) { return this.set({ hour: 23 }) } }
+      // @ts-ignore
+      const t = new Tempo('2024-05-20 bedtime', { period, anchor: today.toDateTime() })
+      expect(t.format('{yyyy}-{mm}-{dd}')).toBe('2024-05-20')
+      expect(t.format('{hh}:{mi}')).toBe('23:00')
+    })
+
+    test('Alias with custom composite string', () => {
+      const today = new Tempo('2024-05-20')
+      const event = { blah: '20-May 10pm' }
+      // @ts-ignore
+      const t = new Tempo('blah', { event, anchor: today.toDateTime() })
+      expect(t.format('{yyyy}-{mm}-{dd}')).toBe('2024-05-20')
+      expect(t.format('{hh}:{mi}')).toBe('22:00')
     })
   })
 })

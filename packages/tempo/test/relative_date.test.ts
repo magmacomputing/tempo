@@ -13,7 +13,7 @@ describe('Tempo smoke tests', () => {
   });
 
   test('Relative Dates', () => {
-    expect(new Tempo('now').isValid()).toBe(true);
+    expect(new Tempo('now').isValid).toBe(true);
     expect(new Tempo('today').format('date')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(new Tempo('yesterday').format('date')).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(new Tempo('tomorrow').format('date')).toMatch(/^\d{4}-\d{2}-\d{2}$/);

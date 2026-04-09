@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-04-03
+
+### Added
+- **Ticker Stability Guard**: Implemented a 10,000-iteration safety break in `resolveTermShift` to prevent infinite loops when resolving malformed or non-advancing custom terms.
+- **Unified Diagnostics (`Logify`)**: Integrated the `Logify` utility into core internal classes for standardized `debug`, `catch`, and `silent` mode support.
+
+### Changed
+- **High-Precision Ticker**: Migrated `TickerPlugin` from `Date.now()` to `instant().epochMilliseconds`, ensuring consistent use of high-precision timing without legacy `Date` object dependencies.
+- **Test Performance**: Standardized the test suite on `vitest --pool=forks` to ensure deterministic execution of asynchronous ticker and generator tests.
+
+### Fixed
+- **Ticker Async Stability**: Resolved hangs in async generators (`for await...of`) by implementing a `Pledge`-based waiter resolution mechanism that guarantees immediate termination upon `stop()`, `return()`, or `throw()`.
+- **Ticker Pulse Synchronization**: Corrected pulse counts for both listeners and generators ($N$ pulses for `limit: N`); ensured `limit: 0` is strictly honored as zero pulses.
+- **Ticker Cold-Start**: Fixed an issue where tickers created without an initial callback would remain idle even after listeners were attached; extracted `#bootstrap()` to ensure the scheduler starts correctly on the first listener registration.
+- **Parsing Engine Optimization**: Refactored `Tempo.#setPatterns` to optimize pattern generation and avoid redundant global guard rebuilds, significantly improving performance for local/one-off parser instances.
+- **Local Layout Stability**: Fixed a bug where custom layout literals in local instances were being destroyed during state synchronization.
+- **Registry Protection**: Hardened `registryUpdate` to safely handle non-proxied or missing targets, preventing potential crashes during late-import plugin registration.
+- **Term Plugin Resolution**: Corrected package export mappings for term-based plugins in `package.json`, resolving module resolution errors in development and test environments.
+- **Numeric Word Parsing**: Fixed regressions in numeric word resolution (e.g., "eleven days hence") by ensuring registry synchronization during late-import scenarios.
+
+---
+
 ## [2.0.0] - 2026-03-30
 
 ### Added

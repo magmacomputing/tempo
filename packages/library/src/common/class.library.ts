@@ -1,6 +1,6 @@
 import { ownEntries } from '#library/reflection.library.js';
-import { Registry } from '#library/serialize.library.js';
-import type { Constructor } from '#library/type.library.js';
+import { registerSerializable } from '#library/serialize.library.js';
+import { type Constructor, type Type, registerType } from '#library/type.library.js';
 
 /**
  * Some interesting Class Decorators
@@ -13,7 +13,7 @@ export function Immutable<T extends Constructor>(value: T, { kind, name, addInit
 	switch (kind) {
 		case 'class':
 			const wrapper = {
-				[name]: class extends value {											// anonymous class infers name from property
+				[name]: class extends value {												// anonymous class infers name from property
 					constructor(...args: any[]) {
 						super(...args);
 						Object.freeze(this);														// freeze the instance
@@ -21,10 +21,13 @@ export function Immutable<T extends Constructor>(value: T, { kind, name, addInit
 				}
 			}[name] as T;
 
+			registerType(value, `${name}_original` as Type);			// register the original class definition
+			registerType(wrapper, name as Type);									// register the wrapper as the authoritative definition
+
 			addInitializer(() => {																// wait for construction to complete
 				const protect = (obj: object) => {									// protect existing members
 					ownEntries(Object.getOwnPropertyDescriptors(obj))
-						.filter(([name]) => name !== 'constructor')		// dont touch the constructor
+						.filter(([name]) => name !== 'constructor')			// dont touch the constructor
 						.forEach(([name, { configurable, writable }]) => {
 							if (configurable) {
 								const update: PropertyDescriptor = { configurable: false };
@@ -34,10 +37,10 @@ export function Immutable<T extends Constructor>(value: T, { kind, name, addInit
 						});
 				};
 
-				protect(value);																		// protect original static members
-				protect(value.prototype);													// protect original prototype members
-				protect(wrapper);																	// protect wrapper static members
-				protect(wrapper.prototype);												// protect wrapper prototype members
+				protect(value);																			// protect original static members
+				protect(value.prototype);														// protect original prototype members
+				protect(wrapper);																		// protect wrapper static members
+				protect(wrapper.prototype);													// protect wrapper prototype members
 			});
 
 			return wrapper;
@@ -50,10 +53,11 @@ export function Immutable<T extends Constructor>(value: T, { kind, name, addInit
 /** register a Class for serialization */
 export function Serializable<T extends Constructor>(value: T, { kind, name, addInitializer }: ClassDecoratorContext<T>): T | void {
 	name = String(name);																			// cast as String
+	registerType(value, name as Type);
 
 	switch (kind) {
 		case 'class':
-			addInitializer(() => Registry.set(`$${name}`, value));	// register the class for serialization, via its toString() method
+			addInitializer(() => registerSerializable(name, value));// register the class for serialization, via its toString() method
 
 			return value;
 
@@ -76,6 +80,9 @@ export function Static<T extends Constructor>(value: T, { kind, name }: ClassDec
 					}
 				}
 			}[name] as T;
+
+			registerType(value, `${name}_original` as Type);			// register the original class definition
+			registerType(wrapper, name as Type);									// register the wrapper as the authoritative definition
 
 			return wrapper;
 

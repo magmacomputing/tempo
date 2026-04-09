@@ -5,9 +5,12 @@
  * clean separation of concerns.
  */
 
+import { Tempo } from '#tempo/tempo.class.js';
+
 /** key for Global Discovery of Tempo configuration */			export const $Tempo = Symbol.for('$Tempo');
 /** key for Global Discovery of Tempo Plugins */						export const $Plugins = Symbol.for('$TempoPlugin');
 /** key for Reactive Plugin Registration */									export const $Register = Symbol.for('$TempoRegister');
+/** key for Global Identity Brand for Tempo */							export const $isTempo = Symbol.for('$isTempo');
 
 /**
  * Define a reactive registration hook on a global symbol.
@@ -24,3 +27,6 @@ export function registerHook(sym: symbol, cb: (val: any) => void) {
 	(globalThis as any)[sym] = cb;
 	return existing;																					// allow chaining or cleanup
 }
+
+/** check valid Tempo */
+export const isTempo = (tempo?: any): tempo is Tempo => tempo?.[$isTempo] === true;

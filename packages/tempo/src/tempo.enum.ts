@@ -1,6 +1,6 @@
 import { $Target, $Extensible } from '#library/symbol.library.js';
 import { enumify, Enum } from '#library/enumerate.library.js';
-import { getProxy } from '#library/proxy.library.js';
+import { proxify } from '#library/proxy.library.js';
 import { allDescriptors, ownKeys } from '#library/reflection.library.js';
 import { clearCache } from '#library/function.library.js';
 import { isUndefined, isDefined } from '#library/type.library.js';
@@ -30,7 +30,7 @@ export type COMPASS = ValueOf<typeof COMPASS>
  */
 
 /** @internal LIVE state for all registries */
-const DEFAULTS = {
+const Defaults = {
 	NUMBER: {
 		zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10
 	},
@@ -99,17 +99,19 @@ const DEFAULTS = {
 
 /** @internal Centralized mutable state for all extendable registries */
 export const STATE = {
-	NUMBER: allDescriptors(DEFAULTS.NUMBER),
-	DURATION: allDescriptors(DEFAULTS.DURATION),
-	TIMEZONE: allDescriptors(DEFAULTS.TIMEZONE),
-	DURATIONS: allDescriptors(DEFAULTS.DURATIONS),
-	FORMAT: allDescriptors(DEFAULTS.FORMAT),
-	LIMIT: allDescriptors(DEFAULTS.LIMIT),
+	NUMBER: allDescriptors(Defaults.NUMBER),
+	DURATION: allDescriptors(Defaults.DURATION),
+	TIMEZONE: allDescriptors(Defaults.TIMEZONE),
+	DURATIONS: allDescriptors(Defaults.DURATIONS),
+	FORMAT: allDescriptors(Defaults.FORMAT),
+	LIMIT: allDescriptors(Defaults.LIMIT),
 } as const;
 
 (STATE.NUMBER as any)[$Extensible] = true;
 (STATE.FORMAT as any)[$Extensible] = true;
 (STATE.TIMEZONE as any)[$Extensible] = true;
+(STATE.DURATION as any)[$Extensible] = true;
+(STATE.DURATIONS as any)[$Extensible] = true;
 
 /** Gregorian calendar week-days (short-form) */
 export const WEEKDAY = enumify(['All', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
@@ -132,11 +134,13 @@ export type MONTHS = KeyOf<typeof MONTHS>
 export type Months = ValueOf<typeof MONTHS>
 
 /** number names (0-10) */
-export const NUMBER = enumify(STATE.NUMBER, false);
+export const NUMBER = proxify(enumify(STATE.NUMBER, false), true, false);
 export type Number = KeyOf<typeof NUMBER>
 
 /** common time-zone aliases */
-export const TimeZone = getProxy(STATE.TIMEZONE, false);
+export const TIMEZONE = proxify(STATE.TIMEZONE, true, false);
+export type TIMEZONE = KeyOf<typeof TIMEZONE>
+export type Timezone = ValueOf<typeof TIMEZONE>
 
 /** number of seconds in a time unit */
 export const DURATION = enumify(STATE.DURATION, false);
@@ -147,12 +151,13 @@ export const DURATIONS = enumify(STATE.DURATIONS, false);
 export type DURATIONS = KeyOf<typeof DURATIONS>
 
 /** common format aliases */
-export const FORMAT = enumify(STATE.FORMAT, false);
+export const FORMAT = proxify(enumify(STATE.FORMAT, false), true, false);
 export type FORMAT = ValueOf<typeof FORMAT>
 export type Format = LooseUnion<KeyOf<typeof FORMAT> & string>
 
 /** patterns that return a number */
-type NumericPattern = '{yyyy}{mm}' | '{yyww}' | '{yyyy}{mm}{dd}' | '{yw}{ww}' | '{yw}'
+export const NumericPattern = ['{yyyy}{ww}', '{yyyy}{mm}', '{yyyy}{mm}{dd}', '{yyww}', '{yw}{ww}', '{yw}'] as const;
+export type NumericPattern = typeof NumericPattern[number]
 
 /** pre-configured format strings */
 export type OwnFormat = Mutable<OwnOf<typeof FORMAT>>
@@ -170,11 +175,11 @@ export type Formats = {
 /** Enum registry of format strings */
 export type FormatEnum = Enum.wrap<OwnFormat & Record<string, string | number>>;
 
-export const LIMIT = getProxy(STATE.LIMIT, false);
+export const LIMIT = proxify(STATE.LIMIT, true, false);
 
 /** date-time element tokens */
 const elementKeys = ['yy', 'mm', 'ww', 'dd', 'hh', 'mi', 'ss', 'ms', 'us', 'ns'] as const;
-export const ELEMENT = getProxy(enumify({
+export const ELEMENT = proxify(enumify({
 	yy: 'year',
 	mm: 'month',
 	ww: 'week',
@@ -185,61 +190,68 @@ export const ELEMENT = getProxy(enumify({
 	ms: 'millisecond',
 	us: 'microsecond',
 	ns: 'nanosecond',
-}, false), false);
+}, false), true, false);
 export type ELEMENT = ValueOf<typeof ELEMENT>
 export type Element = KeyOf<typeof ELEMENT>
 
 /** allowed mutation keys for .set() and .add() */
 const mutationKeys = [...elementKeys, 'event', 'period', 'clock', 'time', 'date', 'start', 'mid', 'end'] as const;
-export const MUTATION = getProxy(enumify(mutationKeys, false), false);
+export const MUTATION = proxify(enumify(mutationKeys, false), true, false);
 export type MUTATION = ValueOf<typeof MUTATION>
 export type Mutation = KeyOf<typeof MUTATION>
 
 /** allowed keys for ZonedDateTime-like objects */
 const zonedDateTimeKeys = ['value', 'timeZoneId', 'calendarId', 'monthCode', 'offset', 'timeZone', ...elementKeys] as const;
-export const ZONED_DATE_TIME = getProxy(enumify(zonedDateTimeKeys, false), false);
+export const ZONED_DATE_TIME = proxify(enumify(zonedDateTimeKeys, false), true, false);
 export type ZONED_DATE_TIME = ValueOf<typeof ZONED_DATE_TIME>
 export type ZonedDateTime = KeyOf<typeof ZONED_DATE_TIME>
 
 /** allowed keys for Tempo configuration options */
 const optionKeys = ['value', 'mode', 'mdyLocales', 'mdyLayouts', 'store', 'discovery', 'debug', 'catch', 'timeZone', 'calendar', 'locale', 'pivot', 'sphere', 'timeStamp', 'snippet', 'layout', 'event', 'period', 'formats', 'plugins'] as const;
-export const OPTION = getProxy(enumify(optionKeys, false), false);
+export const OPTION = proxify(enumify(optionKeys, false), true, false);
 export type Option = KeyOf<typeof OPTION>
 
 /** initialization strategies */
 export const MODE = enumify({ Auto: 'auto', Strict: 'strict', Defer: 'defer', }, false);
-export type Mode = ValueOf<typeof MODE>
+export type MODE = ValueOf<typeof MODE>
 
 /** allowed keys for internal parse state */
 const parseKeys = ['mdyLocales', 'mdyLayouts', 'formats', 'pivot', 'snippet', 'layout', 'event', 'period', 'anchor', 'value', 'discovery', 'plugins', 'mode'] as const;
-export const PARSE = getProxy(enumify(parseKeys, false), false);
+export const PARSE = proxify(enumify(parseKeys, false), true, false);
 export type Parse = KeyOf<typeof PARSE>
 
 /** allowed keys for global discovery objects */
 const discoveryKeys = ['options', 'timeZones', 'terms', 'plugins', 'numbers', 'formats'] as const;
-export const DISCOVERY = getProxy(enumify(discoveryKeys, false), false);
+export const DISCOVERY = proxify(enumify(discoveryKeys, false), true, false);
 export type Discovery = KeyOf<typeof DISCOVERY>
 
 
 /** @internal LIVE Registries mapping (STATE key -> Enum/Proxy) */
 const REGISTRIES: Record<string, any> = {
-	NUMBER, DURATION, TIMEZONE: TimeZone, DURATIONS, FORMAT, LIMIT,
+	NUMBER, DURATION, TIMEZONE, DURATIONS, FORMAT, LIMIT,
 };
 
 /** update a global registry with new discoverable data */
 export function registryUpdate(name: keyof typeof STATE, data: Record<string, any>) {
 	const registry = REGISTRIES[name];
-	const target = registry?.[$Target] as Property<any>;
+	if (!isDefined(registry) || !isDefined(registry[$Target])) return;	// early-return if no valid target to mutate
+
+	const target = registry[$Target] as Property<any>;
 	const state = STATE[name] as Property<any>;
 
 	Object.entries(data).forEach(([key, val]) => {
-		if (isUndefined(state[key])) {													// only add if key does not exist
-			state[key] = val;
-			if (target) target[key] = val;
+		if (isUndefined(target[key])) {																// only add if key does not exist
+			Object.defineProperty(target, key, {
+				value: val,
+				enumerable: true,
+				writable: true,
+				configurable: true
+			});
+			if (isDefined(state)) state[key] = val;
 		}
 	});
 
-	if (target) clearCache(target);
+	clearCache(target);
 }
 
 /** Reset all extendable registries to their original built-in defaults */
@@ -247,7 +259,7 @@ export function registryReset() {
 	ownKeys(STATE).forEach(name => {
 		const state = STATE[name as keyof typeof STATE] as Property<any>;
 		const target = REGISTRIES[name]?.[$Target] as Property<any>;
-		const defaults = DEFAULTS[name as keyof typeof DEFAULTS] as Property<any>;
+		const defaults = Defaults[name as keyof typeof Defaults] as Property<any>;
 
 		// 1. Purge all own-properties from state and target (if configurable)
 		[state, target].filter(isDefined).forEach(obj => {
@@ -271,4 +283,26 @@ export function registryReset() {
 		if (target) clearCache(target);
 		clearCache(state);																			// clear cache for state object
 	});
+}
+
+/** public-reachable enums */
+export default {
+	SEASON,
+	COMPASS,
+	WEEKDAY,
+	WEEKDAYS,
+	MONTH,
+	MONTHS,
+	NUMBER,
+	TIMEZONE,
+	DURATION,
+	DURATIONS,
+	FORMAT,
+	LIMIT,
+	ELEMENT,
+	MUTATION,
+	ZONED_DATE_TIME,
+	OPTION,
+	MODE,
+	PARSE,
 }

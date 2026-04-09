@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-04-03
+
+### Added
+- **Ticker Stability Guard**: Implemented a 10,000-iteration safety break in `resolveTermShift` to prevent infinite loops when resolving malformed or non-advancing custom terms.
+- **Unified Diagnostics (`Logify`)**: Integrated the `Logify` utility into core internal classes. This provides a standardized mechanism for `debug`, `catch`, and `silent` modes across the library.
+
+### Changed
+- **High-Precision Ticker**: Migrated `TickerPlugin` from `Date.now()` to `instant().epochMilliseconds`, ensuring consistent use of high-precision timing without legacy `Date` object dependencies.
+- **Test Performance**: Standardized the test suite on `vitest --pool=forks` to ensure deterministic execution of asynchronous ticker and generator tests.
+- **Vitest Upgrade Deferral**: Intentionally deferred the upgrade to Vitest 4.x and maintained version `^2.1.8`. The current Vitest 4 transformer (Oxc) does not yet support the Stage 3 (ECMAScript) decorators used extensively by this library's `@Immutable` and `Logify` utilities.
+
+### Fixed
+- **Term Plugin Resolution**: Corrected package export mappings for term-based plugins in `package.json`, resolving module resolution errors in development and test environments.
+- **Numeric Word Parsing**: Fixed regressions in numeric word resolution (e.g., "eleven days hence") by ensuring registry synchronization during late-import scenarios.
+
+---
+
+## [2.0.0] (Internal) - 2026-03-30
+
+### Added
+- **Zero-Cost Constructor**: Optimized the instantiation path to $O(1)$ by deferring all parsing and property registration until the first property access.
+- **Generic Lazy Delegator**: Introduced `getLazyDelegator` to standardize on-demand property discovery for `fmt` and `term` objects.
+- **Anchor-Aware Parsing**: Added native support for anchoring relative date strings (e.g., "next Friday") to a specific reference date via the `anchor` option.
+- **Timezone Safety**: Implemented graceful fallback to `UTC` (with a warning) for invalid IANA TimeZone IDs when `catch: true` is enabled.
+
+### Fixed
+- **Parsing Robustness**: Resolved 299/299 regressions in the core and plugin test suites.
+- **Immutability Performance**: Fixed `TypeError` during lazy discovery on secured instances by implementing defensive prototype-shadowing.
+
+---
+
 ## [1.3.0] - 2026-03-26
 
 ### Added
@@ -63,7 +94,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Core Simplification ($Base Removal)**: Removed the `$Base` symbol and its termination logic from `reflection.library.ts`. This simplifies prototype chain traversal across the library, as boundary protection is no longer required following the `config` getter refactor and existing enumerable property filtering for Enums.
 - **Constant Modernization**: Renamed and deprecated `Tempo.TIME` and `Tempo.TIMES` in favor of more semantic `Tempo.DURATION` and `Tempo.DURATIONS`, improving readability and consistency with internal logic.
 - **Enum Extension Optimization**: Refactored `Enum.extend` to support deep prototype chains (up to 50 levels) and fixed a critical boundary bug where root Enum data was being excluded from child extensions.
-- **Proxy Trap Performance**: Optimized `toJSON` and `$Inspect` traps in `getProxy` to prevent unnecessary prototype chain traversal. The traps now prioritize checking for own properties, significantly improving performance and preventing recursion during serialization.
+- **Proxy Trap Performance**: Optimized `toJSON` and `$Inspect` traps in `proxify` to prevent unnecessary prototype chain traversal. The traps now prioritize checking for own properties, significantly improving performance and preventing recursion during serialization.
 - **Term Traversal Logic**: Unified prototype traversal by introducing a shared `$Base` symbol to terminate chain climbing, improving both performance and collision resistance.
 - **Node.js Custom Inspection**: Standardized the Node.js custom inspection symbol as `$Inspect` in the reflection library and updated `Tempo` and `Enumify` for consistent console formatting.
 - **Stealth Proxy for terms**: Implemented a "Stealth Proxy" for the `term` accessor to provide a flat, iterable object view of resolved terms across Node.js and Browser environments while preserving lazy resolution.

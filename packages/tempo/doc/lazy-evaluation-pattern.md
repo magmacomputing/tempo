@@ -83,3 +83,13 @@ We can achieve lazy evaluation in `O(1)` time by swapping out `Object.defineProp
 ### Summary
 
 By strategically combining **Private Fields**, **`Object.create()`**, and **Prototype lookups**, we can build securely immutable APIs that lazy-load computed getters with absolute minimal overhead.
+
+## 🌈 The Best of All Worlds
+
+As of **v2.0.1**, Tempo maintains **`enumerable: true`** for all properties in its `#term` and `#fmt` containers. This design choice provides a unique trifecta of benefits:
+
+1. **Lazy by Default**: Properties are only evaluated when accessed, keeping the constructor near-instant.
+2. **Targeted Evaluation**: Accessing a single property (e.g., `t.term.quarter`) only evaluates that specific getter.
+3. **Transparent Discovery**: Because properties are enumerable, a simple `console.log(t.term)` will trigger the eager evaluation of *all* currently registered terms. 
+
+This transparency is invaluable for debugging, as it allows developers to see the full state of the grammar-engine at a glance. To prevent terminal noise during these "Full Evaluation" events (especially on invalid dates), use the **`silent: true`** configuration option.

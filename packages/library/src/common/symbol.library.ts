@@ -7,3 +7,13 @@
 /** key to trigger full discovery of all lazy properties */	export const $Discover = Symbol.for('$Discover');
 /** key to identify objects that should remain extensible */export const $Extensible = Symbol.for('$Extensible');
 /** NodeJS custom inspection symbol for the Proxy pattern */export const $Inspect = Symbol.for('nodejs.util.inspect.custom');
+/** unique marker to identify a Logify configuration object */export const $Logify = Symbol.for('$Logify');
+/** key to identify the global type registry */							export const $Registry = Symbol.for('$Registry');
+/** key to identify the global registration hook */					export const $Register = Symbol.for('$Register');
+
+/** identify and mark a Logify configuration object */			export function markConfig<T extends object>(obj: T): T {
+	if (!(obj as any)[$Logify] && Object.isExtensible(obj)) {
+		Object.defineProperty(obj, $Logify, { value: true, enumerable: false, writable: true, configurable: true });
+	}
+	return obj;
+}

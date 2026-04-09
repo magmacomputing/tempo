@@ -1,6 +1,6 @@
 {
   "name": "@magmacomputing/library",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Shared utility library for Tempo",
   "author": "Magma Computing Solutions",
   "license": "MIT",
@@ -81,6 +81,7 @@
     }
   },
   "scripts": {
+    "test": "vitest run",
     "build": "tsc -b",
     "clean": "tsc -b --clean",
     "prepublishOnly": "npm run build"

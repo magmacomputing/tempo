@@ -1,12 +1,14 @@
-import { Tempo, isTempo } from '#tempo/tempo.class.js';
-import '#tempo/plugins/plugin.ticker.js';
+import { Tempo } from '#tempo/tempo.class.js';
+import { isTempo } from '#tempo/tempo.symbol.js';
+import '#tempo/plugins/plugin.ticker.js'
 
 // TickerPlugin self-registers on import via definePlugin
-Tempo.init();
-
 const label = 'ticker:';
 
 describe(`${label}`, () => {
+	beforeEach(() => {
+		Tempo.init({ silent: true })
+	});
 
 	test(`${label} callback pattern`, async () => {
 		let count = 0;
@@ -23,7 +25,7 @@ describe(`${label}`, () => {
 			expect(lastTick).toBeDefined();
 
 			await new Promise(resolve => setTimeout(resolve, 500));	// wait for ~5 total ticks
-		}																											// stop() is called automatically here
+		}																												// stop() is called automatically here
 
 		expect(count).toBeGreaterThanOrEqual(4);
 		expect(lastTick).toBeDefined();
@@ -31,7 +33,7 @@ describe(`${label}`, () => {
 
 		const finalCount = count;
 		await new Promise(resolve => setTimeout(resolve, 100));
-		expect(count).toBe(finalCount);												// check it stopped
+		expect(count).toBe(finalCount);													// check it stopped
 	});
 
 	test(`${label} async generator pattern`, async () => {
@@ -44,7 +46,7 @@ describe(`${label}`, () => {
 				results.push(t);
 				if (++i === 3) break;
 			}
-		}																											// asyncDispose() is called automatically here
+		}																												// asyncDispose() is called automatically here
 
 		expect(results.length).toBe(3);
 		expect(results[0]).toBeDefined();
@@ -56,7 +58,7 @@ describe(`${label}`, () => {
 		const start = new Tempo('2024-01-01T00:00:10Z');
 
 		{
-			Tempo.ticker({ seed: start, interval: -1 }, (t, stop) => {
+			Tempo.ticker({ seed: start, seconds: -1 }, (t, stop) => {
 				results.push(t.ss);
 				if (results.length === 3) stop();
 			});
@@ -71,7 +73,7 @@ describe(`${label}`, () => {
 		let count = 0;
 		Tempo.ticker(0.05, (t, stop) => {
 			count++;
-			stop();																							// stop immediately on first tick
+			stop();																								// stop immediately on first tick
 		});
 
 		await new Promise(resolve => setTimeout(resolve, 200));
@@ -103,12 +105,16 @@ describe(`${label}`, () => {
 	});
 
 	test('ticker: validation', () => {
+		// In Tempo v2 Logify pattern, terminal errors are thrown by default unless caught.
 		// @ts-ignore
-		expect(() => Tempo.ticker(NaN)).toThrow(RangeError);
+		expect(() => Tempo.ticker(NaN)).toThrow(/Invalid Tempo number: NaN/);
 		// @ts-ignore
-		expect(() => Tempo.ticker(Infinity)).toThrow(RangeError);
+		expect(() => Tempo.ticker(NaN, { catch: true })).not.toThrow();
+
 		// @ts-ignore
-		expect(() => Tempo.ticker('not a number')).toThrow(RangeError);
+		expect(() => Tempo.ticker(Infinity)).toThrow(/Invalid Tempo number: Infinity/);
+		// @ts-ignore
+		expect(() => Tempo.ticker('not a number')).toThrow(/Cannot parse Date: "not a number"/);
 	});
 
 });

@@ -1,30 +1,40 @@
 import { looseIndex } from '#library/object.library.js';
 import { secure } from '#library/utility.library.js';
+import { proxify } from '#library/proxy.library.js';
 import { NUMBER, MODE } from '#tempo/tempo.enum.js';
 import type { Options } from '#tempo/tempo.type.js';
 
 // BE VERY CAREFUL NOT TO BREAK THE REGEXP PATTERNS BELOW
 // TEMPO functionality heavily depends on these patterns
 
+/** characters allowed inside timezone/calendar brackets */
+const bracket_content = /[^\]]+/;
+
 /** common RegExp patterns */
-export const Match = secure({
+const MatchBase = {
 	/** match all {} pairs, if they start with a word char */	braces: /{([#]?[\w]+(?:\.[\w]+)*)}/g,
 	/** named capture-group, if it starts with a letter */		captures: /\(\?<([a-zA-Z][\w]*)>(.*?)(?<!\\)\)/g,
-	/** event */																							event: /^(g|l)evt[0-9]+$/,
-	/** period */																							period: /^(g|l)per[0-9]+$/,
+	/** event */																							event: /^([gl])?evt(?<idx>[0-9]+)$|^g?dt$/,
+	/** period */																							period: /^([gl])?per(?<idx>[0-9]+)$|^g?tm$/,
 	/** two digit year */																			twoDigit: /^[0-9]{2}$/,
 	/** date */																								date: /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/,
 	/** time */																								time: /^[0-9]{2}:[0-9]{2}(:[0-9]{2})?$/,
 	/** hour-minute-second with no separator */								hhmiss: /(hh)(m[i|m])(ss)?/i,
-	/** separator characters (/ - . ,) */											separator: /[\/\-\.\s,]/,
+	/** separator characters (/ - . , T) */										separator: /[T\/\-\.\s,]/,
 	/** modifier characters (+-<>=) */												modifier: /[\+\-\<\>][\=]?|this|next|prev|last/,
 	/** offset post keywords (ago|hence) */										affix: /ago|hence|from now/,
 	/** strip out these characters from a string */						strips: /\(|\)/g,
 	/** whitespace characters */															spaces: /\s+/g,
 	/** Z character */																				zed: /^Z$/,
-	/** base guard characters (digits and common symbols) */	guard: /[\d\s\-\.\:T\/Z\+\-\(\)\[\]\,\=\#]+/i,
+	/** base guard characters (digits and common symbols) */	guard: /[\d\s\-\.\:T\/Z\+\-\(\)\,\=\#]/i,
+	/** bracketed content (timezone/calendar) */							bracket: /\[[^\]]+\]/i,
 	/** escape special regex characters in a string */				escape: (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-})
+}
+
+/** 
+ * Tempo Match patterns — Soft-Frozen to allow for dynamic event/period resolution
+ */
+export const Match = proxify(MatchBase, true, false);
 
 /** Tempo Symbol registry */
 export const Token = looseIndex<string, symbol>()({
@@ -91,7 +101,7 @@ export const Snippet = looseIndex<symbol, RegExp>()({
 	[Token.mod]: new RegExp(`((?<mod>${Match.modifier.source})?{nbr}? *)`),	// modifier (+,-,<,<=,>,>=) plus optional offset-count
 	[Token.sep]: new RegExp(`(?:${Match.separator.source})`),	// date-input separator character "/\\-., " (non-capture group)
 	[Token.unt]: /(?<unt>year|month|week|day|hour|minute|second|millisecond)(?:s)?/,	// useful for '2 days ago' etc
-	[Token.brk]: /(\[(?<brk>[^\]]+)\](?:\[(?<cal>[^\]]+)\])?)?/,	// timezone/calendar brackets [...]
+	[Token.brk]: new RegExp(`(\\[(?<brk>${bracket_content.source})\\](?:\\[(?<cal>${bracket_content.source})\\])?)?`),	// timezone/calendar brackets [...]
 })
 export type Snippet = typeof Snippet
 
@@ -100,21 +110,21 @@ export type Snippet = typeof Snippet
  * the Layout's keys are in the order that they will be checked against an input value  
  */
 export const Layout = looseIndex<symbol, string>()({
-	[Token.dt]: '({dd}{sep}?{mm}({sep}?{yy})?|{mod}?({evt}))',	// calendar or event
+	[Token.dt]: '({dd}{sep}?{mm}({sep}?{yy})?|{mod}?({evt}))',// calendar or event
 	[Token.tm]: '({hh}{mi}?{ss}?{ff}?{mer}?|{per})',					// clock or period
 	[Token.dtm]: '({dt})(?:(?:{sep}+|T)({tm}))?{tzd}?{brk}?',	// calendar/event and clock/period
-	[Token.dmy]: '({wkd}{sep}+)?{dd}{sep}?{mm}({sep}?{yy})?{sfx}?{brk}?',	// day-month(-year)
-	[Token.mdy]: '({wkd}{sep}+)?{mm}{sep}?{dd}({sep}?{yy})?{sfx}?{brk}?',	// month-day(-year)
-	[Token.ymd]: '({wkd}{sep}+)?{yy}{sep}?{mm}({sep}?{dd})?{sfx}?{brk}?',	// year-month(-day)
-	[Token.wkd]: '{mod}?{wkd}{afx}?{sfx}?',									// special layout (no {dt}!) used for weekday calcs (only one that requires {wkd} pattern)
+	[Token.dmy]: '({wkd}{sep}+)?{dd}{sep}?{mm}({sep}?{yy})?{sfx}?{brk}?',// day-month(-year)
+	[Token.mdy]: '({wkd}{sep}+)?{mm}{sep}?{dd}({sep}?{yy})?{sfx}?{brk}?',// month-day(-year)
+	[Token.ymd]: '({wkd}{sep}+)?{yy}{sep}?{mm}({sep}?{dd})?{sfx}?{brk}?',// year-month(-day)
+	[Token.wkd]: '{mod}?{wkd}{afx}?{sfx}?',										// special layout (no {dt}!) used for weekday calcs (only one that requires {wkd} pattern)
 	[Token.off]: '{mod}?{dd}{afx}?',													// day of month, with optional offset
-	[Token.rel]: '{nbr}{sep}?{unt}{sep}?{afx}',							// relative duration (e.g. 2 days ago)
+	[Token.rel]: '{nbr}{sep}?{unt}{sep}?{afx}',								// relative duration (e.g. 2 days ago)
 })
 export type Layout = typeof Layout
 
 /** 
  * an {event} is a Record of regex-pattern-like-string keys that describe Date strings.
- * values can be a string or a function. 
+ * values can be a string or a function that returns a string. 
  * if assigning a function, use standard 'function()' syntax to allow for 'this' binding.
  * also, a function should always have a .toString() method which returns a parse-able Date string
  */
@@ -127,16 +137,16 @@ export const Event = looseIndex<string, string | Function>()({
 	'christmas': '25 Dec',
 	'xmas ?eve': '24 Dec',
 	'xmas': '25 Dec',
-	'now': function (this: any) { return this.toPlainDateTime() },
-	'today': function (this: any) { return this.toPlainDate() },
-	'tomorrow': function (this: any) { return this.toPlainDate().add({ days: 1 }) },
-	'yesterday': function (this: any) { return this.toPlainDate().add({ days: -1 }) },
-})
+	'now': function (this: any) { return this },										// this instance
+	'today': function (this: any) { return this },										// today at current time
+	'tomorrow': function (this: any) { return this.add({ days: 1 }) },	// tomorrow at current time
+	'yesterday': function (this: any) { return this.add({ days: -1 }) },// yesterday at current time
+});
 export type Event = typeof Event
 
 /** 
  * a {period} is a Record of regex-pattern-like keys that describe pre-defined Time strings.
- * values can be a string or a function.
+ * values can be a string or a function that returns a string.
  * if using a function, use regular 'function()' syntax to allow for 'this' binding.
  */
 export const Period = looseIndex<string, string | Function>()({
@@ -156,10 +166,12 @@ export type Period = typeof Period
 export const Default = secure({
 	/** log to console */																			debug: false,
 	/** catch or throw Errors */															catch: false,
-	/** initialization strategy ('auto' | 'strict' | 'defer') */	mode: MODE.Auto,
+	/** initialization strategy (auto | strict | defer) */		mode: MODE.Auto,
 	/** used to parse two-digit years*/												pivot: 75,										/** @link https:	//en.wikipedia.org/wiki/Date_windowing */
 	/** precision to measure timestamps (ms | us) */					timeStamp: 'ms',
 	/** calendaring system */																	calendar: 'iso8601',
+	/** default timezone if not specified */									timeZone: 'UTC',
 	/** locales that prefer month-day order */								mdyLocales: ['en-US', 'en-AS'],	/** @link https:	//en.wikipedia.org/wiki/Date_format_by_country */
 	/** layouts that need to swap parse-order */							mdyLayouts: [['dayMonthYear', 'monthDayYear']],
+	/** hemisphere for term.qtr or term.szn */								sphere: undefined,
 } as Options)

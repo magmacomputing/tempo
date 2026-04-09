@@ -1,5 +1,6 @@
 import { Immutable } from '#library/class.library.js';
-import { asType, isObject, type ValueOf } from '#library/type.library.js';
+import { $Logify, markConfig } from '#library/symbol.library.js';
+import { asType, isObject, isEmpty, type ValueOf } from '#library/type.library.js';
 
 const Method = {
 	Log: 'log',
@@ -15,48 +16,64 @@ const Method = {
 @Immutable
 export class Logify {
 	#name: string;
-	#opts: Logify.Constructor = {};
-
-	#log(method: Logify.Method, ...msg: any[]) {
-		if (this.#opts.debug)
-			console[method](this.#name, ...msg);
-	}
+	#opts: Logify.Constructor = { [$Logify]: true };
 
 	/**
 	 * if {catch:true} then show a warning on the console and return  
 	 * otherwise show an error on the console and re-throw the error
 	 */
-	catch(...msg: any[]) {
-		if (this.#opts.catch) {
-			this.warn(...msg);																		// show a warning on the console
-			return;																							// safe-return
-		}
+	#trap(method: Logify.Method, ...msg: any[]) {
+		const config = (isObject(msg[0]) && (msg[0] as any)[$Logify] === true) ? msg.shift() : this.#opts;
 
-		this.error(...msg);																		// this goes to the console
-		throw new Error(`${this.#name}${msg.map(m => isObject(m) ? JSON.stringify(m) : String(m)).join(' ')}`);	// catch will be loud or silent, based on #catch config
+		if (method === Method.Debug && !config.debug) return;
+
+		const output = msg.map(m => {
+			if (m instanceof Error) return m.message;
+			if (isObject(m)) {
+				try { return JSON.stringify(m); } catch { return '[Object]'; }
+			}
+			return String(m);
+		}).filter(s => !isEmpty(s)).join(' ');
+
+		if (!config.silent && !isEmpty(output))
+			(console as any)[method](`${this.#name}: ${output}`);
+
+		if (method === Method.Error && !config.catch) {
+			const e = msg.find(m => m instanceof Error);
+			const message = `${this.#name}: ${output}`;
+			if (e) {
+				e.message = message;
+				throw e;
+			}
+			throw new Error(message);
+		}
 	}
 
-	/** console.log */																				log = (...msg: any[]) => this.#log(Method.Log, ...msg);
-	/** console.info */																				info = (...msg: any[]) => this.#log(Method.Info, ...msg);
-	/** console.warn */																				warn = (...msg: any[]) => this.#log(Method.Warn, ...msg);
-	/** console.debug */																			debug = (...msg: any[]) => this.#log(Method.Debug, ...msg);
-	/** console.error */																			error = (...msg: any[]) => this.#log(Method.Error, ...msg);
+	/** console.log */		log = (...msg: any[]) => this.#trap(Method.Log, ...msg);
+	/** console.info */		info = (...msg: any[]) => this.#trap(Method.Info, ...msg);
+	/** console.warn */		warn = (...msg: any[]) => this.#trap(Method.Warn, ...msg);
+	/** console.debug */	debug = (...msg: any[]) => this.#trap(Method.Debug, ...msg);
+	/** console.error */	error = (...msg: any[]) => this.#trap(Method.Error, ...msg);
 
 	constructor(self?: Logify.Constructor | string, opts = {} as Logify.Constructor) {
+		opts = { ...opts };																				// defensive copy of the options
 		const arg = asType(self);
-		switch (arg.type) {
-			case 'String':
-				this.#name = arg.value;
-				break;
-			// @ts-ignore
-			case 'Object':
-				Object.assign(opts, arg.value);
-			default:
-				this.#name = (self ?? this).constructor.name.concat(': ') ?? '';
+		this.#name = (arg.type === 'String')
+			? arg.value
+			: (self as any)?.constructor?.name
+			?? 'Logify';
+
+		if (arg.type === 'Object') {
+			const cfg = { ...arg.value as object };
+			markConfig(cfg);																			// auto-mark if it's a config object
+			Object.assign(opts, cfg);
 		}
 
-		this.#opts.debug = opts.debug ?? false;								// default debug to 'false'
-		this.#opts.catch = opts.catch ?? false;								// default catch to 'false'								
+		markConfig(opts);																				// auto-mark the options object
+
+		this.#opts.debug = opts.debug ?? false;									// default debug to 'false'
+		this.#opts.catch = opts.catch ?? false;									// default catch to 'false'
+		this.#opts.silent = opts.silent ?? false;								// default silent to 'false'
 	}
 }
 
@@ -65,6 +82,8 @@ export namespace Logify {
 
 	export interface Constructor {
 		debug?: boolean | undefined,
-		catch?: boolean | undefined
+		catch?: boolean | undefined,
+		silent?: boolean | undefined,
+		[$Logify]?: boolean | undefined
 	}
 }

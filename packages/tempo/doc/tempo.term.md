@@ -11,6 +11,9 @@ Once evaluated, the result is memoised — subsequent reads of the same property
 new Tempo('25-Dec-2024').term.season     // ← computed on first access, cached thereafter
 ```
 
+> [!TIP]
+> **Transparent Discovery**: As of **v2.0.1**, all term properties are **enumerable**. This means a single `console.log(t.term)` will trigger the eager evaluation of *every* registered term at once—providing a full snapshot of the instance's grammar state. To prevent terminal noise during these full-eval events (e.g. for invalid dates), initialize Tempo with **`silent: true`**.
+
 ---
 
 ## What a Term Does
@@ -131,39 +134,45 @@ Tempo.terms
 
 ## How to Define a Term Plugin
 
-A term plugin is a TypeScript module that exports four named members and follows a simple contract.
+A term plugin is ideally created using the **`defineTerm`** factory function provided by the library. This ensures correct type-inference and automatically handles registration during the discovery phase.
 
-### Plugin shape
+### Plugin Definition
 
 ```ts
-import { getTermRange, type Range } from '@magmacomputing/tempo/terms/term.utils.js';
-import type { Tempo } from 'tempo';
+import { defineTerm, defineRange, getTermRange, type Range, COMPASS } from '@magmacomputing/tempo/plugins';
+import type { Tempo } from '@magmacomputing/tempo';
 
-/** 1. The range boundaries (static — defined once at import time) */
-const ranges = [
-  { key: 'Low',  month: 1 },
-  { key: 'Mid',  month: 5 },
-  { key: 'High', month: 9 },
-] as Range[];
+/** 1. The range boundaries (flattened and self-documenting) */
+const { ranges, groups } = defineRange([
+  { key: 'Spring', month: 3,  group: 'season', sphere: COMPASS.North },
+  { key: 'Summer', month: 6,  group: 'season', sphere: COMPASS.North },
+  { key: 'Autumn', month: 9,  group: 'season', sphere: COMPASS.North },
+  { key: 'Winter', month: 12, group: 'season', sphere: COMPASS.North },
+  
+  { key: 'Dry',    month: 1,  group: 'tropical' },
+  { key: 'Wet',    month: 5,  group: 'tropical' },
+], 'group', 'sphere');
 
-/** 2. Short identifier used as the property name on `tempo.term` */
-export const key = 'rng';
+/** 2. The Plugin Object */
+export const MySeasonTerm = defineTerm({
+    key: 'szn',
+    scope: 'season',
+    description: 'Custom seasonal range',
+    ranges,
 
-/** 3. Long name used as the scope property name on `tempo.term` */
-export const scope = 'range';
+    /**
+     * 3. The lookup function.
+     *    - `this` is bound to the Tempo instance at call time.
+     *    - `keyOnly = true`  → return the key string
+     *    - `keyOnly = false` → return the full range object
+     */
+    define(this: Tempo, keyOnly?: boolean) {
+      // Use pre-grouped results for instantaneous lookup!
+      const list = groups[`season.${this.config.sphere}`] ?? [];
 
-/** 4. Human-readable description (surfaced via Tempo.terms) */
-export const description = 'Custom seasonal range';
-
-/**
- * 5. The lookup function.
- *    - `this` is bound to the Tempo instance at call time.
- *    - `keyOnly = true`  → called when accessing `tempo.term.<key>`   → return the key string
- *    - `keyOnly = false` → called when accessing `tempo.term.<scope>` → return the full range object
- */
-export function define(this: Tempo, keyOnly?: boolean) {
-  return getTermRange(this, ranges, keyOnly);
-}
+      return getTermRange(this, list, keyOnly);
+    }
+});
 ```
 
 ### `Range` fields
@@ -173,27 +182,28 @@ A `Range` object must include a `key` and any subset of the date-time fields bel
 
 ```ts
 type Range = {
-  key: PropertyKey;   // identifier returned when keyOnly = true
+  key: PropertyKey;                // identifier returned when keyOnly = true
   year?:   number;
   month?:  number;
   day?:    number;
   hour?:   number;
   minute?: number;
   second?: number;
-  [extra: PropertyKey]: any;  // any additional metadata fields
+  group?:  string;                 // categorization marker (e.g. 'fiscal', 'western')
+  [extra: PropertyKey]: any;       // any additional term-dependent metadata (e.g. 'sphere')
 }
 ```
 
 ### Registering the plugin
 
-Use the static **`Tempo.extend()`** method. This allows you to add terms dynamically without modifying the library source.
+Use the static **`Tempo.extend()`** (or `Tempo.addTerm()`) method. This allows you to add terms dynamically without modifying the library source.
 
 ```ts
 import { Tempo } from '@magmacomputing/tempo';
-import * as rng from './term.myrange.js';
+import { MySeasonTerm } from './term.myseason.js';
 
 // Register the term plugin
-Tempo.extend(rng);
+Tempo.extend(MySeasonTerm);
 ```
 
 Every `Tempo` instance created after that point will have the custom term available.
@@ -227,6 +237,62 @@ Tempo.extend({
 const t = new Tempo('2025-02-15');
 console.log(t.term.cfy); // → "FY2024" (because it's before July 2025)
 ```
+
+---
+
+## 🧭 Writing Math-Aware Terms
+
+To unlock Tempo's advanced **Term Traversal** (e.g., `t.add({ '#quarter': 1 })`) and **Ticker Syncing**, a plugin must provide semantic **boundaries** (`start` and `end`). 
+
+### The `getTermRange` Helper
+The library provides a specialized helper that calculates these boundaries automatically based on your `ranges` array.
+
+```ts
+import { getTermRange } from '@magmacomputing/tempo/plugins';
+
+export function define(this: Tempo, keyOnly?: boolean) {
+  // Finds the current range, then injects 'start' and 'end' (as Tempo instances)
+  // into the result object before returning it to the user.
+  return getTermRange(this, ranges, keyOnly);
+}
+```
+
+### Manual Boundaries
+If you choose not to use `getTermRange`, you must manually include `start` and `end` (as `Tempo` instances) in your scope object:
+
+```ts
+return keyOnly ? 'MyTerm' : {
+  key: 'MyTerm',
+  start: this.set({ hour: 0 }),
+  end: this.set({ hour: 23, mi: 59 })
+};
+```
+
+---
+
+## 🕒 Terms in Tickers
+Any term that provides `start` and `end` boundaries can be used to drive a `Tempo.ticker`. This is ideal for logic that doesn't follow a fixed duration (like seasons or fiscal quarters).
+
+```ts
+// Pulse every time a new fiscal quarter begins
+await using quarterly = Tempo.ticker({ '#quarter': 1 });
+
+for await (const t of quarterly) {
+  console.log(`Pulsing at Quarter Start: ${t.format('{yyyy}-{#qtr}')}`);
+}
+```
+
+---
+
+## 🛠️ Developer Guide: Best Practices
+
+To ensure a custom `Term` plugin integrates fully with Tempo, follow these guidelines:
+
+1.  **Static `ranges` Export**: Always include the `ranges` property in your `defineTerm` configuration. This enables **programmatic discovery** via `Tempo.terms` and allows the Ticker to automatically calculate next-pulse intervals.
+2.  **Metadata-First Boundaries**: If your plugin handles multiple sets (e.g. hemispheres or cultural calendars), avoid using array indices like `ranges[0]`. Instead, add marker fields like **`sphere`** or **`group`** to each range object and use `.filter()` inside your `define` function.
+3.  **Memoization Safety**: Keep the `define` function pure. It will only be called once per instance access.
+4.  **Math Readiness**: Always use `getTermRange` or provide boundaries. Without them, users cannot use your term in `add()`, `set()`, or `ticker()`.
+5.  **Key consistency**: Ensure the `key` property you return in the `define` function's scope object matches the `key` definition of your plugin.
 
 ---
 

@@ -68,13 +68,13 @@ export function reset<T extends Obj>(orig: T, obj?: T) {
 // and will include both string and symbol keys
 
 /** array of all enumerable PropertyKeys */
-export function ownKeys<T extends Obj>(json: T) {
-	return ownEntries(json).map(([key]) => key as KeyOf<T>);
+export function ownKeys<T extends Obj>(json: T, all = false) {
+	return ownEntries(json, all).map(([key]) => key as KeyOf<T>);
 }
 
 /** array of all enumerable object values */
-export function ownValues<T extends Obj>(json: T) {
-	return ownEntries(json).map(([_, value]) => value as ValueOf<T>);
+export function ownValues<T extends Obj>(json: T, all = false) {
+	return ownEntries(json, all).map(([_, value]) => value as ValueOf<T>);
 }
 
 /** tuple of enumerable entries with string | symbol keys */
