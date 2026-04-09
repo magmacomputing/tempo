@@ -4,7 +4,7 @@
 
 ## Installation
 
-To use the ticker, simply import the plugin as a side effect or import the `Ticker` class directly if you need to access the [Reporting & Registry](#reporting--registry) API. Both methods automatically register the `Tempo.ticker()` method with the core library:
+To use the ticker, simply import the plugin as a side effect or import the `Ticker` namespace directly if you need to access the [Reporting & Registry](#reporting--registry) API. Both methods automatically register the `Tempo.ticker()` method with the core library:
 
 ```typescript
 // Pattern A: Pure side-effect (registers Tempo.ticker)
@@ -219,7 +219,7 @@ The object returned by `Tempo.ticker()` (or an instance of the `Ticker` class) i
 The `Ticker` class maintains a static registry of all currently active tickers. This is useful for debugging, monitoring, or cleanup checks.
 
 ### `Ticker.active`
-A static getter that returns an array of [`TickerSnapshot`](#tickersnapshot) objects for all active (non-stopped) tickers.
+A static getter that returns an array of [`Ticker.Snapshot`](#tickersnapshot) objects for all active (non-stopped) tickers.
 
 ```typescript
 import { Ticker } from '@magmacomputing/tempo/plugins/ticker';
@@ -232,10 +232,10 @@ reports.forEach(({ ticker, next, ticks }) => {
 });
 ```
 
-#### `TickerSnapshot`
+#### `Ticker.Snapshot`
 ```typescript
-type TickerSnapshot = {
-  ticker: Ticker;       // The Ticker instance itself
+type Snapshot = {
+  ticker: Instance;      // The Ticker instance (Proxy) itself
   next: Tempo;          // The next Tempo value to be emitted
   ticks: number;        // Number of pulses emitted so far
   limit?: number;       // The configured limit (if any)

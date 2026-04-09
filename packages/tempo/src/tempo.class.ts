@@ -804,7 +804,7 @@ export class Tempo {
 
 	/** Compares two `Tempo` instances or date-time values. */
 	static compare(tempo1?: Tempo.DateTime | Tempo.Options, tempo2?: Tempo.DateTime | Tempo.Options) {
-		const one = Reflect.construct(Tempo, [tempo1 as Tempo.DateTime]), two = Reflect.construct(Tempo, [tempo2 as Tempo.DateTime]);
+		const one = new Tempo(tempo1 as Tempo.DateTime), two = new Tempo(tempo2 as Tempo.DateTime);
 
 		return Number((one.nano > two.nano) || -(one.nano < two.nano)) + 0;
 	}
@@ -846,7 +846,7 @@ export class Tempo {
 	/** Creates a new `Tempo` instance. */
 	static from(options?: Tempo.Options): Tempo;
 	static from(tempo: Tempo.DateTime | undefined, options?: Tempo.Options): Tempo;
-	static from(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return Reflect.construct(this, [tempo as NonNullable<Tempo.DateTime>, options]); }
+	static from(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) { return new this(tempo as NonNullable<Tempo.DateTime>, options); }
 
 	static now() { return instant().epochNanoseconds; }
 
@@ -1178,7 +1178,7 @@ export class Tempo {
 	 * we must instantiate internally from the decorated wrapper (which is bound to `this.constructor`)  
 	 * rather than using `new Tempo(..)`.  
 	 */
-	/** @internal */																					get #Tempo() { return (tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options) => Reflect.construct(this.constructor, [tempo, options]) as Tempo; }
+	/** @internal */																					get #Tempo() { return this.constructor as typeof Tempo; }
 
 	/** time duration until (with unit, returns number) */		until(until: Tempo.Until, opts?: Tempo.Options): number;
 	/** time duration until another date-time (with unit) */	until(dateTimeOrOpts: Tempo.DateTime | Tempo.Options, until: Tempo.Until): number;
@@ -1193,7 +1193,7 @@ export class Tempo {
 	/** applies a format to the instance. */									format<K extends t.Format>(fmt: K) { this.#ensureParsed(); return this.#format(fmt) }
 	/** returns a new `Tempo` with specific duration added. */add(tempo?: Tempo.Add, options?: Tempo.Options) { this.#ensureParsed(); return this.#add(tempo, options); }
 	/** returns a new `Tempo` with specific offsets. */				set(tempo?: Tempo.Set, options?: Tempo.Options) { this.#ensureParsed(); return this.#set(tempo, options); }
-	/** returns a clone of the current `Tempo` instance. */		clone() { return this.#Tempo(this, this.config) }
+	/** returns a clone of the current `Tempo` instance. */		clone() { return new this.#Tempo(this, this.config) }
 
 	/** returns the underlying Temporal.ZonedDateTime */
 	toDateTime() {
@@ -2080,7 +2080,7 @@ export class Tempo {
 										const termObj = Tempo.#terms.find(t => t.scope === term || t.key === term);
 
 										let jump = zdt;
-										let next = this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }).set({ [unit]: offset }).toDateTime();
+										let next = new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }).set({ [unit]: offset }).toDateTime();
 
 										let iterations = 0;
 										while (next.epochNanoseconds <= zdt.epochNanoseconds) {
@@ -2088,7 +2088,7 @@ export class Tempo {
 												Tempo.#dbg.warn(this.#local.config, `Term resolution stalling for "${unit}" (offset: "${offset}"). Jumping range.`);
 												let range;
 												try {
-													range = termObj?.define.call(this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }), false);
+													range = termObj?.define.call(new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }), false);
 												} catch (err: any) {
 													if (err.message.includes('Class constructor')) {
 														Tempo.#dbg.warn(this.#local.config, `Misidentified class in term recovery: ${unit}`, err.stack ?? err);
@@ -2098,13 +2098,13 @@ export class Tempo {
 												}
 												const step = getSafeFallbackStep(range as any, (termObj as any)?.scope ?? (unit === '#period' ? 'period' : undefined));
 												jump = jump.add(step);
-												next = this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }).set({ [unit]: offset }).toDateTime();
+												next = new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }).set({ [unit]: offset }).toDateTime();
 												break;
 											}
 
 											let range;
 											try {
-												range = termObj?.define.call(this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }), false);
+												range = termObj?.define.call(new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }), false);
 											} catch (err: any) {
 												if (err.message.includes('Class constructor')) {
 													Tempo.#dbg.warn(this.#local.config, `Misidentified class in term resolution: ${unit}`, err.stack ?? err);
@@ -2119,11 +2119,11 @@ export class Tempo {
 												const step = (unit === '#period' || (termObj as any)?.scope === 'period') ? { days: 1 } : { years: 1 };
 												jump = jump.add(step);
 											}
-											next = this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }).set({ [unit]: offset }).toDateTime();
+											next = new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }).set({ [unit]: offset }).toDateTime();
 										}
 										return next;
 									}
-									const res = resolveTermShift(this.#Tempo(zdt, this.config), Tempo.#terms, unit, offset as number);
+									const res = resolveTermShift(new this.#Tempo(zdt, this.config), Tempo.#terms, unit, offset as number);
 									if (isDefined(res)) {
 										return res;
 									}
@@ -2156,14 +2156,14 @@ export class Tempo {
 						}, zdt);
 				}
 				else {
-					return this.#Tempo(args, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
+					return new this.#Tempo(args, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
 				}
 			}
 
 			if (this.#errored)
-				return this.#Tempo(null, { ...this.#options, ...overrides, ...options, result: this.#matches });
+				return new this.#Tempo(null, { ...this.#options, ...overrides, ...options, result: this.#matches });
 
-			return this.#Tempo(zdt, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
+			return new this.#Tempo(zdt, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
 
 		} finally {
 			if (isRoot) this.#matches = undefined;
@@ -2385,11 +2385,11 @@ export class Tempo {
 						}, zdt)																					// start reduce with the shifted zonedDateTime
 				}
 				else {
-					return this.#Tempo(args, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
+					return new this.#Tempo(args, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
 				}
 			}
 
-			return this.#Tempo(zdt, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
+			return new this.#Tempo(zdt, { ...this.#options, ...overrides, ...options, result: this.#matches, anchor: zdt });
 		} finally {
 			if (isRoot) this.#matches = undefined;
 			this.#parseDepth--;
@@ -2502,7 +2502,7 @@ export class Tempo {
 				value = arg as Tempo.DateTime;											// assume 'arg' is a DateTime
 		}
 
-		const offset = this.#Tempo(value, { ...opts, mode: enums.MODE.Strict });	// create the offset Tempo (strict: #zdt needed immediately)
+		const offset = new this.#Tempo(value, { ...opts, mode: enums.MODE.Strict });	// create the offset Tempo (strict: #zdt needed immediately)
 		const diffZone = this.#zdt.timeZoneId !== offset.#zdt.timeZoneId;
 		// Temporal restricts cross-timezone math to absolute units ('hours') to avoid DST ambiguity
 		const duration = this.#zdt.until(offset.#zdt.withCalendar(this.#zdt.calendarId), { largestUnit: diffZone ? 'hours' : (unit ?? 'years') });

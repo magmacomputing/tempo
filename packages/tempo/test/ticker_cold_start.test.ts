@@ -2,7 +2,7 @@ import { Tempo } from '#tempo/tempo.class.js';
 import '#tempo/plugins/plugin.ticker.js';
 
 describe('Ticker Cold-Start Resolution', () => {
-    beforeEach(() => Tempo.init());
+    beforeEach(() => { Tempo.init(); });
 
     test('should start pulsing when a listener is added post-creation', async () => {
         // 1. Create a ticker without a callback (should remain idle)

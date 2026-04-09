@@ -134,6 +134,65 @@ if (errorCondition) {
 
 This pattern ensures that Tempo remains robust in production environments while providing strict validation during development.
 
+## Advanced Pattern: Stateful Classes & Callable Proxies
+
+For complex plugins (like the **Ticker**) that need to maintain internal state across multiple calls or provide both a class interface and a "shortcut" function, use the **Stateful Class + Proxy** pattern.
+
+### 1. Define a Dedicated Types Namespace
+Avoid polluting the global `Tempo` namespace. Instead, create a dedicated `Types` namespace for your plugin's internal and public signatures. This prevents "Used before declaration" errors and name-shading.
+
+```typescript
+export namespace MyPluginTypes {
+  export type Options = { ... }
+  export interface Descriptor extends AsyncGenerator<Tempo, any> {
+    doSomething(): void;
+  }
+  // The final public interface (callable as a function)
+  export interface Instance extends Descriptor {
+    (): void
+  }
+}
+```
+
+### 2. Implement the Logic in a Class
+Use a standard class to manage your state. This keeps your logic decoupled from the Proxy and the core engine.
+
+```typescript
+class MyPluginInstance implements MyPluginTypes.Descriptor {
+  #self!: MyPluginTypes.Instance;
+  
+  bootstrap(proxy: MyPluginTypes.Instance) {
+    this.#self = proxy;
+    return this.#self;
+  }
+  // ... implement Descriptor methods ...
+}
+```
+
+### 3. Wrap with a Proxy in the Factory
+Use a `Proxy` in your `definePlugin` factory to handle the callability trap. This allows your plugin to act as a function (the shortcut) and an object (the stateful class) simultaneously.
+
+```typescript
+export const MyPlugin = definePlugin((options, TempoClass, factory) => {
+  (TempoClass as any).myTool = function(arg1: any): MyPluginTypes.Instance {
+    const instance = new MyPluginInstance(arg1);
+    
+    const proxy = new Proxy((() => instance.doSomething()) as any, {
+      get: (_, prop) => {
+        // Map proxy properties to instance methods
+        if (prop in instance) return (instance as any)[prop].bind(instance);
+        return (instance as any)[prop];
+      },
+      apply: (target) => target()
+    }) as unknown as MyPluginTypes.Instance;
+
+    return instance.bootstrap(proxy);
+  };
+});
+```
+
+---
+
 ## Distributing Your Plugin
 
 To make your plugin available to the community, package it as a standard NPM module. 
