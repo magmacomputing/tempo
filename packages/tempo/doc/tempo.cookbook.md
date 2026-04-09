@@ -123,7 +123,7 @@ const isWeekend = t.dow >= 6; // Saturday = 6, Sunday = 7
 ```
 
 ### What Fiscal Quarter are we in?
-Using the `qtr` Term plugin.
+Using the `qtr` Term plugin (**Note**: `term.qtr` is a convenient alias for the full `term.quarter` property).
 ```typescript
 const t = new Tempo();
 console.log(`Current Quarter: ${t.term.qtr}`); // "Q1", "Q2", etc.
@@ -188,7 +188,7 @@ Drive internal reporting cycles precisely when a new quarter begins.
 await using quarterly = Tempo.ticker({ '#quarter': 1 });
 
 for await (const t of quarterly) {
-  generateReport(t.term.quarter);
+  generateReport(t.term.qtr);
 }
 ```
 

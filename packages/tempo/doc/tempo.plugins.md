@@ -72,6 +72,7 @@ declare module '@magmacomputing/tempo' {
 
 > [!WARNING]
 > **Avoid Circular Dependencies**: When writing a plugin, **never** import the `Tempo` class directly from `@magmacomputing/tempo`. Doing so will create a circular dependency that breaks the library initialization. Instead, always use `import type { Tempo }` for type checking, and rely on the `TempoClass` argument passed to your plugin function for static method access.
+
 ---
 
 Modern Tempo plugins are designed to be "plug-and-play." By using the `definePlugin` factory, a plugin registers itself with the global Tempo registry as soon as it's imported.
@@ -118,14 +119,14 @@ Using `Tempo.extend()` ensures that the library safely bypasses the "Soft Freeze
 When building plugins that perform complex parsing or logic, follow Tempo's **"Fail-fast by Default"** principle.
 
 - **Strict Mode (Default)**: If your plugin encounters a terminal error (e.g., invalid input that cannot be recovered), you should `throw` a descriptive error.
-- **Catch Mode**: Respect the user's `catch` configuration. If `this.config.catch` is `true`, instead of throwing, you should log a warning using `Tempo.#dbg.warn()` and return a sensible fallback (or the original input).
+- **Catch Mode**: Respect the user's `catch` configuration. If `this.config.catch` is `true`, instead of throwing, you should log a warning using `this.warn()` and return a sensible fallback (or the original input).
 
 ```typescript
 // Example within a plugin instance method
 if (errorCondition) {
   const msg = `Custom Error: ${details}`;
   if (this.config.catch === true) {
-    Tempo.#dbg.warn(this.config, msg);
+    this.warn(msg);
     return this; // or a fallback value
   }
   throw new Error(msg);

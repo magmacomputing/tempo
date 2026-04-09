@@ -32,7 +32,7 @@ describe('Ticker with Terms', () => {
 		const seed = '2020-01-01T00:00:00'
 		const pulses: string[] = []
 
-		// morning is defined in Default.ts as 08:00
+		// morning is defined in term.timeline.ts as 08:00
 		const ticker = Tempo.ticker({ '#period': 'morning' }, { seed })
 		const callback = vi.fn((t: Tempo) => {
 			pulses.push(t.toString().substring(0, 19))
@@ -56,7 +56,7 @@ describe('Ticker with Terms', () => {
 	it('should refuse to launch with an invalid #term', () => {
 		const seed = '2020-01-01'
 		const payload = { '#invalid': 1 }
-		
+
 		// 1. should throw by default (catch: false)
 		expect(() => Tempo.ticker(payload, { seed })).toThrow(/Invalid Ticker payload resolution/)
 
@@ -64,7 +64,7 @@ describe('Ticker with Terms', () => {
 		const errorCallback = vi.fn()
 		const ticker = Tempo.ticker(payload, { seed, catch: true })
 		ticker.on('catch', errorCallback)
-		
+
 		// Pulse-manual should not work meaningfully as ticker was inhibited
 		expect(ticker.pulse().isValid).toBe(false)
 	})

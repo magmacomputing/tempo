@@ -57,6 +57,20 @@ export type DateTimeUnit = Temporal.DateUnit | Temporal.TimeUnit
 export type Unit = DateTimeUnit | Plural<DateTimeUnit>
 type Units = Temporal.PluralizeUnit<DateTimeUnit>;
 type BaseDuration = Record<Units, number>;
+/**
+ * # FlexibleDuration
+ * A distributive mapped type over {@link Units} which requires at least one duration key 
+ * from {@link BaseDuration} (the mapped key K) while making all other BaseDuration 
+ * properties optional.
+ * 
+ * @example
+ * // Valid: at least one key is present
+ * const a: FlexibleDuration = { hours: 1 };
+ * const b: FlexibleDuration = { hours: 1, minutes: 30 };
+ * 
+ * // Invalid: empty object (no mandatory key)
+ * const c: FlexibleDuration = {}; 
+ */
 export type FlexibleDuration = {
 	[K in Units]: Pick<BaseDuration, K> & { [P in keyof Omit<BaseDuration, K>]?: number };
 }[Units]

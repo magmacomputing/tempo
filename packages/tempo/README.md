@@ -126,7 +126,7 @@ console.log(now.fmt.date);                    // using pre-built formats: "2026-
 ## 📚 Documentation
 
 > [!IMPORTANT]
-> **Documentation Update**: We have been made aware that the documentation links between npmjs.com (the package host) and github.com (the source repository) was broken a short while back. To overcome this, we have altered our Publish process to now include the doc/ subfolder (along with dist/ and src/ folders) in the Tempo package (as well as updating the links between individual documentation files). We sincerely apologize for the trouble this has caused and the poor user-experience it presented.
+> **Documentation Update**: We have been made aware that the documentation links between npmjs.com (the package host) and GitHub (the source repository) were broken a short while back. To overcome this, we have altered our Publish process to now include the doc/ subfolder (along with dist/ and src/ folders) in the Tempo package (as well as updating the links between individual documentation files). We sincerely apologize for the trouble this has caused and the poor user-experience it presented.
 
 For detailed technical guides, please refer to:
 - [Vision & Value Proposition](https://github.com/magmacomputing/magma/blob/v2.0.1/packages/tempo/doc/vision.md)

@@ -151,7 +151,12 @@ export function assertNever(val: never): asserts val is never { throw new Error(
  * # resetRegistry
  * Clear the global type registry for test isolation and deterministic behavior.
  */
-export const resetRegistry = () => { registry.length = 0; };
+export const resetRegistry = () => {
+	registry.length = 0;
+	if (Array.isArray((globalThis as any)[$Registry])) {
+		(globalThis as any)[$Registry].length = 0;
+	}
+};
 const classRegex = /^\s*(class\s|\[native code\])/;						// match class keyword OR native constructor
 
 /** private helper to safely identify an ES6 class, bypassing Proxies */

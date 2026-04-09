@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **High-Precision Ticker**: Migrated `TickerPlugin` from `Date.now()` to `instant().epochMilliseconds`, ensuring consistent use of high-precision timing without legacy `Date` object dependencies.
 - **Test Performance**: Standardized the test suite on `vitest --pool=forks` to ensure deterministic execution of asynchronous ticker and generator tests.
+- **Vitest Upgrade Deferral**: Intentionally deferred the upgrade to Vitest 4.x and maintained version `^2.1.8`. The current Vitest 4 transformer (Oxc) does not yet support the Stage 3 (ECMAScript) decorators used extensively by this library's `@Immutable` and `Logify` utilities.
 
 ### Fixed
 - **Term Plugin Resolution**: Corrected package export mappings for term-based plugins in `package.json`, resolving module resolution errors in development and test environments.

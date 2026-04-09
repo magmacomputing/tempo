@@ -12,7 +12,7 @@
 /** key to identify the global registration hook */					export const $Register = Symbol.for('$Register');
 
 /** identify and mark a Logify configuration object */			export function markConfig<T extends object>(obj: T): T {
-	if (!(obj as any)[$Logify]) {
+	if (!(obj as any)[$Logify] && Object.isExtensible(obj)) {
 		Object.defineProperty(obj, $Logify, { value: true, enumerable: false, writable: true, configurable: true });
 	}
 	return obj;

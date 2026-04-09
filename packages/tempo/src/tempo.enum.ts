@@ -234,10 +234,9 @@ const REGISTRIES: Record<string, any> = {
 /** update a global registry with new discoverable data */
 export function registryUpdate(name: keyof typeof STATE, data: Record<string, any>) {
 	const registry = REGISTRIES[name];
-	const target = registry?.[$Target] as Property<any>;
+	if (!isDefined(registry) || !isDefined(registry[$Target])) return;	// early-return if no valid target to mutate
 
-	if (!isDefined(registry) || !isDefined(target)) return;					// early-return if no valid target to mutate
-
+	const target = registry[$Target] as Property<any>;
 	const state = STATE[name] as Property<any>;
 
 	Object.entries(data).forEach(([key, val]) => {

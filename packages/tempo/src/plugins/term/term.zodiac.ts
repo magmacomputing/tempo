@@ -79,14 +79,18 @@ function getChineseZodiac(year: number) {
 	const animals = (groups as any)['animal'] ?? [];
 	const elements = (groups as any)['element'] ?? [];
 
-	const animalIndex = (year - 4) % 12;											// calculate the animal index
-	const elementIndex = Math.floor(((year - 4) % 10) / 2);		// calculate the element index based on the last digit of the year
-	const yinYang = year % 2 === 0 ? 'Yang' : 'Yin';					// determine Yin or Yang
+	if (animals.length === 0 || elements.length === 0) {
+		throw new Error(`[getChineseZodiac] Missing registration: animal (${animals.length}) or element (${elements.length})`);
+	}
+
+	const animalIndex = ((year - 4) % 12 + 12) % 12;												// calculate the animal index
+	const elementIndex = Math.floor((((year - 4) % 10) + 10) % 10 / 2);			// calculate the element index based on the last digit of the year
+	const yinYang = year % 2 === 0 ? 'Yang' : 'Yin';												// determine Yin or Yang
 
 	return {
-		animal: animals[animalIndex]?.key,
-		traits: (animals[animalIndex] as any)?.traits,
-		element: elements[elementIndex]?.key,
+		animal: animals[animalIndex].key,
+		traits: (animals[animalIndex] as any).traits,
+		element: elements[elementIndex].key,
 		yinYang: yinYang
 	}
 }

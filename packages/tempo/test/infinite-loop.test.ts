@@ -11,17 +11,16 @@ describe('Tempo Infinite Loop Protection', () => {
       loopB: 'loopA'
     }
     const t = new Tempo('loopA', { event, catch: true })
-    console.log('loopA', t.toString());
-    expect(t.toString().includes('loopA') || t.toString().includes('loopB')).toBe(true)
+    expect(t.toString()).toBe('loopA')
   })
 
   test('deep alias chain is broken by MAX_DEPTH', () => {
     const event: Record<string, string> = {}
-    for (let i = 0; i < 20; i++) { // reduced to 20 for faster test
+    for (let i = 0; i < 60; i++) {
       event[`step${i}`] = `step${i + 1}`
     }
 
     const t = new Tempo('step0', { event, catch: true })
-    expect(t.toString()).toBeDefined()
+    expect(t.toString()).toBe('step0')
   })
 })

@@ -5,9 +5,18 @@ import { isType, asType, isEmpty, isDefined, isUndefined, isNullish, isString, i
 import type { Obj, Type } from '#library/type.library.js';
 
 
-/** register a Class for serialization */
-export const registerSerializable = (name: string, cls: Function) => Registry.set(name.startsWith('$') ? name : `$${name}`, cls);
 export const Registry = new Map<string, Function>();
+
+/** register a Class for serialization */
+export const registerSerializable = (name: string, cls: Function) => {
+	const key = name.startsWith('$') ? name : `$${name}`;
+
+	if (Registry.has(key)) {
+		throw new Error(`[registerSerializable] Collision: '${key}' is already registered with ${Registry.get(key)?.name || 'anonymous constructor'}`);
+	}
+
+	Registry.set(key, cls);
+}
 
 // be aware that 'structuredClone' preserves \<undefined> values...  
 // and JSON.stringify() does not

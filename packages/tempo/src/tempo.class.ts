@@ -1395,8 +1395,10 @@ export class Tempo {
 						if (Number.isNaN(value) || !Number.isFinite(value))
 							throw new RangeError(`Invalid Tempo number: ${value}`);
 
+						const negative = value < 0;
 						const [seconds = BigInt(0), suffix = BigInt(0)] = value.toString().split('.').map(v => isNumeric(v) ? BigInt(v) : BigInt(0));
-						const nano = BigInt(suffix.toString().substring(0, 9).padEnd(9, '0'));
+						let nano = BigInt(suffix.toString().substring(0, 9).padEnd(9, '0'));
+						if (negative && nano > 0n) nano = -nano;
 
 						dateTime = Temporal.Instant.fromEpochNanoseconds(seconds * BigInt(1_000_000_000) + nano)
 							.toZonedDateTimeISO(targetTz);
@@ -1964,10 +1966,10 @@ export class Tempo {
 			dateTime = zdt.toPlainDateTime().toZonedDateTime(zone);	// adopt timezone override (stable)
 		}
 
-		if (cal && cal !== zdt.calendarId) {
+		if (cal && cal !== (dateTime as any).calendarId) {
 			const calendar = cal.startsWith('u-ca=') ? cal.substring(5) : cal;
-			this.#local.config.calendar = calendar;
-			dateTime = zdt.withCalendar(calendar);
+			if (this.#local) this.#local.config.calendar = calendar;
+			dateTime = dateTime.withCalendar(calendar);
 		}
 
 		delete groups["brk"];

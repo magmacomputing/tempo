@@ -56,6 +56,7 @@ export class Logify {
 	/** console.error */	error = (...msg: any[]) => this.#trap(Method.Error, ...msg);
 
 	constructor(self?: Logify.Constructor | string, opts = {} as Logify.Constructor) {
+		opts = { ...opts };																				// defensive copy of the options
 		const arg = asType(self);
 		this.#name = (arg.type === 'String')
 			? arg.value
@@ -63,8 +64,9 @@ export class Logify {
 			?? 'Logify';
 
 		if (arg.type === 'Object') {
-			markConfig(arg.value as object);											// auto-mark if it's a config object
-			Object.assign(opts, arg.value);
+			const cfg = { ...arg.value as object };
+			markConfig(cfg);																			// auto-mark if it's a config object
+			Object.assign(opts, cfg);
 		}
 
 		markConfig(opts);																				// auto-mark the options object

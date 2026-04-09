@@ -21,7 +21,7 @@ export function Immutable<T extends Constructor>(value: T, { kind, name, addInit
 				}
 			}[name] as T;
 
-			registerType(value, name as Type);										// register the original class definition
+			registerType(value, `${name}_original` as Type);			// register the original class definition
 			registerType(wrapper, name as Type);									// register the wrapper as the authoritative definition
 
 			addInitializer(() => {																// wait for construction to complete
@@ -81,7 +81,7 @@ export function Static<T extends Constructor>(value: T, { kind, name }: ClassDec
 				}
 			}[name] as T;
 
-			registerType(value, name as Type);										// register the original class definition
+			registerType(value, `${name}_original` as Type);			// register the original class definition
 			registerType(wrapper, name as Type);									// register the wrapper as the authoritative definition
 
 			return wrapper;

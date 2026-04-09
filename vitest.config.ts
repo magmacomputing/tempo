@@ -9,6 +9,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     alias: [
+      { find: /^#library\/(browser|server|common)\/(.*)\.js$/, replacement: path.resolve(__dirname, './packages/library/src/$1/$2.ts') },
       { find: /^#library\/(.*)\.js$/, replacement: path.resolve(__dirname, './packages/library/src/common/$1.ts') },
       { find: /^#tempo\/plugins\/plugin\.util\.js$/, replacement: path.resolve(__dirname, './packages/tempo/src/plugins/plugin.util.ts') },
       { find: /^#tempo\/plugins\/plugin\.type\.js$/, replacement: path.resolve(__dirname, './packages/tempo/src/plugins/plugin.type.ts') },
