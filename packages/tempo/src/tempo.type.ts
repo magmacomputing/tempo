@@ -96,8 +96,10 @@ export type OwnFormat = enums.OwnFormat;
 /** mapping of format names to instance-resolutions (string | number) */
 export type Formats = enums.Formats;
 
+/** Union of all known format strings */
+export type Format = enums.Format;
 /** Enum registry of format strings */
-export type Format = enums.FormatEnum;
+export type FormatRegistry = enums.FormatEnum;
 export type FormatType<K extends PropertyKey> = enums.FormatType<K>;
 
 export type { Range, TermPlugin, ResolvedRange, Terms };
@@ -210,7 +212,7 @@ export namespace Internal {
 	/** Instance configuration derived from supply, storage, and discovery. */
 	export interface Config extends Required<Omit<OptionsKeep, "formats">> {
 		/** configuration (global | local) */										scope: 'global' | 'local';
-		/** pre-configured format strings */										formats: Format;
+		/** pre-configured format strings */										formats: FormatRegistry;
 		/** index-signature */																	readonly [key: string]: any;
 	}
 

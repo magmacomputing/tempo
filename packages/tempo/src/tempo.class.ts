@@ -354,10 +354,10 @@ export class Tempo {
 
 					case 'formats':
 						if (Tempo.#isLocal(shape) && !Tempo.#hasOwn(shape.config, 'formats'))
-							shape.config.formats = shape.config.formats.extend({}) as Tempo.Format;	// shadow parent prototype
+							shape.config.formats = shape.config.formats.extend({}) as Tempo.FormatRegistry;	// shadow parent prototype
 
 						if (isObject(arg.value))
-							shape.config.formats = shape.config.formats.extend(arg.value as Property<any>) as Tempo.Format;
+							shape.config.formats = shape.config.formats.extend(arg.value as Property<any>) as Tempo.FormatRegistry;
 						break;
 
 					case 'discovery':
@@ -431,7 +431,7 @@ export class Tempo {
 
 		// 3. Process Formats
 		if (discovery.formats) {
-			shape.config.formats = shape.config.formats.extend(discovery.formats) as Tempo.Format;
+			shape.config.formats = shape.config.formats.extend(discovery.formats) as Tempo.FormatRegistry;
 			registryUpdate('FORMAT', discovery.formats);
 		}
 
@@ -630,7 +630,7 @@ export class Tempo {
 							registryUpdate('TIMEZONE', tzs)
 						}
 						if (discovery.formats) {
-							Tempo.#global.config.formats = Tempo.#global.config.formats.extend(discovery.formats) as Tempo.Format;
+							Tempo.#global.config.formats = Tempo.#global.config.formats.extend(discovery.formats) as Tempo.FormatRegistry;
 							registryUpdate('FORMAT', discovery.formats)
 						}
 
@@ -2593,6 +2593,7 @@ export namespace Tempo {
 	export type OwnFormat = t.OwnFormat;
 	export type Formats = t.Formats;
 	export type Format = t.Format;
+	export type FormatRegistry = t.FormatRegistry;
 	export type FormatType<K extends PropertyKey> = t.FormatType<K>;
 
 	export type Terms = t.Terms;
