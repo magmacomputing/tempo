@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "./src" },
-    { "path": "./test" }
+    { "path": "./test" },
+    { "path": "./scripts" }
   ]
 }

@@ -1,0 +1,29 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "noEmit": true,
+    "composite": true,
+    "types": ["node"],
+    "paths": {
+      "#library": ["../../library/src/common/index.ts"],
+      "#library/*": ["../../library/src/common/*"],
+      "#browser/*": ["../../library/src/browser/*"],
+      "#server/*": ["../../library/src/server/*"],
+      "#tempo": ["../src/tempo.index.ts"],
+      "#tempo/core": ["../src/tempo.core.ts"],
+      "#tempo/plugins/plugin.*.js": ["../src/plugins/plugin.*.ts"],
+      "#tempo/plugins/extend.*.js": ["../src/plugins/extend/extend.*.ts"],
+      "#tempo/plugins/module.*.js": ["../src/plugins/module/module.*.ts"],
+      "#tempo/plugins/term.*.js": ["../src/plugins/term/term.*.ts"],
+      "#tempo/*.js": ["../src/*.ts"],
+      "#tempo/*": ["../src/*"]
+    }
+  },
+  "include": [
+    "**/*.ts"
+  ],
+  "references": [
+    { "path": "../src/tsconfig.json" }
+  ]
+}

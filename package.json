@@ -12,7 +12,6 @@
   ],
   "scripts": {
     "test": "npm run test --workspaces --if-present",
-    "build": "tsc -b",
     "build:tempo": "npm run build --workspace=@magmacomputing/tempo",
     "build:library": "npm run build --workspace=@magmacomputing/library",
     "clean": "tsc -b --clean",

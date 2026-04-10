@@ -15,7 +15,7 @@ export function compose(
 	targetTz: string,
 	targetCal: string
 ): { dateTime: Temporal.ZonedDateTime, timeZone?: string | undefined } {
-	let res: TemporalObject | Tempo = today;
+	let temporal: TemporalObject | Tempo = today;
 	let timeZone: string | undefined;
 	let dateTime: Temporal.ZonedDateTime;
 
@@ -23,7 +23,7 @@ export function compose(
 		case 'Void':
 		case 'Empty':
 		case 'Undefined':
-			res = today;
+			temporal = today;
 			break;
 
 		case 'String':
@@ -31,23 +31,23 @@ export function compose(
 				const str = value.replace(/Z$/, '');
 				const zdt = Temporal.ZonedDateTime.from(`${str}[${tz}]`);
 				timeZone = zdt.timeZoneId;
-				res = zdt;
+				temporal = zdt;
 			} catch (err) {
 				if (Match.date.test(value)) {
 					try {
-						res = Temporal.PlainDate.from(value);
+						temporal = Temporal.PlainDate.from(value);
 						break;
 					} catch { /* ignore and fallback */ }
 				}
 
 				try {
-					res = Temporal.PlainDateTime.from(value);
+					temporal = Temporal.PlainDateTime.from(value);
 				} catch (err2) {
 					const date = new Date(value.toString());
 					if (isNaN(date.getTime())) {
 						throw new Error(`Cannot parse Date: "${value}"`);
 					} else {
-						res = Temporal.Instant.fromEpochMilliseconds(date.getTime());
+						temporal = Temporal.Instant.fromEpochMilliseconds(date.getTime());
 					}
 				}
 			}
@@ -58,23 +58,23 @@ export function compose(
 		case 'Temporal.PlainDateTime':
 		case 'Temporal.Instant':
 		case 'Tempo':
-			res = value;
+			temporal = value;
 			break;
 
 		case 'Temporal.PlainTime':
-			res = today.withPlainTime(value);
+			temporal = today.withPlainTime(value);
 			break;
 
 		case 'Temporal.PlainYearMonth':
-			res = value.toPlainDate({ day: Math.min(today.day, value.daysInMonth) });
+			temporal = value.toPlainDate({ day: Math.min(today.day, value.daysInMonth) });
 			break;
 
 		case 'Temporal.PlainMonthDay':
-			res = value.toPlainDate({ year: today.year });
+			temporal = value.toPlainDate({ year: today.year });
 			break;
 
 		case 'Date':
-			res = Temporal.Instant.fromEpochMilliseconds(value.getTime());
+			temporal = Temporal.Instant.fromEpochMilliseconds(value.getTime());
 			break;
 
 		case 'Number':
@@ -87,12 +87,12 @@ export function compose(
 				let nano = BigInt(suffix.toString().substring(0, 9).padEnd(9, '0'));
 				if (negative && nano > 0n) nano = -nano;
 
-				res = Temporal.Instant.fromEpochNanoseconds(seconds * BigInt(1_000_000_000) + nano);
+				temporal = Temporal.Instant.fromEpochNanoseconds(seconds * BigInt(1_000_000_000) + nano);
 				break;
 			}
 
 		case 'BigInt':
-			res = Temporal.Instant.fromEpochNanoseconds(value);
+			temporal = Temporal.Instant.fromEpochNanoseconds(value);
 			break;
 
 		default:
@@ -101,24 +101,24 @@ export function compose(
 
 	// now analyze what kind of Temporal Object we have and convert to ZonedDateTime
 	switch (true) {
-		case isZonedDateTime(res):
-			dateTime = res.withCalendar(targetCal);
+		case isZonedDateTime(temporal):
+			dateTime = temporal.withCalendar(targetCal);
 			break;
 
-		case isInstant(res):
-			dateTime = res.toZonedDateTimeISO(targetTz).withCalendar(targetCal);
+		case isInstant(temporal):
+			dateTime = temporal.toZonedDateTimeISO(targetTz).withCalendar(targetCal);
 			break;
 
-		case isPlainDate(res) || isPlainDateTime(res):
-			dateTime = res.toZonedDateTime(targetTz).withCalendar(targetCal);
+		case isPlainDate(temporal) || isPlainDateTime(temporal):
+			dateTime = temporal.toZonedDateTime(targetTz).withCalendar(targetCal);
 			break;
 
-		case isTempo(res):
-			dateTime = res.toDateTime().withCalendar(targetCal);
+		case isTempo(temporal):
+			dateTime = temporal.toDateTime().withCalendar(targetCal);
 			break;
 
 		default:
-			throw new Error(`Cannot convert ${type} (value: ${String(res)}) to ZonedDateTime`);
+			throw new Error(`Cannot convert ${type} (value: ${String(temporal)}) to ZonedDateTime`);
 	}
 
 	return { dateTime, timeZone };

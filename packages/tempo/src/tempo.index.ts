@@ -1,6 +1,7 @@
 import { Tempo } from './tempo.class.js';
 import { registerTerms } from './plugins/term/term.index.js';
 import './plugins/module/module.duration.js';
+import './plugins/module/module.format.js';
 import './plugins/extend/extend.ticker.js';
 
 // Batteries Included: Register standard terms on the Tempo class

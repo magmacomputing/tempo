@@ -1,5 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill';
-import { isDefined } from '#library/type.library.js';
+import { isDefined, isFunction } from '#library/type.library.js';
 import { secure } from '#library/utility.library.js';
 import { type Tempo } from '../tempo.class.js';
 import { SCHEMA, getLargestUnit } from '../tempo.util.js';
@@ -14,6 +14,23 @@ import type { TermPlugin, Range, ResolvedRange, Plugin, Extension } from './plug
 export const REGISTRY = {
 	terms: [] as TermPlugin[],
 	extends: [] as Extension[]
+}
+
+/**
+ * ## interpret
+ * Utility to safely delegate calls to the Tempo Interpreter with catch-support.
+ */
+export function interpret(t: any, module: string, fallback?: any, ...args: any[]) {
+	const logic = (t.constructor as any)[$Interpreter]?.[module];
+
+	try {
+		if (!isFunction(logic)) throw new Error(`${module} plugin not loaded`);
+		return logic.apply(t, args);
+	} catch (err) {
+		t.constructor.logError(t.config, err);
+	}
+
+	return (isFunction(fallback) ? fallback() : fallback);
 }
 
 /**

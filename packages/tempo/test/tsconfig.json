@@ -24,6 +24,9 @@
       "#tempo": [
         "../src/tempo.index.ts"
       ],
+      "#tempo/core": [
+        "../src/tempo.core.ts"
+      ],
       "#tempo/*": [
         "../src/*"
       ]

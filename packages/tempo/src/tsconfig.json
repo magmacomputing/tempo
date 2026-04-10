@@ -10,7 +10,8 @@
       "#library/*": ["../../library/src/common/*"],
       "#browser/*": ["../../library/src/browser/*"],
       "#server/*": ["../../library/src/server/*"],
-      "#tempo": ["./index.ts"],
+      "#tempo": ["./tempo.index.ts"],
+      "#tempo/core": ["./tempo.core.ts"],
       "#tempo/*": ["./*"]
     }
   },

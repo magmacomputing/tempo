@@ -31,6 +31,10 @@
       "development": "./src/tempo.index.ts",
       "default": "./dist/tempo.index.js"
     },
+    "#tempo/core": {
+      "development": "./src/tempo.core.ts",
+      "default": "./dist/tempo.core.js"
+    },
     "#tempo/plugins/plugin.*.js": {
       "development": "./src/plugins/plugin.*.ts",
       "default": "./dist/plugins/plugin.*.js"
@@ -86,6 +90,10 @@
       "types": "./dist/plugins/module/module.duration.d.ts",
       "import": "./dist/plugins/module/module.duration.js"
     },
+    "./format": {
+      "types": "./dist/plugins/module/module.format.d.ts",
+      "import": "./dist/plugins/module/module.format.js"
+    },
     "./library": {
       "types": "./dist/library.index.d.ts",
       "import": "./dist/library.index.js"
@@ -98,6 +106,7 @@
   "scripts": {
     "test": "vitest run",
     "repl": "tsx --conditions=development -i --import ./scripts/setup.ts --import ./scripts/repl.ts",
+    "core": "tsx --conditions=development -i --import ./scripts/setup.ts --import ./scripts/core.ts",
     "build": "tsc -b && npm run build:bundle && npm run build:resolve",
     "build:bundle": "rollup -c",
     "build:resolve": "tsx scripts/resolve-types.ts",
