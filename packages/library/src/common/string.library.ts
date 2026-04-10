@@ -91,9 +91,15 @@ export const plural = (val: string | number | Record<string, string>, word: stri
 		: _plural(val, word, plural)
 }
 
+type SingularUnit<T extends string> = T extends `${infer S}s`
+	? T extends `${string}${string}${string}${string}`
+		? S
+		: T
+	: T;
+
 /** strip a plural suffix, if endsWith 's' */
-export const singular = (val: string) =>
-	val.endsWith('s') && val.length > 3 ? val.slice(0, -1) : val;
+export const singular = <T extends string>(val: T): SingularUnit<T> =>
+	(val.endsWith('s') && val.length > 3 ? val.slice(0, -1) : val) as any;
 
 /**
  * make an Object's values into a Template Literals, and evaluate

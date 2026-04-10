@@ -4,7 +4,7 @@ import { secure } from '#library/utility.library.js';
 import { type Tempo } from '../tempo.class.js';
 import { SCHEMA, getLargestUnit } from '../tempo.util.js';
 import { sortKey, byKey } from '#library/array.library.js';
-import { $Register, $Plugins, isTempo } from '../tempo.symbol.js';
+import { $Register, $Plugins, isTempo, $Interpreter } from '../tempo.symbol.js';
 import type { TermPlugin, Range, ResolvedRange, Plugin, Extension } from './plugin.type.js';
 
 /** 
@@ -33,6 +33,21 @@ export const defineModule = <T extends Plugin>(module: T): T => {
 	registerPlugin(module);
 	return module;
 }
+
+/**
+ * ## defineInterpreterModule
+ * Used to register a module that attaches methods to the Tempo $Interpreter registry.
+ */
+export const defineInterpreterModule = (name: string, logic: Function) =>
+	defineModule((options: any, TempoClass: any) => {
+		TempoClass[$Interpreter] ??= {};
+
+		if (isDefined(TempoClass[$Interpreter][name]) && TempoClass[$Interpreter][name] !== logic) {
+			throw new Error(`Tempo Interpreter Module clash: '${name}' logic is already defined.`);
+		}
+
+		TempoClass[$Interpreter][name] = logic;
+	});
 
 /**
  * ## defineExtension
