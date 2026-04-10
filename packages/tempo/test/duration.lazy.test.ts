@@ -1,9 +1,9 @@
-import { Tempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo/core';
 
 describe('Tempo Duration Plugin (Lazy)', () => {
 	it('should throw "plugin not loaded" by default', () => {
 		const t = new Tempo('2024-01-01');
-		expect(() => t.until('2024-01-02')).toThrow('Duration plugin not loaded');
+		expect(() => t.until('2024-01-02')).toThrow('Tempo: duration plugin not loaded');
 	});
 
 	it('should work after importing the plugin', async () => {

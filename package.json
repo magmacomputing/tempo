@@ -11,7 +11,7 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "npm run test --workspaces --if-present",
+    "test": "vitest run",
     "build:tempo": "npm run build --workspace=@magmacomputing/tempo",
     "build:library": "npm run build --workspace=@magmacomputing/library",
     "clean": "tsc -b --clean",

@@ -52,6 +52,10 @@
       "default": "./dist/plugins/term/term.*.js"
     },
     "#tempo/scripts/*.js": "./scripts/*.ts",
+    "#tempo/tempo.class.js": {
+      "development": "./src/tempo.index.ts",
+      "default": "./dist/tempo.index.js"
+    },
     "#tempo/*.js": {
       "development": "./src/*.ts",
       "default": "./dist/*.js"
@@ -104,9 +108,9 @@
     }
   },
   "scripts": {
-    "test": "vitest run",
-    "repl": "tsx --conditions=development -i --import ./scripts/setup.ts --import ./scripts/repl.ts",
-    "core": "tsx --conditions=development -i --import ./scripts/setup.ts --import ./scripts/core.ts",
+    "test": "vitest run --workspace ../../vitest.workspace.ts",
+    "repl": "tsx --conditions=development -i --import ./scripts/setup.full.ts --import ./scripts/repl.ts",
+    "core": "tsx --conditions=development -i --import ./scripts/setup.core.ts --import ./scripts/core.ts",
     "build": "tsc -b && npm run build:bundle && npm run build:resolve",
     "build:bundle": "rollup -c",
     "build:resolve": "tsx scripts/resolve-types.ts",

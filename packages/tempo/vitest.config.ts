@@ -8,7 +8,6 @@ export default defineConfig({
   plugins: [],
   test: {
     globals: true,
-    setupFiles: [resolve(__dirname, './scripts/setup.ts')],
     pool: 'forks',                                          // isolated child processes (no shared memory)
     poolOptions: {
       forks: {
@@ -19,7 +18,7 @@ export default defineConfig({
   },
   resolve: {
     alias: [
-      { find: /^#tempo\/tempo\.class\.js$/, replacement: resolve(__dirname, './src/tempo.class.ts') },
+      { find: /^#tempo\/tempo\.class\.js$/, replacement: resolve(__dirname, './src/tempo.index.ts') },
       { find: /^#tempo\/scripts\/(.*)\.js$/, replacement: resolve(__dirname, './scripts/$1.ts') },
       { find: /^#tempo\/plugins\/plugin\.util\.js$/, replacement: resolve(__dirname, './src/plugins/plugin.util.ts') },
       { find: /^#tempo\/plugins\/plugin\.type\.js$/, replacement: resolve(__dirname, './src/plugins/plugin.type.ts') },
