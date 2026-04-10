@@ -1,4 +1,4 @@
-import { Tempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo';
 
 describe('Soft-Freeze & Term Resolution Verification', () => {
     it('should block mutation on t.term (Hard-Freeze)', () => {

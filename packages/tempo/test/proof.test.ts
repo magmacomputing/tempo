@@ -1,4 +1,4 @@
-import { Tempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo';
 
 describe('Proof: Enumerable + Silent Mode', () => {
 	it('should trigger getters during object inspection (enumerable: true)', () => {

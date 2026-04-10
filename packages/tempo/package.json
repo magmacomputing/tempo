@@ -31,25 +31,21 @@
       "development": "./src/tempo.index.ts",
       "default": "./dist/tempo.index.js"
     },
-    "#tempo/plugins/plugin.util.js": {
-      "development": "./src/plugins/plugin.util.ts",
-      "default": "./dist/plugins/plugin.util.js"
-    },
-    "#tempo/plugins/plugin.type.js": {
-      "development": "./src/plugins/plugin.type.ts",
-      "default": "./dist/plugins/plugin.type.js"
-    },
     "#tempo/plugins/plugin.*.js": {
-      "development": "./src/plugins/extend/plugin.*.ts",
-      "default": "./dist/plugins/extend/plugin.*.js"
+      "development": "./src/plugins/plugin.*.ts",
+      "default": "./dist/plugins/plugin.*.js"
     },
-    "#tempo/plugins/term/term.*.js": {
+    "#tempo/plugins/extend.*.js": {
+      "development": "./src/plugins/extend/extend.*.ts",
+      "default": "./dist/plugins/extend/extend.*.js"
+    },
+    "#tempo/plugins/module.*.js": {
+      "development": "./src/plugins/module/module.*.ts",
+      "default": "./dist/plugins/module/module.*.js"
+    },
+    "#tempo/plugins/term.*.js": {
       "development": "./src/plugins/term/term.*.ts",
       "default": "./dist/plugins/term/term.*.js"
-    },
-    "#tempo/plugins/term/index.js": {
-      "development": "./src/plugins/term/index.ts",
-      "default": "./dist/plugins/term/index.js"
     },
     "#tempo/scripts/*.js": "./scripts/*.ts",
     "#tempo/*.js": {
@@ -66,21 +62,37 @@
       "types": "./dist/tempo.enum.d.ts",
       "import": "./dist/tempo.enum.js"
     },
-    "./plugins": {
-      "types": "./dist/plugins/tempo.plugin.d.ts",
-      "import": "./dist/plugins/tempo.plugin.js"
+    "./extend/*": {
+      "types": "./dist/plugins/extend/extend.*.d.ts",
+      "import": "./dist/plugins/extend/extend.*.js"
     },
-    "./plugins/ticker": {
-      "types": "./dist/plugins/extend/plugin.ticker.d.ts",
-      "import": "./dist/plugins/extend/plugin.ticker.js"
+    "./module/*": {
+      "types": "./dist/plugins/module/module.*.d.ts",
+      "import": "./dist/plugins/module/module.*.js"
     },
-    "./plugins/plugin.*": {
-      "types": "./dist/plugins/extend/plugin.*.d.ts",
-      "import": "./dist/plugins/extend/plugin.*.js"
+    "./term/*": {
+      "types": "./dist/plugins/term/term.*.d.ts",
+      "import": "./dist/plugins/term/term.*.js"
+    },
+    "./plugins/*": {
+      "types": "./dist/plugins/*.d.ts",
+      "import": "./dist/plugins/*.js"
+    },
+    "./ticker": {
+      "types": "./dist/plugins/extend/extend.ticker.d.ts",
+      "import": "./dist/plugins/extend/extend.ticker.js"
+    },
+    "./duration": {
+      "types": "./dist/plugins/module/module.duration.d.ts",
+      "import": "./dist/plugins/module/module.duration.js"
     },
     "./library": {
       "types": "./dist/library.index.d.ts",
       "import": "./dist/library.index.js"
+    },
+    "./core": {
+      "types": "./dist/tempo.core.d.ts",
+      "import": "./dist/tempo.core.js"
     }
   },
   "scripts": {

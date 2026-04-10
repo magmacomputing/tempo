@@ -1,7 +1,7 @@
 import { defineTerm, getTermRange, defineRange, resolveCycleWindow } from '../plugin.util.js';
-import { isTempo } from '#tempo/tempo.symbol.js';
-import { COMPASS } from '#tempo/tempo.enum.js';
-import { type Tempo } from '#tempo/tempo.class.js';
+import { isTempo } from '../../tempo.symbol.js';
+import { COMPASS } from '../../tempo.enum.js';
+import { type Tempo } from '../../tempo.class.js';
 import { isNumber } from '#library/type.library.js';
 import { asArray } from '#library';
 

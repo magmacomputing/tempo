@@ -1,9 +1,8 @@
-import { Tempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo';
 import { QuarterTerm } from '#tempo/plugins/term/term.quarter.js';
 
 describe('Debug QuarterTerm', () => {
 	it('should have a resolve method', () => {
-		console.log('QuarterTerm keys:', Object.keys(QuarterTerm));
 		expect(typeof QuarterTerm.resolve).toBe('function');
 	});
 
@@ -22,7 +21,6 @@ describe('Debug QuarterTerm', () => {
 	it('should be found in Tempo.#terms', () => {
 		// @ts-ignore
 		const term = Tempo.terms.find(t => t.scope === 'quarter');
-		console.log('Term found:', term?.key);
 		expect(term).toBeDefined();
 	});
 });

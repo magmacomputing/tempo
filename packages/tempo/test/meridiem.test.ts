@@ -1,4 +1,4 @@
-import { Tempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo';
 
 describe('Meridiem (AM/PM) parsing and formatting', () => {
 

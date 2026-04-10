@@ -62,3 +62,15 @@ export type ResolvedRange = Range & {
  * extend the functionality of the Tempo class.
  */
 export type Plugin = (options: any, TempoClass: typeof Tempo, factory: (val: any) => Tempo) => void;
+
+/**
+ * ## Module
+ * Internal extensions to the Tempo class (same signature as Plugin).
+ */
+export type Module = Plugin;
+
+/**
+ * ## Extension
+ * Class-augmenting extensions to the Tempo class (same signature as Plugin).
+ */
+export type Extension = Plugin;

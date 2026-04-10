@@ -1,4 +1,4 @@
-import { Tempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo';
 import { Token } from '#tempo/tempo.default.js';
 
 describe('Tempo.regexp', () => {

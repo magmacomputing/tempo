@@ -1,5 +1,5 @@
-import { Tempo } from '#tempo/tempo.class.js';
-import '#tempo/plugins/extend/plugin.ticker.js';
+import { Tempo } from '#tempo';
+import '#tempo/plugins/extend/extend.ticker.js';
 
 describe('Error Handling stabilization', () => {
 	it('should throw an error for invalid ticker interval by default', () => {

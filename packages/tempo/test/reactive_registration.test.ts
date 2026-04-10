@@ -1,4 +1,4 @@
-import { Tempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo';
 import type { Plugin } from '#tempo/tempo.type.js';
 
 describe('Tempo Reactive Registration', () => {

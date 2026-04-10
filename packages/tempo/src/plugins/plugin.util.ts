@@ -5,7 +5,7 @@ import { type Tempo } from '../tempo.class.js';
 import { SCHEMA, getLargestUnit } from '../tempo.util.js';
 import { sortKey, byKey } from '#library/array.library.js';
 import { $Register, $Plugins, isTempo } from '../tempo.symbol.js';
-import type { TermPlugin, Range, ResolvedRange, Plugin } from './plugin.type.js';
+import type { TermPlugin, Range, ResolvedRange, Plugin, Extension } from './plugin.type.js';
 
 /** 
  * # REGISTRY
@@ -13,7 +13,7 @@ import type { TermPlugin, Range, ResolvedRange, Plugin } from './plugin.type.js'
  */
 export const REGISTRY = {
 	terms: [] as TermPlugin[],
-	plugins: [] as any[]
+	extends: [] as Extension[]
 }
 
 /**
@@ -26,12 +26,21 @@ export const defineTerm = <T extends TermPlugin>(term: T): T => {
 }
 
 /**
- * ## definePlugin
- * Used to register a non-Term based plugin.
+ * ## defineModule
+ * Used to register an internal modularization component.
  */
-export const definePlugin = <T extends Plugin>(plugin: T): T => {
-	registerPlugin(plugin);
-	return plugin;
+export const defineModule = <T extends Plugin>(module: T): T => {
+	registerPlugin(module);
+	return module;
+}
+
+/**
+ * ## defineExtension
+ * Used to register a class-augmenting extension.
+ */
+export const defineExtension = <T extends Plugin>(extension: T): T => {
+	registerPlugin(extension);
+	return extension;
 }
 
 /**
@@ -269,8 +278,8 @@ export function registerPlugin(plugin: any) {
 		db.plugins.push(plugin);
 	}
 
-	if (!REGISTRY.plugins.includes(plugin)) {
-		REGISTRY.plugins.push(plugin);
+	if (!REGISTRY.extends.includes(plugin)) {
+		REGISTRY.extends.push(plugin);
 	}
 
 	(globalThis as any)[$Register]?.(plugin);

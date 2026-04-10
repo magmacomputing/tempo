@@ -1,5 +1,5 @@
 import { getType } from '#library/type.library.js'
-import { Tempo } from '#tempo/tempo.class.js'
+import { Tempo } from '#tempo'
 import { isTempo } from '#tempo/tempo.symbol.js';
 
 describe('Tempo Initialization Hang Repro', () => {

@@ -1,5 +1,5 @@
 import { Tempo } from '../src/tempo.class.js';
-import '../src/plugins/term/index.js';
+import '../src/plugins/term/term.index.js';
 
 describe('Fiscal Cycle Wrap-around', () => {
 	it('should resolve Southern Hemisphere Q4 for April anchor', () => {

@@ -1,5 +1,5 @@
-import { Tempo } from '#tempo/tempo.class.js';
-import { Ticker } from '#tempo/plugins/plugin.ticker.js';
+import { Tempo } from '#tempo';
+import { Ticker } from '#tempo/plugins/extend/extend.ticker.js';
 
 describe('Ticker Management (Static Registry)', () => {
 

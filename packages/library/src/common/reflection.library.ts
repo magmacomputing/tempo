@@ -139,3 +139,29 @@ const ownAccessors = (obj: any = {}, type: 'get' | 'set') => {
 		.filter(([_, descriptor]) => isFunction(descriptor[type]))
 		.map(([key, _]) => key)
 }
+
+/**
+ * Define a lazy method on a prototype that reifies itself upon first access.  
+ * This allows heavy logic to be deferred (or even loaded via plugin)  
+ * while maintaining a clean, synchronous public API.
+ */
+export function lazyMethod<T extends object>(target: T, key: PropertyKey, factory: (this: T) => Function) {
+	Object.defineProperty(target, key, {
+		configurable: true,
+		enumerable: false,																			// methods are usually non-enumerable
+		get() {
+			const impl = factory.call(this);
+
+			if (Reflect.isExtensible(this)) {
+				Object.defineProperty(this, key, {									// reify on the instance (shadowing prototype)
+					value: impl,
+					writable: true,
+					configurable: true,
+					enumerable: false
+				});
+			}
+
+			return impl;
+		}
+	});
+}

@@ -4,11 +4,11 @@ import { asArray, isNumeric } from '#library/coercion.library.js'
 import { instant, normaliseFractionalDurations } from '#library/temporal.library.js'
 import { markConfig } from '#library/symbol.library.js'
 
-import { DURATIONS } from '#tempo/tempo.enum.js'
-import { definePlugin } from '#tempo/plugins/plugin.util.js'
-import type { Tempo } from '#tempo/tempo.class.js'
+import { DURATIONS } from '../../tempo.enum.js'
+import { defineExtension } from '../plugin.util.js'
+import type { Tempo } from '../../tempo.class.js'
 
-declare module '#tempo/tempo.class.js' {
+declare module '../../tempo.class.js' {
 	namespace Tempo {
 		const tickers: Ticker.Snapshot[]
 		function ticker(interval?: Ticker.Interval): Ticker.Instance;
@@ -330,9 +330,9 @@ class TickerInstance implements Ticker.Descriptor {
 }
 
 /**
- * # TickerPlugin
+ * # TickerExtension
  */
-export const TickerPlugin = definePlugin((_options, TempoClass, _factory) => {
+export const TickerExtension: Tempo.Extension = defineExtension((_options, TempoClass, _factory) => {
 	(TempoClass as any).ticker = function (this: typeof Tempo, arg1: any, arg2?: any): Ticker.Instance {
 		const instance = new TickerInstance(this, arg1, arg2);
 		const proxy = new Proxy((() => instance.stop()) as any, {

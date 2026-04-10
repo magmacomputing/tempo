@@ -1,4 +1,4 @@
-import { Tempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo';
 
 describe('Bracket Regex Fix', () => {
   it('should correctly parse timezone and calendar from multiple brackets', () => {

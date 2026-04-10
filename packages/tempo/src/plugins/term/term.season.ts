@@ -1,7 +1,7 @@
 import { getTermRange, defineTerm, defineRange, resolveCycleWindow } from '../plugin.util.js';
-import { COMPASS } from '#tempo/tempo.enum.js';
-import { type Tempo } from '#tempo/tempo.class.js';
-import { isTempo } from '#tempo/tempo.symbol.js';
+import { COMPASS } from '../../tempo.enum.js';
+import { type Tempo } from '../../tempo.class.js';
+import { isTempo } from '../../tempo.symbol.js';
 
 /** definition of fiscal season ranges */
 const groups = defineRange([

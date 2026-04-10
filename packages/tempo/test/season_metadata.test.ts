@@ -1,4 +1,4 @@
-import { Tempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo';
 
 describe('Season Metadata Resolution', () => {
     it('should resolve meteorological seasons and Chinese trait metadata', () => {

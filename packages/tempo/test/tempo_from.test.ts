@@ -1,4 +1,4 @@
-import { Tempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo';
 
 describe('Tempo.from() static method', () => {
 	it('should create an instance of Tempo from no arguments (now)', () => {

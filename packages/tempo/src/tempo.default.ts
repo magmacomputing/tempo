@@ -1,8 +1,9 @@
 import { looseIndex } from '#library/object.library.js';
 import { secure } from '#library/utility.library.js';
 import { proxify } from '#library/proxy.library.js';
-import { NUMBER, MODE } from '#tempo/tempo.enum.js';
-import type { Options } from '#tempo/tempo.type.js';
+import { NUMBER, MODE } from './tempo.enum.js';
+import type { Options } from './tempo.type.js';
+import type { Tempo } from '#tempo';
 
 // BE VERY CAREFUL NOT TO BREAK THE REGEXP PATTERNS BELOW
 // TEMPO functionality heavily depends on these patterns
@@ -137,10 +138,13 @@ export const Event = looseIndex<string, string | Function>()({
 	'christmas': '25 Dec',
 	'xmas ?eve': '24 Dec',
 	'xmas': '25 Dec',
-	'now': function (this: any) { return this },										// this instance
-	'today': function (this: any) { return this },										// today at current time
-	'tomorrow': function (this: any) { return this.add({ days: 1 }) },	// tomorrow at current time
-	'yesterday': function (this: any) { return this.add({ days: -1 }) },// yesterday at current time
+	'now': function (this: Tempo) { return this.toNow() },
+	'today': function (this: Tempo) {
+		const { year, month, day } = this.toNow();
+		return this.toDateTime().with({ year, month, day })
+	},
+	'tomorrow': function (this: Tempo) { return this.add({ days: 1 }) },		// tomorrow at current time
+	'yesterday': function (this: Tempo) { return this.add({ days: -1 }) },	// yesterday at current time
 });
 export type Event = typeof Event
 

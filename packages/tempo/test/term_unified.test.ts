@@ -1,4 +1,4 @@
-import { Tempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo';
 
 describe('Term Unified Logic (Mutation & Identity)', () => {
 	// 2024-05-15 is in Q2 (Apr-Jun) in Northern hemisphere

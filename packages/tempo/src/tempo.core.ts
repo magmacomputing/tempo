@@ -1,13 +1,5 @@
-import { Tempo } from './tempo.class.js';
-import { registerTerms } from './plugins/term/term.index.js';
-import './plugins/module/module.duration.js';
-import './plugins/extend/extend.ticker.js';
-
-// Batteries Included: Register standard terms on the Tempo class
-Tempo.extend(registerTerms);
-
 export * from './tempo.class.js';
-export { default as enums } from './tempo.enum.js';         // Tempo enumerators
+export { default as enums } from './tempo.enum.js';
 
 // export items specifically from #library if they are required in the Tempo API
 export { enumify } from '#library/enumerate.library.js';

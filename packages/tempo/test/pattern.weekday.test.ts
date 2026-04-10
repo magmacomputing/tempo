@@ -1,4 +1,4 @@
-import { Tempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo';
 
 const label = 'pattern.weekday:';
 const Wed = Tempo.WEEKDAY.Wed, Sun = Tempo.WEEKDAY.Sun;

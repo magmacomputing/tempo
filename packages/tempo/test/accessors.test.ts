@@ -1,4 +1,4 @@
-import { Tempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo';
 
 const label = 'accessors:';
 const date = new Date();
@@ -8,7 +8,6 @@ const tempo = new Tempo();
  * Test the Tempo accessors
 */
 describe(`${label}`, () => {
-  // console.log('Date:\t\t\t%s\nInstant:\t\t%s\nZonedDateTime:\t\t%s', date, tempo.toInstant().toString({ timeZone: 'UTC' }), tempo.toString());
 
   test(`${label} get the right day-of-week (${date.getDay()})`, () => {
     const dow = date.getDay() || 7;

@@ -11,7 +11,7 @@ import * as enums from '#tempo/tempo.enum.js';
 import { $Tempo, $Plugins, $Register } from '#tempo/tempo.symbol.js';
 import type { Snippet, Layout, Event, Period, Token } from '#tempo/tempo.default.js';
 import type { IntRange, NonOptional, Property, Plural, Prettify, TemporalObject, TypeValue } from '#library/type.library.js';
-import type { Range, TermPlugin, ResolvedRange, Plugin, Terms } from './plugins/plugin.type.js';
+import type { Range, TermPlugin, ResolvedRange, Plugin, Terms, Module, Extension } from './plugins/plugin.type.js';
 
 /**
  * Structural forward-reference to the Tempo class.
@@ -50,7 +50,7 @@ export type Options = Prettify<{ [K in keyof Internal.BaseOptions]?: Internal.Ba
  * Every attempt to resolve an input to a Tempo should always be checked with .isValid before continuing.
  * Otherwise unpredictable behaviour is likely.
  */
-export type { Plugin };
+export type { Plugin, Module, Extension };
 
 /** Configuration to use for #until() and #since() argument */
 export type DateTimeUnit = Temporal.DateUnit | Temporal.TimeUnit
@@ -202,7 +202,7 @@ export namespace Internal {
 		/** Map of regex-patterns to match input-string */			pattern: Registry;
 		/** configured Events */																event: Event;
 		/** configured Periods */																period: Period;
-		/** pivot year for two-digit years */										pivot?: number;
+		/** pivot year for two-digit years */										pivot: number;
 		/** parsing match result */															result: Match[];
 		/** was this a nested/anchored parse? */								isAnchored?: boolean;
 		/** initialization strategy ('auto'|'strict'|'defer') */mode: enums.MODE;

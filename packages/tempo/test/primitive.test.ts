@@ -1,5 +1,5 @@
 import { stringify, objectify } from '#library/serialize.library.js';
-import { Tempo } from '#tempo/tempo.class.js';
+import { Tempo } from '#tempo';
 
 describe('Tempo [Symbol.toPrimitive]', () => {
 	const iso = '2024-05-20T10:00:00Z';
