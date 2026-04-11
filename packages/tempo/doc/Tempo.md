@@ -23,13 +23,22 @@ This project came about due to the need for a simple, yet powerful, way to parse
 
 ### Browser (Import Maps)
 
-Tempo is an ESM-first library. You can use it in the browser without a build step using an `importmap`:
+Tempo is an ESM-first library. You can use it in the browser without a build step using a suggested `importmap`. We provide an [importmap.json](../importmap.json) artifact in the package root for automated tools, or you can cut-and-paste the following into your HTML:
 
 ```html
 <script type="importmap">
 {
   "imports": {
-    "@magmacomputing/tempo": "/path/to/tempo/dist/index.js"
+    "@magmacomputing/tempo": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/tempo.index.js",
+    "@magmacomputing/tempo/core": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/tempo.core.js",
+    "@magmacomputing/tempo/ticker": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/plugins/extend/extend.ticker.js",
+    "@magmacomputing/tempo/duration": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/plugins/module/module.duration.js",
+    "@magmacomputing/tempo/format": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/plugins/module/module.format.js",
+    "@magmacomputing/tempo/plugins": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/plugins/plugin.util.js",
+    "@magmacomputing/tempo/enums": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/tempo.enum.js",
+    "@magmacomputing/tempo/library": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/library.index.js",
+    "@magmacomputing/library": "https://cdn.jsdelivr.net/npm/@magmacomputing/library/dist/common/index.js",
+    "@js-temporal/polyfill": "https://cdn.jsdelivr.net/npm/@js-temporal/polyfill@0.4.4/dist/index.esm.min.js"
   }
 }
 </script>
@@ -292,7 +301,7 @@ To add a plugin, use the static `extend()` method.
 
 ```typescript
 import { Tempo } from '@magmacomputing/tempo';
-import { TickerPlugin } from '@magmacomputing/tempo/plugins/ticker';
+import { TickerPlugin } from '@magmacomputing/tempo/ticker';
 
 Tempo.extend(TickerPlugin);
 ```

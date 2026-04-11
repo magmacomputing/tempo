@@ -8,11 +8,11 @@ To use the ticker, simply import the plugin as a side effect or import the `Tick
 
 ```typescript
 // Pattern A: Pure side-effect (registers Tempo.ticker)
-import '@magmacomputing/tempo/plugins/ticker';
+import '@magmacomputing/tempo/ticker';
 import { Tempo } from '@magmacomputing/tempo';
 
 // Pattern B: Direct import (recommended if using Ticker.active)
-import { Ticker } from '@magmacomputing/tempo/plugins/ticker';
+import { Ticker } from '@magmacomputing/tempo/ticker';
 import { Tempo } from '@magmacomputing/tempo';
 
 // Ticker is now available via Tempo.ticker() in both patterns!
@@ -153,7 +153,7 @@ The `Ticker` class provides a centralized way to monitor all active (non-stopped
 A static getter that returns an array of snapshots for every live ticker.
 
 ```typescript
-import { Ticker } from '@magmacomputing/tempo/plugins/ticker';
+import { Ticker } from '@magmacomputing/tempo/ticker';
 
 // Monitor all active tickers
 const monitoring = Ticker.active;
@@ -222,7 +222,7 @@ The `Ticker` class maintains a static registry of all currently active tickers. 
 A static getter that returns an array of [`Ticker.Snapshot`](#tickersnapshot) objects for all active (non-stopped) tickers.
 
 ```typescript
-import { Ticker } from '@magmacomputing/tempo/plugins/ticker';
+import { Ticker } from '@magmacomputing/tempo/ticker';
 
 // Get a report of all running tickers
 const reports = Ticker.active;

@@ -102,7 +102,7 @@ export const defineInterpreterModule = (name: string, logic: any) =>
 		REGISTRY.modules[name] = logic;
 
 		// 2. Fallback for legacy class-local access
-		TempoClass[$Interpreter] ??= {};
+		TempoClass[$Interpreter] ??= secureRef({});
 		if (isDefined(TempoClass[$Interpreter][name]) && TempoClass[$Interpreter][name] !== logic) {
 			throw new Error(`Tempo Interpreter Module clash: '${name}' logic is already defined.`);
 		}
@@ -327,8 +327,11 @@ export function resolveCycleWindow(t: Tempo, template: Range[], anchor?: any) {
  * Registration hook for Term plugins.
  */
 export function registerTerm(term: TermPlugin) {
-	const db = (globalThis as any)[$Plugins] ??= {};
-	db.terms ??= [];
+	const db = (globalThis as any)[$Plugins] ??= secureRef({
+		terms: [] as TermPlugin[],
+		plugins: [] as Plugin[]
+	});
+	db.terms ??= secureRef([] as TermPlugin[]);
 
 	if (!db.terms.some((t: any) => t.key === term.key)) {
 		db.terms.push(term);
@@ -346,8 +349,11 @@ export function registerTerm(term: TermPlugin) {
  * Registration hook for general plugins.
  */
 export function registerPlugin(plugin: any) {
-	const db = (globalThis as any)[$Plugins] ??= {};
-	db.plugins ??= [];
+	const db = (globalThis as any)[$Plugins] ??= secureRef({
+		terms: [] as TermPlugin[],
+		plugins: [] as Plugin[]
+	});
+	db.plugins ??= secureRef([] as Plugin[]);
 
 	if (!db.plugins.includes(plugin)) {
 		db.plugins.push(plugin);

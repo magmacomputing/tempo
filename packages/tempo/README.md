@@ -9,39 +9,16 @@
 
 ## 🚀 Overview
 
-Working with dates in JavaScript has historically been painful. The new `Temporal` standard (Stage 4) fixes this, but it can be verbose and strict when parsing strings. 
+Working with `Date` in JavaScript has historically been painful. The new `Temporal` standard (Stage 4) fixes this, but it can be verbose and strict when parsing strings. 
 
 **Tempo** bridges that gap by providing:
 - **Flexible Parsing**: Interprets almost any date string, including relative ones like "next Friday".
+- **Natural Language**: Supports word-based numbers (0-10) in relative parsing (e.g., "two days ago").
 - **Fluent API**: Chainable methods for adding, subtracting, and setting date-times (similar to Moment.js).
 - **Formatting**: Use custom tokens to format date-times in a way that is both intuitive and flexible.
 - **Plugins**: Extend core functionality safely; built-ins (e.g., TickerPlugin) self-register on import (just import the module).
-- **Natural Language**: Supports word-based numbers (0-10) in relative parsing (e.g., "two days ago").
-- **Terms**: Access complex date ranges (Quarters, Seasons, Fiscal Years) easily.
+- **Terms**: Access complex date ranges (Quarters, Seasons, Zodiacs) easily.
 - **Immutable**: Operations (like `set` and `add`) return a new `Tempo` instance, ensuring thread safety and predictability.
-
-## ✨ New in v2.1.0
-
-Tempo v2.1.0 is a major milestone, delivering a more reactive architecture and rock-solid stability.
-
-- **Modular Architecture**: Tempo is now split into `core` and optional plugins/modules, allowing you to include only what you need.
-- **Improved Logging**: Internal logging uses context-aware Symbols for better decoupling.
-- **Static API**: `Tempo.duration()` static method for convenient duration creation.
-
-- **Side Effect Registration**: Plugins and Terms now support self-registration. Simply importing a plugin is now sufficient to extend the Tempo core automatically.
-- **100% Reliability**: The engine now passes all regression tests, ensuring complete stability across parsing, calculation, and formatting routines.
-- **Unified Term Logic**: Terms (like Quarters and Seasons) are now fully integrated. Use `#` in `set()` to jump to boundaries, and `{#term}` in `format()` to embed semantic labels (e.g. "Second Quarter") directly into strings.
-- **Relational Term Math**: A category-first feature. Shift dates by semantic "steps" with `.add({ '#quarter': 1 })`. Tempo preserves your relative duration within the term, jumping across gaps and handling overflows with mathematical precision.
-- **Fluent Immutable Boundaries**: Term ranges now return fully functional, frozen `Tempo` instances for `start` and `end`, allowing for seamless chaining like `t.term.qtr.start.format('{dd} {mmm}')`.
-- **Ticker Reliability**: Fully stabilized the Ticker subsystem by resolving async generator hangs and synchronizing pulse counts ($N$ pulses for `limit: N`), guaranteeing 100% predictable reactive streams.
-- **Parsing Engine Optimization**: Re-engineered pattern generation for $O(1)$ instance creation and improved support for custom layout literals in local/one-off parsers.
-- **Enhanced Parsing**: Significant refinements to the natural language engine for even more intuitive relative-date handling.
-## ⚠️ Migrating from v1.x
-
-Tempo v2.1.0 continues the architectural improvements started in v2.0:
-
-- **Modular Architecture**: Use optional modules for `duration` and `format` to keep your bundle lean.
-- **Automatic Registration**: Built-ins self-register on import (just import the module).
 
 ```javascript
 // v2.1.0 - Automatic registration via side-effect import
@@ -66,9 +43,9 @@ Tempo is built for **modern JavaScript developers** who require a premium, type-
 npm install @magmacomputing/tempo
 ```
 
-### 💻 Node.js (Server-Side)
+### 💻 Server (Node.js)
 Tempo is a native ESM package. In Node.js (20+), simply import the class.
-In Node.js:
+Node.js, Bun and Deno support native ESM out of the box.
 
 ```javascript
 import { Tempo } from '@magmacomputing/tempo';
@@ -130,6 +107,29 @@ console.log(now.fmt.date);                    // using pre-built formats: "2026-
 > [!IMPORTANT]
 > **Documentation Update**: We have been made aware that the documentation links between npmjs.com (the package host) and GitHub (the source repository) were broken a short while back. To overcome this, we have altered our Publish process to now include the doc/ subfolder (along with dist/ folder). We sincerely apologize for any past trouble and thank you for your support.
 
+## ✨ New in v2.1.0
+
+Tempo v2.1.0 is a major milestone, delivering a more reactive architecture and rock-solid stability.
+
+- **Modular Architecture**: Tempo is now split into `core` and optional plugins/modules, allowing you to include only what you need.
+- **Improved Logging**: Internal logging uses context-aware Symbols for better decoupling.
+- **Static API**: `Tempo.duration()` static method for convenient duration creation.
+
+- **Side Effect Registration**: Plugins and Terms now support self-registration. Simply importing a plugin is now sufficient to extend the Tempo core automatically.
+- **100% Reliability**: The engine passes all regression tests, ensuring complete stability across parsing, calculation, and formatting routines.
+- **Unified Term Logic**: Terms (like Quarters and Seasons) are now fully integrated. Use `#` in `set()` to jump to boundaries, and `{#term}` in `format()` to embed semantic labels (e.g. "Second Quarter") directly into strings.
+- **Relational Term Math**: A category-first feature. Shift dates by semantic "steps" with `.add({ '#quarter': 1 })`. Tempo preserves your relative duration within the term, jumping across gaps and handling overflows with mathematical precision.
+- **Fluent Immutable Boundaries**: Term ranges now return fully functional, frozen `Tempo` instances for `start` and `end`, allowing for seamless chaining like `t.term.qtr.start.format('{dd} {mmm}')`.
+- **Ticker Reliability**: Fully stabilized the Ticker subsystem by resolving async generator hangs and synchronizing pulse counts ($N$ pulses for `limit: N`), guaranteeing 100% predictable reactive streams.
+- **Parsing Engine Optimization**: Re-engineered pattern generation for $O(1)$ instance creation and improved support for custom layout literals in local/one-off parsers.
+- **Enhanced Parsing**: Significant refinements to the natural language engine for even more intuitive relative-date handling.
+## ⚠️ Migrating from v1.x
+
+Tempo v2.1.0 continues the architectural improvements started in v2.0:
+
+- **Modular Architecture**: Use optional modules for `duration` and `format` to keep your bundle lean.
+- **Automatic Registration**: Built-ins self-register on import (just import the module).
+
 For detailed technical guides, please refer to:
 - [Tempo Modularity](./doc/tempo.modularity.md) ([v2.1.0](https://github.com/magmacomputing/magma/blob/v2.1.0/packages/tempo/doc/tempo.modularity.md))
 - [Vision & Value Proposition](https://github.com/magmacomputing/magma/blob/v2.1.0/packages/tempo/doc/vision.md)
@@ -144,7 +144,7 @@ For detailed technical guides, please refer to:
 
 ## 💖 Support the Project
 
-If you find **Tempo** useful and want to support its development, please consider sponsoring me on GitHub! Your support helps keep the project active and premium.
+If you find **Tempo** useful and want to support its development, please consider sponsoring us on GitHub! Your support helps keep the project active and premium.
 
 [![GitHub Sponsors](https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?style=for-the-badge&logo=github-sponsors)](https://github.com/sponsors/magmacomputing)
 

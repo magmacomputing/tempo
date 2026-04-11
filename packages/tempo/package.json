@@ -82,6 +82,10 @@
       "types": "./dist/plugins/term/term.*.d.ts",
       "import": "./dist/plugins/term/term.*.js"
     },
+    "./plugins": {
+      "types": "./dist/plugins/plugin.util.d.ts",
+      "import": "./dist/plugins/plugin.util.js"
+    },
     "./plugins/*": {
       "types": "./dist/plugins/*.d.ts",
       "import": "./dist/plugins/*.js"

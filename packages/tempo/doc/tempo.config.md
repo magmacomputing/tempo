@@ -99,7 +99,7 @@ Tempo.init({
 | `sphere` | `'north' \| 'south'`| Auto-inferred (from timezones's daylight savings) Hemisphere for seasonal plugins. |
 | `debug` | `boolean` | `false` | Enables internal log tracking. |
 | `catch` | `boolean` | `false` | If true, invalid inputs return a Void instance. |
-| `lazy` | `boolean` | `false` | Defers registry evaluation until the first property access. |
+| `mode` | `'auto' \| 'strict' \| 'defer'` | `'auto'` | Controls the hydration strategy and parsing strictness. |
 | `silent` | `boolean` | `false` | Suppresses both `console.error` and `console.warn` output. When combined with `catch: true`, expected failures (like invalid date strings) produce no console output. |
 
 ---
@@ -134,22 +134,22 @@ Tempo.init({
 const delivery = new Tempo('deadline'); // Parsed using your custom logic
 ```
 
-### ⚡ 5b. Lazy Initialization (`lazy: true`)
+### ⚡ 5b. Deferring Initialization (`mode: 'defer'`)
 
-By default, Tempo creates the shadowing prototype chain for `#fmt` and `#term` at the moment of instantiation. For exceptionally high-volume scenarios where you may be creating thousands of Tempo instances but only using them for calculations (not formatting or terms), you can enable `lazy` initialization.
+By default (`mode: 'auto'`), Tempo uses the **Master Guard** to determine if a string can be lazily evaluated. For exceptionally high-volume scenarios where you may be creating thousands of Tempo instances but only using them for calculations (not formatting or terms), you can force a standard lazy behavior using `mode: 'defer'`.
 
-When `lazy: true` is set, the registry-discovery logic is deferred until the first time you access a property on `t.fmt` or `t.term`.
+When `mode: 'defer'` is set, the registry-discovery logic is deferred until the first time you access a property on `t.fmt` or `t.term`.
 
 ```javascript
 // Optimized for mass-creation
-const t = new Tempo('now', { lazy: true });
+const t = new Tempo('now', { mode: 'defer' });
 // No registries are built yet. The constructor returns in O(1) time.
 
-console.log(t.fmt.iso); // Discovery triggers NOW, only once.
+console.log(t.format('{yyyy}')); // Discovery triggers NOW, only once.
 ```
 
 > [!TIP]
-> **Zero-Cost Constructor**: Combining the **Master Guard** (automatic) and the **`lazy`** flag (optional) allows Tempo to satisfy the "Zero-Cost Constructor" requirement for mass-processing applications.
+> **Zero-Cost Constructor**: Combining the **Master Guard** (automatic) and the **`defer`** mode allows Tempo to satisfy the "Zero-Cost Constructor" requirement for mass-processing applications.
 
 ---
 

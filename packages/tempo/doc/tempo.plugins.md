@@ -78,7 +78,7 @@ declare module '@magmacomputing/tempo' {
 Modern Tempo plugins are designed to be "plug-and-play." By using the `definePlugin` factory, a plugin registers itself with the global Tempo registry as soon as it's imported.
 
 ```typescript
-import '@magmacomputing/tempo/plugins/ticker';
+import '@magmacomputing/tempo/ticker';
 import { Tempo } from '@magmacomputing/tempo';
 
 // Ticker is already available!

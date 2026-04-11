@@ -100,7 +100,7 @@ The **Guarded-Lazy** strategy ensures that even with hundreds of custom plugins,
 1.  **Length-Sorted Terms**: To prevent "partial matching" (e.g., matching `noon` inside `afternoon`), all registered terms are sorted by length (descending) before the Guard regex is built.
 2.  **Automated Escaping**: All custom terms are escaped to prevent regex injection or character collision.
 3.  **High-Speed Gatekeeper**: This single-pass $O(1)$ regex acts as the fast-fail gatekeeper.
-4.  **Auto-Lazy**: Valid inputs that pass the guard automatically switch the instance to `lazy: true` mode, deferring the $O(N)$ full-parse work until the first property access.
+4.  **Auto-Lazy**: Valid inputs that pass the guard automatically switch the instance to `mode: 'defer'` mode, deferring the $O(N)$ full-parse work until the first property access.
 
 ### 📈 Validation & Performance
 The efficiency of the Master Guard and the success of the Zero-Cost objective have been validated via local benchmarking:

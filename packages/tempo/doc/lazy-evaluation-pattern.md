@@ -4,7 +4,7 @@ When building complex JavaScript libraries (like date-time utilities), exposing 
 
 But what if the base object is strictly **immutable** (via `Object.freeze`)? 
 
-This article details a highly-optimized `O(1)` pattern for securely lazy-evaluating properties on immutable objects using prototype shadowing and private fields.
+This article details a highly-optimized $O(1)$ pattern for securely lazy-evaluating properties on immutable objects using prototype shadowing and private fields.
 
 ## The Problem: Mutating Frozen State
 
@@ -31,11 +31,11 @@ get: function () {
 }
 ```
 
-This operations runs in `O(N)` time (where `N` is the number of getters on the object) every single time *any* getter is accessed. In a hot loop, building and throwing away objects with dozens of descriptors wrecks memory (GC churn) and severely hits the CPU.
+This operations runs in $O(N)$ time (where $N$ is the number of getters on the object) every single time *any* getter is accessed. In a hot loop, building and throwing away objects with dozens of descriptors wrecks memory (GC churn) and severely hits the CPU.
 
 ## The Solution: Prototype Shadowing
 
-We can achieve lazy evaluation in `O(1)` time by swapping out `Object.defineProperty` for `Object.create()`.
+We can achieve lazy evaluation in $O(1)$ time by swapping out `Object.defineProperty` for `Object.create()`.
 
 ```javascript
 // The O(1) approach - Extremely fast, zero overhead

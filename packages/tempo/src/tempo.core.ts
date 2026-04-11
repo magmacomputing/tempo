@@ -5,6 +5,7 @@ export { default as enums } from './tempo.enum.js';
 export { enumify } from '#library/enumerate.library.js';
 export { stringify, objectify, cloneify } from '#library/serialize.library.js';
 export { getType } from '#library/type.library.js';
+export { Pledge } from '#library/pledge.class.js';
 
 // export common patterns and symbols for custom Layouts
 export { Token, Snippet, Match, Default } from './tempo.default.js';

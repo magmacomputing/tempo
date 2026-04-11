@@ -139,15 +139,15 @@ A term plugin is ideally created using the **`defineTerm`** factory function pro
 ### Plugin Definition
 
 ```ts
-import { defineTerm, defineRange, getTermRange, type Range, COMPASS } from '@magmacomputing/tempo/plugins';
-import type { Tempo } from '@magmacomputing/tempo';
+import { defineTerm, defineRange, getTermRange, type Range } from '@magmacomputing/tempo/plugins';
+import { enums, type Tempo } from '@magmacomputing/tempo';
 
 /** 1. The range boundaries (flattened and self-documenting) */
 const { ranges, groups } = defineRange([
-  { key: 'Spring', month: 3,  group: 'season', sphere: COMPASS.North },
-  { key: 'Summer', month: 6,  group: 'season', sphere: COMPASS.North },
-  { key: 'Autumn', month: 9,  group: 'season', sphere: COMPASS.North },
-  { key: 'Winter', month: 12, group: 'season', sphere: COMPASS.North },
+  { key: 'Spring', month: 3,  group: 'season', sphere: enums.COMPASS.North },
+  { key: 'Summer', month: 6,  group: 'season', sphere: enums.COMPASS.North },
+  { key: 'Autumn', month: 9,  group: 'season', sphere: enums.COMPASS.North },
+  { key: 'Winter', month: 12, group: 'season', sphere: enums.COMPASS.North },
   
   { key: 'Dry',    month: 1,  group: 'tropical' },
   { key: 'Wet',    month: 5,  group: 'tropical' },

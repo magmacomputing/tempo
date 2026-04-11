@@ -1,7 +1,7 @@
 import { $Target, $Inspect, $Discover } from '#library/symbol.library.js';
 import { allObject } from '#library/reflection.library.js';
 import { secure } from '#library/utility.library.js';
-import { isFunction, isSymbol, registerType, type Constructor, type Type } from '#library/type.library.js';
+import { isDefined, isFunction, isSymbol, registerType, type Constructor, type Type } from '#library/type.library.js';
 
 /** Stealth Proxy pattern to allow for iteration and logging over a Frozen object */
 export function proxify<T extends object>(target: T, frozen = true, lock = frozen) {
@@ -112,23 +112,29 @@ export function delegate<T extends object>(target: T, onGet: (key: string | symb
 	}) as T;
 }
 
+/** internal helper to check for array truncation attempts */
+const isTruncating = (t: any, k: PropertyKey, v: any) => Array.isArray(t) && k === 'length' && v < t.length;
+
+/** internal helper to verify that a mutation is safe (Closed for Modification, Open for Extension) */
+const assertSafe = (t: any, k: PropertyKey, v: any) => {
+	if (isTruncating(t, k, v)) throw new Error('Security: Truncation attempt on protected array.');
+	if (Array.isArray(t) && k === 'length') return;
+	if (Reflect.has(t, k)) throw new Error(`Security: Mutation attempt on protected key '${String(k)}'`);
+}
+
 /** 
- * # secureRef
+ * ## secureRef
  * Wrap an object or array in a protective Proxy that follows 'Closed for Modification, Open for Extension'.
  * Allows adding new properties/elements, but prevents overwriting or deleting existing ones.
  */
 export function secureRef<T extends object>(target: T): T {
 	return new Proxy(target, {
 		set(t, k, v) {
-			if (Reflect.has(t, k) && (k !== 'length')) {
-				throw new Error(`Security: Mutation attempt on protected key '${String(k)}'`);
-			}
+			assertSafe(t, k, v);
 			return Reflect.set(t, k, v);
 		},
 		defineProperty(t, k, d) {
-			if (Reflect.has(t, k) && (k !== 'length')) {
-				throw new Error(`Security: Mutation attempt on protected key '${String(k)}'`);
-			}
+			assertSafe(t, k, d.value);
 			return Reflect.defineProperty(t, k, d);
 		},
 		deleteProperty(t, k) {
