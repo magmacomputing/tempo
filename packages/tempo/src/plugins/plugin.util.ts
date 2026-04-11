@@ -1,5 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill';
-import { isDefined, isFunction } from '#library/type.library.js';
+import { isDefined, isFunction, isString } from '#library/type.library.js';
 import { secure } from '#library/utility.library.js';
 import { type Tempo } from '../tempo.class.js';
 import { SCHEMA, getLargestUnit } from '../tempo.util.js';
@@ -16,21 +16,37 @@ export const REGISTRY = {
 	extends: [] as Extension[]
 }
 
+/** internal helper to resolve the class-host from either an instance or the class itself */
+function getHost(t: any): any {
+	const $T = Symbol.for('$Target');
+	const isFn = typeof t === 'function';
+	if (isFn) return t?.[$T] ?? t;
+	const host = (t as any)?.constructor ?? (isDefined(t) ? Reflect.get(Object(t), 'constructor') : Object);
+	const target = host?.[$T] ?? host;
+	return typeof target === 'function' ? target : Object;
+}
+
 /**
  * ## interpret
  * Utility to safely delegate calls to the Tempo Interpreter with catch-support.
  */
-export function interpret(t: any, module: string, fallback?: any, ...args: any[]) {
-	const logic = (t.constructor as any)[$Interpreter]?.[module];
+export function interpret(t: any, module: string, methodOrFallback?: any, ...args: any[]) {
+	const host = getHost(t);
+	const hostLogic = host[$Interpreter]?.[module];
 
 	try {
-		if (!isFunction(logic)) throw new Error(`${module} plugin not loaded`);
+		if (!isFunction(hostLogic)) throw new Error(`${module} plugin not loaded`);
+
+		// Resolve the specific logic (either the module itself or a sub-method)
+		const logic = isString(methodOrFallback) ? hostLogic[methodOrFallback] : hostLogic;
+		if (!isFunction(logic)) throw new Error(`${module} ${methodOrFallback} method not loaded`);
+
 		return logic.apply(t, args);
 	} catch (err) {
-		t.constructor[$logError](t.config, err);
+		host[$logError](t.config, err);
 	}
 
-	return (isFunction(fallback) ? fallback() : fallback);
+	return (isFunction(methodOrFallback) ? methodOrFallback() : undefined);
 }
 
 /**
