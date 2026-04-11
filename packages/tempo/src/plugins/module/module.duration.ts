@@ -23,6 +23,20 @@ declare module '../../tempo.class.js' {
 }
 
 /**
+ * Convert a Temporal.Duration to a full Tempo.Duration object (EDO).
+ */
+function toDuration(dur: Temporal.Duration): Tempo.Duration {
+	return getAccessors(dur)
+		.reduce((acc, d) => Object.assign(acc, ifDefined({ [d]: (dur as any)[d] })),
+			{
+				iso: dur.toString(),
+				sign: dur.sign,
+				blank: dur.blank,
+				unit: undefined
+			} as Tempo.Duration);
+}
+
+/**
  * Internal implementation of Tempo.until and Tempo.since  
  * (moved out of tempo.class.ts to reduce core bundle size)
  */
@@ -76,9 +90,8 @@ function duration(this: Tempo, type: 'until' | 'since', arg?: any, until?: any) 
 		unit = `${singular(unit)}s`;
 
 	if (isUndefined(unit) || since) {
-		const res = getAccessors(dur)
-			.reduce((acc, d) => Object.assign(acc, ifDefined({ [d]: (dur as any)[d] })),
-				{ iso: dur.toString(), unit } as Record<string, any>);
+		const res = toDuration(dur);
+		if (unit) res.unit = unit;
 
 		if (!since) return res;
 
@@ -111,6 +124,16 @@ function duration(this: Tempo, type: 'until' | 'since', arg?: any, until?: any) 
 	}
 
 	return dur.total({ relativeTo: selfZdt, unit });
+}
+
+/** 
+ * Bi-directional conversion utility for ISO Durations.
+ * string -> EDO
+ * DurationLikeObject -> EDO (with iso string)
+ */
+duration.toDuration = (input: string | Temporal.DurationLikeObject) => {
+	const dur = Temporal.Duration.from(input);
+	return toDuration(dur);
 }
 
 /**

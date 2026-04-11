@@ -723,6 +723,11 @@ export class Tempo {
 		return this
 	}
 
+	/** returns a full Tempo Duration object (EDO) for the given input */
+	static duration(input: any): Tempo.Duration {
+		return interpret(Tempo, 'duration', 'toDuration', input);
+	}
+
 	/** Reads options from persistent storage (e.g., localStorage). */
 	static readStore(key = Tempo.#global.config.store) {
 		return getStorage<Tempo.Options>(key, {});
