@@ -22,6 +22,7 @@ import type { Tempo } from '#tempo/tempo.class.js';
 declare module '#library/type.library.js' {
 	interface TypeValueMap<T> {
 		Tempo: { type: 'Tempo', value: Tempo };
+		'Tempo.Duration': { type: 'Tempo.Duration', value: Duration };
 	}
 }
 

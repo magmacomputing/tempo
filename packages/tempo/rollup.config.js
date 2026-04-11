@@ -24,7 +24,7 @@ export default {
 			file: 'dist/tempo.bundle.js',
 			format: 'umd',
 			name: 'Tempo',
-			sourcemap: true,
+			sourcemap: false,
 			indent: '\t',
 			globals: {
 				'@js-temporal/polyfill': 'TemporalLibrary'
@@ -35,7 +35,7 @@ export default {
 			format: 'es',
 			preserveModules: true,
 			preserveModulesRoot: 'dist',
-			sourcemap: true,
+			sourcemap: false,
 			indent: '\t',
 			entryFileNames: (chunkInfo) => getOutputFileName(chunkInfo.facadeModuleId, chunkInfo.name)
 		}

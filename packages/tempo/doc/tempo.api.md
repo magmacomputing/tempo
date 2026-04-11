@@ -34,6 +34,11 @@ Creates a new `Tempo` instance. A static alternative to `new Tempo()`.
 Compares two `Tempo` instances or date-time values for sorting.
 - **Returns:** `-1` (smaller), `0` (equal), or `1` (larger).
 
+### `Tempo.duration(input)`
+(Plugin required) Creates a full Tempo Duration object (EDO) from an ISO string or DurationLike object.
+- **Returns:** `Tempo.Duration`
+- **Example:** `Tempo.duration('P1Y')` or `Tempo.duration({ months: 2 })`
+
 
 ### `Tempo.now()`
 Returns the current Unix epoch in nanoseconds as a `BigInt`.
