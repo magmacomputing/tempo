@@ -112,3 +112,27 @@ export function delegate<T extends object>(target: T, onGet: (key: string | symb
 	}) as T;
 }
 
+/** 
+ * # secureRef
+ * Wrap an object or array in a protective Proxy that follows 'Closed for Modification, Open for Extension'.
+ * Allows adding new properties/elements, but prevents overwriting or deleting existing ones.
+ */
+export function secureRef<T extends object>(target: T): T {
+	return new Proxy(target, {
+		set(t, k, v) {
+			if (Reflect.has(t, k) && (k !== 'length')) {
+				throw new Error(`Security: Mutation attempt on protected key '${String(k)}'`);
+			}
+			return Reflect.set(t, k, v);
+		},
+		defineProperty(t, k, d) {
+			if (Reflect.has(t, k) && (k !== 'length')) {
+				throw new Error(`Security: Mutation attempt on protected key '${String(k)}'`);
+			}
+			return Reflect.defineProperty(t, k, d);
+		},
+		deleteProperty(t, k) {
+			throw new Error(`Security: Deletion attempt on protected key '${String(k)}'`);
+		}
+	});
+}

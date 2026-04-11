@@ -1,20 +1,42 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { isDefined, isFunction, isString } from '#library/type.library.js';
 import { secure } from '#library/utility.library.js';
-import { type Tempo } from '../tempo.class.js';
 import { SCHEMA, getLargestUnit } from '../tempo.util.js';
 import { sortKey, byKey } from '#library/array.library.js';
 import { $Register, $Plugins, isTempo, $Interpreter, $logError, $logDebug } from '../tempo.symbol.js';
+import { secureRef } from '#library/proxy.library.js';
+import type { Tempo } from '../tempo.class.js';
 import type { TermPlugin, Range, ResolvedRange, Plugin, Extension } from './plugin.type.js';
+
+const _REGISTRY = {
+	terms: secureRef([] as TermPlugin[]),
+	extends: secureRef([] as Extension[]),
+	modules: secureRef({} as Record<string, any>)
+}
 
 /** 
  * # REGISTRY
  * Internal registry for registered components.
+ * Closed for modification, Open for extension.
  */
-export const REGISTRY = {
-	terms: [] as TermPlugin[],
-	extends: [] as Extension[]
-}
+export const REGISTRY = new Proxy(_REGISTRY, {
+	get: (t, k) => Reflect.get(t, k),
+	set: (t, k, v) => {
+		if (Object.hasOwn(t, k)) {
+			throw new Error(`Tempo Security: Mutation attempt on protected registry key '${String(k)}'`);
+		}
+		return Reflect.set(t, k, v);
+	},
+	defineProperty: (t, k, d) => {
+		if (Object.hasOwn(t, k)) {
+			throw new Error(`Tempo Security: Mutation attempt on protected registry key '${String(k)}'`);
+		}
+		return Reflect.defineProperty(t, k, d);
+	},
+	deleteProperty: () => {
+		throw new Error(`Tempo Security: Deletion attempt on protected registry.`);
+	}
+});
 
 /** internal helper to resolve the class-host from either an instance or the class itself */
 function getHost(t: any): any {
@@ -32,7 +54,7 @@ function getHost(t: any): any {
  */
 export function interpret(t: any, module: string, methodOrFallback?: any, ...args: any[]) {
 	const host = getHost(t);
-	const hostLogic = host[$Interpreter]?.[module];
+	const hostLogic = REGISTRY.modules[module] ?? host[$Interpreter]?.[module];
 
 	try {
 		if (!isFunction(hostLogic)) throw new Error(`${module} plugin not loaded`);
@@ -71,14 +93,19 @@ export const defineModule = <T extends Plugin>(module: T): T => {
  * ## defineInterpreterModule
  * Used to register a module that attaches methods to the Tempo $Interpreter registry.
  */
-export const defineInterpreterModule = (name: string, logic: Function) =>
+export const defineInterpreterModule = (name: string, logic: any) =>
 	defineModule((options: any, TempoClass: any) => {
-		TempoClass[$Interpreter] ??= {};
+		// 1. Secure the Global Registry
+		if (isDefined(REGISTRY.modules[name]) && REGISTRY.modules[name] !== logic) {
+			throw new Error(`Tempo Security: Core Module clash for '${name}'. Logic is already defined.`);
+		}
+		REGISTRY.modules[name] = logic;
 
+		// 2. Fallback for legacy class-local access
+		TempoClass[$Interpreter] ??= {};
 		if (isDefined(TempoClass[$Interpreter][name]) && TempoClass[$Interpreter][name] !== logic) {
 			throw new Error(`Tempo Interpreter Module clash: '${name}' logic is already defined.`);
 		}
-
 		TempoClass[$Interpreter][name] = logic;
 	});
 
