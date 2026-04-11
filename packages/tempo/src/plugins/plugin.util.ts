@@ -4,7 +4,7 @@ import { secure } from '#library/utility.library.js';
 import { type Tempo } from '../tempo.class.js';
 import { SCHEMA, getLargestUnit } from '../tempo.util.js';
 import { sortKey, byKey } from '#library/array.library.js';
-import { $Register, $Plugins, isTempo, $Interpreter } from '../tempo.symbol.js';
+import { $Register, $Plugins, isTempo, $Interpreter, $logError, $logDebug } from '../tempo.symbol.js';
 import type { TermPlugin, Range, ResolvedRange, Plugin, Extension } from './plugin.type.js';
 
 /** 
@@ -27,7 +27,7 @@ export function interpret(t: any, module: string, fallback?: any, ...args: any[]
 		if (!isFunction(logic)) throw new Error(`${module} plugin not loaded`);
 		return logic.apply(t, args);
 	} catch (err) {
-		t.constructor.logError(t.config, err);
+		t.constructor[$logError](t.config, err);
 	}
 
 	return (isFunction(fallback) ? fallback() : fallback);

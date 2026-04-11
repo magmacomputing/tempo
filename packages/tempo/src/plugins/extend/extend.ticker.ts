@@ -5,6 +5,7 @@ import { instant, normaliseFractionalDurations } from '#library/temporal.library
 import { markConfig } from '#library/symbol.library.js'
 
 import { DURATIONS } from '../../tempo.enum.js'
+import { $Register, $Tempo, $Plugins, $isTempo, isTempo, registerHook, $Interpreter, $logError, $logDebug } from '../../tempo.symbol.js';
 import { defineExtension } from '../plugin.util.js'
 import type { Tempo } from '../../tempo.class.js'
 
@@ -140,7 +141,7 @@ class TickerInstance implements Ticker.Descriptor {
 		const isInterval = isDefined(rawOptions.seconds) && Number.isFinite(rawOptions.seconds) && !Number.isNaN(rawOptions.seconds);
 
 		if (isDefined(arg1) && !isInterval && !isSeed && !cb) {
-			(this.#TempoClass as any).logError(markConfig(rawOptions), `Invalid Ticker interval or seed: ${String(arg1)}`);
+			this.#TempoClass[$logError](markConfig(rawOptions), `Invalid Ticker interval or seed: ${String(arg1)}`);
 		}
 
 		const { limit: lmt, until: stopAt, seed: startAt, ...rest } = rawOptions;
@@ -169,10 +170,10 @@ class TickerInstance implements Ticker.Descriptor {
 		// ── Validation ───────────────────────────────────────────────
 		if (!this.#current.isValid) {
 			this.stop();
-			(this.#TempoClass as any).logError(this.#current.config, `Invalid Ticker seed: ${String(this.#current)}`);
+			this.#TempoClass[$logError](this.#current.config, `Invalid Ticker seed: ${String(this.#current)}`);
 		} else if (this.#until && !this.#until.isValid) {
 			this.stop();
-			(this.#TempoClass as any).logError(this.#current.config, `Invalid Ticker boundary: ${String(this.#until)}`);
+			this.#TempoClass[$logError](this.#current.config, `Invalid Ticker boundary: ${String(this.#until)}`);
 		} else {
 			try {
 				const firstStep = this.#current.add(this.#payload);
@@ -185,7 +186,7 @@ class TickerInstance implements Ticker.Descriptor {
 				this.#runBootstrap();
 			} catch (e: any) {
 				this.stop();
-				(this.#TempoClass as any).logError(this.#current.config, `Invalid Ticker payload resolution for ${JSON.stringify(this.#payload)}`, e);
+				this.#TempoClass[$logError](this.#current.config, `Invalid Ticker payload resolution for ${JSON.stringify(this.#payload)}`, e);
 				queueMicrotask(() => this.#catchListeners.forEach(l => l(this.#current, () => this.stop())));
 				this.#isForward = true;
 				this.#isInstant = false;

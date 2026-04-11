@@ -20,7 +20,8 @@
     "version:patch": "npm version patch -w @magmacomputing/tempo -w @magmacomputing/library --no-git-tag-version",
     "version:minor": "npm version minor -w @magmacomputing/tempo -w @magmacomputing/library --no-git-tag-version",
     "version:major": "npm version major -w @magmacomputing/tempo -w @magmacomputing/library --no-git-tag-version",
-    "repl": "npm run repl --workspace=@magmacomputing/tempo"
+    "repl": "npm run repl --workspace=@magmacomputing/tempo",
+    "core": "npm run core --workspace=@magmacomputing/tempo"
   },
   "devDependencies": {
     "@js-temporal/polyfill": "^0.5.1",

@@ -11,7 +11,10 @@ import type { Tempo } from '#tempo/tempo.class.js';
 /** key for Global Discovery of Tempo Plugins */						export const $Plugins = Symbol.for('$TempoPlugin');
 /** key for Reactive Plugin Registration */									export const $Register = Symbol.for('$TempoRegister');
 /** key for Global Identity Brand for Tempo */							export const $isTempo = Symbol.for('$isTempo');
+
 /** key for Internal Interpreter Service */									export const $Interpreter = Symbol.for('$TempoInterpreter');
+/** key for contextual Error Logging */											export const $logError = Symbol.for('$TempoLogError');
+/** key for contextual Debug Logging */											export const $logDebug = Symbol.for('$TempoLogDebug');
 
 /**
  * Define a reactive registration hook on a global symbol.

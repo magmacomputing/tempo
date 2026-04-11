@@ -21,7 +21,7 @@ import { prefix, parseWeekday, parseDate, parseTime, parseZone } from './plugins
 import { REGISTRY, registerPlugin, registerTerm, getRange, getTermRange, resolveTermShift, interpret } from './plugins/plugin.util.js'
 
 import { getSafeFallbackStep } from './tempo.util.js'
-import { $Register, $Tempo, $Plugins, $isTempo, isTempo, registerHook, $Interpreter } from './tempo.symbol.js';
+import { $Register, $Tempo, $Plugins, $isTempo, isTempo, registerHook, $Interpreter, $logError, $logDebug } from './tempo.symbol.js';
 import { Match, Token, Snippet, Layout, Event, Period, Default } from './tempo.default.js';
 import enums, { STATE, DISCOVERY, NumericPattern, registryUpdate, registryReset } from './tempo.enum.js';
 import * as t from './tempo.type.js';												// namespaced types (Tempo.*)
@@ -80,14 +80,14 @@ export class Tempo {
 	})
 
 	/** handle internal errors using the global config */
-	static logError(...msg: any[]) {
+	static [$logError](...msg: any[]) {
 		const config = (isObject(msg[0]) && (msg[0] as any)[$Logify] === true) ? msg.shift() : Tempo.#global.config;
 		markConfig(config);														// ensure config is marked for Logify
 		Tempo.#dbg.error(config, ...msg);
 	}
 
 	/** handle internal debug info using the global config */
-	static logDebug(...msg: any[]) {
+	static [$logDebug](...msg: any[]) {
 		Tempo.#dbg.debug(...msg);
 	}
 
