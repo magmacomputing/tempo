@@ -18,17 +18,24 @@ export default defineConfig({
   },
   resolve: {
     alias: [
-      { find: /^#tempo\/tempo\.class\.js$/, replacement: resolve(__dirname, './src/tempo.index.ts') },
+      { find: /^#tempo\/core$/, replacement: resolve(__dirname, './src/core.index.ts') },
+      { find: /^#tempo\/term$/, replacement: resolve(__dirname, './src/plugin/term/term.index.ts') },
+      { find: /^#tempo\/term\/standard$/, replacement: resolve(__dirname, './src/plugin/term/standard.index.ts') },
+      { find: /^#tempo\/ticker$/, replacement: resolve(__dirname, './src/plugin/extend/extend.ticker.ts') },
+      { find: /^#tempo\/duration$/, replacement: resolve(__dirname, './src/plugin/module/module.duration.ts') },
+      { find: /^#tempo\/format$/, replacement: resolve(__dirname, './src/plugin/module/module.format.ts') },
+
       { find: /^#tempo\/scripts\/(.*)\.js$/, replacement: resolve(__dirname, './scripts/$1.ts') },
-      { find: /^#tempo\/plugins\/plugin\.util\.js$/, replacement: resolve(__dirname, './src/plugins/plugin.util.ts') },
-      { find: /^#tempo\/plugins\/plugin\.type\.js$/, replacement: resolve(__dirname, './src/plugins/plugin.type.ts') },
-      { find: /^#tempo\/plugins\/plugin\.(.*)\.js$/, replacement: resolve(__dirname, './src/plugins/extend/plugin.$1.ts') },
-      { find: /^#tempo\/plugins\/term\.(.*)\.js$/, replacement: resolve(__dirname, './src/plugins/term/term.$1.ts') },
-      { find: /^#tempo\/plugins\/term\/index\.js$/, replacement: resolve(__dirname, './src/plugins/term/index.ts') },
+      { find: /^#tempo\/plugin\/plugin\.(.*)\.js$/, replacement: resolve(__dirname, './src/plugin/plugin.$1.ts') },
+      { find: /^#tempo\/plugin\/extend\.(.*)\.js$/, replacement: resolve(__dirname, './src/plugin/extend/extend.$1.ts') },
+      { find: /^#tempo\/plugin\/module\.(.*)\.js$/, replacement: resolve(__dirname, './src/plugin/module/module.$1.ts') },
+      { find: /^#tempo\/plugin\/term\.(.*)\.js$/, replacement: resolve(__dirname, './src/plugin/term/term.$1.ts') },
+      
       { find: /^#tempo\/(.*)\.js$/, replacement: resolve(__dirname, './src/$1.ts') },
       { find: /^#tempo$/, replacement: resolve(__dirname, './src/tempo.index.ts') },
+
       { find: /^#library\/(.*)\.js$/, replacement: resolve(__dirname, '../library/src/common/$1.ts') },
-      { find: /^#library$/, replacement: resolve(__dirname, '../library/src/common/index.ts') },
+      { find: /^#library$/, replacement: resolve(__dirname, '../library/src/common.index.ts') },
     ]
   }
 })

@@ -6,12 +6,16 @@
     "composite": true,
     "noEmit": false,
     "paths": {
-      "#library": ["../../library/src/common/index.ts"],
+      "#library": ["../../library/src/common.index.ts"],
       "#library/*": ["../../library/src/common/*"],
       "#browser/*": ["../../library/src/browser/*"],
       "#server/*": ["../../library/src/server/*"],
       "#tempo": ["./tempo.index.ts"],
-      "#tempo/core": ["./tempo.core.ts"],
+      "#tempo/core": ["./core.index.ts"],
+      "#tempo/duration": ["./plugin/module/module.duration.ts"],
+      "#tempo/format": ["./plugin/module/module.format.ts"],
+      "#tempo/ticker": ["./plugin/extend/extend.ticker.ts"],
+      "#tempo/term/*": ["./plugin/term/term.*.ts"],
       "#tempo/*": ["./*"]
     }
   },

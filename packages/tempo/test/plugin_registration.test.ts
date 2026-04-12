@@ -1,14 +1,14 @@
 import { Tempo } from '#tempo';
 import { $Plugins } from '#tempo/tempo.symbol.js';
-import { TickerExtension } from '#tempo/plugins/extend/extend.ticker.js';
+import { TickerModule } from '#tempo/ticker';
 
-describe('Self-Registering Plugins', () => {
+describe('Ticker Registration / Initialization', () => {
 
-	test('TickerExtension should be auto-registered on import', () => {
-		// 1. TickerExtension was imported above, so it should be in $Plugins
+	test('TickerModule should be auto-registered on import', () => {
+		// 1. TickerModule was imported above, so it should be in $Plugins
 		const db = (globalThis as any)[$Plugins];
 		expect(db).toBeDefined();
-		expect(db.plugins).toContain(TickerExtension);
+		expect(db.plugins).toContain(TickerModule);
 
 		// 2. We must call init() to "activate" the registered plugins
 		Tempo.init();

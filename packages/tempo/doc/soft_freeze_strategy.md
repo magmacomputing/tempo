@@ -1,6 +1,6 @@
 # Soft Freeze Strategy
 
-The **Soft Freeze** is a design pattern used in the Tempo library to balance **Public Immutability** with **Internal Extensibility**. It ensures that shared registries (like `NUMBER`, `FORMAT`, or `DURATION`) are read-only for users while remaining mutable for internal library features like plugins and runtime updates.
+The **Soft Freeze** is a design pattern used in the Tempo library to balance **Public Immutability** with **Internal Extensibility**. It ensures that shared registries (like `NUMBER`, `FORMAT`, or `DURATION`) are read-only for users while remaining mutable for internal library features like plugin and runtime updates.
 
 ## The Problem
 
@@ -69,7 +69,7 @@ export function enumify(list, frozen = true) {
 
 ## Benefits
 1. **Bulletproof Public API**: Users cannot accidentally overwrite library constants.
-2. **Library Extensibility**: Plugins can add new data to registries at runtime without bypasses or "hacks".
+2. **Library Extensibility**: Plugin can add new data to registries at runtime without bypasses or "hacks".
 3. **Safe Global Discovery**: External discovery objects (via `Symbol.for($Tempo)`) can extend the library with new aliases but are prevented from overwriting core keys.
 4. **Internal State Integrity**: Centralized `STATE` objects are protected from direct access while providing a single source of truth.
 5. **Transparent Experience**: The object behaves like a POJO (Plain Old JavaScript Object) in the debugger and typical usage.

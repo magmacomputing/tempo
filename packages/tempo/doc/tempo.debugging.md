@@ -8,7 +8,7 @@ This document outlines the various debugging and introspection mechanisms availa
 
 ## Static Introspection
 
-Before an instance is even created, you can inspect the static state of the `Tempo` class to understand the global configuration and available plugins.
+Before an instance is even created, you can inspect the static state of the `Tempo` class to understand the global configuration and available plugin.
 
 ### `Tempo.config`
 Returns the current *global* configuration settings that act as the default for all new `Tempo` instances. This includes properties like the default `locale`, `timeZone`, and formatting layouts.
@@ -17,7 +17,7 @@ Returns the current *global* configuration settings that act as the default for 
 Returns the *initial*, out-of-the-box defaults that `Tempo` ships with, unaffected by any modifications made via [Global Discovery](../README.md#global-discovery) or [`Tempo.init()`](./tempo.config.md).
 
 ### `Tempo.terms`
-Returns an array of all currently registered term plugins. This is useful to verify which plugins have been loaded via `Tempo.addTerm()`.
+Returns an array of all currently registered term plugin. This is useful to verify which plugin have been loaded via [`Tempo.extend()`](./tempo.plugin.md).
 
 ### `Tempo.properties`
 Returns an array of the available static getters on the `Tempo` class.
@@ -44,10 +44,10 @@ Because `Tempo` is chainable (e.g., `new Tempo('xmas').set({ period: 'afternoon'
 *   `groups`: The resolved components (`yy`, `mm`, `dd`, `hh`, etc.) extracted from the match.
 
 ### `this.term`
-Returns an object containing the evaluated results of all registered term plugins for this specific instance.
+Returns an object containing the evaluated results of all registered term plugin for this specific instance.
 
 ### `this.fmt`
-Returns an object containing the pre-calculated string outputs for all standard formatting codes (e.g., `this.fmt.iso8601`).
+Returns an object containing the pre-calculated string outputs for all currently registered formatting codes.
 
 ### Primitive Auditing
 If you simply need to see the value represented in different primitive formats, `Tempo` implements `[Symbol.toPrimitive]`:

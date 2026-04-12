@@ -1,4 +1,7 @@
-import { Tempo } from '../src/tempo.class.js';
+import { Tempo } from '#tempo/core';
+import { FormatModule } from '#tempo/format';
+
+Tempo.extend(FormatModule);
 
 describe('Tempo Core', () => {
 	beforeEach(() => {

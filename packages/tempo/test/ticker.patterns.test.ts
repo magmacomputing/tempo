@@ -1,8 +1,8 @@
 import { Tempo } from '#tempo';
 import { isTempo } from '#tempo/tempo.symbol.js';
-import '#tempo/plugins/extend/extend.ticker.js'
+import '#tempo/ticker'
 
-// TickerExtension self-registers on import via definePlugin
+// TickerModule self-registers on import via definePlugin
 const label = 'ticker:';
 
 describe(`${label}`, () => {

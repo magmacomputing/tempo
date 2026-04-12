@@ -19,25 +19,29 @@
     "monorepo"
   ],
   "type": "module",
-  "main": "dist/common/index.js",
-  "types": "dist/common/index.d.ts",
+  "main": "dist/common.index.js",
+  "types": "dist/common.index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/common/index.d.ts",
-        "import": "./dist/common/index.js"
+        "types": "./dist/common.index.d.ts",
+        "development": "./src/common.index.ts",
+        "import": "./dist/common.index.js"
       },
       "./browser": {
-        "types": "./dist/browser/index.d.ts",
-        "import": "./dist/browser/index.js"
+        "types": "./dist/browser.index.d.ts",
+        "development": "./src/browser.index.ts",
+        "import": "./dist/browser.index.js"
       },
       "./common": {
-        "types": "./dist/common/index.d.ts",
-        "import": "./dist/common/index.js"
+        "types": "./dist/common.index.d.ts",
+        "development": "./src/common.index.ts",
+        "import": "./dist/common.index.js"
       },
       "./server": {
         "node": {
-          "types": "./dist/server/index.d.ts",
-          "import": "./dist/server/index.js"
+          "types": "./dist/server.index.d.ts",
+          "development": "./src/server.index.ts",
+          "import": "./dist/server.index.js"
         },
         "browser": null
       },
@@ -64,8 +68,8 @@
   ],
   "imports": {
     "#library": {
-      "development": "./src/common/index.ts",
-      "default": "./dist/common/index.js"
+      "development": "./src/common.index.ts",
+      "default": "./dist/common.index.js"
     },
     "#library/*.js": {
       "development": "./src/common/*.ts",

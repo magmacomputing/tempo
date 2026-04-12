@@ -1,5 +1,5 @@
 import { Tempo } from '#tempo';
-import { QuarterTerm } from '#tempo/plugins/term/term.quarter.js';
+import { QuarterTerm } from '#tempo/plugin/term/term.quarter.js';
 
 describe('Debug QuarterTerm', () => {
 	it('should have a resolve method', () => {

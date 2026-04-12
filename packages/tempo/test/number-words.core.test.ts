@@ -1,4 +1,4 @@
-import { Tempo } from '../src/tempo.class.js';
+import { Tempo } from '#tempo/core';
 
 describe('Number-Word Pilot (0-10)', () => {
 	it('should resolve word-based counts in weekday patterns', () => {

@@ -1,5 +1,5 @@
 import { Tempo } from '#tempo';
-import '#tempo/plugins/extend/extend.ticker.js';
+import '#tempo/plugin/extend/extend.ticker.js';
 
 describe('Ticker Pulse Behavior', () => {
     test('limit: 1 should result in 1 pulse currently', async () => {

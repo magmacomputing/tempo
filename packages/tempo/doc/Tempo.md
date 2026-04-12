@@ -12,7 +12,7 @@ This project came about due to the need for a simple, yet powerful, way to parse
 4. [Manipulation](#manipulation)
 5. [Plugin System](#plugin-system)
 6. [Ticker (Optional Plugin)](#ticker-optional-plugin)
-7. [Terms (Built-in Plugins)](#plugins-terms)
+7. [Terms (Built-in Plugin)](#plugin-terms)
 8. [Context & Configuration](#context--configuration)
 9. [Library Functionality](#library-functionality)
 10. [API Reference](./tempo.api.md)
@@ -30,11 +30,11 @@ Tempo is an ESM-first library. You can use it in the browser without a build ste
 {
   "imports": {
     "@magmacomputing/tempo": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/tempo.index.js",
-    "@magmacomputing/tempo/core": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/tempo.core.js",
-    "@magmacomputing/tempo/ticker": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/plugins/extend/extend.ticker.js",
-    "@magmacomputing/tempo/duration": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/plugins/module/module.duration.js",
-    "@magmacomputing/tempo/format": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/plugins/module/module.format.js",
-    "@magmacomputing/tempo/plugins": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/plugins/plugin.util.js",
+    "@magmacomputing/tempo/core": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/core.index.js",
+    "@magmacomputing/tempo/ticker": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/plugin/extend/extend.ticker.js",
+    "@magmacomputing/tempo/duration": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/plugin/module/module.duration.js",
+    "@magmacomputing/tempo/format": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/plugin/module/module.format.js",
+    "@magmacomputing/tempo/plugin": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/plugin/plugin.util.js",
     "@magmacomputing/tempo/enums": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/tempo.enum.js",
     "@magmacomputing/tempo/library": "https://cdn.jsdelivr.net/npm/@magmacomputing/tempo/dist/library.index.js",
     "@magmacomputing/library": "https://cdn.jsdelivr.net/npm/@magmacomputing/library/dist/common/index.js",
@@ -306,7 +306,7 @@ import { TickerPlugin } from '@magmacomputing/tempo/ticker';
 Tempo.extend(TickerPlugin);
 ```
 
-- [Plugin Development Guide](./tempo.plugins.md): A detailed overview of the `Tempo.extend()` API and best practices for creating custom extensions.
+- [Plugin Development Guide](./tempo.plugin.md): A detailed overview of the `Tempo.extend()` API and best practices for creating custom extensions.
 
 > [!NOTE]
 > **Selective Immobility**: When you extend Tempo, the core methods (like `format`, `add`, `set`) are protected. You can add NEW functionality, but you cannot overwrite the essential behavior of the library.
@@ -329,9 +329,9 @@ See the [Tempo Ticker guide](./tempo.ticker.md) for full details and API signatu
 
 ---
 
-## Plugins (Terms)
+## Plugin (Terms)
 
-`Tempo` can be extended with "terms" – plugins that calculate complex date ranges. 
+`Tempo` can be extended with "terms" – plugin that calculate complex date ranges. 
 
 ### Unified Term Logic (v2.0.0)
 

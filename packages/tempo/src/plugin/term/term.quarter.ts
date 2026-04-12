@@ -25,7 +25,6 @@ function resolve(t: Tempo, anchor?: any): any[] {
 	const template = (groups as any)[sphere] ?? [];
 	if (template.length === 0) return [];
 
-	const yy = isTempo(source) ? source.yy : (source.year ?? source.yy);
 	const list = resolveCycleWindow(t, template, anchor);
 
 	list.forEach(itm => {

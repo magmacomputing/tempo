@@ -11,7 +11,7 @@ import * as enums from '#tempo/tempo.enum.js';
 import { $Tempo, $Plugins, $Register } from '#tempo/tempo.symbol.js';
 import type { Snippet, Layout, Event, Period, Token } from '#tempo/tempo.default.js';
 import type { IntRange, NonOptional, Property, Plural, Prettify, TemporalObject, TypeValue } from '#library/type.library.js';
-import type { Range, TermPlugin, ResolvedRange, Plugin, Terms, Module, Extension } from './plugins/plugin.type.js';
+import type { Range, TermPlugin, ResolvedRange, Plugin, Terms, Module, Extension } from './plugin/plugin.type.js';
 
 /**
  * Structural forward-reference to the Tempo class.

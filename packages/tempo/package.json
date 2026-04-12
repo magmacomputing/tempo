@@ -32,29 +32,48 @@
       "default": "./dist/tempo.index.js"
     },
     "#tempo/core": {
-      "development": "./src/tempo.core.ts",
-      "default": "./dist/tempo.core.js"
+      "development": "./src/core.index.ts",
+      "default": "./dist/core.index.js"
     },
-    "#tempo/plugins/plugin.*.js": {
-      "development": "./src/plugins/plugin.*.ts",
-      "default": "./dist/plugins/plugin.*.js"
+    "#tempo/duration": {
+      "development": "./src/plugin/module/module.duration.ts",
+      "default": "./dist/plugin/module/module.duration.js"
     },
-    "#tempo/plugins/extend.*.js": {
-      "development": "./src/plugins/extend/extend.*.ts",
-      "default": "./dist/plugins/extend/extend.*.js"
+    "#tempo/format": {
+      "development": "./src/plugin/module/module.format.ts",
+      "default": "./dist/plugin/module/module.format.js"
     },
-    "#tempo/plugins/module.*.js": {
-      "development": "./src/plugins/module/module.*.ts",
-      "default": "./dist/plugins/module/module.*.js"
+    "#tempo/ticker": {
+      "development": "./src/plugin/extend/extend.ticker.ts",
+      "default": "./dist/plugin/extend/extend.ticker.js"
     },
-    "#tempo/plugins/term.*.js": {
-      "development": "./src/plugins/term/term.*.ts",
-      "default": "./dist/plugins/term/term.*.js"
+    "#tempo/term/standard": {
+      "development": "./src/plugin/term/standard.index.ts",
+      "default": "./dist/plugin/term/standard.index.js"
     },
-    "#tempo/scripts/*.js": "./scripts/*.ts",
-    "#tempo/tempo.class.js": {
-      "development": "./src/tempo.index.ts",
-      "default": "./dist/tempo.index.js"
+    "#tempo/term": {
+      "development": "./src/plugin/term/term.index.ts",
+      "default": "./dist/plugin/term/term.index.js"
+    },
+    "#tempo/term/*": {
+      "development": "./src/plugin/term/term.*.ts",
+      "default": "./dist/plugin/term/term.*.js"
+    },
+    "#tempo/plugin/plugin.*.js": {
+      "development": "./src/plugin/plugin.*.ts",
+      "default": "./dist/plugin/plugin.*.js"
+    },
+    "#tempo/plugin/extend.*.js": {
+      "development": "./src/plugin/extend/extend.*.ts",
+      "default": "./dist/plugin/extend/extend.*.js"
+    },
+    "#tempo/plugin/module.*.js": {
+      "development": "./src/plugin/module/module.*.ts",
+      "default": "./dist/plugin/module/module.*.js"
+    },
+    "#tempo/plugin/term.*.js": {
+      "development": "./src/plugin/term/term.*.ts",
+      "default": "./dist/plugin/term/term.*.js"
     },
     "#tempo/*.js": {
       "development": "./src/*.ts",
@@ -71,50 +90,54 @@
       "import": "./dist/tempo.enum.js"
     },
     "./extend/*": {
-      "types": "./dist/plugins/extend/extend.*.d.ts",
-      "import": "./dist/plugins/extend/extend.*.js"
+      "types": "./dist/plugin/extend/extend.*.d.ts",
+      "import": "./dist/plugin/extend/extend.*.js"
     },
     "./module/*": {
-      "types": "./dist/plugins/module/module.*.d.ts",
-      "import": "./dist/plugins/module/module.*.js"
+      "types": "./dist/plugin/module/module.*.d.ts",
+      "import": "./dist/plugin/module/module.*.js"
     },
     "./term/*": {
-      "types": "./dist/plugins/term/term.*.d.ts",
-      "import": "./dist/plugins/term/term.*.js"
+      "types": "./dist/plugin/term/term.*.d.ts",
+      "import": "./dist/plugin/term/term.*.js"
     },
-    "./plugins": {
-      "types": "./dist/plugins/plugin.util.d.ts",
-      "import": "./dist/plugins/plugin.util.js"
+    "./plugin": {
+      "types": "./dist/plugin/plugin.index.d.ts",
+      "import": "./dist/plugin/plugin.index.js"
     },
-    "./plugins/*": {
-      "types": "./dist/plugins/*.d.ts",
-      "import": "./dist/plugins/*.js"
+    "./plugin/*": {
+      "types": "./dist/plugin/*.d.ts",
+      "import": "./dist/plugin/*.js"
     },
     "./ticker": {
-      "types": "./dist/plugins/extend/extend.ticker.d.ts",
-      "import": "./dist/plugins/extend/extend.ticker.js"
+      "types": "./dist/plugin/extend/extend.ticker.d.ts",
+      "import": "./dist/plugin/extend/extend.ticker.js"
     },
     "./duration": {
-      "types": "./dist/plugins/module/module.duration.d.ts",
-      "import": "./dist/plugins/module/module.duration.js"
+      "types": "./dist/plugin/module/module.duration.d.ts",
+      "import": "./dist/plugin/module/module.duration.js"
     },
     "./format": {
-      "types": "./dist/plugins/module/module.format.d.ts",
-      "import": "./dist/plugins/module/module.format.js"
+      "types": "./dist/plugin/module/module.format.d.ts",
+      "import": "./dist/plugin/module/module.format.js"
     },
     "./library": {
       "types": "./dist/library.index.d.ts",
       "import": "./dist/library.index.js"
     },
     "./core": {
-      "types": "./dist/tempo.core.d.ts",
-      "import": "./dist/tempo.core.js"
+      "types": "./dist/core.index.d.ts",
+      "import": "./dist/core.index.js"
+    },
+    "./term": {
+      "types": "./dist/plugin/term/term.index.d.ts",
+      "import": "./dist/plugin/term/term.index.js"
     }
   },
   "scripts": {
     "test": "vitest run --workspace ../../vitest.workspace.ts",
-    "repl": "tsx --conditions=development -i --import ./scripts/setup.full.ts --import ./scripts/repl.ts",
-    "core": "tsx --conditions=development -i --import ./scripts/setup.core.ts --import ./scripts/core.ts",
+    "repl": "tsx --conditions=development -i --import ./scripts/repl.ts",
+    "core": "tsx --conditions=development -i --import ./scripts/core.ts",
     "build": "tsc -b && npm run build:bundle && npm run build:resolve",
     "build:bundle": "rollup -c",
     "build:resolve": "tsx scripts/resolve-types.ts",

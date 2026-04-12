@@ -1,8 +1,12 @@
-import { Tempo } from '../src/tempo.class.js';
+import { Tempo } from '#tempo/core';
+import { FormatModule } from '#tempo/format';
 import { registryReset } from '#tempo/tempo.enum.js';
+import '#tempo/term/standard';
+
+Tempo.extend(FormatModule);
 
 describe('Reproduction of Parsing Regressions', () => {
-		afterEach(() => registryReset());
+	afterEach(() => registryReset());
 
 	it('should correctly parse "one Wednesday ago"', () => {
 		const anchor = new Tempo('2024-03-20'); // A Wednesday

@@ -7,7 +7,7 @@ import { Temporal } from '@js-temporal/polyfill';
 
 // @ts-ignore
 if (!globalThis.Temporal) {
-	(globalThis as any).Temporal = Temporal;
+	Object.defineProperty(globalThis, 'Temporal', { value: Temporal, enumerable: false, configurable: true, writable: true });
 }
 
 export { }

@@ -65,8 +65,8 @@ Tempo looks for the following structure:
 | Property | Type | Description |
 | :--- | :--- | :--- |
 | `options` | `Options \| (() => Options)` | Configuration options merged into global state. |
-| `plugins` | `Plugin \| Plugin[]` | Modular plugins to be extended onto Tempo automatically. |
-| `terms` | `TermPlugin \| TermPlugin[]` | Custom term plugins to be registered. |
+| `plugin` | `Plugin \| Plugin[]` | Modular plugin to be extended onto Tempo automatically. |
+| `terms` | `TermPlugin \| TermPlugin[]` | Custom term plugin to be registered. |
 | `timeZones` | `Record<string, string>` | Custom timezone aliases to be merged. |
 | `formats` | `Record<string, string>` | Custom format strings to be merged into `Tempo.FORMAT`. |
 
@@ -96,7 +96,7 @@ Tempo.init({
 | `calendar` | `string` | `'iso8601'` | Default calendar system. |
 | `pivot` | `number` | `75` | Cutoff for parsing two-digit years. |
 | `timeStamp`| `'ms' \| 'ns'` | `'ms'` | Precision for timestamps. |
-| `sphere` | `'north' \| 'south'`| Auto-inferred (from timezones's daylight savings) Hemisphere for seasonal plugins. |
+| `sphere` | `'north' \| 'south'`| Auto-inferred (from timezones's daylight savings) Hemisphere for seasonal plugin. |
 | `debug` | `boolean` | `false` | Enables internal log tracking. |
 | `catch` | `boolean` | `false` | If true, invalid inputs return a Void instance. |
 | `mode` | `'auto' \| 'strict' \| 'defer'` | `'auto'` | Controls the hydration strategy and parsing strictness. |

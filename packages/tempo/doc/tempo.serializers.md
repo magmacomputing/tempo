@@ -66,7 +66,7 @@ Internally, these robust guarantees allow Tempo to safely toss memory-heavy or c
 
 * **Caching & Storage (`storage.library.ts`):** Used to safely serialize and deserialize internal state and user settings to `localStorage`, `sessionStorage`, or NodeJS `process.env`.
 * **Cryptography (`cipher.class.ts`):** Complex payloads are reliably stringified prior to hashing and encryption, guaranteeing that decrypting the payload yields the exact original JavaScript topology.
-* **Deep Cloning Templates (`term.season.ts`, etc):** Core plugins define fixed objects or arrays (like meteorological season date boundaries). `cloneify` is used extensively to serve detached copies of those arrays to standard operations, ensuring that the original base configuration can never be accidentally mutated by reference.
+* **Deep Cloning Templates (`term.season.ts`, etc):** Core plugin define fixed objects or arrays (like meteorological season date boundaries). `cloneify` is used extensively to serve detached copies of those arrays to standard operations, ensuring that the original base configuration can never be accidentally mutated by reference.
 
 ---
 

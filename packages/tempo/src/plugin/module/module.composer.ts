@@ -43,12 +43,8 @@ export function compose(
 				try {
 					temporal = Temporal.PlainDateTime.from(value);
 				} catch (err2) {
-					const date = new Date(value.toString());
-					if (isNaN(date.getTime())) {
-						throw new Error(`Cannot parse Date: "${value}"`);
-					} else {
-						temporal = Temporal.Instant.fromEpochMilliseconds(date.getTime());
-					}
+					// security check: do not let native Date take a guess on garbage strings
+					throw new Error(`Cannot parse Date: "${value}"`);
 				}
 			}
 			break;

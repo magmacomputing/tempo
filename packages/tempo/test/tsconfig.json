@@ -10,7 +10,7 @@
     ],
     "paths": {
       "#library": [
-        "../../library/src/common/index.ts"
+        "../../library/src/common.index.ts"
       ],
       "#library/*": [
         "../../library/src/common/*"
@@ -25,7 +25,19 @@
         "../src/tempo.index.ts"
       ],
       "#tempo/core": [
-        "../src/tempo.core.ts"
+        "../src/core.index.ts"
+      ],
+      "#tempo/duration": [
+        "../src/plugin/module/module.duration.ts"
+      ],
+      "#tempo/format": [
+        "../src/plugin/module/module.format.ts"
+      ],
+      "#tempo/ticker": [
+        "../src/plugin/extend/extend.ticker.ts"
+      ],
+      "#tempo/term/*": [
+        "../src/plugin/term/term.*.ts"
       ],
       "#tempo/*": [
         "../src/*"

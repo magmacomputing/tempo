@@ -23,7 +23,7 @@ Tempo employs two distinct methodologies for protecting its internal state. Thes
 | :--- | :--- | :--- |
 | **Primary Target** | `Tempo.#term`, `Tempo.#fmt` (Instance State) | `NUMBER`, `FORMAT` (Global Registries) |
 | **Scope** | **Instance-Specific**: Unique to every separate `new Tempo()` call. | **Global-Shared**: One single source of truth used by all instances. |
-| **Primary Goal** | **Performance**: Avoid computing expensive terms (like `qtr` or `szn`) until needed. | **Extensibility**: Allow plugins to safely "append" new data to registries at runtime. |
+| **Primary Goal** | **Performance**: Avoid computing expensive terms (like `qtr` or `szn`) until needed. | **Extensibility**: Allow plugin to safely "append" new data to registries at runtime. |
 | **Mechanism** | `Object.create(proto)` + Prototype Shadowing. | `new Proxy(target)` + Symbol-bypass. |
 | **Why this one?** | **Memory Efficiency**: Thousands of instances share the same base prototype. | **Reference Stability**: Shared registries must stay at the same object reference. |
 
@@ -36,7 +36,7 @@ This objective is achieved through two primary architectural pillars:
 1.  **Lazy Evaluation ([Section 1](#1-lazy-evaluation-shadowing))**: Deferring the expensive work of string parsing and term computation until the first property access.
 2.  **Master Guard ([Section 3](#3-master-guard-fast-fail-sync-point))**: Implementing a high-speed "fast-fail" gatekeeper to instantly reject invalid inputs when parsing *is* eventually triggered.
 
-Together, these ensure that `new Tempo()` maintains an O(1) constructor execution time by deferring O(N) full-parse work until the first property access, regardless of how many plugins or custom terms are registered in the global system.
+Together, these ensure that `new Tempo()` maintains an O(1) constructor execution time by deferring O(N) full-parse work until the first property access, regardless of how many plugin or custom terms are registered in the global system.
 
 ---
 
@@ -94,7 +94,7 @@ Global registries must be **live** but **secure**. As of **v2.0.1**, these are p
 ## ⚡ 3. Master Guard (Guarded-Lazy Strategy)
 Used for: `new Tempo(string | number)`
 
-The **Guarded-Lazy** strategy ensures that even with hundreds of custom plugins, the entry point remains nearly instantaneous. In **v2.0.1**, this was refined for 100% matching reliability.
+The **Guarded-Lazy** strategy ensures that even with hundreds of custom plugin, the entry point remains nearly instantaneous. In **v2.0.1**, this was refined for 100% matching reliability.
 
 ### How it works:
 1.  **Length-Sorted Terms**: To prevent "partial matching" (e.g., matching `noon` inside `afternoon`), all registered terms are sorted by length (descending) before the Guard regex is built.

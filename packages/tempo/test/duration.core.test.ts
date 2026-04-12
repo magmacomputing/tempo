@@ -8,7 +8,7 @@ describe('Tempo.duration() (Core)', () => {
 
 	it('should work after manual extension', async () => {
 		// @ts-ignore
-		const { DurationModule } = await import('../src/plugins/module/module.duration.js');
+		const { DurationModule } = await import('#tempo/duration');
 		Tempo.extend(DurationModule);
 		
 		const d = Tempo.duration('P1Y');

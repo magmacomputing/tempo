@@ -3,7 +3,7 @@ import { secure } from '#library/utility.library.js';
 import { proxify } from '#library/proxy.library.js';
 import { NUMBER, MODE } from './tempo.enum.js';
 import type { Options } from './tempo.type.js';
-import type { Tempo } from '#tempo';
+import type { Tempo } from './tempo.class.js';
 
 // BE VERY CAREFUL NOT TO BREAK THE REGEXP PATTERNS BELOW
 // TEMPO functionality heavily depends on these patterns

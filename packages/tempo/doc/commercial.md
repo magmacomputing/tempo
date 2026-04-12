@@ -23,9 +23,9 @@ For mission-critical applications, we provide priority support, security auditin
 
 ## 💎 Premium Extensions
 
-In addition to our open-source core, we offer a suite of **Premium Plugins** available via private NPM registry or commercial license. These extensions provide advanced logic for enterprise-scale requirements.
+In addition to our open-source core, we offer a suite of **Premium Plugin** available via private NPM registry or commercial license. These extensions provide advanced logic for enterprise-scale requirements.
 
-**[Browse the Plugin Marketplace](./tempo.plugins.md)**
+**[Browse the Plugin Marketplace](./tempo.plugin.md)**
 
 ---
 

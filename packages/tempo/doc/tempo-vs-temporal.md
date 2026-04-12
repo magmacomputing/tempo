@@ -65,14 +65,14 @@ This is a perfect example of where Tempo adds business logic (something that Tem
 To add a 'term' that defines 'isWeekend' to Tempo, you would write a plugin that defines the term.  
 From that point, the plugin is available to new Tempo instances.
 
-See the section on [plugins](tempo.terms.md) for more information.
+See the section on [plugin](tempo.term.md) for more information.
 
 
 ```typescript
 const t = new Tempo();
-const isWeekend = t.term.isWeekend (through plugins)
+const isWeekend = t.term.isWeekend (through plugin)
 
-// Built-in complex terms via plugins
+// Built-in complex terms via plugin
 t.term.qtr; // returns calculated 'fiscal quarter' based on current instance (date and hemisphere) e.g., 'Q1'
 t.term.szn; // returns calculated 'meteorological season' based on current instance (date and hemisphere) e.g., 'Summer'
 

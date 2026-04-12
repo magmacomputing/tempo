@@ -1,5 +1,5 @@
 import { Tempo } from '#tempo';
-import '#tempo/plugins/extend/extend.ticker.js';
+import '#tempo/plugin/extend/extend.ticker.js';
 
 describe('Ticker Cold-Start Resolution', () => {
     beforeEach(() => { Tempo.init(); });

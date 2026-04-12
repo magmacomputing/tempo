@@ -11,7 +11,7 @@ Modern developers expect a "warm" API for common tasks. Native Temporal requires
 ### 2. Human-Centric Parsing
 Data in the real world is messy. Tempo's **Layout** and **Snippet** engine allows developers to interpret human-readable strings, aliases, and custom formats without writing complex, custom utility functions. It turns "today" or "Christmas" into machine-exact time points effortlessly.
 
-### 3. Business Intelligence via Plugins
+### 3. Business Intelligence via Plugin
 Tempo extends beyond simple date arithmetic through its **Terms** system. By providing declarative access to complex calculations—such as fiscal quarters, meteorological seasons, and zodiac signs, Tempo moves domain-specific logic out of the application code and into a reusable, extensible plugin architecture.
 
 ### 4. Lean but Robust

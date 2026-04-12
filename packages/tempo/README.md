@@ -16,7 +16,7 @@ Working with `Date` in JavaScript has historically been painful. The new `Tempor
 - **Natural Language**: Supports word-based numbers (0-10) in relative parsing (e.g., "two days ago").
 - **Fluent API**: Chainable methods for adding, subtracting, and setting date-times (similar to Moment.js).
 - **Formatting**: Use custom tokens to format date-times in a way that is both intuitive and flexible.
-- **Plugins**: Extend core functionality safely; built-ins (e.g., TickerPlugin) self-register on import (just import the module).
+- **Plugin**: Extend core functionality safely; built-ins (e.g., TickerPlugin) self-register on import (just import the module).
 - **Terms**: Access complex date ranges (Quarters, Seasons, Zodiacs) easily.
 - **Immutable**: Operations (like `set` and `add`) return a new `Tempo` instance, ensuring thread safety and predictability.
 
@@ -111,11 +111,11 @@ console.log(now.fmt.date);                    // using pre-built formats: "2026-
 
 Tempo v2.1.0 is a major milestone, delivering a more reactive architecture and rock-solid stability.
 
-- **Modular Architecture**: Tempo is now split into `core` and optional plugins/modules, allowing you to include only what you need.
+- **Modular Architecture**: Tempo is now split into `core` and optional plugin/modules, allowing you to include only what you need.
 - **Improved Logging**: Internal logging uses context-aware Symbols for better decoupling.
 - **Static API**: `Tempo.duration()` static method for convenient duration creation.
 
-- **Side Effect Registration**: Plugins and Terms now support self-registration. Simply importing a plugin is now sufficient to extend the Tempo core automatically.
+- **Side Effect Registration**: Plugin and Term now support self-registration. Simply importing a plugin is now sufficient to extend the Tempo core automatically.
 - **100% Reliability**: The engine passes all regression tests, ensuring complete stability across parsing, calculation, and formatting routines.
 - **Unified Term Logic**: Terms (like Quarters and Seasons) are now fully integrated. Use `#` in `set()` to jump to boundaries, and `{#term}` in `format()` to embed semantic labels (e.g. "Second Quarter") directly into strings.
 - **Relational Term Math**: A category-first feature. Shift dates by semantic "steps" with `.add({ '#quarter': 1 })`. Tempo preserves your relative duration within the term, jumping across gaps and handling overflows with mathematical precision.
@@ -137,7 +137,7 @@ For detailed technical guides, please refer to:
 - [Tempo vs. The Competition](./doc/comparison.md) ([v2.1.0](https://github.com/magmacomputing/magma/blob/v2.1.0/packages/tempo/doc/comparison.md))
 - [Tempo API Reference](./doc/tempo.api.md) ([v2.1.0](https://github.com/magmacomputing/magma/blob/v2.1.0/packages/tempo/doc/tempo.md))
 - [Tempo Class Documentation](./doc/Tempo.md) ([v2.1.0](https://github.com/magmacomputing/magma/blob/v2.1.0/packages/tempo/doc/Tempo.md))
-- [Plugin System](./doc/tempo.plugins.md) ([v2.1.0](https://github.com/magmacomputing/magma/blob/v2.1.0/packages/tempo/doc/tempo.plugins.md))
+- [Plugin System](./doc/tempo.plugin.md) ([v2.1.0](https://github.com/magmacomputing/magma/blob/v2.1.0/packages/tempo/doc/tempo.plugin.md))
 - [Configuration Guide](./doc/tempo.config.md) ([v2.1.0](https://github.com/magmacomputing/magma/blob/v2.1.0/packages/tempo/doc/tempo.config.md))
 - [Architecture & Internal Protection](./doc/architecture.md) ([v2.1.0](https://github.com/magmacomputing/magma/blob/v2.1.0/packages/tempo/doc/architecture.md))
 - [Commercial Support](./doc/commercial.md) ([v2.1.0](https://github.com/magmacomputing/magma/blob/v2.1.0/packages/tempo/doc/commercial.md))

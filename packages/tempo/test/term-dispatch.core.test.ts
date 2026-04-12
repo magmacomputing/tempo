@@ -1,5 +1,8 @@
-import { Tempo } from '../src/tempo.class.js';
-import '../src/plugins/term/term.index.js'; // ensure terms are registered
+import { Tempo } from '#tempo/core';
+import { FormatModule } from '#tempo/format';
+import '#tempo/term/standard';
+
+Tempo.extend(FormatModule);
 
 describe('Term Dispatch Refactor', () => {
 	it('should set term by index (#quarter: 2)', () => {

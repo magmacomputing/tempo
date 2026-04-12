@@ -24,7 +24,7 @@ Unified extender for library functionality.
   **Formats:** `Tempo.extend(MyFormat)` — Registers custom format strings.
 
 - **Returns:** `typeof Tempo` (for chaining).
-- **Note:** Plugins are only installed once. Existing core members are protected.
+- **Note:** Plugin are only installed once. Existing core members are protected.
 
 ### `Tempo.from(tempo?: Tempo.DateTime | Tempo.Options, options?: Tempo.Options)`
 Creates a new `Tempo` instance. A static alternative to `new Tempo()`.
@@ -68,7 +68,7 @@ Returns the current *global* configuration settings.
 Returns the *initial* out-of-the-box library defaults.
 
 ### `Tempo.terms`
-Returns an array of all currently registered term plugins.
+Returns an array of all currently registered term plugin.
 
 ### `Tempo.parse`
 Returns the global parsing rules registry (snippets, layouts, events, etc.).
@@ -165,7 +165,7 @@ Returns a `Temporal.PlainDateTime` representation.
 ### Lineage & Metadata
 - `nano`: Epoch nanoseconds (`BigInt`).
 - `epoch`: Object containing `ss`, `ms`, `us`, `ns` epoch values.
-- `term`: Object containing results from all active term plugins. (Note: These are enumerable for easy discovery).
+- `term`: Object containing results from all active term plugin. (Note: These are enumerable for easy discovery).
 - `fmt`: Registry of pre-calculated strings for all standard formats. (Note: These are enumerable for easy discovery).
 - `config`: The effective configuration for this specific instance (Note: `scope`, `anchor`, and `value` are excluded from the public object).
 - `parse`: The parsing rules and lineage for this instance.

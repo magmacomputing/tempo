@@ -4,18 +4,26 @@
 
 ## Installation
 
-To use the ticker, simply import the plugin as a side effect or import the `Ticker` namespace directly if you need to access the [Reporting & Registry](#reporting--registry) API. Both methods automatically register the `Tempo.ticker()` method with the core library:
+To use the ticker, simply import the module as a side effect or import the `TickerModule` directly. Both methods automatically register the `Tempo.ticker()` method with the core library:
 
 ```typescript
-// Pattern A: Pure side-effect (registers Tempo.ticker)
+// Pattern A: One-line activation (Side effect)
 import '@magmacomputing/tempo/ticker';
-import { Tempo } from '@magmacomputing/tempo';
 
-// Pattern B: Direct import (recommended if using Ticker.active)
+// Pattern B: Explicit Module (Recommended)
+import { Tempo } from '@magmacomputing/tempo/core';
+import { TickerModule } from '@magmacomputing/tempo/ticker';
+
+Tempo.extend(TickerModule);
+```
+
+### Direct Access
+If you need to access the [Reporting & Registry](#reporting--registry) API (like `Ticker.active`), you should import the `Ticker` namespace:
+
+```typescript
 import { Ticker } from '@magmacomputing/tempo/ticker';
-import { Tempo } from '@magmacomputing/tempo';
 
-// Ticker is now available via Tempo.ticker() in both patterns!
+console.log(Ticker.active);
 ```
 
 ## 🚀 Enhancements

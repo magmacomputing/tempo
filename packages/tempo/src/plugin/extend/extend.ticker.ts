@@ -5,7 +5,7 @@ import { instant, normaliseFractionalDurations } from '#library/temporal.library
 import { markConfig } from '#library/symbol.library.js'
 
 import { DURATIONS } from '../../tempo.enum.js'
-import { $Register, $Tempo, $Plugins, $isTempo, isTempo, registerHook, $Interpreter, $logError, $logDebug } from '../../tempo.symbol.js';
+import { $logError, $logDebug } from '../../tempo.symbol.js';
 import { defineExtension } from '../plugin.util.js'
 import type { Tempo } from '../../tempo.class.js'
 
@@ -331,9 +331,9 @@ class TickerInstance implements Ticker.Descriptor {
 }
 
 /**
- * # TickerExtension
+ * # TickerModule
  */
-export const TickerExtension: Tempo.Extension = defineExtension((_options, TempoClass, _factory) => {
+export const TickerModule: Tempo.Extension = defineExtension((_options, TempoClass, _factory) => {
 	(TempoClass as any).ticker = function (this: typeof Tempo, arg1: any, arg2?: any): Ticker.Instance {
 		const instance = new TickerInstance(this, arg1, arg2);
 		const proxy = new Proxy((() => instance.stop()) as any, {

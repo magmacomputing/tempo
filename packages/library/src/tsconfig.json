@@ -17,7 +17,7 @@
     ],
     "paths": {
       "#library": [
-        "./common/index.ts"
+        "./common.index.ts"
       ],
       "#library/*.js": [
         "./common/*.ts"

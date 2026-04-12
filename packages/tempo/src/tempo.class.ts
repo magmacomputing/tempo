@@ -3,7 +3,7 @@ import '#library/temporal.polyfill.js';
 import { Logify } from '#library/logify.class.js';
 import { secure } from '#library/utility.library.js';
 import { Immutable, Serializable } from '#library/class.library.js';
-import { asArray, asInteger, isNumeric, ifNumeric } from '#library/coercion.library.js';
+import { asArray, asInteger, isNumeric } from '#library/coercion.library.js';
 import { getStorage, setStorage } from '#library/storage.library.js';
 import { proxify, delegate } from '#library/proxy.library.js';
 import { $Logify, $Discover, markConfig } from '#library/symbol.library.js';
@@ -11,19 +11,19 @@ import { getContext, CONTEXT } from '#library/utility.library.js';
 import { enumify } from '#library/enumerate.library.js';
 import { ownKeys, ownEntries, getAccessors, omit } from '#library/reflection.library.js';
 import { pad, singular, trimAll } from '#library/string.library.js';
-import { getType, asType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction, isClass, isTemporal, isZonedDateTime } from '#library/type.library.js';
+import { getType, asType, isEmpty, isNull, isNullish, isDefined, isUndefined, isString, isObject, isRegExp, isRegExpLike, isIntegerLike, isSymbol, isFunction, isClass, isZonedDateTime, isPlainDate, isPlainTime } from '#library/type.library.js';
 import { getHemisphere, getResolvedOptions, canonicalLocale } from '#library/international.library.js';
 import { instant } from '#library/temporal.library.js';
 import type { Property, TypeValue, Secure } from '#library/type.library.js';
 
-import { compose } from './plugins/module/module.composer.js';
-import { prefix, parseWeekday, parseDate, parseTime, parseZone } from './plugins/module/module.lexer.js';
-import { REGISTRY, registerPlugin, registerTerm, getRange, getTermRange, resolveTermShift, interpret } from './plugins/plugin.util.js'
+import { compose } from './plugin/module/module.composer.js';
+import { prefix, parseWeekday, parseDate, parseTime, parseZone } from './plugin/module/module.lexer.js';
+import { REGISTRY, registerPlugin, registerTerm, getRange, getTermRange, resolveTermShift, interpret } from './plugin/plugin.util.js'
 
 import { getSafeFallbackStep } from './tempo.util.js'
-import { $Register, $Tempo, $Plugins, $isTempo, isTempo, registerHook, $Interpreter, $logError, $logDebug } from './tempo.symbol.js';
+import { $Register, $Tempo, $Plugins, $isTempo, isTempo, registerHook, $logError, $logDebug } from './tempo.symbol.js';
 import { Match, Token, Snippet, Layout, Event, Period, Default } from './tempo.default.js';
-import enums, { STATE, DISCOVERY, NumericPattern, registryUpdate, registryReset } from './tempo.enum.js';
+import enums, { STATE, DISCOVERY, registryUpdate, registryReset } from './tempo.enum.js';
 import * as t from './tempo.type.js';												// namespaced types (Tempo.*)
 
 const Context = getContext();																// current execution context
@@ -102,6 +102,11 @@ export class Tempo {
 	/** flag to prevent recursion during init */							static #lifecycle = { bootstrap: true, initialising: false, extendDepth: 0, ready: false };
 	/** Master Guard predicate (implements RegExp-like interface) */					static #guard: { test(str: string): boolean } = { test: () => true };
 	/** Set of allowed lowercased tokens for the Master Guard */					static #allowedTokens: Set<string> = new Set();
+	
+	static #termError(config: Tempo.Options, term: string) {
+		const hint = Tempo.#terms.length === 0 ? ". (No term plugins are registered—did you forget to call Tempo.extend(TermsModule)?)" : "";
+		Tempo.#dbg.error(config, `Unknown Term identifier: ${term}${hint}`);
+	}
 
 	//** prototype helpers */
 	/** return the Prototype parent of an object */						static #proto(obj: object) { return Object.getPrototypeOf(obj) }
@@ -243,7 +248,7 @@ export class Tempo {
 			shape.parse.layout = Object.fromEntries(layouts) as Layout;	// rebuild Layout in new parse order
 	}
 
-	// Modular parsing helpers moved to #tempo/plugins/module/lexer.ts
+	// Modular parsing helpers moved to #tempo/plugin/module/lexer.ts
 
 	/** get first Canonical name of a supplied locale */
 	static #locale = (locale?: string) => {
@@ -558,11 +563,20 @@ export class Tempo {
 	 * @param options - Optional configuration for a standard `Plugin`.
 	 * @returns The `Tempo` class for chaining.
 	 */
-	static extend(plugin: t.Plugin | t.Plugin[], options?: any): typeof Tempo
-	static extend(term: t.TermPlugin | t.TermPlugin[], discovery?: symbol): typeof Tempo
-	static extend(config: t.Internal.Discovery | t.Internal.Discovery[], discovery?: symbol): typeof Tempo
-	static extend(arg: any, options?: any) {
-		const items = asArray(arg).flat(1);
+	/**
+	 * Register a plugin or term extension.
+	 * 
+	 * @param args - A plugin, term, or list/array of extensions to register.
+	 *               If the last argument is a plain object (and not a plugin/term), 
+	 *               it will be treated as the 'options' for all plugins in the call.
+	 */
+	static extend(plugin: Tempo.Plugin, options?: Tempo.Options): typeof Tempo;
+	static extend(plugins: (Tempo.Plugin | Tempo.TermPlugin | any)[], options?: Tempo.Options): typeof Tempo;
+	static extend(...args: any[]): typeof Tempo;
+	static extend(...args: any[]): typeof Tempo {
+		let options = (args.length > 1 && isObject(args[args.length - 1]) && !isFunction(args[args.length - 1]) && !isDefined(args[args.length - 1].key)) ? args.pop() : undefined;
+		const items = args.flat(Infinity);
+
 		if (isEmpty(items)) return this;
 
 		Tempo.#lifecycle.extendDepth++;													// increment the re-entrant nesting counter
@@ -964,7 +978,7 @@ export class Tempo {
 		// 🏛️ Initialization Strategy ('auto' | 'strict' | 'defer')
 		if (mode === Tempo.MODE.Defer) this.#local.parse.lazy = true;
 		else if (mode === Tempo.MODE.Strict) this.#local.parse.lazy = false;
-		else if (!isEmpty(input) && Tempo.#guard.test(trimAll(input))) {
+		else if (isString(this.#tempo) && !isEmpty(input) && Tempo.#guard.test(trimAll(input))) {
 			this.#local.parse.lazy = true;												// auto-switch to lazy-mode for valid strings
 		}
 
@@ -1132,7 +1146,7 @@ export class Tempo {
 	/** Full weekday name (e.g., 'Monday') */									get wkd() { return Tempo.WEEKDAYS.keyOf(this.toDateTime().dayOfWeek as Tempo.Weekday) }
 	/** ISO weekday number: Mon=1, Sun=7 */										get dow() { return this.toDateTime().dayOfWeek as Tempo.Weekday }
 	/** Nanoseconds since Unix epoch (BigInt) */							get nano() { return this.toDateTime().epochNanoseconds }
-	/** `true` if the underlying date-time is valid. */				get isValid() { this.#ensureParsed(); return isDefined(this.#zdt) && !this.#errored }
+	/** `true` if the underlying date-time is valid. */				get isValid() { this.#ensureParsed(); return isZonedDateTime(this.#zdt) && !this.#errored }
 	/** current Tempo configuration */
 	get config() {
 		const base = Object.create(Default);										// Default → global overrides
@@ -1205,7 +1219,7 @@ export class Tempo {
 	toDateTime() {
 		try {
 			this.#ensureParsed();
-			return this.#zdt ?? this.#now.toZonedDateTimeISO('UTC');
+			return isZonedDateTime(this.#zdt) ? this.#zdt : this.#now.toZonedDateTimeISO('UTC');
 		} catch (err) {
 			if (this.#local.config.catch === true) return this.#now.toZonedDateTimeISO('UTC');
 			throw err;
@@ -1270,7 +1284,11 @@ export class Tempo {
 			if (term) {
 				const ident = term.startsWith('#') ? term.slice(1) : term;
 				const termObj = Tempo.#terms.find(t => t.key === ident || t.scope === ident);
-				if (!termObj) throw new Error(`Unknown Term identifier: ${term}`);
+				if (!termObj) {
+					Tempo.#termError(this.#local.config, term);
+					return undefined as any;
+				}
+
 
 				// 1. if input is numeric, resolve by index
 				if (isNumeric(tempo as any)) {
@@ -1311,27 +1329,41 @@ export class Tempo {
 			const resolvingKeys = new Set<string>();
 			const res = this.#conform(tempo, today, isAnchored, resolvingKeys);
 
+			if (isString(tempo) && tempo.startsWith('#') && !['Temporal.ZonedDateTime', 'Temporal.PlainDate', 'Temporal.PlainTime'].includes(res.type as string)) {
+				Tempo.#termError(this.#local.config, tempo);
+				return undefined as any;
+			}
+
+
+			// security check: if it contains term-keys (#) in constructor mode, we should throw an unsupported syntax error
+			if (isUndefined(term) && isObject(tempo) && Object.keys(tempo).some(k => k.startsWith('#'))) {
+				Tempo.#dbg.error(this.#local.config, `Unsupported Syntax: Term-based mutations (#) cannot be passed to the constructor. Use new Tempo().set(${JSON.stringify(tempo)}) instead.`);
+				return undefined as any;
+			}
+
+			// security check: if it contains term-keys (#) while no plugins are loaded
+			if (isObject(tempo) && Object.keys(tempo).some(k => k.startsWith('#')) && Tempo.#terms.length === 0) {
+				Tempo.#termError(this.#local.config, Object.keys(tempo).find(k => k.startsWith('#'))!);
+				return undefined as any;
+			}
+
+
 			// re-fetch zone/cal as they may have been updated by brackets during #conform
 			const { timeZone: tz2, calendar: cal2 } = this.#local.config;
 			const targetTz = isString(tz2) ? tz2 : (tz2 as any).id ?? (tz2 as any).timeZoneId;
 			const targetCal = isString(cal2) ? cal2 : (cal2 as any).id ?? (cal2 as any).calendarId;
 
 			// results are now handled at the end of #parse via #matches
-			if (!['Undefined', 'Void', 'Empty'].includes(res.type as string))
-				Tempo.#dbg.debug(this.#local.config, 'parse', `{type: ${res.type}, value: ${res.value}}`);	// show what we're parsing
-
-
 			const { dateTime: dt, timeZone } = compose(res, today, tz, targetTz, targetCal);
+
 			dateTime = dt;
 			if (timeZone && this.#local) this.#local.config.timeZone = timeZone;
 
 			// Final adjustment to normalize timezone and calendar across all types
-			if (dateTime && !this.#errored)
+			if (isZonedDateTime(dateTime) && !this.#errored)
 				dateTime = dateTime.withTimeZone(targetTz).withCalendar(targetCal);
 
 			if (isRoot) {
-				// results already handled above
-
 				if (Reflect.isExtensible(this.#local.parse)) {
 					// ensure 'result' array is present and append our discovered matches
 					if (isUndefined(this.#local.parse.result)) {
@@ -1346,12 +1378,12 @@ export class Tempo {
 					}
 				}
 			}
+
+			return (isZonedDateTime(dateTime) && !this.#errored) ? dateTime : undefined as any;
 		} finally {
 			if (isRoot) this.#matches = undefined;
 			this.#parseDepth--;
 		}
-
-		return dateTime;
 	}
 
 	/** resolve constructor / method arguments */
@@ -1410,7 +1442,7 @@ export class Tempo {
 		const arg = asType(tempo);
 		const { type, value } = arg;
 
-		if (!isTemporal(dateTime)) {
+		if (!isZonedDateTime(dateTime)) {
 			Tempo.#dbg.error(this.#local.config, new TypeError(`Sacred Anchor corrupted: ${String(value)}`));
 			return arg;
 		}
@@ -1420,10 +1452,19 @@ export class Tempo {
 
 		if (this.#isZonedDateTimeLike(tempo)) {									// tempo is ZonedDateTime-ish object (throw away 'value' property)
 			const { timeZone, calendar, value: _, ...options } = tempo as Tempo.Options;
+
+			// security check: if it contains term-keys (#) in core mode, we should throw a hint
+			const keys = Object.keys(options);
+			if (keys.some(k => k.startsWith('#')) && Tempo.#terms.length === 0) {
+				Tempo.#termError(this.#local.config, keys.find(k => k.startsWith('#'))!);
+				return undefined as any;
+			}
+
+
 			if (!isEmpty(options)) zdt = zdt.with(options as Temporal.ZonedDateTimeLikeObject);
 
 			if (timeZone)
-				if (isTemporal(zdt)) zdt = zdt.withTimeZone(timeZone);// optionally set timeZone
+				if (isZonedDateTime(zdt)) zdt = zdt.withTimeZone(timeZone);// optionally set timeZone
 			if (calendar)
 				zdt = zdt.withCalendar(calendar);										// optionally set calendar
 
@@ -1662,13 +1703,13 @@ export class Tempo {
 	}
 
 	#add = (args?: any, options: Tempo.Options = {}) => {
-		if (!isTemporal(this.#zdt)) return this;
+		if (!isZonedDateTime(this.#zdt)) return this;
 
 		const tz = options.timeZone ?? this.tz;
 		let zdt = (this.#zdt as any).withTimeZone(tz);
 		this.#parseDepth++;
 		const isRoot = this.#parseDepth === 1;
-		if (isRoot) this.#matches = [];
+		if (isRoot) this.#matches = [...this.parse.result];
 
 		const overrides = {
 			timeZone: tz,
@@ -1788,7 +1829,7 @@ export class Tempo {
 
 	/** mutate the date-time by setting specific offsets */
 	#set = (args?: any, options: Tempo.Options = {}) => {
-		if (!isTemporal(this.#zdt)) return this;
+		if (!isZonedDateTime(this.#zdt)) return this;
 
 		const tz = options.timeZone ?? this.tz;
 		const cal = options.calendar ?? (this.#zdt as any).calendarId;
@@ -1798,7 +1839,7 @@ export class Tempo {
 		let zdt = (this.#zdt as any).withTimeZone(tz).withCalendar(cal);
 		this.#parseDepth++;
 		const isRoot = this.#parseDepth === 1;
-		if (isRoot) this.#matches = [];
+		if (isRoot) this.#matches = [...this.parse.result];
 
 		const overrides = {
 			timeZone: tz,
@@ -1845,7 +1886,11 @@ export class Tempo {
 									{
 										const ident = term!.startsWith('#') ? term!.slice(1) : term!;
 										const termObj = Tempo.#terms.find(t => t.key === ident || t.scope === ident);
-										if (!termObj) throw new Error(`Unknown Term identifier: ${term}`);
+										if (!termObj) {
+											Tempo.#termError(options, term!);
+											return this;
+										}
+
 
 										const list = getRange(termObj, this, zdt);
 										const range = (getTermRange(this, list, false, zdt) as any);

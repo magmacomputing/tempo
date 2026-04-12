@@ -12,7 +12,7 @@ new Tempo('25-Dec-2024').term.season     // ← computed on first access, cached
 ```
 
 > [!TIP]
-> **Transparent Discovery**: As of **v2.0.1**, all term properties are **enumerable**. This means a single `console.log(t.term)` will trigger the eager evaluation of *every* registered term at once—providing a full snapshot of the instance's grammar state. To prevent terminal noise during these full-eval events (e.g. for invalid dates), initialize Tempo with **`silent: true`**.
+> **Transparent Discovery**: As of **v2.0.1**, all term properties are **enumerable**. Whilst modern `console.log` environments (like Node.js) will typically display these as `[Getter]` to preserve laziness, they *are* visible to property-scanning tools. This means a serializer (like `JSON.stringify`) or a deep-clone utility **will** trigger the eager evaluation of *every* registered term at once. To prevent terminal noise during these events (e.g., for invalid dates), initialize Tempo with **`silent: true`**.
 
 ---
 
@@ -24,7 +24,7 @@ A term plugin answers a single question:
 
 Each plugin holds a static list of **range boundaries** (e.g. the start of each meteorological season) and a **`define` function** that is called — with the `Tempo` instance as its `this` context — to determine into which boundary the instance falls.
 
-Plugins expose two views of that result via the `Tempo.term` object:
+Plugin expose two views of that result via the `Tempo.term` object:
 
 | Property | Returns |
 |---|---|
@@ -33,7 +33,7 @@ Plugins expose two views of that result via the `Tempo.term` object:
 The `<key>` and `<scope>` are defined by the plugin author, where the intent of the `<key>` is to provide a short identifier value, and the intent of the `<scope>` is to provide the full matching range object.
 ---
 
-## Provided Plugins
+## Provided Plugin
 
 ### `qtr` / `quarter` — Fiscal Quarters
 
@@ -65,7 +65,10 @@ const t = new Tempo('01-Jul-2025');
 
 t.term.szn      // → 'Winter'  (northern hemisphere)
 t.term.season
-// → { key: 'Winter', day: 22, month: 12, symbol: 'Snowflake', sphere: 'North', CN: { key: 'Summer', ... } }
+// → { key: 'Winter', day: 22, month: 12, symbol: 'Snowflake', sphere: 'North' }
+
+t.term.season.CN
+// → { key: 'Summer', symbol: 'Sun', ... }
 ```
 
 ```ts
@@ -86,8 +89,10 @@ const t = new Tempo('14-Mar-2025');
 
 t.term.zdc      // → 'Pisces'
 t.term.zodiac
-// → { key: 'Pisces', day: 19, month: 2, symbol: 'Fish', longitude: 330, planet: 'Neptune',
-//     CN: { animal: 'Snake', traits: 'Wise, intuitive', element: 'Wood', yinYang: 'Yin' } }
+// → { key: 'Pisces', day: 19, month: 2, symbol: 'Fish', longitude: 330, planet: 'Neptune' }
+
+t.term.zodiac.CN
+// → { animal: 'Snake', traits: 'Wise, intuitive', element: 'Wood', yinYang: 'Yin' }
 ```
 
 ---
@@ -118,7 +123,7 @@ t.term.period   // → { key: 'midday', hour: 12 }
 
 ## Inspecting Registered Terms
 
-The static `Tempo.terms` getter returns a read-only list of all registered plugins:
+The static `Tempo.terms` getter returns a read-only list of all registered plugin:
 
 ```ts
 Tempo.terms
@@ -132,6 +137,36 @@ Tempo.terms
 
 ---
 
+## Activating Terms
+
+In **Tempo Full**, all standard terms are enabled by default. In **Tempo Core**, you have three ways to opt-in:
+
+### 1. Standard Activation (Recommended)
+The fastest way to enable all built-in terms (`qtr`, `szn`, `zdc`, `per`).
+```typescript
+import '@magmacomputing/tempo/term/standard'; // One-line side-effect activation
+```
+
+### 2. Explicit Module (Uniform Sync)
+Best for projects that prefer explicit dependencies and a uniform API across all features.
+```typescript
+import { Tempo } from '@magmacomputing/tempo/core';
+import { TermsModule } from '@magmacomputing/tempo/term';
+
+Tempo.extend(TermsModule);
+```
+
+### 3. Surgical Opt-in (Maximum Lite)
+Best for maximum bundle-size optimization—you only load the specific terms you use.
+```typescript
+import { Tempo } from '@magmacomputing/tempo/core';
+import { QuarterTerm } from '@magmacomputing/tempo/term/quarter';
+
+Tempo.extend(QuarterTerm);
+```
+
+---
+
 ## How to Define a Term Plugin
 
 A term plugin is ideally created using the **`defineTerm`** factory function provided by the library. This ensures correct type-inference and automatically handles registration during the discovery phase.
@@ -139,41 +174,51 @@ A term plugin is ideally created using the **`defineTerm`** factory function pro
 ### Plugin Definition
 
 ```ts
-import { defineTerm, defineRange, getTermRange, type Range } from '@magmacomputing/tempo/plugins';
-import { enums, type Tempo } from '@magmacomputing/tempo';
+import { defineTerm, defineRange, getTermRange, resolveCycleWindow } from '@magmacomputing/tempo/plugin';
+import { enums, type Tempo } from '@magmacomputing/tempo/core';
 
-/** 1. The range boundaries (flattened and self-documenting) */
-const { ranges, groups } = defineRange([
-  { key: 'Spring', month: 3,  group: 'season', sphere: enums.COMPASS.North },
-  { key: 'Summer', month: 6,  group: 'season', sphere: enums.COMPASS.North },
-  { key: 'Autumn', month: 9,  group: 'season', sphere: enums.COMPASS.North },
-  { key: 'Winter', month: 12, group: 'season', sphere: enums.COMPASS.North },
+/** 1. The range boundaries (grouped by sphere) */
+const groups = defineRange([
+  { key: 'Spring', month: 3,  sphere: enums.COMPASS.North },
+  { key: 'Summer', month: 6,  sphere: enums.COMPASS.North },
+  { key: 'Autumn', month: 9,  sphere: enums.COMPASS.North },
+  { key: 'Winter', month: 12, sphere: enums.COMPASS.North },
+], 'sphere');
+
+/** 2. Resolve the candidate list for the current anchor/context */
+function resolve(t: Tempo, anchor?: any): any[] {
+  const source = anchor ?? t;
+  const sphere = source.config?.sphere ?? t.config.sphere;
+  const template = groups[sphere] ?? [];
   
-  { key: 'Dry',    month: 1,  group: 'tropical' },
-  { key: 'Wet',    month: 5,  group: 'tropical' },
-], 'group', 'sphere');
+  // resolveCycleWindow handle the ±1 year shifting for boundaries
+  return resolveCycleWindow(t, template, anchor);
+}
 
-/** 2. The Plugin Object */
+/** 3. The Plugin Object */
 export const MySeasonTerm = defineTerm({
     key: 'szn',
     scope: 'season',
     description: 'Custom seasonal range',
-    ranges,
+    groups,
+
+    /** Optional: Used for multi-cycle discovery & traversals */
+    resolve(this: Tempo, anchor?: any) {
+      return resolve(this, anchor);
+    },
 
     /**
-     * 3. The lookup function.
-     *    - `this` is bound to the Tempo instance at call time.
-     *    - `keyOnly = true`  → return the key string
-     *    - `keyOnly = false` → return the full range object
+     * Determine the current range.
+     * @param keyOnly - if true, return only the identifier string
+     * @param anchor - the specific date-time we are calculating for 
      */
-    define(this: Tempo, keyOnly?: boolean) {
-      // Use pre-grouped results for instantaneous lookup!
-      const list = groups[`season.${this.config.sphere}`] ?? [];
-
-      return getTermRange(this, list, keyOnly);
+    define(this: Tempo, keyOnly?: boolean, anchor?: any) {
+      const list = resolve(this, anchor);
+      return getTermRange(this, list, keyOnly, anchor);
     }
 });
 ```
+
 
 ### `Range` fields
 
@@ -196,10 +241,10 @@ type Range = {
 
 ### Registering the plugin
 
-Use the static **`Tempo.extend()`** (or `Tempo.addTerm()`) method. This allows you to add terms dynamically without modifying the library source.
+Use the static **`Tempo.extend()`** method. This allows you to add terms dynamically without modifying the library source.
 
 ```ts
-import { Tempo } from '@magmacomputing/tempo';
+import { Tempo } from '@magmacomputing/tempo/core';
 import { MySeasonTerm } from './term.myseason.js';
 
 // Register the term plugin
@@ -210,7 +255,7 @@ Every `Tempo` instance created after that point will have the custom term availa
 
 ### Using Custom Configuration in Terms
 
-Since `Tempo` preserves non-standard configuration options in its internal `config` object, you can use `Tempo.init()` to provide values that your custom term plugins can later reference.
+Since `Tempo` preserves non-standard configuration options in its internal `config` object, you can use `Tempo.init()` to provide values that your custom term plugin can later reference.
 
 ```ts
 // 1. Initialize with a custom 'business' config option
@@ -248,7 +293,7 @@ To unlock Tempo's advanced **Term Traversal** (e.g., `t.add({ '#quarter': 1 })`)
 The library provides a specialized helper that calculates these boundaries automatically based on your `ranges` array.
 
 ```ts
-import { getTermRange } from '@magmacomputing/tempo/plugins';
+import { getTermRange } from '@magmacomputing/tempo/plugin';
 
 export function define(this: Tempo, keyOnly?: boolean) {
   // Finds the current range, then injects 'start' and 'end' (as Tempo instances)
