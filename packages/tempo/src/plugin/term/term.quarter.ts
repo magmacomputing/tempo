@@ -51,9 +51,7 @@ export const QuarterTerm = defineTerm({
 	define(this: Tempo, keyOnly?: boolean, anchor?: any) {
 		const res = resolve(this, anchor);
 		const result = getTermRange(this, asArray(res), keyOnly, anchor) as any;
-		if (Array.isArray(result)) {
-			console.error(`[DEBUG] QuarterTerm.define(keyOnly=${keyOnly}) returned an ARRAY! Length: ${result.length}`);
-		}
+
 		return result;
 	}
 });

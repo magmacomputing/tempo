@@ -26,6 +26,17 @@ describe('Ticker with Terms', () => {
 				'2020-01-03T08:00:00',
 				'2020-01-04T08:00:00'
 			]
+		},
+		{
+			name: 'every morning using shorthand literal key',
+			interval: { '#period.morning': 1 },
+			seed: '2020-01-01T00:00:00',
+			expected: [
+				'2020-01-01T08:00:00',
+				'2020-01-02T08:00:00',
+				'2020-01-03T08:00:00',
+				'2020-01-04T08:00:00'
+			]
 		}
 	])('should pulse $name', ({ interval, seed, expected }) => {
 		const pulses: string[] = []
@@ -46,6 +57,7 @@ describe('Ticker with Terms', () => {
 	})
 
 	it('should refuse to launch with an invalid #term', () => {
+		const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
 		const seed = '2020-01-01'
 		const payload = { '#invalid': 1 }
 
@@ -59,5 +71,6 @@ describe('Ticker with Terms', () => {
 
 		// Pulse-manual should not work meaningfully as ticker was inhibited
 		expect(ticker.pulse().isValid).toBe(false)
+		spy.mockRestore()
 	})
 })

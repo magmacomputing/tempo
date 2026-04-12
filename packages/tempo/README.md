@@ -137,6 +137,7 @@ For detailed technical guides, please refer to:
 - [Tempo vs. The Competition](./doc/comparison.md) ([v2.1.0](https://github.com/magmacomputing/magma/blob/v2.1.0/packages/tempo/doc/comparison.md))
 - [Tempo API Reference](./doc/tempo.api.md) ([v2.1.0](https://github.com/magmacomputing/magma/blob/v2.1.0/packages/tempo/doc/tempo.md))
 - [Tempo Class Documentation](./doc/Tempo.md) ([v2.1.0](https://github.com/magmacomputing/magma/blob/v2.1.0/packages/tempo/doc/Tempo.md))
+- [Tempo Term Shorthand](./doc/shorthand_engine.md) ([v2.1.0](https://github.com/magmacomputing/magma/blob/v2.1.0/packages/tempo/doc/shorthand_engine.md))
 - [Plugin System](./doc/tempo.plugin.md) ([v2.1.0](https://github.com/magmacomputing/magma/blob/v2.1.0/packages/tempo/doc/tempo.plugin.md))
 - [Configuration Guide](./doc/tempo.config.md) ([v2.1.0](https://github.com/magmacomputing/magma/blob/v2.1.0/packages/tempo/doc/tempo.config.md))
 - [Architecture & Internal Protection](./doc/architecture.md) ([v2.1.0](https://github.com/magmacomputing/magma/blob/v2.1.0/packages/tempo/doc/architecture.md))

@@ -19,7 +19,7 @@ import type { Property, TypeValue, Secure } from '#library/type.library.js';
 import { compose } from './plugin/module/module.composer.js';
 import { resolveTermMutation, resolveTermValue } from './plugin/module/module.term.js';
 import { prefix, parseWeekday, parseDate, parseTime, parseZone } from './plugin/module/module.lexer.js';
-import { REGISTRY, registerPlugin, registerTerm, getRange, getTermRange, resolveTermShift, interpret } from './plugin/plugin.util.js'
+import { REGISTRY, registerPlugin, registerTerm, getRange, getTermRange, resolveTermShift, interpret, findTermPlugin } from './plugin/plugin.util.js'
 
 import { getSafeFallbackStep } from './tempo.util.js'
 import { $Register, $Tempo, $Plugins, $isTempo, isTempo, registerHook, $logError, $logDebug, $termError } from './tempo.symbol.js';
@@ -1723,7 +1723,13 @@ export class Tempo {
 
 		try {
 			if (isDefined(args)) {
-				if (isObject(args) && args.constructor === Object) {
+				// 1. Intercept Shorthand String (e.g. .add('#quarter'))
+				if (isString(args) && args.startsWith('#')) {
+					zdt = resolveTermMutation(Tempo, this, 'add', args, 1, zdt);
+					if (zdt === null) this.#errored = true;
+				}
+				// 2. Process Mutation Object
+				else if (isObject(args) && args.constructor === Object) {
 					const mutate = 'add';
 					zdt = Object.entries(args ?? {})										// loop through each mutation
 						.reduce<Temporal.ZonedDateTime>((zdt, [unit, offset]) => {	// apply each mutation to preceding one
@@ -1735,7 +1741,11 @@ export class Tempo {
 							try {
 								if (unit === 'timeZone' || unit === 'calendar') return zdt;
 
-								if (unit.startsWith('#')) {
+								const isTerm = unit.startsWith('#');
+								const name = isTerm ? unit.slice(1) : unit;
+								const isTermPlugin = !isTerm && !!findTermPlugin(name as string);
+
+								if (isTerm || isTermPlugin) {
 									return resolveTermMutation(Tempo, this, mutate, unit, offset, zdt);
 								}
 
@@ -1799,7 +1809,13 @@ export class Tempo {
 
 		try {
 			if (isDefined(args)) {
-				if (isObject(args) && args.constructor === Object) {
+				// 1. Intercept Shorthand String (e.g. .set('#morning') or .set('#zodiac.aries'))
+				if (isString(args) && args.startsWith('#')) {
+					zdt = resolveTermMutation(Tempo, this, 'start', args, args, zdt);
+					if (zdt === null) this.#errored = true;
+				}
+				// 2. Process Mutation Object
+				else if (isObject(args) && args.constructor === Object) {
 
 					const { timeZone, calendar } = args as Temporal.ZonedDateTimeLikeObject;
 					if (timeZone) overrides.timeZone = timeZone;
@@ -1824,8 +1840,9 @@ export class Tempo {
 										{
 											const isTerm = key.startsWith('#');
 											const name = isTerm ? key.slice(1) : key;
-											const single = isTerm ? 'term' : singular(name as string);
-											return { mutate: 'set', offset: adjust, single, term: isTerm ? (key as string) : undefined }
+											const isTermPlugin = !isTerm && !!findTermPlugin(name as string);
+											const single = isTerm || isTermPlugin ? 'term' : singular(name as string);
+											return { mutate: 'set', offset: adjust, single, term: isTerm ? (key as string) : (isTermPlugin ? key : undefined) }
 										}
 								}
 							})(key);																			// IIFE to analyze arguments

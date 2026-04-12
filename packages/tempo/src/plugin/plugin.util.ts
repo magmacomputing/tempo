@@ -119,6 +119,25 @@ export const defineExtension = <T extends Plugin>(extension: T): T => {
 }
 
 /**
+ * ## findTermPlugin
+ * Find a Term plugin by key, scope, or sub-key.
+ */
+export function findTermPlugin(ident: string): TermPlugin | undefined {
+	if (!isString(ident)) return undefined;
+	const id = (ident.startsWith('#') ? ident.slice(1) : ident).toLowerCase();
+	const [termPart] = id.split('.');
+
+	return REGISTRY.terms.find(t => {
+		if (t.key?.toLowerCase() === termPart || t.scope?.toLowerCase() === termPart) return true;
+		if (t.groups) {
+			const list = Array.isArray(t.groups) ? t.groups : Object.values(t.groups).flat(Infinity) as Range[];
+			return list.some(r => r.key?.toLowerCase() === id || r.key?.toLowerCase() === termPart);
+		}
+		return false;
+	});
+}
+
+/**
  * ## defineRange
  * Factory to normalize and group Term ranges for efficient lookup.
  */
@@ -261,19 +280,30 @@ export function resolveTermAnchor(tempo: Tempo, terms: any[], offset: string, mu
 /**
  * Resolve a term shift.
  */
-export function resolveTermShift(tempo: Tempo, terms: any[], offset: string, shift: number): any {
-	const ident = offset.startsWith('#') ? offset.slice(1) : offset;
-	const termObj = terms.find(t => t.key === ident || t.scope === ident);
-	if (!termObj) return undefined;
-
+export function resolveTermShift(tempo: Tempo, source: any[], offset: string, shift: number): any {
 	const anchor = (tempo as any).toDateTime();
-	const list = getRange(termObj, tempo, anchor);
+	let list: Range[] = [];
+
+	// If source is a list of plugins, find the right one and resolve it.
+	// Otherwise, it's a pre-resolved list of ranges.
+	if (source.length > 0 && 'define' in source[0]) {
+		const ident = offset.startsWith('#') ? offset.slice(1) : offset;
+		const termObj = source.find(t => t.key === ident || t.scope === ident);
+		if (!termObj) return undefined;
+		list = getRange(termObj, tempo, anchor);
+	} else {
+		list = source;
+	}
+
 	const range = (getTermRange(tempo, list, false, anchor) as any);
 	if (!range) return undefined;
 
-	// find index in list (matching both key and year for accurate cycle identification)
-	const isMultiCycle = list.some(r => isDefined(r.year));
-	const idx = list.findIndex(r => r.key === range.key && (isMultiCycle ? r.year === range.year : true));
+	// find index in list (matching key and all shared date/time units for accurate identity)
+	const idx = list.findIndex(r => 
+		r.key === range.key && 
+		SCHEMA.every(([u]) => (isDefined(r[u]) && isDefined(range[u])) ? r[u] === range[u] : true)
+	);
+	
 	if (idx === -1) return undefined;
 
 	const targetIdx = idx + shift;
@@ -282,15 +312,39 @@ export function resolveTermShift(tempo: Tempo, terms: any[], offset: string, shi
 
 	// resolve target range
 	const res = (getTermRange(tempo, [target], false) as any);
+	if (!res) return undefined;
 	return res.start;
 }
 
 /**
  * ## resolveCycleWindow
- * Helper to generate a 3-cycle candidate window (-1, 0, +1 years) around an anchor.
+ * Helper to generate a 3-cycle candidate window around an anchor.
+ * Defaults to yearly cycles, but supports daily cycles if the template suggests it.
  */
 export function resolveCycleWindow(t: Tempo, template: Range[], anchor?: any) {
-	const source: any = anchor ?? t;													// anchor used to resolve relative cycle year
+	const source = anchor ?? (t as any).toDateTime();
+	const largest = getLargestUnit(template);
+
+	// Handle Daily Cycles (e.g. TimelineTerm)
+	if (largest === 'hour' || largest === 'minute') {
+		const list: Range[] = [];
+		const base = Temporal.PlainDate.from(source);
+		
+		for (const offset of [-1, 0, 1]) {
+			const date = base.add({ days: offset });
+			template.forEach(itm => {
+				list.push({
+					...itm,
+					year: date.year,
+					month: date.month,
+					day: date.day
+				});
+			});
+		}
+		return list;
+	}
+
+	// Handle Yearly Cycles (Default)
 	const yy = isTempo(source) ? source.yy : (source.year ?? source.yy);
 	const mm = isTempo(source) ? source.mm : (source.month ?? source.mm);
 	const dd = isTempo(source) ? source.dd : (source.day ?? source.dd);
@@ -300,21 +354,15 @@ export function resolveCycleWindow(t: Tempo, template: Range[], anchor?: any) {
 	const startDd = startItem.day ?? 1;
 
 	let baseYear = yy;
-
-	// Anchor check: if anchor is before cycle start in current year, its 'active' cycle started last year.
-	if (mm < startMm || (mm === startMm && dd < startDd))
-		baseYear--;
+	if (mm < startMm || (mm === startMm && dd < startDd)) baseYear--;
 
 	const list: Range[] = [];
 	for (const offset of [-1, 0, 1]) {
 		const yy = baseYear + offset;
 		template.forEach(itm => {
 			const clone = { ...itm };
-
-			// calculate absolute year from relative year offset
 			if (isDefined(itm.year)) clone.year = itm.year + yy;
 			else clone.year = yy;
-
 			list.push(clone);
 		});
 	}

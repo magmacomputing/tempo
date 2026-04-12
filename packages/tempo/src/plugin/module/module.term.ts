@@ -4,7 +4,7 @@ import { isDefined, isObject, isString, isZonedDateTime } from '#library/type.li
 import { isNumeric } from '#library/coercion.library.js';
 import { $termError } from '../../tempo.symbol.js';
 import { getSafeFallbackStep } from '../../tempo.util.js';
-import { REGISTRY, getRange, getTermRange, resolveTermShift } from '../plugin.util.js';
+import { REGISTRY, getRange, getTermRange, resolveTermShift, findTermPlugin } from '../plugin.util.js';
 
 /**
  * Resolves a mutation (start/mid/end/add) against a Tempo Term.
@@ -20,8 +20,11 @@ import { REGISTRY, getRange, getTermRange, resolveTermShift } from '../plugin.ut
 export function resolveTermMutation(Tempo: any, instance: any, mutate: string, unit: string, offset: any, zdt: any): any {
 	if (!isZonedDateTime(zdt)) return zdt;
 
-	const ident = unit.startsWith('#') ? unit.slice(1) : unit;
-	const termObj = REGISTRY.terms.find((t: any) => t.key === ident || t.scope === ident);
+	const [termPart, rangePart] = unit.startsWith('#') 
+		? unit.slice(1).split('.') 
+		: [unit, undefined];
+
+	const termObj = findTermPlugin(termPart);
 
 	if (!termObj) {
 		Tempo[$termError](instance.config, unit);
@@ -33,9 +36,23 @@ export function resolveTermMutation(Tempo: any, instance: any, mutate: string, u
 
 	// 1. Handle Absolute Mutations (start | mid | end)
 	if (mutate === 'start' || mutate === 'mid' || mutate === 'end') {
-		const list = getRange(termObj, instance, zdt);
+		let list = getRange(termObj, instance, zdt);
+
+		// If a range part was specified, filter the list
+		if (rangePart) {
+			list = list.filter(r => r.key?.toLowerCase() === rangePart.toLowerCase());
+		}
+
+		if (list.length === 0) {
+			Tempo[$termError](instance.config, unit);
+			return null;
+		}
+
 		const range = (getTermRange(instance, list, false, zdt) as any);
-		if (!range) throw new Error(`Cannot resolve range for Term: ${unit}`);
+		if (!range) {
+			Tempo[$termError](instance.config, unit);
+			return null;
+		}
 
 		switch (mutate) {
 			case 'start': return range.start.toDateTime().withTimeZone(tz).withCalendar(cal);
@@ -50,41 +67,79 @@ export function resolveTermMutation(Tempo: any, instance: any, mutate: string, u
 	}
 
 	// 2. Handle Relative Mutations (add | set)
-	if (isString(offset)) {
+	if (isString(offset) && !offset.startsWith('#')) {
 		let jump = zdt;
 		// Determine the shifted target by recursively calling .set on a temporary strict instance
 		let next = new instance.constructor(jump, { ...instance.config, mode: 'strict' }).set({ [unit]: offset }).toDateTime();
 
 		let iterations = 0;
 		while (next.epochNanoseconds <= zdt.epochNanoseconds) {
-			if (++iterations > 20) {
+			if (++iterations > 50) {													// Safety-Valve: prevent infinite look-ahead
 				const range = termObj.define.call(new instance.constructor(jump, { ...instance.config, mode: 'strict' }), false);
 				const step = getSafeFallbackStep(range as any, termObj.scope ?? (unit === '#period' ? 'period' : undefined));
 				jump = jump.add(step);
-				next = new instance.constructor(jump, { ...instance.config, mode: 'strict' }).set({ [unit]: offset }).toDateTime();
-				break;
-			}
-
-			const range = termObj.define.call(new instance.constructor(jump, { ...instance.config, mode: 'strict' }), false);
-			if (isObject(range) && (range as any).end) {
-				jump = (range as any).end.toDateTime();
 			} else {
-				const step = (unit === '#period' || termObj.scope === 'period') ? { days: 1 } : { years: 1 };
-				jump = jump.add(step);
+				const range = termObj.define.call(new instance.constructor(jump, { ...instance.config, mode: 'strict' }), false);
+				if (isObject(range) && (range as any).end) {
+					jump = (range as any).end.toDateTime();
+				} else {
+					const step = (unit === '#period' || termObj.scope === 'period') ? { days: 1 } : { years: 1 };
+					jump = jump.add(step);
+				}
 			}
 			next = new instance.constructor(jump, { ...instance.config, mode: 'strict' }).set({ [unit]: offset }).toDateTime();
 		}
 		return next;
 	}
 
-	// 3. Handle Numeric Shifts
-	if (isNumeric(offset)) {
-		const res = resolveTermShift(instance, REGISTRY.terms, unit, offset as number);
-		if (isDefined(res)) return res.toDateTime().withTimeZone(tz).withCalendar(cal);
+	// 3. Handle Numeric Shifts or Term Shifting
+	if (isNumeric(offset) || (isString(offset) && offset.startsWith('#'))) {
+		const shiftValue = isNumeric(offset) ? Number(offset) : 1;
+		let jump = zdt;
+		let remaining = Math.abs(shiftValue);
+		const direction = shiftValue > 0 ? 1 : -1;
 
-		// failure to resolve shift
-		Tempo[$termError](instance.config, unit);
-		return null;
+		let iterations = 0;
+		while (remaining > 0) {
+			if (++iterations > 100) {												// Safety-Valve: prevent infinite shift
+				Tempo[$termError](instance.config, unit);
+				return null;
+			}
+
+			let list = getRange(termObj, instance, jump);
+
+			// If a range part was specified, filter the list
+			if (rangePart) {
+				list = list.filter(r => r.key?.toLowerCase() === rangePart.toLowerCase());
+			}
+
+			if (list.length === 0) {
+				Tempo[$termError](instance.config, unit);
+				return null;
+			}
+
+			const res = resolveTermShift(new instance.constructor(jump, instance.config), list, unit, direction);
+			if (isDefined(res)) {
+				jump = res.toDateTime();
+				remaining--;
+			} else {
+				// if we hit the edge of the current list, jump to the end of the current cycle and try again
+				const current = (getTermRange(instance, list, false, jump) as any);
+				if (!current) {
+					Tempo[$termError](instance.config, unit);
+					return null;
+				}
+				
+				const nextJump = (direction > 0) ? current.end.toDateTime() : current.start.toDateTime().subtract({ nanoseconds: 1 });
+				if (nextJump.epochNanoseconds === jump.epochNanoseconds) {			// detect zero-progress stall
+					jump = (direction > 0) ? jump.add({ days: 1 }) : jump.subtract({ days: 1 });
+				} else {
+					jump = nextJump;
+				}
+			}
+		}
+
+		return jump.withTimeZone(tz).withCalendar(cal);
 	}
 
 	return zdt;
@@ -92,27 +147,28 @@ export function resolveTermMutation(Tempo: any, instance: any, mutate: string, u
 
 /**
  * Resolves a term identifier (e.g. '#quarter') to its current value (start of cycle).
- * 
- * @param Tempo - The Tempo constructor (for static access)
- * @param instance - The calling Tempo instance
- * @param term - The term identifier
- * @param zdt - The current ZonedDateTime state
- * @returns The resolved ZonedDateTime or undefined if not a term
  */
 export function resolveTermValue(Tempo: any, instance: any, term: string, zdt: any): any {
 	if (!term.startsWith('#')) return undefined;
 
-	const ident = term.slice(1);
-	const termObj = REGISTRY.terms.find((t: any) => t.key === ident || t.scope === ident);
+	const [termPart, rangePart] = term.slice(1).split('.');
+	const termObj = findTermPlugin(termPart);
 
 	if (!termObj) {
 		Tempo[$termError](instance.config, term);
 		return undefined;
 	}
 
-	const list = getRange(termObj, instance, zdt);
-	const range = (getTermRange(instance, list, false, zdt) as any);
+	let list = getRange(termObj, instance, zdt);
 
+	// If a range part was specified, filter the list
+	if (rangePart) {
+		list = list.filter(r => r.key?.toLowerCase() === rangePart.toLowerCase());
+	}
+
+	if (list.length === 0) return undefined;
+
+	const range = (getTermRange(instance, list, false, zdt) as any);
 	if (!range) return undefined;
 	if (!isZonedDateTime(zdt)) return undefined;
 

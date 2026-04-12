@@ -1,4 +1,4 @@
-import { defineTerm, getTermRange, defineRange } from '../plugin.util.js';
+import { defineTerm, getTermRange, defineRange, resolveCycleWindow } from '../plugin.util.js';
 import type { Tempo } from '../../tempo.class.js';
 
 /** definition of daily time periods */
@@ -15,8 +15,7 @@ const groups = defineRange([
 
 function resolve(t: Tempo, anchor?: any) {
 	const template = groups["standard"] ?? [];
-
-	return template;
+	return resolveCycleWindow(t, template, anchor);
 }
 
 export const TimelineTerm = defineTerm({
