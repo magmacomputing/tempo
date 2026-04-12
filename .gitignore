@@ -4,6 +4,7 @@
 /public/
 /web
 dist/
+scratch/
 /tmp
 /out-tsc
 *.tsbuildinfo
