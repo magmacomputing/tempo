@@ -16,6 +16,8 @@ import type { Tempo } from '#tempo/tempo.class.js';
 /** key for contextual Error Logging */											export const $logError = Symbol.for('$TempoLogError');
 /** key for contextual Debug Logging */											export const $logDebug = Symbol.for('$TempoLogDebug');
 
+/** key for centralized Term Error dispatching */						export const $termError = Symbol.for('$TempoTermError');
+
 /**
  * Define a reactive registration hook on a global symbol.
  * Allows Tempo to listen for side-effect plugin registrations

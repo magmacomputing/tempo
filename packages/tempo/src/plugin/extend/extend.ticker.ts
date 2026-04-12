@@ -301,7 +301,7 @@ class TickerInstance implements Ticker.Descriptor {
 		}
 		if (this.#isInstant) return { done: true, value: undefined };
 		const delay = this.#delayMs();
-		this.#waiter = new Pledge('Ticker.next') as Pledge<void>;
+		this.#waiter = new Pledge<void>('Ticker.next');
 		this.#schedId = setTimeout(() => this.#waiter?.resolve(), delay);
 		await this.#waiter;
 		this.#waiter = undefined;

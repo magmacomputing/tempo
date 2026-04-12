@@ -13,7 +13,7 @@ describe('Master Guard Extension', () => {
     Tempo.extend({
       terms: [{
         key: '$$$apple$$$',
-        define() { return this.mm === 10 ? 'OCT' : undefined }
+        define(t: any) { return t.mm === 10 ? 'OCT' : undefined }
       }]
     });
 
@@ -33,7 +33,7 @@ describe('Master Guard Extension', () => {
     // 2. Extend directly
     Tempo.extend({
       key: '@@@banana@@@',
-      define() { return this.mm === 11 ? 'NOV' : undefined }
+      define(t: any) { return t.mm === 11 ? 'NOV' : undefined }
     });
 
     // 3. '@@@banana@@@' now passes guard

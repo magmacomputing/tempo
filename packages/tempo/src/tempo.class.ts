@@ -17,11 +17,12 @@ import { instant } from '#library/temporal.library.js';
 import type { Property, TypeValue, Secure } from '#library/type.library.js';
 
 import { compose } from './plugin/module/module.composer.js';
+import { resolveTermMutation, resolveTermValue } from './plugin/module/module.term.js';
 import { prefix, parseWeekday, parseDate, parseTime, parseZone } from './plugin/module/module.lexer.js';
 import { REGISTRY, registerPlugin, registerTerm, getRange, getTermRange, resolveTermShift, interpret } from './plugin/plugin.util.js'
 
 import { getSafeFallbackStep } from './tempo.util.js'
-import { $Register, $Tempo, $Plugins, $isTempo, isTempo, registerHook, $logError, $logDebug } from './tempo.symbol.js';
+import { $Register, $Tempo, $Plugins, $isTempo, isTempo, registerHook, $logError, $logDebug, $termError } from './tempo.symbol.js';
 import { Match, Token, Snippet, Layout, Event, Period, Default } from './tempo.default.js';
 import enums, { STATE, DISCOVERY, registryUpdate, registryReset } from './tempo.enum.js';
 import * as t from './tempo.type.js';												// namespaced types (Tempo.*)
@@ -102,10 +103,13 @@ export class Tempo {
 	/** flag to prevent recursion during init */							static #lifecycle = { bootstrap: true, initialising: false, extendDepth: 0, ready: false };
 	/** Master Guard predicate (implements RegExp-like interface) */					static #guard: { test(str: string): boolean } = { test: () => true };
 	/** Set of allowed lowercased tokens for the Master Guard */					static #allowedTokens: Set<string> = new Set();
-	
-	static #termError(config: Tempo.Options, term: string) {
+
+	/** Centralized error dispatcher for Term resolution failures */
+	static [$termError](config: Tempo.Options, term: string) {
 		const hint = Tempo.#terms.length === 0 ? ". (No term plugins are registered—did you forget to call Tempo.extend(TermsModule)?)" : "";
-		Tempo.#dbg.error(config, `Unknown Term identifier: ${term}${hint}`);
+		const msg = `Unknown Term identifier: ${term}${hint}`;
+		Tempo.#dbg.error(config, msg);
+		if (config.catch !== true) throw new Error(msg);
 	}
 
 	//** prototype helpers */
@@ -1285,7 +1289,7 @@ export class Tempo {
 				const ident = term.startsWith('#') ? term.slice(1) : term;
 				const termObj = Tempo.#terms.find(t => t.key === ident || t.scope === ident);
 				if (!termObj) {
-					Tempo.#termError(this.#local.config, term);
+					Tempo[$termError](this.#local.config, term);
 					return undefined as any;
 				}
 
@@ -1329,8 +1333,9 @@ export class Tempo {
 			const resolvingKeys = new Set<string>();
 			const res = this.#conform(tempo, today, isAnchored, resolvingKeys);
 
-			if (isString(tempo) && tempo.startsWith('#') && !['Temporal.ZonedDateTime', 'Temporal.PlainDate', 'Temporal.PlainTime'].includes(res.type as string)) {
-				Tempo.#termError(this.#local.config, tempo);
+			if (isString(tempo) && tempo.startsWith('#')) {
+				const res = resolveTermValue(Tempo, this, tempo, today);
+				if (isZonedDateTime(res)) return res;
 				return undefined as any;
 			}
 
@@ -1343,7 +1348,7 @@ export class Tempo {
 
 			// security check: if it contains term-keys (#) while no plugins are loaded
 			if (isObject(tempo) && Object.keys(tempo).some(k => k.startsWith('#')) && Tempo.#terms.length === 0) {
-				Tempo.#termError(this.#local.config, Object.keys(tempo).find(k => k.startsWith('#'))!);
+				Tempo[$termError](this.#local.config, Object.keys(tempo).find(k => k.startsWith('#'))!);
 				return undefined as any;
 			}
 
@@ -1456,7 +1461,7 @@ export class Tempo {
 			// security check: if it contains term-keys (#) in core mode, we should throw a hint
 			const keys = Object.keys(options);
 			if (keys.some(k => k.startsWith('#')) && Tempo.#terms.length === 0) {
-				Tempo.#termError(this.#local.config, keys.find(k => k.startsWith('#'))!);
+				Tempo[$termError](this.#local.config, keys.find(k => k.startsWith('#'))!);
 				return undefined as any;
 			}
 
@@ -1705,16 +1710,16 @@ export class Tempo {
 	#add = (args?: any, options: Tempo.Options = {}) => {
 		if (!isZonedDateTime(this.#zdt)) return this;
 
-		const tz = options.timeZone ?? this.tz;
-		let zdt = (this.#zdt as any).withTimeZone(tz);
+		const overrides = {
+			timeZone: options.timeZone ?? this.tz,
+			calendar: options.calendar ?? this.cal,
+		} as Required<Tempo.Options>;
+
+		let zdt = this.#zdt.withTimeZone(overrides.timeZone).withCalendar(overrides.calendar);
 		this.#parseDepth++;
+
 		const isRoot = this.#parseDepth === 1;
 		if (isRoot) this.#matches = [...this.parse.result];
-
-		const overrides = {
-			timeZone: tz,
-			calendar: (this.#zdt as any).calendarId,
-		} as Tempo.Options;
 
 		try {
 			if (isDefined(args)) {
@@ -1731,58 +1736,7 @@ export class Tempo {
 								if (unit === 'timeZone' || unit === 'calendar') return zdt;
 
 								if (unit.startsWith('#')) {
-									if (isString(offset)) {
-										const term = unit.slice(1);
-										const termObj = Tempo.#terms.find(t => t.scope === term || t.key === term);
-
-										let jump = zdt;
-										let next = new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }).set({ [unit]: offset }).toDateTime();
-
-										let iterations = 0;
-										while (next.epochNanoseconds <= zdt.epochNanoseconds) {
-											if (++iterations > 20) {													// lower safety threshold significantly
-												Tempo.#dbg.warn(this.#local.config, `Term resolution stalling for "${unit}" (offset: "${offset}"). Jumping range.`);
-												let range;
-												try {
-													range = termObj?.define.call(new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }), false);
-												} catch (err: any) {
-													if (err.message.includes('Class constructor')) {
-														Tempo.#dbg.warn(this.#local.config, `Misidentified class in term recovery: ${unit}`, err.stack ?? err);
-													} else {
-														throw err;
-													}
-												}
-												const step = getSafeFallbackStep(range as any, (termObj as any)?.scope ?? (unit === '#period' ? 'period' : undefined));
-												jump = jump.add(step);
-												next = new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }).set({ [unit]: offset }).toDateTime();
-												break;
-											}
-
-											let range;
-											try {
-												range = termObj?.define.call(new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }), false);
-											} catch (err: any) {
-												if (err.message.includes('Class constructor')) {
-													Tempo.#dbg.warn(this.#local.config, `Misidentified class in term resolution: ${unit}`, err.stack ?? err);
-												} else {
-													throw err;
-												}
-											}
-
-											if (isObject(range) && (range as any).end) {
-												jump = (range as any).end.toDateTime();
-											} else {
-												const step = (unit === '#period' || (termObj as any)?.scope === 'period') ? { days: 1 } : { years: 1 };
-												jump = jump.add(step);
-											}
-											next = new this.#Tempo(jump, { ...this.config, mode: enums.MODE.Strict }).set({ [unit]: offset }).toDateTime();
-										}
-										return next;
-									}
-									const res = resolveTermShift(new this.#Tempo(zdt, this.config), Tempo.#terms, unit, offset as number);
-									if (isDefined(res)) {
-										return res;
-									}
+									return resolveTermMutation(Tempo, this, mutate, unit, offset, zdt);
 								}
 
 								const single = singular((enums.ELEMENT[unit as t.Element] ?? unit) as string);
@@ -1831,20 +1785,17 @@ export class Tempo {
 	#set = (args?: any, options: Tempo.Options = {}) => {
 		if (!isZonedDateTime(this.#zdt)) return this;
 
-		const tz = options.timeZone ?? this.tz;
-		const cal = options.calendar ?? (this.#zdt as any).calendarId;
+		const overrides = {
+			timeZone: options.timeZone ?? this.tz,
+			calendar: options.calendar ?? this.cal,
+		} as Required<Tempo.Options>;
 
 		// Shift the current instance to the target timezone first to ensure
 		// that any relative keywords (like 'tomorrow') are resolved correctly.
-		let zdt = (this.#zdt as any).withTimeZone(tz).withCalendar(cal);
+		let zdt = this.#zdt.withTimeZone(overrides.timeZone).withCalendar(overrides.calendar);
 		this.#parseDepth++;
 		const isRoot = this.#parseDepth === 1;
 		if (isRoot) this.#matches = [...this.parse.result];
-
-		const overrides = {
-			timeZone: tz,
-			calendar: zdt.calendarId,
-		} as Tempo.Options;
 
 		try {
 			if (isDefined(args)) {
@@ -1883,30 +1834,7 @@ export class Tempo {
 								case 'start.term':
 								case 'mid.term':
 								case 'end.term':
-									{
-										const ident = term!.startsWith('#') ? term!.slice(1) : term!;
-										const termObj = Tempo.#terms.find(t => t.key === ident || t.scope === ident);
-										if (!termObj) {
-											Tempo.#termError(options, term!);
-											return this;
-										}
-
-
-										const list = getRange(termObj, this, zdt);
-										const range = (getTermRange(this, list, false, zdt) as any);
-										if (!range) throw new Error(`Cannot resolve range for Term: ${term}`);
-
-										switch (mutate) {
-											case 'start': return range.start.toDateTime().withTimeZone(tz).withCalendar(cal);
-											case 'mid': {
-												const startNs = range.start.toDateTime().epochNanoseconds as bigint;
-												const endNs = range.end.toDateTime().epochNanoseconds as bigint;
-												const midNs = startNs + (endNs - startNs) / BigInt(2);
-												return Temporal.Instant.fromEpochNanoseconds(midNs).toZonedDateTimeISO(tz).withCalendar(cal);
-											}
-											case 'end': return range.end.toDateTime().subtract({ nanoseconds: 1 }).withTimeZone(tz).withCalendar(cal);
-										}
-									}
+									return resolveTermMutation(Tempo, this, mutate, term!, adjust, zdt);
 
 								case 'set.timeZone':
 									return zdt.withTimeZone(offset as Temporal.TimeZoneLike);

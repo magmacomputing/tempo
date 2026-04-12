@@ -1,5 +1,6 @@
-import { Tempo } from '#tempo'
-import '#tempo/plugin/extend/extend.ticker.js'
+import { Tempo } from '#tempo/core'
+import '#tempo/term/standard'
+import '#tempo/ticker'
 
 describe('Ticker with Terms', () => {
 
